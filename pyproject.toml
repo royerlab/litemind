@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+dependencies = [
+    "openai",
+    "ollama",
+    "chromadb",
+    "arbol",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest"
+]

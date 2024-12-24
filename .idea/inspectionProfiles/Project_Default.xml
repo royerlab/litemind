@@ -1,0 +1,28 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="PyPackageRequirementsInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoredPackages">
+        <value>
+          <list size="15">
+            <item index="0" class="java.lang.String" itemvalue="btrees" />
+            <item index="1" class="java.lang.String" itemvalue="scipy" />
+            <item index="2" class="java.lang.String" itemvalue="arbol" />
+            <item index="3" class="java.lang.String" itemvalue="pytest" />
+            <item index="4" class="java.lang.String" itemvalue="PyYAML" />
+            <item index="5" class="java.lang.String" itemvalue="python-dateutil" />
+            <item index="6" class="java.lang.String" itemvalue="setuptools" />
+            <item index="7" class="java.lang.String" itemvalue="zodb" />
+            <item index="8" class="java.lang.String" itemvalue="imap_tools" />
+            <item index="9" class="java.lang.String" itemvalue="pandas" />
+            <item index="10" class="java.lang.String" itemvalue="spacy" />
+            <item index="11" class="java.lang.String" itemvalue="bokeh" />
+            <item index="12" class="java.lang.String" itemvalue="shortuuid" />
+            <item index="13" class="java.lang.String" itemvalue="persistent" />
+            <item index="14" class="java.lang.String" itemvalue="PySide2" />
+          </list>
+        </value>
+      </option>
+    </inspection_tool>
+  </profile>
+</component>
