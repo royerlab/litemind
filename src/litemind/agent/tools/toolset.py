@@ -1,13 +1,11 @@
 from typing import List, Optional, Callable
 
-
 from litemind.agent.tools.base_tool import BaseTool
-
 
 
 class ToolSet:
     def __init__(self, tools: Optional[List[BaseTool]] = None):
-        self.tools : List[BaseTool] = tools if tools else []
+        self.tools: List[BaseTool] = tools if tools else []
 
     def add_tool(self, tool: BaseTool):
         """Add a new tool."""

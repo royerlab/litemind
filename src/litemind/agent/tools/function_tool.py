@@ -42,12 +42,15 @@ class FunctionTool(BaseTool):
         else:
             return "string"
 
-    def execute(self, **kwargs) -> Any:
+    def execute(self, *args, **kwargs) -> Any:
         """
         Execute the tool with given arguments.
 
         Parameters
         ----------
+        *args
+            Positional arguments to pass to the tool
+
         **kwargs
             Arbitrary keyword arguments to pass to the tool function.
 
@@ -56,7 +59,4 @@ class FunctionTool(BaseTool):
         Any
             The result of the tool function.
         """
-        return self.func(**kwargs)
-
-  
-
+        return self.func(*args, **kwargs)

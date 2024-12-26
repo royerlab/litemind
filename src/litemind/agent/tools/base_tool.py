@@ -1,4 +1,3 @@
-
 from abc import ABC, abstractmethod
 from typing import Any
 
@@ -7,9 +6,8 @@ class BaseTool(ABC):
     """Abstract base class for a tool."""
 
     def __init__(self,
-                 name:str,
+                 name: str,
                  description: str):
-
         self.name = name
         self.description = description
 
@@ -20,7 +18,7 @@ class BaseTool(ABC):
         return self.__repr__()
 
     @abstractmethod
-    def execute(self, **kwargs) -> Any:
+    def execute(self, *args, **kwargs) -> Any:
         """Execute the tool with the provided arguments."""
         pass
 
@@ -45,4 +43,4 @@ class BaseTool(ABC):
         if args:
             raise ValueError(
                 "Positional arguments are not supported. Use keyword arguments instead.")
-        return self.execute(**kwargs)
+        return self.execute(*args, **kwargs)

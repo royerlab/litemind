@@ -1,4 +1,4 @@
-from typing import Optional, Any, Dict
+from typing import Optional, Any
 
 from litemind.agent.agent import Agent
 from litemind.agent.tools.base_tool import BaseTool
@@ -14,10 +14,12 @@ class AgentTool(BaseTool):
                  ):
 
         if not isinstance(agent, Agent):
-            raise ValueError("AgentTool must be initialized with an Agent object")
+            raise ValueError(
+                "AgentTool must be initialized with an Agent object")
 
         if not agent.name or not description:
-            raise ValueError("AgentTool must be initialized with a name and description")
+            raise ValueError(
+                "AgentTool must be initialized with a name and description")
 
         super().__init__(agent.name, description)
         self.agent = agent
@@ -34,5 +36,7 @@ class AgentTool(BaseTool):
         response_message = self.agent(text=prompt)
 
         # Return the response text:
-        response_text = response_message.text if hasattr(response_message, 'text') else str(response_message)
+        response_text = response_message.text if hasattr(response_message,
+                                                         'text') else str(
+            response_message)
         return response_text

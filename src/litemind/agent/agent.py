@@ -21,15 +21,13 @@ class Agent():
         # get key from environmental variables:
         self.api = api
         self.model = model
-        self.temperature=temperature
+        self.temperature = temperature
         self.toolset = toolset
         self.name = name
         self._agent_kwargs = kwargs
 
         # Initialise conversation:
         self.conversation = Conversation()
-
-
 
     def __getitem__(self, item) -> Message:
         return self.conversation[item]
@@ -48,7 +46,6 @@ class Agent():
         # if a role is provided as a keyword argument, append it:
         role = kwargs['role'] if 'role' in kwargs else 'user'
 
-
         # if conversation is provided as a positional argument, append it:
         if args:
             conversation = args[0]
@@ -58,7 +55,7 @@ class Agent():
         # if conversation is provided as a keyword argument, append it:
         if 'conversation' in kwargs:
             conversation = kwargs['conversation']
-            #remove conversation from kwargs:
+            # remove conversation from kwargs:
             del kwargs['conversation']
             if isinstance(conversation, Conversation):
                 self.conversation += conversation
@@ -92,7 +89,7 @@ class Agent():
         # if text is provided as a keyword argument, append it:
         if 'text' in kwargs:
             text = kwargs['text']
-            #remove text from kwargs:
+            # remove text from kwargs:
             del kwargs['text']
             if isinstance(text, str):
                 message = Message(role=role, text=text)
@@ -106,7 +103,7 @@ class Agent():
             model_name=self.model,
             messages=self.conversation.get_all_messages(),
             temperature=self.temperature,
-            toolset = self.toolset,
+            toolset=self.toolset,
             **kwargs
         )
 
@@ -115,4 +112,3 @@ class Agent():
 
         # Return response
         return response
-

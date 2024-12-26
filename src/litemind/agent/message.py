@@ -11,7 +11,6 @@ class Message(ABC):
         self.text = "" if text is None else text
         self.image_urls = [] if image_url is None else [image_url]
 
-
     def append_text(self, text: str):
         """
         Append text to the message.
@@ -25,7 +24,6 @@ class Message(ABC):
 
         # Append content:
         self.text += text
-
 
     def append_image_url(self,
                          image_url: str):
@@ -42,7 +40,6 @@ class Message(ABC):
 
         # Append content to list:
         self.image_urls.append(image_url)
-
 
     def append_image_path(self,
                           image_path: str):
@@ -63,7 +60,8 @@ class Message(ABC):
         elif image_path.endswith('.jpg') or image_path.endswith('.jpeg'):
             image_format = 'jpeg'
         else:
-            raise NotImplementedError(f"Image format not supported: '{image_path}' (only .png and .jpg are supported)")
+            raise NotImplementedError(
+                f"Image format not supported: '{image_path}' (only .png and .jpg are supported)")
 
         import base64
 
@@ -74,8 +72,8 @@ class Message(ABC):
             encoded_image = base64.b64encode(image_file.read()).decode("utf-8")
 
             # Append the image to the current message:
-            self.append_image_url(f"data:image/{image_format};base64,{encoded_image}")
-
+            self.append_image_url(
+                f"data:image/{image_format};base64,{encoded_image}")
 
     # method definition so that we can use the 'in' operator:
 
@@ -100,7 +98,6 @@ class Message(ABC):
                 return True
         return False
 
-
     def __str__(self):
         """
         Return the message as a string.
@@ -117,7 +114,6 @@ class Message(ABC):
 
         return message_string
 
-
     def __repr__(self):
         """
         Return the message as a string.
@@ -127,5 +123,3 @@ class Message(ABC):
             The message as a string.
         """
         return str(self)
-
-

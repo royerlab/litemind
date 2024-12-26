@@ -1,4 +1,3 @@
-import openai
 import pytest
 
 from litemind.apis.openai.utils.vision import has_vision_support
@@ -43,4 +42,3 @@ def test_invalid_model_name():
         has_vision_support("")
     with pytest.raises(ValueError):
         has_vision_support("   ")
-

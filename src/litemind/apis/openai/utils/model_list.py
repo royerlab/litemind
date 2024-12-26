@@ -48,7 +48,8 @@ def get_openai_model_list(filter: str = 'gpt',
 
         except Exception as e:
             # Error message:
-            aprint(f"Error: {type(e).__name__} with message: '{str(e)}' occured while trying to get the list of OpenAI models. ")
+            aprint(
+                f"Error: {type(e).__name__} with message: '{str(e)}' occured while trying to get the list of OpenAI models. ")
             # print stacktrace:
             traceback.print_exc()
 
@@ -100,7 +101,8 @@ def postprocess_openai_model_list(model_list: list) -> list:
         # Ensure that the best models are at the top of the list:
         best_models = [m for m in model_list if
                        any(bm in m for bm in best_models_filters)]
-        model_list = best_models + [m for m in model_list if m not in best_models]
+        model_list = best_models + [m for m in model_list if
+                                    m not in best_models]
 
         # Ensure that the very best models are at the top of the list:
         very_best_models = [m for m in model_list if

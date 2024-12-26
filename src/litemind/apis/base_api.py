@@ -16,11 +16,19 @@ class BaseApi(ABC):
         pass
 
     @abstractmethod
+    def default_model(self, require_vision: bool = False) -> str:
+        pass
+
+    @abstractmethod
     def has_vision_support(self, model_name: Optional[str] = None) -> bool:
         pass
 
     @abstractmethod
-    def max_num_input_token(self,  model_name: Optional[str] = None) -> int:
+    def has_tool_support(self, model_name: Optional[str] = None) -> bool:
+        pass
+
+    @abstractmethod
+    def max_num_input_token(self, model_name: Optional[str] = None) -> int:
         pass
 
     @abstractmethod

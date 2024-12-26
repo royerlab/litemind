@@ -108,6 +108,3 @@ class Conversation:
 
     def __len__(self):
         return len(self.get_all_messages())
-
-
-

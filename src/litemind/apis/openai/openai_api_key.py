@@ -6,7 +6,6 @@ from litemind.apis.openai.openai_api import OpenAIApi
 
 
 def is_openai_api_key_available() -> bool:
-
     # check is OpenAI API key is available in the environment:
     openai_api_key = os.getenv("OPENAI_API_KEY")
     if openai_api_key is None:
@@ -22,5 +21,3 @@ def is_openai_api_key_available() -> bool:
         aprint("OpenAI API key is invalid.")
 
     return is_valid
-
-

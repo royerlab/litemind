@@ -11,6 +11,8 @@ from litemind.apis.openai.utils.default_model import \
     get_default_openai_model_name
 from litemind.apis.openai.utils.messages import convert_messages_for_openai
 from litemind.apis.openai.utils.model_list import get_openai_model_list
+from litemind.apis.openai.utils.model_types import is_vision_model, \
+    is_tool_model
 from litemind.apis.openai.utils.process_response import _process_response
 from litemind.apis.openai.utils.tools import _format_tools_for_openai
 
@@ -50,16 +52,17 @@ class OpenAIApi(BaseApi):
     def model_list(self) -> List[str]:
         return get_openai_model_list()
 
+    def default_model(self,
+                      require_vision: bool = False,
+                      require_tools: bool = False) -> str:
+        return get_default_openai_model_name(require_vision=require_vision,
+                                             require_tools=require_tools)
+
     def has_vision_support(self, model_name: Optional[str] = None) -> bool:
+        return is_vision_model(model_name)
 
-        if model_name is None:
-            model_name = get_default_openai_model_name()
-
-        model_list = get_openai_model_list()
-        if model_name in model_list:
-            model_info = model_list[model_name]
-            return model_info['vision']
-
+    def has_tool_support(self, model_name: Optional[str] = None) -> bool:
+        return is_tool_model(model_name)
 
     def max_num_input_token(self, model_name: Optional[str] = None) -> int:
 
@@ -86,7 +89,7 @@ class OpenAIApi(BaseApi):
 
     def completion(self,
                    messages: List[Message],
-                   model_name: Optional[str]=None,
+                   model_name: Optional[str] = None,
                    temperature: Optional[float] = 0.0,
                    toolset: Optional[ToolSet] = None,
                    **kwargs) -> Message:
@@ -98,7 +101,8 @@ class OpenAIApi(BaseApi):
             model_name = get_default_openai_model_name()
 
         # Convert ToolSet to OpenAI-compatible JSON schema if toolset is provided
-        openai_tools = _format_tools_for_openai(toolset) if toolset else NotGiven()
+        openai_tools = _format_tools_for_openai(
+            toolset) if toolset else NotGiven()
 
         # Format messages for OpenAI:
         openai_formatted_messages = convert_messages_for_openai(messages)
@@ -116,8 +120,6 @@ class OpenAIApi(BaseApi):
         response_message = _process_response(response, toolset)
         messages.append(response_message)
         return response_message
-
-
 
     def describe_image(self,
                        image_path: str,
@@ -193,7 +195,6 @@ class OpenAIApi(BaseApi):
                 from openai import OpenAI
                 from openai.resources.chat import Completions
 
-
                 try:
                     for tries in range(number_of_tries):
 
@@ -241,7 +242,3 @@ class OpenAIApi(BaseApi):
                     import traceback
                     traceback.print_exc()
                     return f"Error: '{e}'"
-
-
-
-

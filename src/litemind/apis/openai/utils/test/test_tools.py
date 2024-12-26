@@ -6,11 +6,12 @@ def sample_tool_function(order_id: str) -> str:
     """Retrieve delivery date for a given order ID."""
     return "2024-11-15"  # Placeholder return value
 
+
 def test_format_tools_for_openai():
     # Initialize ToolSet and add a sample tool
     toolset = ToolSet()
     toolset.add_function_tool(sample_tool_function,
-                     "Retrieve delivery date for a given order ID")
+                              "Retrieve delivery date for a given order ID")
 
     # Generate the OpenAI-compatible tool schema
     formatted_tools = _format_tools_for_openai(toolset)
@@ -34,4 +35,3 @@ def test_format_tools_for_openai():
 
     # Check that formatted_tools matches expected_output
     assert formatted_tools == expected_output, "Formatted tools schema does not match the expected OpenAI format."
-

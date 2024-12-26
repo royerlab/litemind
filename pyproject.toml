@@ -6,6 +6,8 @@ build-backend = "setuptools.build_meta"
 dependencies = [
     "openai",
     "ollama",
+    "anthropic",
+    "google-generativeai",
     "chromadb",
     "arbol",
 ]

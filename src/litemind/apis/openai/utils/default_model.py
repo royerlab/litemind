@@ -1,19 +1,30 @@
 from arbol import aprint
 
 from litemind.apis.openai.utils.model_list import get_openai_model_list
+from litemind.apis.openai.utils.model_types import is_vision_model, \
+    is_tool_model
 
 # cache result of function:
 _default_openai_model_name = None
 
-def get_default_openai_model_name() -> str:
 
+def get_default_openai_model_name(require_vision: bool = False,
+                                  require_tools: bool = False) -> str:
     # Check if the model name is in the cache:
     global _default_openai_model_name
     if _default_openai_model_name is not None:
-        aprint(f'Using cached default OpenAI model name: {_default_openai_model_name}')
+        aprint(
+            f'Using cached default OpenAI model name: {_default_openai_model_name}')
         return _default_openai_model_name
     else:
         model_list = get_openai_model_list()
+
+        if require_vision:
+            model_list = [model for model in model_list if
+                          is_vision_model(model)]
+
+        if require_tools:
+            model_list = [model for model in model_list if is_tool_model(model)]
 
         if len(model_list) == 0:
             return None

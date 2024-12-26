@@ -6,11 +6,16 @@ from arbol import asection, aprint
 from litemind.agent.message import Message
 from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.base_api import BaseApi
+from litemind.apis.ollama.utils.messages import _convert_messages_for_ollama
+from litemind.apis.ollama.utils.process_response import _process_response
+from litemind.apis.ollama.utils.tools import _format_tools_for_ollama
 from litemind.apis.openai.exceptions import APIError
 
 
 class OllamaApi(BaseApi):
-    def __init__(self, host: Optional[str] = None, headers: Optional[Dict[str, str]] = None, **kwargs):
+    def __init__(self,
+                 host: Optional[str] = None,
+                 headers: Optional[Dict[str, str]] = None, **kwargs):
         """
         Initialize the Ollama API client.
 
@@ -20,7 +25,14 @@ class OllamaApi(BaseApi):
         """
 
         from ollama import Client
-        self.client = Client(host=host, headers=headers, **kwargs)
+        self.client = Client(host=host,
+                             headers=headers,
+                             **kwargs)
+
+        self.host = host
+        self.headers = headers
+
+        self._model_list = [model.model for model in self.client.list().models]
 
     def model_list(self) -> List[str]:
         """
@@ -32,10 +44,32 @@ class OllamaApi(BaseApi):
         """
 
         try:
-            return [model.model for model in self.client.list().models]
+            return list(self._model_list)
         except Exception:
             raise APIError("Error fetching model list from Ollama.")
 
+    def default_model(self,
+                      require_vision: bool = False,
+                      require_tools: bool = False) -> str:
+        """
+        Get the default model name for Ollama.
+        (Calls ollama.list())
+
+        Returns:
+        - str: The default model name for Ollama.
+        """
+
+        model_list = self.model_list()
+        if require_vision:
+            model_list = [model for model in model_list if
+                          self.has_vision_support(model)]
+        if require_tools:
+            model_list = [model for model in model_list if
+                          self.has_tool_support(model)]
+        if not model_list:
+            return None
+
+        return model_list[0]
 
     def check_api_key(self, api_key: Optional[str] = None) -> bool:
         """
@@ -50,70 +84,116 @@ class OllamaApi(BaseApi):
         except Exception:
             return False
 
-    def has_vision_support(self) -> bool:
+    def has_vision_support(self, model_name: Optional[str] = None) -> bool:
         """
         Indicates whether the API supports vision tasks.
+
+        Parameters:
+        - model_name (str): The model name.
 
         Returns:
         - bool: False (Ollama does not currently support vision).
         """
-        return False
 
-    def max_num_input_token(self, model: str) -> int:
+        try:
+            model_details_families = self.client.show(
+                model_name).details.families
+            return model_details_families and 'clip' in model_details_families
+        except:
+            return False
+
+    def has_tool_support(self, model_name: Optional[str] = None) -> bool:
+        """
+        Indicates whether the API supports tool usage.
+        Parameters
+        ----------
+        model_name : Optional[str]
+            The model name.
+
+        Returns
+        -------
+        bool : True if the model supports tools, False otherwise.
+
+        """
+        model_template = self.client.show(model_name).template
+        return '$.Tools' in model_template
+
+    def max_num_input_token(self, model_name: Optional[str] = None) -> int:
         """
         Returns the maximum number of input tokens allowed for a specific model.
 
         Parameters:
-        - model (str): The model name.
+        - model_name (str): The model name.
 
         Returns:
         - int: Currently returns 100000 as a placeholder. Update this as more info about Ollama's token limits is available.
         """
-        model_info = self.client.show(model).modelinfo
+        model_info = self.client.show(model_name).modelinfo
 
         # search key hat contains 'context_length'
         for key in model_info.keys():
             if 'context_length' in key:
                 return model_info[key]
 
-        # return default value:
+        # return default value if nothing else works:
         return 2500
-
 
     def completion(self,
                    messages: List[Message],
-                   model_name: str = "llama3.2",
+                   model_name: Optional[str] = None,
                    temperature: Optional[float] = 0.0,
                    toolset: Optional[ToolSet] = None,
                    **kwargs) -> Message:
         """
-        Generate a completion using the Ollama API.
+        Generate a completion using the Ollama API, with optional tool usage.
 
-        Parameters:
-        - messages (List[Message]): A list of messages to send to the model.
-        - model (str): The model to use for the request.
-        - temperature (Optional[float]): Sampling temperature (not directly supported by Ollama yet).
-        - toolset (Optional[ToolSet]): Not supported by Ollama, included for interface adherence.
+        Parameters
+        ----------
+        messages : List[Message]
+            A list of messages to send to the model.
+        model_name : str
+            The model to use for the request.
+        temperature : float
+            Sampling temperature.
+        toolset : Optional[ToolSet]
+            A set of tools that can be invoked by the model via function calls.
 
-        Returns:
-        - Message: The response from the model.
+        Returns
+        -------
+        Message
+            The response from the model.
         """
-        # Convert messages into Ollama's format
-        ollama_messages = self._convert_messages_for_ollama(messages)
 
-        # Ollama does not support external tools, so the toolset is unused
-        if toolset:
-            raise NotImplementedError("Tool usage is not supported by Ollama.")
+        # Set default model if not provided
+        if model_name is None:
+            model_name = self.default_model()
 
+        # 1) Convert user messages into Ollama's format
+        ollama_messages = _convert_messages_for_ollama(messages)
+
+        # 2) Convert toolset (if any) to Ollama's tools schema
+        ollama_tools = _format_tools_for_ollama(toolset) if toolset else None
+
+        # 3) Make the request to Ollama
         from ollama import ResponseError
         try:
-            from ollama import ChatResponse
-            response: ChatResponse = self.client.chat(model=model_name, messages=ollama_messages)
-            response_message = Message(role="assistant", text=response.message.content)
+            aprint(f"Sending request to Ollama with model: {model_name}")
+            response = self.client.chat(
+                model=model_name,
+                messages=ollama_messages,
+                tools=ollama_tools,
+                options={"temperature": temperature},
+                **kwargs
+            )
+
+            # 4) Process the response
+            response_message = _process_response(response, toolset)
             messages.append(response_message)
             return response_message
+
         except ResponseError as e:
-            raise APIError(f"Error during completion: {e.error} (status code: {e.status_code})")
+            raise APIError(
+                f"Error during completion: {e.error} (status code: {e.status_code})")
 
     def describe_image(self,
                        image_path: str,
@@ -211,16 +291,3 @@ class OllamaApi(BaseApi):
                 aprint(f"Error: '{e}'")
                 traceback.print_exc()
                 return f"Error: '{e}'"
-
-    @staticmethod
-    def _convert_messages_for_ollama(messages: List[Message]) -> List[Dict[str, str]]:
-        """
-        Convert messages into Ollama's format.
-
-        Parameters:
-        - messages (List[Message]): A list of messages.
-
-        Returns:
-        - List[Dict[str, str]]: Converted messages.
-        """
-        return [{"role": msg.role, "content": msg.text} for msg in messages]

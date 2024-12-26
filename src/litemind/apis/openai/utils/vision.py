@@ -1,8 +1,3 @@
-from typing import Optional
-
-
-
-
 def has_vision_support(model_name: str) -> bool:
     """
     Tests if an OpenAI model supports vision by attempting to send a minimal valid image.
@@ -21,7 +16,7 @@ def has_vision_support(model_name: str) -> bool:
     # Cleanup model name:
     model_name = model_name.strip()
 
-    if not isinstance(model_name, str) or len(model_name)==0:
+    if not isinstance(model_name, str) or len(model_name) == 0:
         raise ValueError("Model name must be a non-empty string")
 
     # Create a 1x1 transparent pixel in base64
@@ -57,8 +52,9 @@ def has_vision_support(model_name: str) -> bool:
     except openai.BadRequestError as e:
         # If we get an error about images not being supported, return False
         if ("does not support vision" in str(e).lower()
-                or "invalid message format" in str(e).lower())\
-                or "image_url is only supported by certain models." in str(e).lower()\
+            or "invalid message format" in str(e).lower()) \
+                or "image_url is only supported by certain models." in str(
+            e).lower() \
                 or "you must provide a model parameter" in str(e).lower():
             return False
         # For other bad request errors, re-raise
@@ -71,5 +67,3 @@ def has_vision_support(model_name: str) -> bool:
     except openai.OpenAIError as e:
         # For other OpenAI errors (API key, network, etc.), re-raise
         raise
-
-

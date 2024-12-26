@@ -62,7 +62,7 @@ def test_toolset_add_agent_tool():
 
     # Initialize ToolSet and add an AgentTool
     toolset = ToolSet()
-    toolset.add_agent_tool(agent,  "Sample agent tool for testing")
+    toolset.add_agent_tool(agent, "Sample agent tool for testing")
 
     # Retrieve and validate the AgentTool
     added_tool = toolset.get_tool("agent_tool")
