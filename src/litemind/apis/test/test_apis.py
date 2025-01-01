@@ -3,20 +3,17 @@ from arbol import aprint
 
 from litemind.agent.message import Message
 from litemind.agent.tools.toolset import ToolSet
+from litemind.apis.anthropic.anthropic_api import AnthropicApi
+from litemind.apis.google.google_api import GeminiApi
 from litemind.apis.ollama.ollama_api import OllamaApi
-# Import each of your real implementations here
 from litemind.apis.openai.openai_api import OpenAIApi
 
 # Put all your implementations in this list:
 API_IMPLEMENTATIONS = [
     OpenAIApi,
     OllamaApi,
-    # Add other implementations here...
-]
-
-MODELS_TO_TEST = [
-    "llama3.2",
-    "llava:34b"
+    AnthropicApi,
+    GeminiApi
 ]
 
 
@@ -125,9 +122,9 @@ class TestBaseApiImplementations:
 
         # User message:
         user_message = Message(role='user')
-        user_message.append_image_url(
+        user_message.append_image_uri(
             'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Einstein_1921_by_F_Schmutzer_-_restoration.jpg/456px-Einstein_1921_by_F_Schmutzer_-_restoration.jpg')
-        user_message.append_text('Can you describe what you see?')
+        user_message.append_text('Can you describe what you see in the image?')
         messages.append(user_message)
 
         # Run agent:
@@ -221,13 +218,28 @@ class TestBaseApiImplementations:
 
         api_instance = ApiClass()
         default_model_name = api_instance.default_model()
-        max_tokens = api_instance.max_num_input_token(
+        max_tokens = api_instance.max_num_input_tokens(
             model_name=default_model_name)
         assert isinstance(max_tokens, int), (
             f"{ApiClass.__name__}.max_num_input_token() should return an int!"
         )
         assert max_tokens > 0, (
             f"{ApiClass.__name__}.max_num_input_token() should be a positive integer!"
+        )
+
+    def test_max_num_output_tokens(self, ApiClass):
+        """
+        Test that max_num_output_tokens() returns a valid integer.
+        """
+        api_instance = ApiClass()
+        default_model_name = api_instance.default_model()
+        max_tokens = api_instance.max_num_output_tokens(
+            model_name=default_model_name)
+        assert isinstance(max_tokens, int), (
+            f"{ApiClass.__name__}.max_num_output_tokens() should return an int!"
+        )
+        assert max_tokens > 0, (
+            f"{ApiClass.__name__}.max_num_output_tokens() should be a positive integer!"
         )
 
     def test_describe_image_if_supported(self, ApiClass):

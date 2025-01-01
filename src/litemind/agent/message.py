@@ -6,10 +6,10 @@ class Message(ABC):
 
     def __init__(self, role: str,
                  text: Optional[str] = None,
-                 image_url: Optional[str] = None):
+                 image_uri: Optional[str] = None):
         self.role = role
         self.text = "" if text is None else text
-        self.image_urls = [] if image_url is None else [image_url]
+        self.image_uris = [] if image_uri is None else [image_uri]
 
     def append_text(self, text: str):
         """
@@ -21,40 +21,30 @@ class Message(ABC):
             The text to append to the message.
 
         """
-
-        # Append content:
         self.text += text
 
-    def append_image_url(self,
-                         image_url: str):
+    def append_image_uri(self, image_uri: str):
         """
         Append image url to the message.
 
         Parameters
         ----------
-
-        image_url : str
+        image_uri : str
             The url of the image to append to the message.
 
         """
+        self.image_uris.append(image_uri)
 
-        # Append content to list:
-        self.image_urls.append(image_url)
-
-    def append_image_path(self,
-                          image_path: str):
+    def append_image_path(self, image_path: str):
         """
         Append image path to the message.
 
         Parameters
         ----------
-
         image_path : str
             The path of the image to append to the message.
 
         """
-
-        # Check if the image format is supported:
         if image_path.endswith('.png'):
             image_format = 'png'
         elif image_path.endswith('.jpg') or image_path.endswith('.jpeg'):
@@ -64,18 +54,10 @@ class Message(ABC):
                 f"Image format not supported: '{image_path}' (only .png and .jpg are supported)")
 
         import base64
-
-        # Read and encode the image in base64
         with open(image_path, "rb") as image_file:
-
-            # Encode the image in base64:
             encoded_image = base64.b64encode(image_file.read()).decode("utf-8")
-
-            # Append the image to the current message:
-            self.append_image_url(
+            self.append_image_uri(
                 f"data:image/{image_format};base64,{encoded_image}")
-
-    # method definition so that we can use the 'in' operator:
 
     def __contains__(self, item: str) -> bool:
         """
@@ -93,8 +75,8 @@ class Message(ABC):
         """
         if item in self.text:
             return True
-        for image_url in self.image_urls:
-            if item in image_url:
+        for image_uri in self.image_uris:
+            if item in image_uri:
                 return True
         return False
 
@@ -106,12 +88,10 @@ class Message(ABC):
         str
             The message as a string.
         """
-        # Return the message as a string, add:
         message_string = f"*{self.role}*:\n"
         message_string += self.text
-        for image_url in self.image_urls:
-            message_string += f"Image: {image_url}\n"
-
+        for image_uri in self.image_uris:
+            message_string += f"Image: {image_uri}\n"
         return message_string
 
     def __repr__(self):

@@ -27,7 +27,7 @@ def convert_messages_for_openai(messages):
                 {"type": "text", "text": message.text})
 
         # Add each image URL in the required format
-        for image_url in message.image_urls:
+        for image_url in message.image_uris:
             formatted_message["content"].append({
                 "type": "image_url",
                 "image_url": {"url": image_url}

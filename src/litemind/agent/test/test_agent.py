@@ -48,7 +48,7 @@ def test_message_image():
     system_message = Message(role='system',
                              text='You are an omniscient all-knowing being called Ohmm')
     user_message = Message(role='user', text='Can you describe what you see?')
-    user_message.append_image_url(
+    user_message.append_image_uri(
         'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Einstein_1921_by_F_Schmutzer_-_restoration.jpg/456px-Einstein_1921_by_F_Schmutzer_-_restoration.jpg')
 
     # Create conversation:
@@ -65,8 +65,8 @@ def test_message_image():
                0].text == 'You are an omniscient all-knowing being called Ohmm'
     assert conversation[1].role == 'user'
     assert conversation[1].text == 'Can you describe what you see?'
-    assert len(conversation[1].image_urls) == 1
-    assert 'upload' in conversation[1].image_urls[0]
+    assert len(conversation[1].image_uris) == 1
+    assert 'upload' in conversation[1].image_uris[0]
 
     # Create OpenAI API object:
     api = OpenAIApi()

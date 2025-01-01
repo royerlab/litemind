@@ -20,7 +20,7 @@ def test_convert_text_only_message():
 def test_convert_image_only_message():
     # Create a message with only an image URL
     message = Message(role="user")
-    message.append_image_url("https://example.com/image.png")
+    message.append_image_uri("https://example.com/image.png")
 
     # Convert to OpenAI format
     converted = convert_messages_for_openai([message])
@@ -38,7 +38,7 @@ def test_convert_text_and_image_message():
     # Create a message with both text and an image URL
     message = Message(role="user")
     message.append_text("Here is an image:")
-    message.append_image_url("https://example.com/image.png")
+    message.append_image_uri("https://example.com/image.png")
 
     # Convert to OpenAI format
     converted = convert_messages_for_openai([message])
@@ -57,8 +57,8 @@ def test_convert_multiple_images_message():
     # Create a message with multiple image URLs
     message = Message(role="user")
     message.append_text("Here are two images:")
-    message.append_image_url("https://example.com/image1.png")
-    message.append_image_url("https://example.com/image2.png")
+    message.append_image_uri("https://example.com/image1.png")
+    message.append_image_uri("https://example.com/image2.png")
 
     # Convert to OpenAI format
     converted = convert_messages_for_openai([message])
@@ -95,7 +95,7 @@ def test_convert_multiple_messages():
 
     message2 = Message(role="assistant")
     message2.append_text("Here is an image:")
-    message2.append_image_url("https://example.com/image.png")
+    message2.append_image_uri("https://example.com/image.png")
 
     # Convert to OpenAI format
     converted = convert_messages_for_openai([message1, message2])

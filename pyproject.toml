@@ -9,6 +9,7 @@ dependencies = [
     "anthropic",
     "google-generativeai",
     "chromadb",
+    "pillow",
     "arbol",
 ]
 

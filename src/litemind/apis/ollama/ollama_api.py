@@ -118,7 +118,7 @@ class OllamaApi(BaseApi):
         model_template = self.client.show(model_name).template
         return '$.Tools' in model_template
 
-    def max_num_input_token(self, model_name: Optional[str] = None) -> int:
+    def max_num_input_tokens(self, model_name: Optional[str] = None) -> int:
         """
         Returns the maximum number of input tokens allowed for a specific model.
 
@@ -138,10 +138,27 @@ class OllamaApi(BaseApi):
         # return default value if nothing else works:
         return 2500
 
+    def max_num_output_tokens(self, model_name: Optional[str] = None) -> int:
+        """
+        Return the model's maximum number of output tokens.
+        If model_name is None, this uses get_default_openai_model_name() as a fallback.
+        """
+
+        model_info = self.client.show(model_name).modelinfo
+
+        # search key hat contains 'max_tokens'
+        for key in model_info.keys():
+            if 'max_tokens' in key:
+                return model_info[key]
+
+        # return default value if nothing else works:
+        return 4096
+
     def completion(self,
                    messages: List[Message],
                    model_name: Optional[str] = None,
                    temperature: Optional[float] = 0.0,
+                   max_output_tokens: Optional[int] = None,
                    toolset: Optional[ToolSet] = None,
                    **kwargs) -> Message:
         """
@@ -155,6 +172,8 @@ class OllamaApi(BaseApi):
             The model to use for the request.
         temperature : float
             Sampling temperature.
+        max_output_tokens : int
+            Maximum number of tokens to generate.
         toolset : Optional[ToolSet]
             A set of tools that can be invoked by the model via function calls.
 
@@ -167,6 +186,10 @@ class OllamaApi(BaseApi):
         # Set default model if not provided
         if model_name is None:
             model_name = self.default_model()
+
+        # Get max num of output tokens for model if not provided:
+        if max_output_tokens is None:
+            max_output_tokens = self.max_num_output_tokens(model_name)
 
         # 1) Convert user messages into Ollama's format
         ollama_messages = _convert_messages_for_ollama(messages)
@@ -182,7 +205,8 @@ class OllamaApi(BaseApi):
                 model=model_name,
                 messages=ollama_messages,
                 tools=ollama_tools,
-                options={"temperature": temperature},
+                options={"temperature": temperature,
+                         "num_predict": max_output_tokens},
                 **kwargs
             )
 

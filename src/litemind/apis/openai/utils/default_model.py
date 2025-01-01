@@ -45,4 +45,8 @@ def get_default_openai_model_name(require_vision: bool = False,
 
         sorted_model_list = sorted(model_list, key=model_key)
 
-        return sorted_model_list[0]
+        # Cache the result:
+        _default_openai_model_name = sorted_model_list[0]
+        aprint(f'Using default OpenAI model name: {_default_openai_model_name}')
+
+        return _default_openai_model_name

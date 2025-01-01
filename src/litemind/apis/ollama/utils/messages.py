@@ -1,11 +1,3 @@
-import re
-import base64
-import tempfile
-from typing import List, Dict, Any
-import \
-    requests  # Make sure 'requests' is in your environment, or handle differently
-
-from litemind.agent.message import Message
 import base64
 import re
 import tempfile
@@ -113,7 +105,7 @@ def _convert_messages_for_ollama(messages: List[Message]) -> List[
         }
 
         local_image_paths = []
-        for image_url in msg.image_urls:
+        for image_url in msg.image_uris:
             if image_url.startswith("data:image/"):
                 # It's a data URI -> decode Base64 -> local file
                 local_path = _save_base64_to_temp_file(image_url)

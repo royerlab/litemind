@@ -28,14 +28,19 @@ class BaseApi(ABC):
         pass
 
     @abstractmethod
-    def max_num_input_token(self, model_name: Optional[str] = None) -> int:
+    def max_num_input_tokens(self, model_name: Optional[str] = None) -> int:
+        pass
+
+    @abstractmethod
+    def max_num_output_tokens(self, model_name: Optional[str] = None) -> int:
         pass
 
     @abstractmethod
     def completion(self,
                    model_name: str,
                    messages: List[Message],
-                   temperature: float,
+                   temperature: float = 0.0,
+                   max_output_tokens: Optional[int] = None,
                    toolset: Optional[ToolSet] = None,
                    **kwargs) -> Message:
         pass
@@ -44,7 +49,7 @@ class BaseApi(ABC):
     def describe_image(self,
                        image_path: str,
                        query: str = 'Here is an image, please carefully describe it in detail.',
-                       model_name: str = "gpt-4-vision-preview",
+                       model_name: Optional[str] = None,
                        max_tokens: int = 4096,
                        number_of_tries: int = 4,
                        ) -> str:

@@ -40,7 +40,7 @@ def test_openai_api_text_and_image_message():
     # Create a message with text and image
     message = Message(role="user")
     message.append_text("What do you think of this image?")
-    message.append_image_url(
+    message.append_image_uri(
         "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/2560px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg")
 
     # Convert to OpenAI format
@@ -64,8 +64,8 @@ def test_openai_api_multiple_images():
     # Create a message with multiple images
     message = Message(role="user")
     message.append_text("What do you think of these images?")
-    message.append_image_url(__url1)
-    message.append_image_url(__url2)
+    message.append_image_uri(__url1)
+    message.append_image_uri(__url2)
 
     # Convert to OpenAI format
     openai_messages = convert_messages_for_openai([message])
@@ -91,7 +91,7 @@ def test_openai_api_multiple_messages():
 
     message2 = Message(role="user")
     message2.append_text("Here is an image, can you describe it?")
-    message2.append_image_url(__url2)
+    message2.append_image_uri(__url2)
 
     # Convert to OpenAI format
     openai_messages = convert_messages_for_openai([message1, message2])
