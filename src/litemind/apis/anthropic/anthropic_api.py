@@ -1,10 +1,8 @@
-import base64
 import os
 from typing import List, Optional
 
 # Official Anthropic library
 from anthropic import Anthropic, NotGiven
-from arbol import aprint, asection
 
 from litemind.agent.message import Message
 from litemind.agent.tools.toolset import ToolSet
@@ -289,101 +287,3 @@ class AnthropicApi(BaseApi):
 
         messages.append(response_message)
         return response_message
-
-    def describe_image(self,
-                       image_path: str,
-                       query: str = "Here is an image, please carefully describe it in detail.",
-                       model_name: str = "claude-3-5-sonnet-latest",
-                       max_tokens: int = 4096,
-                       number_of_tries: int = 4) -> str:
-        """
-        Describe an image using Anthropic's multi-modal capabilities.
-        We'll do a single-turn request that includes the image + text prompt in a user message.
-        """
-        # Verify vision support
-        if not self.has_vision_support(model_name):
-            return "This Anthropic model does not appear to support vision."
-
-        valid_formats = {
-            ".png": "image/png",
-            ".jpg": "image/jpeg",
-            ".jpeg": "image/jpeg",
-            ".gif": "image/gif",
-            ".webp": "image/webp",
-        }
-        ext = os.path.splitext(image_path)[1].lower()
-        if ext not in valid_formats:
-            raise ValueError(
-                f"Unsupported image format {ext}. Supported: {list(valid_formats.keys())}"
-            )
-
-        with asection(f"Asking Claude to describe image at: {image_path}"):
-            aprint(f"Query: {query}")
-            aprint(f"Model: {model_name}")
-            aprint(f"Max tokens: {max_tokens}")
-
-            # Read and encode the image
-            with open(image_path, "rb") as f:
-                encoded = base64.b64encode(f.read()).decode("utf-8")
-
-            # We'll attempt up to 'number_of_tries':
-            for attempt in range(number_of_tries):
-                try:
-                    # Build a single user message containing text + image
-                    user_msg = {
-                        "role": "user",
-                        "content": [
-                            {
-                                "type": "text",
-                                "text": query,
-                            },
-                            {
-                                "type": "image",
-                                "source": {
-                                    "type": "base64",
-                                    "media_type": valid_formats[ext],
-                                    "data": encoded,
-                                },
-                            },
-                        ],
-                    }
-
-                    # Send to Anthropic
-                    response = self.client.messages.create(
-                        model=model_name,
-                        max_tokens=max_tokens,
-                        messages=[user_msg],
-                    )
-                    # The response content could be string or list-of-chunks
-                    if isinstance(response.content, str):
-                        description = response.content.strip()
-                    else:
-                        # If it's chunked, gather text parts
-                        text_chunks = []
-                        for c in response.content:
-                            if c.type == "text":
-                                text_chunks.append(c.text)
-                        description = "".join(text_chunks).strip()
-
-                    # Check if the model gave us something
-                    if len(description) < 4:
-                        aprint(
-                            f"Got short/empty response; retry {attempt + 1}/{number_of_tries}")
-                        continue
-
-                    # Check for refusal phrases
-                    lowered = description.lower()
-                    if any(r in lowered for r in
-                           ["i cannot", "i can't", "i am unable", "sorry"]):
-                        aprint(
-                            f"Refusal from the model; retry {attempt + 1}/{number_of_tries}")
-                        continue
-
-                    return description
-
-                except Exception as e:
-                    aprint(
-                        f"Error describing image (attempt {attempt + 1}/{number_of_tries}): {e}")
-
-            # If all attempts fail:
-            return "Anthropic failed to describe the image."

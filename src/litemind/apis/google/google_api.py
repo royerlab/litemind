@@ -1,13 +1,12 @@
 import os
 from typing import Optional
 
-from arbol import aprint, asection
-
 from litemind.agent.message import Message
 from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.base_api import BaseApi
 from litemind.apis.google.utils.messages import _convert_messages_for_gemini
 from litemind.apis.openai.exceptions import APIError
+from litemind.apis.openai.utils.vision import has_vision_support
 
 
 class GeminiApi(BaseApi):
@@ -82,42 +81,6 @@ class GeminiApi(BaseApi):
 
     from typing import List
 
-    # def model_list(self) -> List[str]:
-    #     """
-    #     Return a list of currently available Gemini model IDs.
-    #     In real usage, you might discover them from an API call or keep an updated list.
-    #     """
-    #
-    #     return [
-    #         # Gemini 2.0 Flash (Experimental)
-    #         "gemini-2.0-flash-exp",
-    #
-    #         # Gemini 1.5 Flash (stable and versions)
-    #         "gemini-1.5-flash-latest",
-    #         "gemini-1.5-flash",
-    #         "gemini-1.5-flash-001",
-    #         "gemini-1.5-flash-002",
-    #
-    #         # Gemini 1.5 Flash-8B (stable and versions)
-    #         "gemini-1.5-flash-8b-latest",
-    #         "gemini-1.5-flash-8b",
-    #         "gemini-1.5-flash-8b-001",
-    #
-    #         # Gemini 1.5 Pro (stable and versions)
-    #         "gemini-1.5-pro-latest",
-    #         "gemini-1.5-pro",
-    #         "gemini-1.5-pro-001",
-    #         "gemini-1.5-pro-002",
-    #
-    #         # Gemini 1.0 Pro (Deprecated)
-    #         "gemini-1.0-pro-latest",
-    #         "gemini-1.0-pro",
-    #         "gemini-1.0-pro-001",
-    #
-    #         # Alias for Gemini 1.0 Pro
-    #         "gemini-pro",
-    #     ]
-
     def model_list(self) -> List[str]:
         """
         Use the Generative AI API's list_models() to fetch all available models,
@@ -129,7 +92,9 @@ class GeminiApi(BaseApi):
         for model_obj in list_models():
             # model_obj is a Model protobuf (or typed dict) with a .name attribute
             # e.g. "models/gemini-1.5-flash", "models/gemini-2.0-flash-exp", etc.
-            if "gemini" in model_obj.name.lower():
+            if ("gemini" in model_obj.name.lower()
+                    and not 'will be discontinued' in model_obj.description.lower()
+                    and not 'deprecated' in model_obj.description.lower()):
                 gemini_models.append(model_obj.name)
         return gemini_models
 
@@ -140,7 +105,20 @@ class GeminiApi(BaseApi):
         Return a default model that supports vision or tools if needed.
         Currently, 'gemini-1.5-flash' supports both text and multi-modal.
         """
-        return "gemini-1.5-flash"
+
+        # Get the full list of models:
+        model_list = self.model_list()
+
+        if require_vision:
+            # Filter out models that don't support vision
+            model_list = [model for model in model_list if self.has_vision_support(model)]
+
+        if require_tools:
+            # Filter out models that don't support tools
+            model_list = [model for model in model_list if self.has_tool_support(model)]
+
+        # last models are teh better more recent ones:
+        return model_list[-1] if model_list else None
 
     def has_vision_support(self, model_name: Optional[str] = None) -> bool:
         """
@@ -158,7 +136,19 @@ class GeminiApi(BaseApi):
         """
         if not model_name:
             model_name = self.default_model(require_tools=True)
-        return "gemini" in model_name.lower()
+
+        model_name = model_name.lower()
+
+        # Experimental models are tricky and typically don't support tools:
+        if 'exp' in model_name:
+            return  False
+
+        # Check for specific models that support tools:
+        return ("gemini-1.5-flash" in model_name.lower()
+                or "gemini-1.5-pro" in model_name.lower()
+                or "gemini-1.0-pro" in model_name.lower()
+                or "gemini-2.0" in model_name.lower())
+
 
     from typing import Optional
 
@@ -177,37 +167,13 @@ class GeminiApi(BaseApi):
 
         name = model_name.lower()
 
-        # ------------------------------
-        # Gemini 2.0 Flash (Experimental)
-        #   Input token limit: 1,048,576
-        if "gemini-2.0-flash" in name:
-            return 1_048_576
-
-        # ------------------------------
-        # Gemini 1.5 Flash & Flash-8B
-        #   Input token limit: 1,048,576
-        if "gemini-1.5-flash-8b" in name:
-            return 1_048_576
-        if "gemini-1.5-flash" in name:
-            return 1_048_576
-
-        # ------------------------------
-        # Gemini 1.5 Pro
-        #   Input token limit: 2,097,152
-        if "gemini-1.5-pro" in name:
-            return 2_097_152
-
-        # ------------------------------
-        # Gemini 1.0 Pro (Deprecated)
-        #   Not explicitly stated in the docs.
-        #   We'll assume 1,048,576 for consistency
-        #   or fall back to a safe default.
-        if "gemini-1.0-pro" in name or "gemini-pro" in name:
-            return 1_048_576
-
-        # ------------------------------
-        # Fallback if unrecognized:
-        return 1_048_576
+        from google.generativeai import \
+            list_models  # This is the function from your snippet
+        for model_obj in list_models():
+            # model_obj is a Model protobuf (or typed dict) with a .name attribute
+            # e.g. "models/gemini-1.5-flash", "models/gemini-2.0-flash-exp", etc.
+            if name == model_obj.name.lower():
+                return model_obj.input_token_limit
 
     def max_num_output_tokens(self, model_name: Optional[str] = None) -> int:
         """
@@ -224,39 +190,15 @@ class GeminiApi(BaseApi):
 
         name = model_name.lower()
 
-        # ------------------------------
-        # Gemini 2.0 Flash (Experimental)
-        #   Output token limit: 8,192
-        if "gemini-2.0-flash" in name:
-            return 8192
+        from google.generativeai import \
+            list_models  # This is the function from your snippet
+        for model_obj in list_models():
+            # model_obj is a Model protobuf (or typed dict) with a .name attribute
+            # e.g. "models/gemini-1.5-flash", "models/gemini-2.0-flash-exp", etc.
+            if name == model_obj.name.lower():
+                return model_obj.output_token_limit
 
-        # ------------------------------
-        # Gemini 1.5 Flash & Flash-8B
-        #   Output token limit: 8,192
-        if "gemini-1.5-flash-8b" in name:
-            return 8192
-        if "gemini-1.5-flash" in name:
-            return 8192
 
-        # ------------------------------
-        # Gemini 1.5 Pro
-        #   Output token limit: 8,192
-        if "gemini-1.5-pro" in name:
-            return 8192
-
-        # ------------------------------
-        # Gemini 1.0 Pro (Deprecated)
-        #   Not explicitly stated. We'll default to 8,192.
-        if "gemini-1.0-pro" in name or "gemini-pro" in name:
-            return 8192
-
-        # ------------------------------
-        # Fallback if unrecognized:
-        return 8192
-
-    # ----------------------------------------------------------------------
-    # Single-turn completion (text or function-calling)
-    # ----------------------------------------------------------------------
     def completion(self,
                    model_name: str,
                    messages: List[Message],
@@ -298,6 +240,8 @@ class GeminiApi(BaseApi):
                 # We expect Python functions that match the tool signature
                 python_functions.append(t.func)  # or wrap it
 
+            # TODO: improve tool / function support based on: https://ai.google.dev/gemini-api/docs/function-calling
+
             # Create a GenerativeModel with function tools
             model = genai.GenerativeModel(
                 model_name=model_name,
@@ -320,100 +264,3 @@ class GeminiApi(BaseApi):
         response_message = Message(role="assistant", text=text_output)
         messages.append(response_message)
         return response_message
-
-    # ----------------------------------------------------------------------
-    # Describe an image (single-turn). Uses multi-modal input
-    # ----------------------------------------------------------------------
-    def describe_image(self,
-                       image_path: str,
-                       query: str = 'Here is an image, please carefully describe it in detail.',
-                       model_name: str = "gemini-1.5-flash",
-                       max_tokens: int = 4096,
-                       number_of_tries: int = 4,
-                       ) -> str:
-        """
-        Provide an image + text prompt to Gemini for a single-turn description.
-
-        Parameters
-        ----------
-        image_path : str
-            Local path to an image file.
-        query : str
-            Prompt describing what we want.
-        model_name : str
-            Gemini model to use.
-        max_tokens : int
-            Approx. max tokens in the output (passed via generation_config).
-        number_of_tries : int
-            Retry if the model refuses or returns an empty response.
-
-        Returns
-        -------
-        str
-            The text describing the image.
-        """
-        if not self.has_vision_support(model_name):
-            return "This model does not support vision features."
-
-        with asection(f"Asking Gemini to analyze image at '{image_path}'"):
-            aprint(f"Query: {query}")
-            aprint(f"Model: {model_name}")
-            aprint(f"Max tokens: {max_tokens}")
-
-            # Load the image using PIL
-            try:
-                from PIL import Image
-
-                with Image.open(image_path) as img:
-                    # We can pass it directly to model.generate_content([..., PIL.Image]).
-                    # Optionally, you could resize or transform, e.g.:
-                    #   img = img.resize((w, h), Image.Resampling.LANCZOS)
-                    pass
-            except Exception as e:
-                raise APIError(f"Could not open image '{image_path}': {e}")
-
-            # Retry loop
-            for attempt in range(number_of_tries):
-                try:
-                    # google.generativeai references
-                    import google.generativeai as genai
-                    from google.generativeai import types
-
-                    # Create the model
-                    model = genai.GenerativeModel(model_name=model_name)
-                    # The prompt can be [query, PIL.Image] to do a single-turn multi-modal request
-                    generation_cfg = types.GenerationConfig(
-                        max_output_tokens=max_tokens,
-                        temperature=0.0,
-                    )
-
-                    with Image.open(image_path) as pil_img:
-                        # We pass the query string and the PIL image in an array:
-                        response = model.generate_content(
-                            [query, pil_img],
-                            generation_config=generation_cfg
-                        )
-
-                    text = (response.text or "").strip()
-                    if len(text) < 5:
-                        # Possibly the model refused or gave a short answer
-                        aprint(
-                            f"Response too short, attempt {attempt + 1}/{number_of_tries}")
-                        continue
-
-                    # Check for refusal phrases
-                    lower_text = text.lower()
-                    if any(r in lower_text for r in
-                           ["i can't", "i cannot", "i am unable", "sorry"]):
-                        aprint(
-                            f"Model refused. Attempt {attempt + 1}/{number_of_tries}")
-                        continue
-
-                    return text
-
-                except Exception as e:
-                    aprint(
-                        f"Error describing image (attempt {attempt + 1}/{number_of_tries}): {e}")
-
-            # If all attempts fail:
-            return "Gemini failed to provide a valid image description after multiple tries."

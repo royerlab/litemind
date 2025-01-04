@@ -1,7 +1,6 @@
-import traceback
 from typing import List, Dict, Optional
 
-from arbol import asection, aprint
+from arbol import aprint
 
 from litemind.agent.message import Message
 from litemind.agent.tools.toolset import ToolSet
@@ -218,100 +217,3 @@ class OllamaApi(BaseApi):
         except ResponseError as e:
             raise APIError(
                 f"Error during completion: {e.error} (status code: {e.status_code})")
-
-    def describe_image(self,
-                       image_path: str,
-                       query: str = 'Here is an image, please carefully describe it in detail.',
-                       model_name: str = "llava",
-                       temperature: float = 0,
-                       max_tokens: int = 4096,
-                       number_of_tries: int = 4,
-                       ) -> str:
-        """
-        Describe an image using Ollama-based vision models.
-
-        Parameters
-        ----------
-        image_path: str
-            Path to the image to describe
-        query: str
-            Prompt/query to send to the vision model
-        model_name: str
-            Model to use (e.g. "llava")
-        temperature: float
-            Temperature setting for model
-        max_tokens: int
-            Maximum number of tokens (num_ctx in Ollama)
-        number_of_tries: int
-            Number of times to retry if the response is empty or a refusal
-
-        Returns
-        -------
-        str
-            A detailed description of the image
-        """
-
-        with asection(
-                f"Asking Ollama to analyze a given image at path: '{image_path}':"):
-            aprint(f"Query: '{query}'")
-            aprint(f"Model: '{model_name}'")
-            aprint(f"Max tokens: '{max_tokens}'")
-
-            # Basic file format check (optional but consistent with your original function)
-            if not (image_path.endswith('.png') or
-                    image_path.endswith('.jpg') or
-                    image_path.endswith('.jpeg')):
-                raise NotImplementedError(
-                    f"Image format not supported: '{image_path}' (only .png, .jpg, and .jpeg are supported)")
-
-            try:
-                for tries in range(number_of_tries):
-                    # Send a request to Ollama
-                    result = self.client.chat(
-                        model=model_name,
-                        messages=[
-                            {
-                                'role': 'user',
-                                'content': query,
-                                'images': [image_path]
-                            }
-                        ],
-                    )
-
-                    # Extract the content from the response
-                    response = result['message']['content']
-                    aprint(f"Response: '{response}'")
-
-                    # Check if the response is empty
-                    if not response:
-                        aprint("Response is empty. Trying again...")
-                        continue
-
-                    # Trim and lower-case for refusal checks
-                    response_lc = response.lower().strip()
-
-                    # If the response is too short, treat that as an error and retry
-                    if len(response_lc) < 3:
-                        aprint("Response is too short. Trying again...")
-                        continue
-
-                    # Check if the model has refused or is unable to assist
-                    if (
-                            "sorry" in response_lc and
-                            (
-                                    "i cannot" in response_lc or "i can't" in response_lc or "i am unable" in response_lc)
-                    ) or "i cannot assist" in response_lc or "i can't assist" in response_lc or "i am unable to assist" in response_lc or "i'm sorry" in response_lc:
-                        aprint(
-                            f"Vision model refuses to assist (response: {response}). Trying again...")
-                        continue
-
-                    # If we get here, we have a valid non-empty, non-refusal response
-                    return response
-
-                # If all retries are exhausted
-                return "No valid response obtained after multiple attempts."
-
-            except Exception as e:
-                aprint(f"Error: '{e}'")
-                traceback.print_exc()
-                return f"Error: '{e}'"

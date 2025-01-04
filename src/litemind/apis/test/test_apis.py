@@ -40,135 +40,12 @@ class TestBaseApiImplementations:
         """
         api_instance = ApiClass()
         models = api_instance.model_list()
+        for model in models:
+            aprint(model)
         assert isinstance(models,
                           list), f"{ApiClass.__name__}.model_list() should return a list!"
         assert len(
             models) > 0, f"{ApiClass.__name__}.model_list() should not be empty!"
-
-    def test_completion_simple(self, ApiClass):
-        """
-        Test a simple completion with the default or a known good model.
-        """
-        api_instance = ApiClass()
-
-        default_model_name = api_instance.default_model()
-
-        messages = [
-            Message(role="system",
-                    text="You are an omniscient all-knowing being called Ohmm"),
-            Message(role="user", text="Who are you?")
-        ]
-
-        # Some implementations let you omit `model_name` if they have a default.
-        # If your API requires a model_name, supply it here:
-        response = api_instance.completion(
-            model_name=default_model_name,
-            messages=messages,
-            temperature=0.7
-        )
-
-        assert response.role == "assistant", (
-            f"{ApiClass.__name__} completion should return an 'assistant' role."
-        )
-        assert "I am " in response.text, (
-            f"Expected 'I am' in the output of {ApiClass.__name__}.completion()"
-        )
-
-    def test_completion_with_toolset(self, ApiClass):
-        """
-        Test that the completion method can interact with a toolset.
-        """
-
-        # If you have a function-based tool usage pattern:
-        def get_delivery_date(order_id: str) -> str:
-            """Fetch the delivery date for a given order ID."""
-            return "2024-11-15"
-
-        toolset = ToolSet()
-        toolset.add_function_tool(
-            get_delivery_date,
-            "Fetch the delivery date for a given order ID"
-        )
-
-        api_instance = ApiClass()
-
-        default_model_name = api_instance.default_model(require_tools=True)
-
-        user_message = Message(role="user",
-                               text="When will my order order_12345 be delivered?")
-        messages = [user_message]
-
-        response = api_instance.completion(
-            model_name=default_model_name,  # or a specific model name if needed
-            messages=messages,
-            toolset=toolset
-        )
-
-        assert "2024-11-15" in response.text, (
-            f"The response of {ApiClass.__name__} should contain the delivery date."
-        )
-
-    def test_completion_with_image_url(self, ApiClass):
-        api_instance = ApiClass()
-        default_model_name = api_instance.default_model(require_vision=True)
-
-        messages = []
-
-        # System message:
-        system_message = Message(role='system')
-        system_message.append_text(
-            'You are an omniscient all-knowing being called Ohmm')
-        messages.append(system_message)
-
-        # User message:
-        user_message = Message(role='user')
-        user_message.append_image_uri(
-            'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Einstein_1921_by_F_Schmutzer_-_restoration.jpg/456px-Einstein_1921_by_F_Schmutzer_-_restoration.jpg')
-        user_message.append_text('Can you describe what you see in the image?')
-        messages.append(user_message)
-
-        # Run agent:
-        response = api_instance.completion(messages=messages,
-                                           model_name=default_model_name)
-
-        # Normalise response:
-        response = str(response)
-
-        # Check response:
-        assert 'sepia' in response or 'chalkboard' in response
-
-        print('\n' + response)
-
-    def test_completion_with_image_path(self, ApiClass):
-        api_instance = ApiClass()
-        default_model_name = api_instance.default_model(require_vision=True)
-
-        messages = []
-
-        # System message:
-        system_message = Message(role='system')
-        system_message.append_text(
-            'You are an omniscient all-knowing being called Ohmm')
-        messages.append(system_message)
-
-        # User message:
-        user_message = Message(role='user')
-        image_path = self._get_image_path('future.jpeg')
-        user_message.append_image_path(image_path)
-        user_message.append_text('Can you describe what you see?')
-        messages.append(user_message)
-
-        # Run agent:
-        response = api_instance.completion(messages=messages,
-                                           model_name=default_model_name)
-
-        # Normalise response:
-        response = str(response)
-
-        # Check response:
-        assert 'robot' in response or 'futuristic' in response or 'sky' in response
-
-        print('\n' + response)
 
     def test_has_vision_support(self, ApiClass):
         """
@@ -190,6 +67,11 @@ class TestBaseApiImplementations:
         default_model_name = api_instance.default_model(require_vision=True)
         assert api_instance.has_vision_support(model_name=default_model_name)
 
+        # Let's list models that support vision:
+        models = api_instance.model_list()
+        vision_models = [model for model in models if api_instance.has_vision_support(model)]
+        aprint(vision_models)
+
     def test_has_tool_support(self, ApiClass):
         """
         Tests whether the model supports tool usage. Some models may or may not.
@@ -210,6 +92,11 @@ class TestBaseApiImplementations:
 
         if default_model_name:
             assert api_instance.has_tool_support(model_name=tool_model_name)
+
+        # Let's list models that support tools:
+        models = api_instance.model_list()
+        tool_models = [model for model in models if api_instance.has_tool_support(model)]
+        aprint(tool_models)
 
     def test_max_num_input_token(self, ApiClass):
         """
@@ -242,6 +129,323 @@ class TestBaseApiImplementations:
             f"{ApiClass.__name__}.max_num_output_tokens() should be a positive integer!"
         )
 
+    def test_completion_simple(self, ApiClass):
+        """
+        Test a simple completion with the default or a known good model.
+        """
+        api_instance = ApiClass()
+
+        default_model_name = api_instance.default_model()
+
+        messages = [
+            Message(role="system",
+                    text="You are an omniscient all-knowing being called Ohmm"),
+            Message(role="user", text="Who are you?")
+        ]
+
+        # Some implementations let you omit `model_name` if they have a default.
+        # If your API requires a model_name, supply it here:
+        response = api_instance.completion(
+            model_name=default_model_name,
+            messages=messages,
+            temperature=0.7
+        )
+
+        assert response.role == "assistant", (
+            f"{ApiClass.__name__} completion should return an 'assistant' role."
+        )
+        assert "I am " in response.text, (
+            f"Expected 'I am' in the output of {ApiClass.__name__}.completion()"
+        )
+
+    def test_completion_with_simple_toolset(self, ApiClass):
+        """
+        Test that the completion method can interact with a simple toolset.
+        """
+
+        # If you have a function-based tool usage pattern:
+        def get_delivery_date(order_id: str) -> str:
+            """Fetch the delivery date for a given order ID."""
+            return "2024-11-15"
+
+        toolset = ToolSet()
+        toolset.add_function_tool(
+            get_delivery_date,
+            "Fetch the delivery date for a given order ID"
+        )
+
+        api_instance = ApiClass()
+
+        default_model_name = api_instance.default_model(require_tools=True)
+
+        user_message = Message(role="user",
+                               text="When will my order order_12345 be delivered?")
+        messages = [user_message]
+
+        response = api_instance.completion(
+            model_name=default_model_name,  # or a specific model name if needed
+            messages=messages,
+            toolset=toolset
+        )
+
+        for message in messages:
+            aprint(message)
+
+        assert "2024-11-15" in response.text, (
+            f"The response of {ApiClass.__name__} should contain the delivery date."
+        )
+
+    def test_completion_with_complex_toolset(self, ApiClass):
+        """
+        Test that the completion method can interact with a complex toolset.
+        """
+
+        def get_delivery_date(order_id: str) -> str:
+            """Fetch the delivery date for a given order ID."""
+            return "2024-11-15"
+
+        def get_product_name_from_id(product_id: int) -> str:
+            """Fetch the delivery date for a given order ID."""
+
+            product_table = {1393:'Olea Table', 84773:'Fluff Phone'}
+
+            return product_table[product_id]
+
+        def get_product_supply_per_store(store_id: int, product_id: int) -> str:
+            """Fetch the delivery date for a given order ID."""
+
+            # Return a random integer:
+            return 42
+
+        toolset = ToolSet()
+        toolset.add_function_tool(
+            get_delivery_date,
+            "Fetch the delivery date for a given order ID"
+        )
+        toolset.add_function_tool(
+            get_product_name_from_id,
+            "Fetch the product name for a given product ID"
+        )
+        toolset.add_function_tool(
+            get_product_supply_per_store,
+            "Fetch the number of items available of a given product id at a given store."
+        )
+
+        api_instance = ApiClass()
+
+        default_model_name = api_instance.default_model(require_tools=True)
+
+        messages = []
+
+        user_message = Message(role="user",
+                               text="When will my order 'order_12345' be delivered?")
+        messages += [user_message]
+
+        response = api_instance.completion(
+            model_name=default_model_name,  # or a specific model name if needed
+            messages=messages,
+            toolset=toolset
+        )
+
+        assert "2024-11-15" in response.text, (
+            f"The response of {ApiClass.__name__} should contain the delivery date."
+        )
+
+        user_message = Message(role="user",
+                               text="What is the name of product 1393?")
+        messages += [user_message]
+
+        response = api_instance.completion(
+            model_name=default_model_name,  # or a specific model name if needed
+            messages=messages,
+            toolset=toolset
+        )
+
+        assert "Olea Table" in response.text, (
+            f"The response of {ApiClass.__name__} should contain the delivery date."
+        )
+
+        user_message = Message(role="user",
+                               text="How many Olea Tables can I find in store 17?")
+        messages += [user_message]
+
+        response = api_instance.completion(
+            model_name=default_model_name,  # or a specific model name if needed
+            messages=messages,
+            toolset=toolset
+        )
+
+        for message in messages:
+            aprint(message)
+
+        assert "42" in response.text, (
+            f"The response of {ApiClass.__name__} should contain the delivery date."
+        )
+
+
+
+
+    def test_completion_with_image_url(self, ApiClass):
+        api_instance = ApiClass()
+        default_model_name = api_instance.default_model(require_vision=True)
+
+        messages = []
+
+        # System message:
+        system_message = Message(role='system')
+        system_message.append_text(
+            'You are an omniscient all-knowing being called Ohmm')
+        messages.append(system_message)
+
+        # User message:
+        user_message = Message(role='user')
+        user_message.append_text('Can you describe what you see in the image?')
+        user_message.append_image_url(
+            'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Einstein_1921_by_F_Schmutzer_-_restoration.jpg/456px-Einstein_1921_by_F_Schmutzer_-_restoration.jpg')
+        messages.append(user_message)
+
+        # Run agent:
+        response = api_instance.completion(messages=messages,
+                                           model_name=default_model_name)
+
+        # Normalise response:
+        response = str(response)
+
+        # Check response:
+        assert 'sepia' in response or 'chalkboard' in response
+
+        print('\n' + response)
+
+    def test_completion_with_png_image_path(self, ApiClass):
+        api_instance = ApiClass()
+        default_model_name = api_instance.default_model(require_vision=True)
+
+        messages = []
+
+        # System message:
+        system_message = Message(role='system')
+        system_message.append_text(
+            'You are an omniscient all-knowing being called Ohmm')
+        messages.append(system_message)
+
+        # User message:
+        user_message = Message(role='user')
+        user_message.append_text('Can you describe what you see in the image?')
+        image_path = self._get_local_test_image_uri('python.png')
+        user_message.append_image_path(image_path)
+
+        messages.append(user_message)
+
+        # Run agent:
+        response = api_instance.completion(messages=messages,
+                                           model_name=default_model_name)
+
+        # Normalise response:
+        response = str(response)
+
+        # Check response:
+        assert 'snake' in response or 'python' in response
+
+        print('\n' + response)
+
+    def test_completion_with_jpg_image_path(self, ApiClass):
+        api_instance = ApiClass()
+        default_model_name = api_instance.default_model(require_vision=True)
+
+        messages = []
+
+        # System message:
+        system_message = Message(role='system')
+        system_message.append_text(
+            'You are an omniscient all-knowing being called Ohmm')
+        messages.append(system_message)
+
+        # User message:
+        user_message = Message(role='user')
+        user_message.append_text('Can you describe what you see in the image?')
+        image_path = self._get_local_test_image_uri('future.jpeg')
+        user_message.append_image_path(image_path)
+
+        messages.append(user_message)
+
+        # Run agent:
+        response = api_instance.completion(messages=messages,
+                                           model_name=default_model_name)
+
+        # Normalise response:
+        response = str(response)
+
+        # Check response:
+        assert 'robot' in response or 'futuristic' in response or 'sky' in response
+
+        print('\n' + response)
+
+
+    def test_completion_with_webp_image_path(self, ApiClass):
+        api_instance = ApiClass()
+        default_model_name = api_instance.default_model(require_vision=True)
+
+        messages = []
+
+        # System message:
+        system_message = Message(role='system')
+        system_message.append_text(
+            'You are an omniscient all-knowing being called Ohmm')
+        messages.append(system_message)
+
+        # User message:
+        user_message = Message(role='user')
+        user_message.append_text('Can you describe what you see in the image?')
+        image_path = self._get_local_test_image_uri('beach.webp')
+        user_message.append_image_path(image_path)
+
+        messages.append(user_message)
+
+        # Run agent:
+        response = api_instance.completion(messages=messages,
+                                           model_name=default_model_name)
+
+        # Normalise response:
+        response = str(response)
+
+        # Check response:
+        assert 'beach' in response or 'palm' in response or 'sunset' in response
+
+        print('\n' + response)
+
+    def test_completion_with_gif_image_path(self, ApiClass):
+        api_instance = ApiClass()
+        default_model_name = api_instance.default_model(require_vision=True)
+
+        messages = []
+
+        # System message:
+        system_message = Message(role='system')
+        system_message.append_text(
+            'You are an omniscient all-knowing being called Ohmm')
+        messages.append(system_message)
+
+        # User message:
+        user_message = Message(role='user')
+        user_message.append_text(
+            'Can you describe what you see in the image?')
+        image_path = self._get_local_test_image_uri('field.gif')
+        user_message.append_image_path(image_path)
+
+        messages.append(user_message)
+
+        # Run agent:
+        response = api_instance.completion(messages=messages,
+                                           model_name=default_model_name)
+
+        # Normalise response:
+        response = str(response)
+
+        # Check response:
+        assert 'field' in response or 'blue' in response or 'stars' in response
+
+        print('\n' + response)
+
     def test_describe_image_if_supported(self, ApiClass):
         """
         Test describe_image if the implementation supports vision.
@@ -249,26 +453,33 @@ class TestBaseApiImplementations:
         """
         api_instance = ApiClass()
 
-        default_model_name = api_instance.default_model(require_vision=True)
+        try:
 
-        if not api_instance.has_vision_support(default_model_name):
-            pytest.skip(
-                f"{ApiClass.__name__} does not support vision. Skipping image test.")
+            default_model_name = api_instance.default_model(require_vision=True)
 
-        image_path = self._get_image_path('future.jpeg')
+            if not api_instance.has_vision_support(default_model_name):
+                pytest.skip(
+                    f"{ApiClass.__name__} does not support vision. Skipping image test.")
 
-        description = api_instance.describe_image(image_path,
-                                                  model_name=default_model_name)
+            image_path = self._get_local_test_image_uri('future.jpeg')
 
-        assert isinstance(description, str), (
-            f"{ApiClass.__name__}.describe_image() should return a string!"
-        )
-        assert len(description) > 0, (
-            f"{ApiClass.__name__}.describe_image() should return a non-empty string!"
-        )
-        # You can also add content checks if you want to verify the actual text.
+            description = api_instance.describe_image(image_path,
+                                                      model_name=default_model_name)
 
-    def _get_image_path(self, image_name: str):
+            aprint(description)
+
+            assert isinstance(description, str), (
+                f"{ApiClass.__name__}.describe_image() should return a string!"
+            )
+            assert len(description) > 0, (
+                f"{ApiClass.__name__}.describe_image() should return a non-empty string!"
+            )
+            # You can also add content checks if you want to verify the actual text.
+        except:
+            # If exception happened then test failed:
+            assert False
+
+    def _get_local_test_image_uri(self, image_name: str):
         import os
 
         # Get the directory of the current file
@@ -278,5 +489,7 @@ class TestBaseApiImplementations:
         absolute_path = os.path.join(current_dir,
                                      os.path.join('images/', image_name))
 
-        aprint(absolute_path)
-        return absolute_path
+        uri = 'file://' + absolute_path
+
+        aprint(uri)
+        return uri

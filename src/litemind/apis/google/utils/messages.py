@@ -1,12 +1,12 @@
-import base64
-import re
-import tempfile
 from typing import List, Union
 
-import requests
 from PIL import Image
 
 from litemind.agent.message import Message
+from litemind.apis.utils.dowload_image_to_tempfile import \
+    download_image_to_temp_file
+from litemind.apis.utils.write_base64_to_temp_file import \
+    write_base64_to_temp_file
 
 
 def _convert_messages_for_gemini(messages: List[Message]) -> List[
@@ -15,76 +15,46 @@ def _convert_messages_for_gemini(messages: List[Message]) -> List[
     Convert messages into a format suitable for Gemini, supporting both text and image inputs.
     """
 
-    def _download_image_to_temp_file(url: str) -> str:
-        """
-        Downloads the image from an HTTP(S) URL and saves it to a temp file.
-        Tries to infer extension from Content-Type or from the URL.
-        """
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
-        }
-        resp = requests.get(url, headers=headers)
-        resp.raise_for_status()
-
-        content_type = resp.headers.get("Content-Type", "")
-        if "image/png" in content_type:
-            extension = ".png"
-        elif "image/jpeg" in content_type:
-            extension = ".jpg"
-        else:
-            if url.lower().endswith(".jpg") or url.lower().endswith(".jpeg"):
-                extension = ".jpg"
-            elif url.lower().endswith(".png"):
-                extension = ".png"
-            else:
-                extension = ".png"
-
-        with tempfile.NamedTemporaryFile(suffix=extension,
-                                         delete=False) as tmp_file:
-            tmp_file.write(resp.content)
-            tmp_path = tmp_file.name
-
-        return tmp_path
-
-    def _save_base64_to_temp_file(data_uri: str) -> str:
-        """
-        Saves a data URI (data:image/...;base64,...) to a temporary file.
-        Returns the local file path.
-        """
-        match = re.match(r"data:image/(png|jpeg|jpg);base64,(.*)", data_uri,
-                         re.IGNORECASE)
-        if not match:
-            raise ValueError("Invalid data URI format")
-
-        image_type = match.group(1).lower()
-        extension = ".png" if image_type == "png" else ".jpg"
-        base64_part = match.group(2)
-
-        image_data = base64.b64decode(base64_part)
-
-        with tempfile.NamedTemporaryFile(suffix=extension,
-                                         delete=False) as tmp_file:
-            tmp_file.write(image_data)
-            tmp_path = tmp_file.name
-
-        return tmp_path
-
+    # Initialize the list of messages:
     gemini_messages = []
+
+    # Iterate over each message:
     for msg in messages:
+
+        # Append the text content:
         if msg.text:
             gemini_messages.append(f"{msg.role}: {msg.text}")
+
+        # Append the image content:
         for image_uri in msg.image_uris:
+
+            # Google API requires the image to be PIL format,
+            # so the first step is to get the image on a local file:
+
             try:
+
                 if image_uri.startswith("data:image/"):
-                    local_path = _save_base64_to_temp_file(image_uri)
+                    # If it's a data URI, put the base64 data in base64_data:
+                    local_path = write_base64_to_temp_file(image_uri)
+
                 elif image_uri.startswith("http://") or image_uri.startswith(
                         "https://"):
-                    local_path = _download_image_to_temp_file(image_uri)
-                else:
-                    local_path = image_uri
+                    # If it's a remote URL, download the image to a temp file:
+                    local_path = download_image_to_temp_file(image_uri)
 
+                elif image_uri.startswith("file://"):
+                    # If it's a local file path, then we are good
+                    local_path = image_uri.replace("file://", "")
+
+                else:
+                    # Raise an error if the image URI is invalid:
+                    raise ValueError(f"Invalid image URI: '{image_uri}'")
+
+                # Open the image and append it to the list of messages:
                 with Image.open(local_path) as img:
                     gemini_messages.append(img)
+
+
             except Exception as e:
                 raise ValueError(f"Could not open image '{image_uri}': {e}")
 

@@ -30,10 +30,39 @@ class Message(ABC):
         Parameters
         ----------
         image_uri : str
+            The uri of the image to append to the message.
+            Can be: 'data:image/...', 'http://...', 'https://...', or a local file path.
+
+        """
+        # Check if the image URI is valid:
+        if not image_uri.startswith("data:image/") and \
+                not image_uri.startswith("http://") and \
+                not image_uri.startswith("https://") and \
+                not image_uri.startswith("file://"):
+            raise ValueError(
+                f"Invalid image URI: '{image_uri}' (must start with 'data:image/', 'http://', 'https://', or 'file://')")
+
+        # Add the image URI to the list of image URIs:
+        self.image_uris.append(image_uri)
+
+    def append_image_url(self, image_url: str):
+        """
+        Append image url to the message.
+
+        Parameters
+        ----------
+        image_url : str
             The url of the image to append to the message.
 
         """
-        self.image_uris.append(image_uri)
+        # Check if the image URL is valid:
+        if not image_url.startswith("http://") and not image_url.startswith(
+                "https://"):
+            raise ValueError(
+                f"Invalid image URL: '{image_url}' (must start with 'http://' or 'https://')")
+
+        # Add the image URL to the list of image URIs:
+        self.image_uris.append(image_url)
 
     def append_image_path(self, image_path: str):
         """
@@ -45,19 +74,14 @@ class Message(ABC):
             The path of the image to append to the message.
 
         """
-        if image_path.endswith('.png'):
-            image_format = 'png'
-        elif image_path.endswith('.jpg') or image_path.endswith('.jpeg'):
-            image_format = 'jpeg'
-        else:
-            raise NotImplementedError(
-                f"Image format not supported: '{image_path}' (only .png and .jpg are supported)")
 
-        import base64
-        with open(image_path, "rb") as image_file:
-            encoded_image = base64.b64encode(image_file.read()).decode("utf-8")
-            self.append_image_uri(
-                f"data:image/{image_format};base64,{encoded_image}")
+        # First we check if the image path is valid:
+        if not image_path.startswith("file://"):
+            raise ValueError(
+                f"Invalid image path: '{image_path}' (must start with 'file://')")
+
+        # Add the image path to the list of image URIs:
+        self.image_uris.append(image_path)
 
     def __contains__(self, item: str) -> bool:
         """

@@ -30,7 +30,7 @@ def test_message_image():
 
     user_message = Message(role='user')
     user_message.append_text('Can you describe what you see?')
-    user_message.append_image_uri(
+    user_message.append_image_url(
         'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Einstein_1921_by_F_Schmutzer_-_restoration.jpg/456px-Einstein_1921_by_F_Schmutzer_-_restoration.jpg')
 
     assert user_message.role == 'user'

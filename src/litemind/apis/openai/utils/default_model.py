@@ -4,49 +4,39 @@ from litemind.apis.openai.utils.model_list import get_openai_model_list
 from litemind.apis.openai.utils.model_types import is_vision_model, \
     is_tool_model
 
-# cache result of function:
-_default_openai_model_name = None
-
 
 def get_default_openai_model_name(require_vision: bool = False,
                                   require_tools: bool = False) -> str:
-    # Check if the model name is in the cache:
-    global _default_openai_model_name
-    if _default_openai_model_name is not None:
-        aprint(
-            f'Using cached default OpenAI model name: {_default_openai_model_name}')
-        return _default_openai_model_name
-    else:
-        model_list = get_openai_model_list()
+    model_list = get_openai_model_list()
 
-        if require_vision:
-            model_list = [model for model in model_list if
-                          is_vision_model(model)]
+    if require_vision:
+        model_list = [model for model in model_list if
+                      is_vision_model(model)]
 
-        if require_tools:
-            model_list = [model for model in model_list if is_tool_model(model)]
+    if require_tools:
+        model_list = [model for model in model_list if is_tool_model(model)]
 
-        if len(model_list) == 0:
-            return None
+    if len(model_list) == 0:
+        return None
 
-        def model_key(model):
-            # Split the model name into parts
-            parts = model.split('-')
-            # Get the main version (e.g., '3.5' or '4' from 'gpt-3.5' or 'gpt-4')
-            main_version = parts[1]
+    def model_key(model):
+        # Split the model name into parts
+        parts = model.split('-')
+        # Get the main version (e.g., '3.5' or '4' from 'gpt-3.5' or 'gpt-4')
+        main_version = parts[1]
 
-            if 'o' in main_version:
-                main_version = main_version.replace('o', '.25')
+        if 'o' in main_version:
+            main_version = main_version.replace('o', '.25')
 
-            # Use the length of the model name as a secondary sorting criterion
-            length = len(model)
-            # Sort by main version (descending), then by length (ascending)
-            return (-float(main_version), length)
+        # Use the length of the model name as a secondary sorting criterion
+        length = len(model)
+        # Sort by main version (descending), then by length (ascending)
+        return (-float(main_version), length)
 
-        sorted_model_list = sorted(model_list, key=model_key)
+    sorted_model_list = sorted(model_list, key=model_key)
 
-        # Cache the result:
-        _default_openai_model_name = sorted_model_list[0]
-        aprint(f'Using default OpenAI model name: {_default_openai_model_name}')
+    # Cache the result:
+    default_openai_model_name = sorted_model_list[0]
+    aprint(f'Using default OpenAI model name: {default_openai_model_name}')
 
-        return _default_openai_model_name
+    return default_openai_model_name
