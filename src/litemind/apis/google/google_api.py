@@ -1,10 +1,11 @@
 import os
-from typing import Optional
+from typing import Optional, List
 
 from litemind.agent.message import Message
 from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.base_api import BaseApi
 from litemind.apis.google.utils.messages import _convert_messages_for_gemini
+from litemind.apis.google.utils.tools import create_genai_tools_from_toolset
 from litemind.apis.openai.exceptions import APIError
 from litemind.apis.openai.utils.vision import has_vision_support
 
@@ -211,56 +212,90 @@ class GeminiApi(BaseApi):
         We unify all messages into a single text prompt or handle function calls if tools exist.
         """
 
-        # Set default model if not provided
+        # 1. Fallback defaults
         if model_name is None:
             model_name = self.default_model()
 
-        # Get max num of output tokens for model if not provided:
         if max_output_tokens is None:
             max_output_tokens = self.max_num_output_tokens(model_name)
 
-        # 1) Convert user messages into Ollama's format
+        # 2. Convert user messages
         gemini_messages = _convert_messages_for_gemini(messages)
 
-        # google.generativeai references
+        # 3. Build a GenerationConfig
         import google.generativeai as genai
         from google.generativeai import types
-
-        # Use generation_config for temperature, etc.
         generation_cfg = types.GenerationConfig(
             temperature=temperature,
             max_output_tokens=max_output_tokens
         )
 
-        # If user has provided tools, set them up
-        # This will require a chat-based approach with function-calling if we want real tool usage
         if toolset and self.has_tool_support(model_name):
-            python_functions = []
-            for t in toolset.list_tools():
-                # We expect Python functions that match the tool signature
-                python_functions.append(t.func)  # or wrap it
+            # Build fine-grained Tools (protos)
+            proto_tools = create_genai_tools_from_toolset(toolset)
 
-            # TODO: improve tool / function support based on: https://ai.google.dev/gemini-api/docs/function-calling
-
-            # Create a GenerativeModel with function tools
             model = genai.GenerativeModel(
                 model_name=model_name,
-                tools=python_functions,
+                tools=proto_tools,  # The Protobuf definitions
                 generation_config=generation_cfg
             )
-            # Start a chat session that can do function calls automatically
-            chat = model.start_chat(enable_automatic_function_calling=True)
+            chat = model.start_chat()
+
+            # (A) Send user's query
             response = chat.send_message(gemini_messages)
-            text_output = response.text or ""
+
+            # (B) Check if there's a FunctionCall
+            # Typically for single-turn usage, you see whether response is suggesting
+            # a function call. If so, do it manually.
+            function_calls = []
+            for part in response.parts:
+                if part.function_call:
+                    function_calls.append(part.function_call)
+
+            # (C) If there's a function call, manually call the function and
+            #     send the result back.
+            text_output = ""
+            if function_calls:
+                # For simplicity, handle the first function call only
+                fn_call = function_calls[0]
+                fn_name = fn_call.name
+                fn_args = fn_call.args
+
+                # Find the corresponding Python tool
+                # (We still need a real Python function behind the scenes.)
+                python_tool = toolset.get_tool(fn_name)
+                if not python_tool:
+                    # The model called a function we don't have
+                    text_output = f"Function {fn_name} not found."
+                else:
+                    # Execute the tool
+                    result = python_tool(**fn_args)
+
+                    # (D) Send the function result back to the model
+                    # Build a function_response to pass back
+                    response_parts = [
+                        genai.protos.Part(
+                            function_response=genai.protos.FunctionResponse(
+                                name=fn_name,
+                                response={"result": result}
+                            )
+                        )
+                    ]
+                    response2 = chat.send_message(response_parts)
+                    text_output = response2.text or ""
+            else:
+                # If no function call, just use the model's text response
+                text_output = response.text or ""
         else:
-            # No tool usage, or model doesn't support it
+            # No tool usage
             model = genai.GenerativeModel(model_name=model_name)
-
-            response = model.generate_content(gemini_messages,
-                                              generation_config=generation_cfg)
+            response = model.generate_content(
+                gemini_messages,
+                generation_config=generation_cfg
+            )
             text_output = response.text or ""
 
-        # Return as a single litemind Message
+        # 4. Return the final text as a single Message
         response_message = Message(role="assistant", text=text_output)
         messages.append(response_message)
         return response_message

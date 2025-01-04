@@ -3,7 +3,7 @@ from litemind.agent.tools.function_tool import FunctionTool
 
 # Sample functions for testing
 def sample_function_one(param1: int, param2: str) -> str:
-    """Sample function that returns a formatted string."""
+    """Sample function that returns a formatted string from two integers."""
     return f"Received {param1} and {param2}"
 
 
@@ -35,6 +35,13 @@ def test_tool_initialization():
 
     # Assert that the tool parameters match the expected JSON schema format
     assert tool.parameters == expected_parameters, "Tool parameters schema does not match the expected format"
+
+# Test creation of Tool and its properties with JSON schema expectations
+def test_tool_initialization_automatic_description():
+    tool = FunctionTool(func=sample_function_one)
+
+    # Check that the description matches the function's docstring:
+    assert tool.description == "Sample function that returns a formatted string from two integers.", "Description does not match function docstring"
 
 
 # Test parameter schema generation for function with no parameters

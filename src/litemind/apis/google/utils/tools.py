@@ -1,0 +1,64 @@
+import google.generativeai as genai
+from google.generativeai import protos
+
+def create_genai_tools_from_toolset(toolset) -> list[genai.protos.Tool]:
+    """
+    Convert your custom tool objects into genai.protos.Tool
+    for fine-grained control of parameter schemas and descriptions.
+
+    Each BaseTool is assumed to have:
+        - name (string)
+        - description (string)
+        - parameters (JSON schema)  # from FunctionTool._generate_parameters_schema()
+    """
+    tools = []
+    for tool in toolset.list_tools():
+        # Build a FunctionDeclaration for each tool
+        func_decl = protos.FunctionDeclaration(
+            name=tool.name,
+            description=tool.description or "No description",
+            parameters=_create_protos_schema(tool.parameters)
+        )
+        # Wrap it in a Tool
+        tool_proto = protos.Tool(function_declarations=[func_decl])
+        tools.append(tool_proto)
+
+    return tools
+
+def _create_protos_schema(json_schema: dict) -> protos.Schema:
+    """
+    Convert a JSON-schema-like dict (such as tool.parameters) into a genai.protos.Schema.
+    This supports a single level of object properties: "type": "object", "properties": {...}.
+    Extend as needed for nested or more complex structures.
+    """
+    from google.generativeai import protos
+
+    # Map JSON-schema type strings to Gemini (proto) types
+    type_map = {
+        "string":  protos.Type.STRING,
+        "number":  protos.Type.NUMBER,
+        "boolean": protos.Type.BOOLEAN,
+        "array":   protos.Type.ARRAY,
+        "object":  protos.Type.OBJECT
+    }
+
+    # Root-level type
+    root_type_str = json_schema.get("type", "object")
+    root_type = type_map.get(root_type_str, protos.Type.STRING)
+
+    schema = protos.Schema(type_=root_type)
+
+    if root_type == protos.Type.OBJECT:
+        # For each property in the schema, set up a child protos.Schema
+        for prop_name, prop_def in json_schema.get("properties", {}).items():
+            prop_type_str = prop_def.get("type", "string")
+            prop_type = type_map.get(prop_type_str, protos.Type.STRING)
+            child_schema = protos.Schema(type_=prop_type)
+            schema.properties[prop_name] = child_schema
+
+        # Mark required fields
+        required_fields = json_schema.get("required", [])
+        for field_name in required_fields:
+            schema.required.append(field_name)
+
+    return schema

@@ -1,13 +1,36 @@
 import inspect
-from typing import Callable, Dict, Any
+from typing import Callable, Dict, Any, Optional
 
 from litemind.agent.tools.base_tool import BaseTool
+from litemind.agent.tools.utils.inspect_function import extract_docstring
 
 
 class FunctionTool(BaseTool):
-    def __init__(self, func: Callable, description: str):
+    def __init__(self, func: Callable, description: Optional[str]= None):
+        """
+        Initialize a tool that wraps a function.
+
+        Parameters
+        ----------
+        func:
+            The function to wrap.
+        description:
+            A description of the tool. If no description is provided, the docstring of the function is used instead.
+            You can specify which part of the docstring will be used as description by surrounding the description with '***' (e.g. '***This is the description***').
+
+        """
+
         self.func = func
-        self.description = description
+
+        if not description:
+            docstring = extract_docstring(func)
+            # if '***' is present, extract the substring between the first and second occurence of '***':
+            if '***' in docstring:
+                self.description = docstring[docstring.find('***')+3:docstring.find('***', docstring.find('***')+1)]
+            else:
+                self.description = docstring
+        else:
+            self.description = description
         self.name = func.__name__
         self.parameters = self._generate_parameters_schema()
 
