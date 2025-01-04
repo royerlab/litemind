@@ -446,6 +446,41 @@ class TestBaseApiImplementations:
 
         print('\n' + response)
 
+    def test_completion_with_multiple_images(self, ApiClass):
+        api_instance = ApiClass()
+        default_model_name = api_instance.default_model(require_vision=True)
+
+        messages = []
+
+        # System message:
+        system_message = Message(role='system')
+        system_message.append_text(
+            'You are an omniscient all-knowing being called Ohmm')
+        messages.append(system_message)
+
+        # User message:
+        user_message = Message(role='user')
+        user_message.append_text(
+            'Can you compare these two images? What is similar and what is different?')
+        cat_image_path = self._get_local_test_image_uri('cat.jpg')
+        panda_image_path = self._get_local_test_image_uri('panda.jpg')
+        user_message.append_image_path(cat_image_path)
+        user_message.append_image_path(panda_image_path)
+
+        messages.append(user_message)
+
+        # Run agent:
+        response = api_instance.completion(messages=messages,
+                                           model_name=default_model_name)
+
+        # Normalise response:
+        response = str(response)
+
+        # Check response:
+        assert 'animals' in response and 'cat' in response and 'panda' in response
+
+        print('\n' + response)
+
     def test_describe_image_if_supported(self, ApiClass):
         """
         Test describe_image if the implementation supports vision.
