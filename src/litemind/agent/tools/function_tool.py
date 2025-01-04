@@ -6,7 +6,7 @@ from litemind.agent.tools.utils.inspect_function import extract_docstring
 
 
 class FunctionTool(BaseTool):
-    def __init__(self, func: Callable, description: Optional[str]= None):
+    def __init__(self, func: Callable, description: Optional[str] = None):
         """
         Initialize a tool that wraps a function.
 
@@ -26,7 +26,9 @@ class FunctionTool(BaseTool):
             docstring = extract_docstring(func)
             # if '***' is present, extract the substring between the first and second occurence of '***':
             if '***' in docstring:
-                self.description = docstring[docstring.find('***')+3:docstring.find('***', docstring.find('***')+1)]
+                self.description = docstring[
+                                   docstring.find('***') + 3:docstring.find(
+                                       '***', docstring.find('***') + 1)]
             else:
                 self.description = docstring
         else:

@@ -36,6 +36,7 @@ def test_tool_initialization():
     # Assert that the tool parameters match the expected JSON schema format
     assert tool.parameters == expected_parameters, "Tool parameters schema does not match the expected format"
 
+
 # Test creation of Tool and its properties with JSON schema expectations
 def test_tool_initialization_automatic_description():
     tool = FunctionTool(func=sample_function_one)

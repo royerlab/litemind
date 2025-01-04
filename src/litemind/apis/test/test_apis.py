@@ -69,7 +69,8 @@ class TestBaseApiImplementations:
 
         # Let's list models that support vision:
         models = api_instance.model_list()
-        vision_models = [model for model in models if api_instance.has_vision_support(model)]
+        vision_models = [model for model in models if
+                         api_instance.has_vision_support(model)]
         aprint(vision_models)
 
     def test_has_tool_support(self, ApiClass):
@@ -95,7 +96,8 @@ class TestBaseApiImplementations:
 
         # Let's list models that support tools:
         models = api_instance.model_list()
-        tool_models = [model for model in models if api_instance.has_tool_support(model)]
+        tool_models = [model for model in models if
+                       api_instance.has_tool_support(model)]
         aprint(tool_models)
 
     def test_max_num_input_token(self, ApiClass):
@@ -207,7 +209,7 @@ class TestBaseApiImplementations:
         def get_product_name_from_id(product_id: int) -> str:
             """Fetch the delivery date for a given order ID."""
 
-            product_table = {1393:'Olea Table', 84773:'Fluff Phone'}
+            product_table = {1393: 'Olea Table', 84773: 'Fluff Phone'}
 
             return product_table[product_id]
 
@@ -281,9 +283,6 @@ class TestBaseApiImplementations:
         assert "42" in response.text, (
             f"The response of {ApiClass.__name__} should contain the delivery date."
         )
-
-
-
 
     def test_completion_with_image_url(self, ApiClass):
         api_instance = ApiClass()
@@ -379,7 +378,6 @@ class TestBaseApiImplementations:
         assert 'robot' in response or 'futuristic' in response or 'sky' in response
 
         print('\n' + response)
-
 
     def test_completion_with_webp_image_path(self, ApiClass):
         api_instance = ApiClass()

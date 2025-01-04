@@ -1,5 +1,5 @@
 import os
-from typing import Optional, List
+from typing import Optional
 
 from litemind.agent.message import Message
 from litemind.agent.tools.toolset import ToolSet
@@ -7,7 +7,6 @@ from litemind.apis.base_api import BaseApi
 from litemind.apis.google.utils.messages import _convert_messages_for_gemini
 from litemind.apis.google.utils.tools import create_genai_tools_from_toolset
 from litemind.apis.openai.exceptions import APIError
-from litemind.apis.openai.utils.vision import has_vision_support
 
 
 class GeminiApi(BaseApi):
@@ -112,11 +111,13 @@ class GeminiApi(BaseApi):
 
         if require_vision:
             # Filter out models that don't support vision
-            model_list = [model for model in model_list if self.has_vision_support(model)]
+            model_list = [model for model in model_list if
+                          self.has_vision_support(model)]
 
         if require_tools:
             # Filter out models that don't support tools
-            model_list = [model for model in model_list if self.has_tool_support(model)]
+            model_list = [model for model in model_list if
+                          self.has_tool_support(model)]
 
         # last models are teh better more recent ones:
         return model_list[-1] if model_list else None
@@ -142,14 +143,13 @@ class GeminiApi(BaseApi):
 
         # Experimental models are tricky and typically don't support tools:
         if 'exp' in model_name:
-            return  False
+            return False
 
         # Check for specific models that support tools:
         return ("gemini-1.5-flash" in model_name.lower()
                 or "gemini-1.5-pro" in model_name.lower()
                 or "gemini-1.0-pro" in model_name.lower()
                 or "gemini-2.0" in model_name.lower())
-
 
     from typing import Optional
 
@@ -198,7 +198,6 @@ class GeminiApi(BaseApi):
             # e.g. "models/gemini-1.5-flash", "models/gemini-2.0-flash-exp", etc.
             if name == model_obj.name.lower():
                 return model_obj.output_token_limit
-
 
     def completion(self,
                    model_name: str,

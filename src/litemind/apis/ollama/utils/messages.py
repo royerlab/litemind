@@ -71,7 +71,6 @@ def _convert_messages_for_ollama(messages: List[Message]) -> List[
                 # Raise an error if the image URI is invalid:
                 raise ValueError(f"Invalid image URI: '{image_url}'")
 
-
         # If any image is in webp format, which is not supported by Ollama, convert it to PNG:
         for i, image_path in enumerate(local_image_paths):
             if image_path.endswith(".webp"):

@@ -1,6 +1,7 @@
 import google.generativeai as genai
 from google.generativeai import protos
 
+
 def create_genai_tools_from_toolset(toolset) -> list[genai.protos.Tool]:
     """
     Convert your custom tool objects into genai.protos.Tool
@@ -25,6 +26,7 @@ def create_genai_tools_from_toolset(toolset) -> list[genai.protos.Tool]:
 
     return tools
 
+
 def _create_protos_schema(json_schema: dict) -> protos.Schema:
     """
     Convert a JSON-schema-like dict (such as tool.parameters) into a genai.protos.Schema.
@@ -35,11 +37,11 @@ def _create_protos_schema(json_schema: dict) -> protos.Schema:
 
     # Map JSON-schema type strings to Gemini (proto) types
     type_map = {
-        "string":  protos.Type.STRING,
-        "number":  protos.Type.NUMBER,
+        "string": protos.Type.STRING,
+        "number": protos.Type.NUMBER,
         "boolean": protos.Type.BOOLEAN,
-        "array":   protos.Type.ARRAY,
-        "object":  protos.Type.OBJECT
+        "array": protos.Type.ARRAY,
+        "object": protos.Type.OBJECT
     }
 
     # Root-level type
