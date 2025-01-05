@@ -4,9 +4,9 @@ from typing import Optional
 from litemind.agent.message import Message
 from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.base_api import BaseApi
+from litemind.apis.exceptions import APIError
 from litemind.apis.google.utils.messages import _convert_messages_for_gemini
 from litemind.apis.google.utils.tools import create_genai_tools_from_toolset
-from litemind.apis.openai.exceptions import APIError
 
 
 class GeminiApi(BaseApi):
@@ -45,19 +45,6 @@ class GeminiApi(BaseApi):
         genai.configure(api_key=self._api_key)
 
     def check_api_key(self, api_key: Optional[str] = None) -> bool:
-        """
-        Check whether the key is valid.
-
-        Parameters
-        ----------
-        api_key: Optional[str]
-            The API key to check. If not provided, uses the key set in the constructor.
-
-        Returns
-        -------
-        bool
-            True if the key is valid and the API is accessible.
-        """
 
         # Local import to avoid loading the library if not needed:
         import google.generativeai as genai
@@ -82,10 +69,7 @@ class GeminiApi(BaseApi):
     from typing import List
 
     def model_list(self) -> List[str]:
-        """
-        Use the Generative AI API's list_models() to fetch all available models,
-        then return only the ones that match the 'gemini' naming pattern.
-        """
+
         gemini_models = []
         from google.generativeai import \
             list_models  # This is the function from your snippet
@@ -99,43 +83,47 @@ class GeminiApi(BaseApi):
         return gemini_models
 
     def default_model(self,
-                      require_vision: bool = False,
-                      require_tools: bool = False) -> str:
-        """
-        Return a default model that supports vision or tools if needed.
-        Currently, 'gemini-1.5-flash' supports both text and multi-modal.
-        """
+                      require_images: bool = False,
+                      require_audio: bool = False,
+                      require_tools: bool = False) -> Optional[str]:
 
         # Get the full list of models:
         model_list = self.model_list()
 
-        if require_vision:
-            # Filter out models that don't support vision
+        if require_images:
+            # Filter out models that don't support images
             model_list = [model for model in model_list if
-                          self.has_vision_support(model)]
+                          self.has_image_support(model)]
+
+        if require_audio:
+            # Filter out models that don't support audio
+            model_list = [model for model in model_list if
+                          self.has_audio_support(model)]
 
         if require_tools:
             # Filter out models that don't support tools
             model_list = [model for model in model_list if
                           self.has_tool_support(model)]
 
-        # last models are teh better more recent ones:
-        return model_list[-1] if model_list else None
+        if model_list:
+            # If we have any models left, return the first one:
+            return model_list[-1]
+        else:
+            return None
 
-    def has_vision_support(self, model_name: Optional[str] = None) -> bool:
-        """
-        Return True if the model supports images or multimodal input.
-        'gemini-1.5-flash' is known to support image inputs.
-        """
+    def has_image_support(self, model_name: Optional[str] = None) -> bool:
+
         if not model_name:
-            model_name = self.default_model(require_vision=True)
+            model_name = self.default_model(require_images=True)
         return "gemini-1.5" in model_name.lower() or "gemini-2.0" in model_name.lower()
 
+    def has_audio_support(self, model_name: Optional[str] = None) -> bool:
+
+        # TODO: implement this method
+        return False
+
     def has_tool_support(self, model_name: Optional[str] = None) -> bool:
-        """
-        Gemini 1.5+ supports function-calling if you pass `tools=[...]`
-        and `enable_automatic_function_calling=True` in a chat scenario.
-        """
+
         if not model_name:
             model_name = self.default_model(require_tools=True)
 
@@ -154,14 +142,6 @@ class GeminiApi(BaseApi):
     from typing import Optional
 
     def max_num_input_tokens(self, model_name: Optional[str] = None) -> int:
-        """
-        Returns the maximum INPUT token limit for the specified Gemini model,
-        based on the documentation you provided.
-
-        If model_name is None, we call get_default_openai_model_name() as a fallback.
-
-        For unrecognized or older models, we return 4096 as a safe default.
-        """
 
         if model_name is None:
             model_name = self.default_model()
@@ -177,14 +157,6 @@ class GeminiApi(BaseApi):
                 return model_obj.input_token_limit
 
     def max_num_output_tokens(self, model_name: Optional[str] = None) -> int:
-        """
-        Returns the maximum OUTPUT token limit for the specified Gemini model,
-        based on the documentation you provided.
-
-        If model_name is None, we call get_default_openai_model_name() as a fallback.
-
-        For unrecognized or older models, we return 8192 as a safe default.
-        """
 
         if model_name is None:
             model_name = self.default_model()
@@ -206,10 +178,6 @@ class GeminiApi(BaseApi):
                    max_output_tokens: Optional[int] = None,
                    toolset: Optional[ToolSet] = None,
                    **kwargs) -> Message:
-        """
-        Single-turn completion using google.generativeai.
-        We unify all messages into a single text prompt or handle function calls if tools exist.
-        """
 
         # 1. Fallback defaults
         if model_name is None:

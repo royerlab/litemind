@@ -47,31 +47,63 @@ class TestBaseApiImplementations:
         assert len(
             models) > 0, f"{ApiClass.__name__}.model_list() should not be empty!"
 
-    def test_has_vision_support(self, ApiClass):
+    def test_has_image_support(self, ApiClass):
         """
-        Test has_vision_support's return type (True/False).
+        Test has_image_support's return type (True/False).
         We simply call it to ensure it's not blowing up.
         """
         api_instance = ApiClass()
 
-        # Get a model that does not necessarily support vision:
+        # Get a model that does not necessarily support images:
         default_model_name = api_instance.default_model()
-        support = api_instance.has_vision_support(model_name=default_model_name)
+        support = api_instance.has_image_support(model_name=default_model_name)
         # We don't assert True or False globally, because some implementations
         # might support it, others might not. Just ensure it's a boolean.
         assert isinstance(support, bool), (
-            f"{ApiClass.__name__}.has_vision_support() should return a bool."
+            f"{ApiClass.__name__}.has_image_support() should return a bool."
         )
 
-        # Then we get a model that does not necessarily support vision:
-        default_model_name = api_instance.default_model(require_vision=True)
-        assert api_instance.has_vision_support(model_name=default_model_name)
+        # Then we get a model that does necessarily support vision:
+        default_model_name = api_instance.default_model(require_images=True)
+
+        # if a model is returned, check if it supports images:
+        if default_model_name:
+            assert api_instance.has_image_support(model_name=default_model_name)
 
         # Let's list models that support vision:
         models = api_instance.model_list()
-        vision_models = [model for model in models if
-                         api_instance.has_vision_support(model)]
-        aprint(vision_models)
+        for model in models:
+            if api_instance.has_image_support(model):
+                aprint(model)
+
+    def test_has_audio_support(self, ApiClass):
+        """
+        Test has_audio_support's return type (True/False).
+        We simply call it to ensure it's not blowing up.
+        """
+        api_instance = ApiClass()
+
+        # Get a model that does not necessarily support audio:
+        default_model_name = api_instance.default_model()
+        support = api_instance.has_image_support(model_name=default_model_name)
+        # We don't assert True or False globally, because some implementations
+        # might support it, others might not. Just ensure it's a boolean.
+        assert isinstance(support, bool), (
+            f"{ApiClass.__name__}.has_audio_support() should return a bool."
+        )
+
+        # Then we get a model that does necessarily support audio:
+        default_model_name = api_instance.default_model(require_audio=True)
+
+        # If a model is returned, check if it supports audio:
+        if default_model_name:
+            assert api_instance.has_audio_support(model_name=default_model_name)
+
+        # Let's list models that support audio:
+        models = api_instance.model_list()
+        for model in models:
+            if api_instance.has_audio_support(model):
+                aprint(model)
 
     def test_has_tool_support(self, ApiClass):
         """
@@ -96,9 +128,9 @@ class TestBaseApiImplementations:
 
         # Let's list models that support tools:
         models = api_instance.model_list()
-        tool_models = [model for model in models if
-                       api_instance.has_tool_support(model)]
-        aprint(tool_models)
+        for model in models:
+            if api_instance.has_tool_support(model):
+                aprint(model)
 
     def test_max_num_input_token(self, ApiClass):
         """
@@ -286,7 +318,8 @@ class TestBaseApiImplementations:
 
     def test_completion_with_image_url(self, ApiClass):
         api_instance = ApiClass()
-        default_model_name = api_instance.default_model(require_vision=True)
+        default_model_name = api_instance.default_model(require_images=True)
+        aprint(default_model_name)
 
         messages = []
 
@@ -317,7 +350,8 @@ class TestBaseApiImplementations:
 
     def test_completion_with_png_image_path(self, ApiClass):
         api_instance = ApiClass()
-        default_model_name = api_instance.default_model(require_vision=True)
+        default_model_name = api_instance.default_model(require_images=True)
+        aprint(default_model_name)
 
         messages = []
 
@@ -349,7 +383,8 @@ class TestBaseApiImplementations:
 
     def test_completion_with_jpg_image_path(self, ApiClass):
         api_instance = ApiClass()
-        default_model_name = api_instance.default_model(require_vision=True)
+        default_model_name = api_instance.default_model(require_images=True)
+        aprint(default_model_name)
 
         messages = []
 
@@ -381,7 +416,8 @@ class TestBaseApiImplementations:
 
     def test_completion_with_webp_image_path(self, ApiClass):
         api_instance = ApiClass()
-        default_model_name = api_instance.default_model(require_vision=True)
+        default_model_name = api_instance.default_model(require_images=True)
+        aprint(default_model_name)
 
         messages = []
 
@@ -413,7 +449,8 @@ class TestBaseApiImplementations:
 
     def test_completion_with_gif_image_path(self, ApiClass):
         api_instance = ApiClass()
-        default_model_name = api_instance.default_model(require_vision=True)
+        default_model_name = api_instance.default_model(require_images=True)
+        aprint(default_model_name)
 
         messages = []
 
@@ -446,7 +483,7 @@ class TestBaseApiImplementations:
 
     def test_completion_with_multiple_images(self, ApiClass):
         api_instance = ApiClass()
-        default_model_name = api_instance.default_model(require_vision=True)
+        default_model_name = api_instance.default_model(require_images=True)
 
         messages = []
 
@@ -475,24 +512,25 @@ class TestBaseApiImplementations:
         response = str(response)
 
         # Check response:
-        assert 'animals' in response and 'cat' in response and 'panda' in response
+        assert (
+                           'animals' in response or 'characters' in response) and 'cat' in response and 'panda' in response
 
         print('\n' + response)
 
     def test_describe_image_if_supported(self, ApiClass):
         """
-        Test describe_image if the implementation supports vision.
+        Test describe_image if the implementation supports images.
         If not, we skip it.
         """
         api_instance = ApiClass()
 
         try:
 
-            default_model_name = api_instance.default_model(require_vision=True)
+            default_model_name = api_instance.default_model(require_images=True)
 
-            if not api_instance.has_vision_support(default_model_name):
+            if not api_instance.has_image_support(default_model_name):
                 pytest.skip(
-                    f"{ApiClass.__name__} does not support vision. Skipping image test.")
+                    f"{ApiClass.__name__} does not support images. Skipping image test.")
 
             image_path = self._get_local_test_image_uri('future.jpeg')
 

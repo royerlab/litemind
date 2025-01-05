@@ -10,9 +10,11 @@ from litemind.agent.tools.toolset import ToolSet
 class BaseApi(ABC):
 
     @abstractmethod
-    def check_api_key(self, api_key: Optional[str]) -> bool:
+    def check_api_key(self, api_key: Optional[str]) -> Optional[bool]:
         """
         Check if the API key is valid.
+        If no API key is provided, checks if the API key available in the environment is valid.
+        If no API key is required, returns None.
 
         Parameters
         ----------
@@ -22,7 +24,7 @@ class BaseApi(ABC):
         Returns
         -------
         bool
-            True if the API key is valid, False otherwise.
+            True if the API key is valid, False otherwise, None if no credentials are required.
 
         """
         pass
@@ -42,16 +44,19 @@ class BaseApi(ABC):
 
     @abstractmethod
     def default_model(self,
-                      require_vision: bool = False,
+                      require_images: bool = False,
+                      require_audio: bool = False,
                       require_tools: bool = False
-                      ) -> str:
+                      ) -> Optional[str]:
         """
         Get the default model to use.
 
         Parameters
         ----------
-        require_vision: bool
-            Whether the model requires vision support.
+        require_images: bool
+            Whether the model requires image support.
+        require_audio: bool
+            Whether the model requires audio support.
         require_tools: bool
             Whether the model requires tool support.
 
@@ -59,14 +64,15 @@ class BaseApi(ABC):
         -------
         str
             The default model to use.
+            None if no models satisfy the requirements
 
         """
         pass
 
     @abstractmethod
-    def has_vision_support(self, model_name: Optional[str] = None) -> bool:
+    def has_image_support(self, model_name: Optional[str] = None) -> bool:
         """
-        Check if the model has vision support.
+        Check if the model has image support.
 
         Parameters
         ----------
@@ -76,7 +82,25 @@ class BaseApi(ABC):
         Returns
         -------
         bool
-            True if the model has vision support, False otherwise.
+            True if the model has image support, False otherwise.
+
+        """
+        pass
+
+    @abstractmethod
+    def has_audio_support(self, model_name: Optional[str] = None) -> bool:
+        """
+        Check if the model has audio support.
+
+        Parameters
+        ----------
+        model_name: Optional[str]
+            The name of the model to use.
+
+        Returns
+        -------
+        bool
+            True if the model has audio support, False otherwise.
 
         """
         pass
@@ -178,7 +202,7 @@ class BaseApi(ABC):
                        number_of_tries: int = 4,
                        ) -> str:
         """
-        Describe an image using GPT-vision.
+        Describe an image using the model.
 
         Parameters
         ----------
@@ -211,16 +235,16 @@ class BaseApi(ABC):
             aprint(f"Max tokens: '{max_output_tokens}'")
 
             # If the model does not support vision, return an error:
-            if not self.has_vision_support(model_name):
-                return f"Model '{model_name}' does not support vision."
+            if not self.has_image_support(model_name):
+                return f"Model '{model_name}' does not support images."
 
             try:
 
                 # Retry in case of model refusing to answer:
                 for tries in range(number_of_tries):
 
-                    vision_model_name = self.default_model(
-                        require_vision=True)
+                    image_model_name = self.default_model(
+                        require_images=True)
 
                     messages = []
 
@@ -238,7 +262,7 @@ class BaseApi(ABC):
 
                     # Run agent:
                     response = self.completion(messages=messages,
-                                               model_name=vision_model_name,
+                                               model_name=image_model_name,
                                                temperature=temperature)
 
                     # Normalise response:
@@ -262,7 +286,7 @@ class BaseApi(ABC):
                             "i cannot" in response_lc or "i can't" in response_lc or 'i am unable' in response_lc)) \
                             or "i cannot assist" in response_lc or "i can't assist" in response_lc or 'i am unable to assist' in response_lc or "I'm sorry" in response_lc:
                         aprint(
-                            f"Vision model {model_name} refuses to assist (response: {response}). Trying again...")
+                            f"Model {model_name} refuses to assist (response: {response}). Trying again...")
                         continue
                     else:
                         return response

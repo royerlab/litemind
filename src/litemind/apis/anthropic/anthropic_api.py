@@ -1,9 +1,6 @@
 import os
 from typing import List, Optional
 
-# Official Anthropic library
-from anthropic import Anthropic, NotGiven
-
 from litemind.agent.message import Message
 from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.anthropic.utils.messages import \
@@ -11,8 +8,7 @@ from litemind.apis.anthropic.utils.messages import \
 from litemind.apis.anthropic.utils.process_response import _process_response
 from litemind.apis.anthropic.utils.tools import _convert_toolset_to_anthropic
 from litemind.apis.base_api import BaseApi
-from litemind.apis.openai.exceptions import \
-    APIError  # reuse or define AnthropicApiError
+from litemind.apis.exceptions import APIError
 
 
 class AnthropicApi(BaseApi):
@@ -43,19 +39,14 @@ class AnthropicApi(BaseApi):
             )
 
         # Create the Anthropic client
+        from anthropic import Anthropic
         self.client = Anthropic(
             api_key=api_key,
             **kwargs  # e.g. timeout=30.0, max_retries=2, etc.
         )
 
-    # ----------------------------------------------------------------------
-    # BaseApi: check_api_key
-    # ----------------------------------------------------------------------
     def check_api_key(self, api_key: Optional[str] = None) -> bool:
-        """
-        Test the API key with a simple messages.create() call.
-        Return True if it succeeds, else False.
-        """
+
         # Use the provided key if any, else the one from the client
         candidate_key = api_key or os.environ.get("ANTHROPIC_API_KEY")
         if not candidate_key:
@@ -81,13 +72,9 @@ class AnthropicApi(BaseApi):
             traceback.print_exc()
             return False
 
-    # ----------------------------------------------------------------------
-    # BaseApi: model_list
-    # ----------------------------------------------------------------------
     def model_list(self) -> List[str]:
         """
         Return a list of known Anthropic models.
-        In production, you might maintain or discover them dynamically.
         """
         try:
             # List Anthropic models:
@@ -108,50 +95,44 @@ class AnthropicApi(BaseApi):
             traceback.print_exc()
             return []
 
-    # ----------------------------------------------------------------------
-    # BaseApi: default_model
-    # ----------------------------------------------------------------------
     def default_model(self,
-                      require_vision: bool = False,
-                      require_tools: bool = False) -> str:
-        """
-        Return the default model to use.
-        For illustration, let's pick 'claude-3-5-sonnet-latest' if we want vision/tool support.
-        Otherwise, fallback to 'claude-3'.
-        """
+                      require_images: bool = False,
+                      require_audio: bool = False,
+                      require_tools: bool = False) -> Optional[str]:
 
+        # Get the list of models:
         model_list = self.model_list()
 
-        if require_vision:
-            # Only Sonnet or Opus models support vision:
-            model_list = [m for m in model_list if "sonnet" in m or "opus" in m]
+        if require_images:
+            # Filter out models that don't support images
+            model_list = [m for m in model_list if self.has_image_support(m)]
+
+        if require_audio:
+            # Filter out models that don't support audio
+            model_list = [m for m in model_list if self.has_audio_support(m)]
 
         if require_tools:
-            model_list = [m for m in model_list if "sonnet" in m or "opus" in m]
+            # Filter out models that don't support tools
+            model_list = [m for m in model_list if self.has_tool_support(m)]
 
         # If we have any models left, return the first one
         if model_list:
             return model_list[0]
         else:
-            raise ValueError("No suitable model found.")
+            return None
 
-    # ----------------------------------------------------------------------
-    # BaseApi: has_vision_support
-    # ----------------------------------------------------------------------
-    def has_vision_support(self, model_name: Optional[str] = None) -> bool:
-        """
-        Return True if the model supports image input.
-        Anthropic docs say 'claude-3.5-sonnet' can handle images.
-        Adjust as needed if only some variants have vision features.
-        """
+    def has_image_support(self, model_name: Optional[str] = None) -> bool:
+
         if model_name is None:
-            model_name = self.default_model(require_vision=True)
+            model_name = self.default_model(require_images=True)
         # For a simple check:
         return "3-5" in model_name or "sonnet" in model_name or "vision" in model_name
 
-    # ----------------------------------------------------------------------
-    # BaseApi: has_tool_support
-    # ----------------------------------------------------------------------
+    def has_audio_support(self, model_name: Optional[str] = None) -> bool:
+
+        # TODO: implement
+        return None
+
     def has_tool_support(self, model_name: Optional[str] = None) -> bool:
         """
         Return True if the model supports function-calling (tools).
@@ -240,11 +221,9 @@ class AnthropicApi(BaseApi):
                    max_output_tokens: Optional[int] = None,
                    toolset: Optional[ToolSet] = None,
                    **kwargs) -> Message:
-        """
-        Single-turn (or multi-turn) completion using Anthropic's /v1/messages endpoint.
-        If toolset is provided, we pass 'tools' param to the request.
-        If the model returns stop_reason='tool_use', we embed tool info in the returned Message.
-        """
+
+        from anthropic import NotGiven
+
         # Extract system message if present
         system_messages = ''
         non_system_messages = []

@@ -4,13 +4,9 @@ from typing import List, Optional
 from litemind.agent.message import Message
 from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.base_api import BaseApi
-from litemind.apis.openai.exceptions import APIError
-from litemind.apis.openai.utils.default_model import \
-    get_default_openai_model_name
+from litemind.apis.exceptions import APIError
 from litemind.apis.openai.utils.messages import convert_messages_for_openai
 from litemind.apis.openai.utils.model_list import get_openai_model_list
-from litemind.apis.openai.utils.model_types import is_vision_model, \
-    is_tool_model
 from litemind.apis.openai.utils.process_response import _process_response
 from litemind.apis.openai.utils.tools import _format_tools_for_openai
 
@@ -53,21 +49,82 @@ class OpenAIApi(BaseApi):
         return get_openai_model_list()
 
     def default_model(self,
-                      require_vision: bool = False,
-                      require_tools: bool = False) -> str:
-        return get_default_openai_model_name(require_vision=require_vision,
-                                             require_tools=require_tools)
+                      require_images: bool = False,
+                      require_audio: bool = False,
+                      require_tools: bool = False) -> Optional[str]:
 
-    def has_vision_support(self, model_name: Optional[str] = None) -> bool:
-        return is_vision_model(model_name)
+        # Get the list of models:
+        model_list = get_openai_model_list()
+
+        if require_images:
+            # Filter out models that don't support vision:
+            model_list = [model for model in model_list if
+                          self.has_image_support(model)]
+
+        if require_audio:
+            # Filter out models that don't support audio:
+            model_list = [model for model in model_list if
+                          self.has_audio_support(model)]
+
+        if require_tools:
+            # Filter out models that don't support tools:
+            model_list = [model for model in model_list if
+                          self.has_tool_support(model)]
+
+        if len(model_list) == 0:
+            return None
+
+        # Next we sort models so the best ones are at the beginning of the list:
+        def model_key(model):
+            # Split the model name into parts
+            parts = model.split('-')
+            # Get the main version (e.g., '3.5' or '4' from 'gpt-3.5' or 'gpt-4')
+            main_version = parts[1]
+
+            if 'o' in main_version:
+                main_version = main_version.replace('o', '.25')
+
+            # Use the length of the model name as a secondary sorting criterion
+            length = len(model)
+            # Sort by main version (descending), then by length (ascending)
+            return (-float(main_version), length)
+
+        # Actual sorting:
+        sorted_model_list = sorted(model_list, key=model_key)
+
+        # return the first in the list which we assume to eb the best:
+        return sorted_model_list[0]
+
+    def has_image_support(self, model_name: Optional[str] = None) -> bool:
+        # Then, we check if it is a vision model:
+        if 'vision' in model_name or 'gpt-4o' in model_name or 'gpt-o1' in model_name:
+            return True
+
+        # then, we check if it is an audio model:
+        if 'audio' in model_name:
+            return False
+
+        # Any other model is not a vision model:
+        return False
+
+    def has_audio_support(self, model_name: Optional[str] = None) -> bool:
+
+        # TODO: implement!
+
+        return False
 
     def has_tool_support(self, model_name: Optional[str] = None) -> bool:
-        return is_tool_model(model_name)
+        # Only old models don't support tools:
+        if 'gpt-3.5' in model_name:
+            return False
+
+        # Any other model supports tools:
+        return True
 
     def max_num_input_tokens(self, model_name: Optional[str] = None) -> int:
 
         if model_name is None:
-            model_name = get_default_openai_model_name()
+            model_name = self.default_model()
 
         if ('gpt-4-1106-preview' in model_name
                 or 'gpt-4-0125-preview' in model_name
@@ -95,10 +152,10 @@ class OpenAIApi(BaseApi):
         based on the current OpenAI model documentation.
         (Despite the function name, this is the total token capacity — input + output.)
 
-        If model_name is None, this uses get_default_openai_model_name() as a fallback.
+        If model_name is None, this uses the default model name as a fallback.
         """
         if model_name is None:
-            model_name = get_default_openai_model_name()
+            model_name = self.default_model()
 
         name = model_name.lower()
 
@@ -208,7 +265,7 @@ class OpenAIApi(BaseApi):
         """
 
         if model_name is None:
-            model_name = get_default_openai_model_name()
+            model_name = self.default_model()
 
         name = model_name.lower()
 
@@ -293,7 +350,7 @@ class OpenAIApi(BaseApi):
 
         # Set default model if not provided
         if model_name is None:
-            model_name = get_default_openai_model_name()
+            model_name = self.default_model()
 
         # Get max num of output tokens for model if not provided:
         if max_output_tokens is None:

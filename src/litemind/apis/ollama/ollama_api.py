@@ -5,10 +5,10 @@ from arbol import aprint
 from litemind.agent.message import Message
 from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.base_api import BaseApi
+from litemind.apis.exceptions import APIError
 from litemind.apis.ollama.utils.messages import _convert_messages_for_ollama
 from litemind.apis.ollama.utils.process_response import _process_response
 from litemind.apis.ollama.utils.tools import _format_tools_for_ollama
-from litemind.apis.openai.exceptions import APIError
 
 
 class OllamaApi(BaseApi):
@@ -34,13 +34,6 @@ class OllamaApi(BaseApi):
         self._model_list = [model.model for model in self.client.list().models]
 
     def model_list(self) -> List[str]:
-        """
-        Get the list of models available in Ollama.
-        (Calls ollama.list())
-
-        Returns:
-        - List[str]: The list of models available in Ollama.
-        """
 
         try:
             return list(self._model_list)
@@ -48,51 +41,43 @@ class OllamaApi(BaseApi):
             raise APIError("Error fetching model list from Ollama.")
 
     def default_model(self,
-                      require_vision: bool = False,
-                      require_tools: bool = False) -> str:
-        """
-        Get the default model name for Ollama.
-        (Calls ollama.list())
+                      require_images: bool = False,
+                      require_audio: bool = False,
+                      require_tools: bool = False) -> Optional[str]:
 
-        Returns:
-        - str: The default model name for Ollama.
-        """
-
+        # Get the list of models:
         model_list = self.model_list()
-        if require_vision:
+
+        if require_images:
+            # Filter out models that don't support vision:
             model_list = [model for model in model_list if
-                          self.has_vision_support(model)]
+                          self.has_image_support(model)]
+
+        if require_audio:
+            # Filter out models that don't support audio:
+            model_list = [model for model in model_list if
+                          self.has_audio_support(model)]
+
         if require_tools:
+            # Filter out models that don't support tools:
             model_list = [model for model in model_list if
                           self.has_tool_support(model)]
-        if not model_list:
+
+        # If we have any models left, return the first one
+        if model_list:
+            return model_list[0]
+        else:
             return None
 
-        return model_list[0]
-
     def check_api_key(self, api_key: Optional[str] = None) -> bool:
-        """
-        Check if Ollama is available by attempting a simple list query.
 
-        Returns:
-        - bool: True if Ollama is running and responding, False otherwise.
-        """
         try:
             self.client.list()
             return True
         except Exception:
             return False
 
-    def has_vision_support(self, model_name: Optional[str] = None) -> bool:
-        """
-        Indicates whether the API supports vision tasks.
-
-        Parameters:
-        - model_name (str): The model name.
-
-        Returns:
-        - bool: False (Ollama does not currently support vision).
-        """
+    def has_image_support(self, model_name: Optional[str] = None) -> bool:
 
         try:
             model_details_families = self.client.show(
@@ -101,32 +86,19 @@ class OllamaApi(BaseApi):
         except:
             return False
 
+    def has_audio_support(self, model_name: Optional[str] = None) -> bool:
+
+        # TODO: implement
+
+        return False
+
     def has_tool_support(self, model_name: Optional[str] = None) -> bool:
-        """
-        Indicates whether the API supports tool usage.
-        Parameters
-        ----------
-        model_name : Optional[str]
-            The model name.
 
-        Returns
-        -------
-        bool : True if the model supports tools, False otherwise.
-
-        """
         model_template = self.client.show(model_name).template
         return '$.Tools' in model_template
 
     def max_num_input_tokens(self, model_name: Optional[str] = None) -> int:
-        """
-        Returns the maximum number of input tokens allowed for a specific model.
 
-        Parameters:
-        - model_name (str): The model name.
-
-        Returns:
-        - int: Currently returns 100000 as a placeholder. Update this as more info about Ollama's token limits is available.
-        """
         model_info = self.client.show(model_name).modelinfo
 
         # search key hat contains 'context_length'
@@ -138,10 +110,6 @@ class OllamaApi(BaseApi):
         return 2500
 
     def max_num_output_tokens(self, model_name: Optional[str] = None) -> int:
-        """
-        Return the model's maximum number of output tokens.
-        If model_name is None, this uses get_default_openai_model_name() as a fallback.
-        """
 
         model_info = self.client.show(model_name).modelinfo
 
@@ -160,27 +128,6 @@ class OllamaApi(BaseApi):
                    max_output_tokens: Optional[int] = None,
                    toolset: Optional[ToolSet] = None,
                    **kwargs) -> Message:
-        """
-        Generate a completion using the Ollama API, with optional tool usage.
-
-        Parameters
-        ----------
-        messages : List[Message]
-            A list of messages to send to the model.
-        model_name : str
-            The model to use for the request.
-        temperature : float
-            Sampling temperature.
-        max_output_tokens : int
-            Maximum number of tokens to generate.
-        toolset : Optional[ToolSet]
-            A set of tools that can be invoked by the model via function calls.
-
-        Returns
-        -------
-        Message
-            The response from the model.
-        """
 
         # Set default model if not provided
         if model_name is None:

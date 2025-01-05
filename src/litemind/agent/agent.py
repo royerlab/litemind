@@ -4,15 +4,13 @@ from litemind.agent.conversation import Conversation
 from litemind.agent.message import Message
 from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.base_api import BaseApi
-from litemind.apis.openai.utils.default_model import \
-    get_default_openai_model_name
 
 
 class Agent():
 
     def __init__(self,
                  api: BaseApi,
-                 model: str = get_default_openai_model_name(),
+                 model: Optional[str] = None,
                  temperature: float = 0.0,
                  toolset: Optional[ToolSet] = None,
                  name: str = "Agent",
@@ -20,7 +18,7 @@ class Agent():
 
         # get key from environmental variables:
         self.api = api
-        self.model = model
+        self.model = model or api.default_model()
         self.temperature = temperature
         self.toolset = toolset
         self.name = name
