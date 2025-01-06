@@ -13,7 +13,6 @@ __url2 = 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsi
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
-@pytest.mark.api
 def test_openai_api_text_only_message():
     # Create a text-only message
     message = Message(role="user")
@@ -35,7 +34,6 @@ def test_openai_api_text_only_message():
     assert "assistant" in response.choices[0].message.role
 
 
-@pytest.mark.api
 def test_openai_api_text_and_image_message():
     # Create a message with text and image
     message = Message(role="user")
@@ -59,7 +57,6 @@ def test_openai_api_text_and_image_message():
     assert "assistant" in response.choices[0].message.role
 
 
-@pytest.mark.api
 def test_openai_api_multiple_images():
     # Create a message with multiple images
     message = Message(role="user")
@@ -83,7 +80,6 @@ def test_openai_api_multiple_images():
     assert "assistant" in response.choices[0].message.role
 
 
-@pytest.mark.api
 def test_openai_api_multiple_messages():
     # Create multiple messages
     message1 = Message(role="user")

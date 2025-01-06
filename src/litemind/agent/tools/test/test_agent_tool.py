@@ -5,7 +5,8 @@ from litemind.agent.message import Message
 from litemind.agent.tools.agent_tool import AgentTool
 from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.openai.openai_api import OpenAIApi
-from litemind.apis.openai.openai_api_key import is_openai_api_key_available
+from litemind.apis.openai.utils.openai_api_key import \
+    is_openai_api_key_available
 
 
 @pytest.mark.skipif(not is_openai_api_key_available(),

@@ -130,8 +130,8 @@ class AnthropicApi(BaseApi):
 
     def has_audio_support(self, model_name: Optional[str] = None) -> bool:
 
-        # TODO: implement
-        return None
+        # No Anthropic models currently support Audio.
+        return False
 
     def has_tool_support(self, model_name: Optional[str] = None) -> bool:
         """

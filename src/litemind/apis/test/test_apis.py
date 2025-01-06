@@ -319,6 +319,10 @@ class TestBaseApiImplementations:
     def test_completion_with_image_url(self, ApiClass):
         api_instance = ApiClass()
         default_model_name = api_instance.default_model(require_images=True)
+        if not default_model_name or not api_instance.has_image_support(
+                default_model_name):
+            pytest.skip(
+                f"{ApiClass.__name__} does not support images. Skipping image test.")
         aprint(default_model_name)
 
         messages = []
@@ -351,6 +355,10 @@ class TestBaseApiImplementations:
     def test_completion_with_png_image_path(self, ApiClass):
         api_instance = ApiClass()
         default_model_name = api_instance.default_model(require_images=True)
+        if not default_model_name or not api_instance.has_image_support(
+                default_model_name):
+            pytest.skip(
+                f"{ApiClass.__name__} does not support images. Skipping image test.")
         aprint(default_model_name)
 
         messages = []
@@ -384,6 +392,10 @@ class TestBaseApiImplementations:
     def test_completion_with_jpg_image_path(self, ApiClass):
         api_instance = ApiClass()
         default_model_name = api_instance.default_model(require_images=True)
+        if not default_model_name or not api_instance.has_image_support(
+                default_model_name):
+            pytest.skip(
+                f"{ApiClass.__name__} does not support images. Skipping image test.")
         aprint(default_model_name)
 
         messages = []
@@ -417,6 +429,10 @@ class TestBaseApiImplementations:
     def test_completion_with_webp_image_path(self, ApiClass):
         api_instance = ApiClass()
         default_model_name = api_instance.default_model(require_images=True)
+        if not default_model_name or not api_instance.has_image_support(
+                default_model_name):
+            pytest.skip(
+                f"{ApiClass.__name__} does not support images. Skipping image test.")
         aprint(default_model_name)
 
         messages = []
@@ -450,6 +466,10 @@ class TestBaseApiImplementations:
     def test_completion_with_gif_image_path(self, ApiClass):
         api_instance = ApiClass()
         default_model_name = api_instance.default_model(require_images=True)
+        if not default_model_name or not api_instance.has_image_support(
+                default_model_name):
+            pytest.skip(
+                f"{ApiClass.__name__} does not support images. Skipping image test.")
         aprint(default_model_name)
 
         messages = []
@@ -484,6 +504,11 @@ class TestBaseApiImplementations:
     def test_completion_with_multiple_images(self, ApiClass):
         api_instance = ApiClass()
         default_model_name = api_instance.default_model(require_images=True)
+        if not default_model_name or not api_instance.has_image_support(
+                default_model_name):
+            pytest.skip(
+                f"{ApiClass.__name__} does not support images. Skipping image test.")
+        aprint(default_model_name)
 
         messages = []
 
@@ -513,7 +538,45 @@ class TestBaseApiImplementations:
 
         # Check response:
         assert (
-                           'animals' in response or 'characters' in response) and 'cat' in response and 'panda' in response
+                       'animals' in response or 'characters' in response) and 'cat' in response and 'panda' in response
+
+        print('\n' + response)
+
+    def test_completion_with_audio_path(self, ApiClass):
+        api_instance = ApiClass()
+        default_model_name = api_instance.default_model(require_audio=True)
+        if not default_model_name or not api_instance.has_audio_support(
+                default_model_name):
+            pytest.skip(
+                f"{ApiClass.__name__} does not support audio. Skipping audio test.")
+        aprint(default_model_name)
+
+        messages = []
+
+        # System message:
+        system_message = Message(role='system')
+        system_message.append_text(
+            'You are an omniscient all-knowing being called Ohmm')
+        messages.append(system_message)
+
+        # User message:
+        user_message = Message(role='user')
+        user_message.append_text(
+            'Can you describe what you heard in the audio file?')
+        image_path = self._get_local_test_audio_uri('harvard.wav')
+        user_message.append_audio_path(image_path)
+
+        messages.append(user_message)
+
+        # Run agent:
+        response = api_instance.completion(messages=messages,
+                                           model_name=default_model_name)
+
+        # Normalise response:
+        response = str(response)
+
+        # Check response:
+        assert 'smell' in response or 'ham' in response or 'beer' in response
 
         print('\n' + response)
 
@@ -551,16 +614,18 @@ class TestBaseApiImplementations:
             assert False
 
     def _get_local_test_image_uri(self, image_name: str):
-        import os
+        return self._get_local_test_file_uri('images', image_name)
 
+    def _get_local_test_audio_uri(self, image_name: str):
+        return self._get_local_test_file_uri('audio', image_name)
+
+    def _get_local_test_file_uri(self, filetype, image_name):
+        import os
         # Get the directory of the current file
         current_dir = os.path.dirname(__file__)
-
         # Combine the two to get the absolute path
         absolute_path = os.path.join(current_dir,
-                                     os.path.join('images/', image_name))
-
+                                     os.path.join(f'{filetype}/', image_name))
         uri = 'file://' + absolute_path
-
         aprint(uri)
         return uri

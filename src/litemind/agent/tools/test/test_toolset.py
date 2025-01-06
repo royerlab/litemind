@@ -3,7 +3,8 @@ import pytest
 from litemind.agent.tools.function_tool import FunctionTool
 from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.openai.openai_api import OpenAIApi
-from litemind.apis.openai.openai_api_key import is_openai_api_key_available
+from litemind.apis.openai.utils.openai_api_key import \
+    is_openai_api_key_available
 
 
 # Sample function to test adding a FunctionTool

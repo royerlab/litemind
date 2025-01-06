@@ -6,10 +6,27 @@ class Message(ABC):
 
     def __init__(self, role: str,
                  text: Optional[str] = None,
-                 image_uri: Optional[str] = None):
+                 image_uri: Optional[str] = None,
+                 audio_uri: Optional[str] = None):
+        """
+        Create a new message.
+
+        Parameters
+        ----------
+        role: str
+            The role of the message (e.g., 'user' or 'agent').
+        text: Optional[str]
+            The text of the message.
+        image_uri: Optional[str]
+            The URI of the image to include in the message.
+        audio_uri: Optional[str]
+            The URI of the audio to include in the message.
+        """
+
         self.role = role
         self.text = "" if text is None else text
         self.image_uris = [] if image_uri is None else [image_uri]
+        self.audio_uris = [] if audio_uri is None else [audio_uri]
 
     def append_text(self, text: str):
         """
@@ -83,9 +100,68 @@ class Message(ABC):
         # Add the image path to the list of image URIs:
         self.image_uris.append(image_path)
 
+    def append_audio_uri(self, audio_uri: str):
+        """
+        Append audio URI to the message.
+
+        Parameters
+        ----------
+        audio_uri : str
+            The URI of the audio to append to the message.
+            Can be: 'data:audio/...', 'http://...', 'https://...', or a local file path.
+
+        """
+        # Check if the audio URI is valid:
+        if not audio_uri.startswith("data:audio/") and \
+                not audio_uri.startswith("http://") and \
+                not audio_uri.startswith("https://") and \
+                not audio_uri.startswith("file://"):
+            raise ValueError(
+                f"Invalid audio URI: '{audio_uri}' (must start with 'data:audio/', 'http://', 'https://', or 'file://')")
+
+        # Add the audio URI to the list of audio URIs:
+        self.audio_uris.append(audio_uri)
+
+    def append_audio_url(self, audio_url: str):
+        """
+        Append audio URL to the message.
+
+        Parameters
+        ----------
+        audio_url : str
+            The URL of the audio to append to the message.
+
+        """
+        # Check if the audio URL is valid:
+        if not audio_url.startswith("http://") and not audio_url.startswith(
+                "https://"):
+            raise ValueError(
+                f"Invalid audio URL: '{audio_url}' (must start with 'http://' or 'https://')")
+
+        # Add the audio URL to the list of audio URIs:
+        self.audio_uris.append(audio_url)
+
+    def append_audio_path(self, audio_path: str):
+        """
+        Append audio path to the message.
+
+        Parameters
+        ----------
+        audio_path : str
+            The path of the audio to append to the message.
+
+        """
+        # First we check if the audio path is valid:
+        if not audio_path.startswith("file://"):
+            raise ValueError(
+                f"Invalid audio path: '{audio_path}' (must start with 'file://')")
+
+        # Add the audio path to the list of audio URIs:
+        self.audio_uris.append(audio_path)
+
     def __contains__(self, item: str) -> bool:
         """
-        Check if the given string is in the message text or image URLs.
+        Check if the given string is in the message text, image URLs, or audio URLs.
 
         Parameters
         ----------
@@ -102,6 +178,9 @@ class Message(ABC):
         for image_uri in self.image_uris:
             if item in image_uri:
                 return True
+        for audio_uri in self.audio_uris:
+            if item in audio_uri:
+                return True
         return False
 
     def __str__(self):
@@ -116,6 +195,8 @@ class Message(ABC):
         message_string += self.text
         for image_uri in self.image_uris:
             message_string += f"Image: {image_uri}\n"
+        for audio_uri in self.audio_uris:
+            message_string += f"Audio: {audio_uri}\n"
         return message_string
 
     def __repr__(self):

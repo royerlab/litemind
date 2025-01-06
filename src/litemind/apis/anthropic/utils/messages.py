@@ -3,6 +3,7 @@ from typing import List
 from anthropic.types import MessageParam
 
 from litemind.agent.message import Message
+from litemind.apis.exceptions import APINotSupportedError
 from litemind.apis.utils.dowload_image_to_tempfile import \
     download_image_to_temp_file
 from litemind.apis.utils.get_media_type_from_uri import get_media_type_from_uri
@@ -72,6 +73,11 @@ def _convert_messages_for_anthropic(messages: List[Message]) -> List[
                     "data": base64_data,
                 },
             })
+
+        # If messages contain audio, raise an APINotSupportedError:
+        if msg.audio_uris:
+            raise APINotSupportedError(
+                "Anthropic API does not support audio messages")
 
         # Append the message to the list of messages:
         anthropic_messages.append({

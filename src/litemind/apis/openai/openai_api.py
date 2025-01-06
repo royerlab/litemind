@@ -9,6 +9,8 @@ from litemind.apis.openai.utils.messages import convert_messages_for_openai
 from litemind.apis.openai.utils.model_list import get_openai_model_list
 from litemind.apis.openai.utils.process_response import _process_response
 from litemind.apis.openai.utils.tools import _format_tools_for_openai
+from litemind.apis.openai.utils.transcribe_audio import \
+    transcribe_audio_in_messages
 
 
 class OpenAIApi(BaseApi):
@@ -109,9 +111,15 @@ class OpenAIApi(BaseApi):
 
     def has_audio_support(self, model_name: Optional[str] = None) -> bool:
 
-        # TODO: implement!
-
-        return False
+        try:
+            openai_models = self.client.models.list()
+            # Check that whisper-1 is in the list:
+            if 'whisper-1' in [model.id for model in openai_models.data]:
+                return True
+            else:
+                return False
+        except Exception:
+            return False
 
     def has_tool_support(self, model_name: Optional[str] = None) -> bool:
         # Only old models don't support tools:
@@ -359,6 +367,9 @@ class OpenAIApi(BaseApi):
         # Convert ToolSet to OpenAI-compatible JSON schema if toolset is provided
         openai_tools = _format_tools_for_openai(
             toolset) if toolset else NotGiven()
+
+        # If messages contain audio, first transcribe audio:
+        messages = transcribe_audio_in_messages(messages, self.client)
 
         # Format messages for OpenAI:
         openai_formatted_messages = convert_messages_for_openai(messages)

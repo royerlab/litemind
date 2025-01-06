@@ -88,8 +88,7 @@ class OllamaApi(BaseApi):
 
     def has_audio_support(self, model_name: Optional[str] = None) -> bool:
 
-        # TODO: implement
-
+        # Ollama does not support, per se, audio inputs.
         return False
 
     def has_tool_support(self, model_name: Optional[str] = None) -> bool:

@@ -1,8 +1,11 @@
+import pathlib
 from typing import List, Union
 
 from PIL import Image
 
 from litemind.agent.message import Message
+from litemind.apis.utils.dowload_audio_to_tempfile import \
+    download_audio_to_temp_file
 from litemind.apis.utils.dowload_image_to_tempfile import \
     download_image_to_temp_file
 from litemind.apis.utils.write_base64_to_temp_file import \
@@ -54,8 +57,28 @@ def _convert_messages_for_gemini(messages: List[Message]) -> List[
                 with Image.open(local_path) as img:
                     gemini_messages.append(img)
 
-
             except Exception as e:
                 raise ValueError(f"Could not open image '{image_uri}': {e}")
+
+        # Append the audio content:
+        for audio_uri in msg.audio_uris:
+            try:
+                if audio_uri.startswith("data:audio/"):
+                    local_path = write_base64_to_temp_file(audio_uri)
+                elif audio_uri.startswith(
+                        "http://") or audio_uri.startswith("https://"):
+                    local_path = download_audio_to_temp_file(audio_uri)
+                elif audio_uri.startswith("file://"):
+                    local_path = audio_uri.replace("file://", "")
+                else:
+                    raise ValueError(f"Invalid audio URI: '{audio_uri}'")
+
+                # Read the audio file and append it as a dictionary with mime_type and data
+                audio_data = pathlib.Path(local_path).read_bytes()
+                mime_type = "audio/" + local_path.split('.')[-1]
+                gemini_messages.append(
+                    {"mime_type": mime_type, "data": audio_data})
+            except Exception as e:
+                raise ValueError(f"Could not open audio '{audio_uri}': {e}")
 
     return gemini_messages

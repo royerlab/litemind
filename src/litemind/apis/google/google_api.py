@@ -119,8 +119,8 @@ class GeminiApi(BaseApi):
 
     def has_audio_support(self, model_name: Optional[str] = None) -> bool:
 
-        # TODO: implement this method
-        return False
+        # Curent assumption: Gemini models support audio if they are multimodal:
+        return self.has_image_support(model_name)
 
     def has_tool_support(self, model_name: Optional[str] = None) -> bool:
 
