@@ -1,6 +1,5 @@
 import os
 
-import pytest
 from openai import OpenAI
 
 from litemind.agent.message import Message

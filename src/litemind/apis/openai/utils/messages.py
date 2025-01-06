@@ -68,6 +68,29 @@ def convert_messages_for_openai(messages):
                 "image_url": {"url": image_uri}
             })
 
+        # Add each audio URL in the required format
+        for audio_uri in message.audio_uris:
+            media_type = get_media_type_from_uri(audio_uri)
+
+            if audio_uri.startswith("data:audio/"):
+                pass
+            elif audio_uri.startswith("http://") or audio_uri.startswith(
+                    "https://"):
+                pass
+            elif audio_uri.startswith("file://"):
+                local_path = audio_uri.replace("file://", "")
+                base64_data = read_file_and_convert_to_base64(local_path)
+                audio_uri = base64_to_data_uri(base64_data, media_type)
+            else:
+                raise ValueError(
+                    f"Invalid audio URI: '{audio_uri}' (must start with 'data:audio/', 'http://', 'https://', or 'file://')")
+
+            formatted_message["content"].append({
+                "type": "input_audio",
+                "input_audio": {"data": audio_uri,
+                                "format": media_type.split('/')[1]}
+            })
+
         # Append the formatted message to the list
         openai_formatted_messages.append(formatted_message)
 

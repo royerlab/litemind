@@ -587,13 +587,13 @@ class TestBaseApiImplementations:
         """
         api_instance = ApiClass()
 
+        default_model_name = api_instance.default_model(require_images=True)
+
+        if not api_instance.has_image_support(default_model_name):
+            pytest.skip(
+                f"{ApiClass.__name__} does not support images. Skipping image test.")
+
         try:
-
-            default_model_name = api_instance.default_model(require_images=True)
-
-            if not api_instance.has_image_support(default_model_name):
-                pytest.skip(
-                    f"{ApiClass.__name__} does not support images. Skipping image test.")
 
             image_path = self._get_local_test_image_uri('future.jpeg')
 
@@ -608,7 +608,45 @@ class TestBaseApiImplementations:
             assert len(description) > 0, (
                 f"{ApiClass.__name__}.describe_image() should return a non-empty string!"
             )
-            # You can also add content checks if you want to verify the actual text.
+
+            # Check the content of the string:
+            assert 'robot' in description or 'futuristic' in description or 'sky' in description
+
+        except:
+            # If exception happened then test failed:
+            assert False
+
+    def test_describe_audio_if_supported(self, ApiClass):
+        """
+        Test describe_audio if the implementation supports audio.
+        If not, we skip it.
+        """
+        api_instance = ApiClass()
+
+        default_model_name = api_instance.default_model(require_audio=True)
+
+        if not api_instance.has_audio_support(default_model_name):
+            pytest.skip(
+                f"{ApiClass.__name__} does not support audio. Skipping audio test.")
+
+        try:
+            audio_path = self._get_local_test_audio_uri('harvard.wav')
+
+            description = api_instance.describe_audio(audio_path,
+                                                      model_name=default_model_name)
+
+            aprint(description)
+
+            assert isinstance(description, str), (
+                f"{ApiClass.__name__}.describe_audio() should return a string!"
+            )
+            assert len(description) > 0, (
+                f"{ApiClass.__name__}.describe_audio() should return a non-empty string!"
+            )
+
+            # Check the contents of the string:
+            assert 'smell' in description or 'ham' in description or 'beer' in description
+
         except:
             # If exception happened then test failed:
             assert False

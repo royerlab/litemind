@@ -28,6 +28,7 @@ class GeminiApi(BaseApi):
         kwargs : dict
             Additional parameters (unused here, but accepted for consistency).
         """
+
         if api_key is None:
             api_key = os.environ.get("GOOGLE_API_KEY")
         if not api_key:
@@ -114,18 +115,20 @@ class GeminiApi(BaseApi):
     def has_image_support(self, model_name: Optional[str] = None) -> bool:
 
         if not model_name:
-            model_name = self.default_model(require_images=True)
+            model_name = self.default_model()
         return "gemini-1.5" in model_name.lower() or "gemini-2.0" in model_name.lower()
 
     def has_audio_support(self, model_name: Optional[str] = None) -> bool:
 
+        if model_name is None:
+            model_name = self.default_model()
         # Curent assumption: Gemini models support audio if they are multimodal:
         return self.has_image_support(model_name)
 
     def has_tool_support(self, model_name: Optional[str] = None) -> bool:
 
         if not model_name:
-            model_name = self.default_model(require_tools=True)
+            model_name = self.default_model()
 
         model_name = model_name.lower()
 

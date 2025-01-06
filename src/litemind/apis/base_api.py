@@ -240,11 +240,11 @@ class BaseApi(ABC):
 
             try:
 
+                image_model_name = self.default_model(
+                    require_images=True)
+
                 # Retry in case of model refusing to answer:
                 for tries in range(number_of_tries):
-
-                    image_model_name = self.default_model(
-                        require_images=True)
 
                     messages = []
 
@@ -290,6 +290,106 @@ class BaseApi(ABC):
                         continue
                     else:
                         return response
+
+            except Exception as e:
+                # Log the error:
+                aprint(f"Error: '{e}'")
+                # print stack trace:
+                import traceback
+                traceback.print_exc()
+                return f"Error: '{e}'"
+
+    def describe_audio(self,
+                       audio_uri: str,
+                       system: str = 'You are a helpful AI assistant that can describe/analyse audio.',
+                       query: str = 'Here is an audio file, please carefully describe it in detail. If it is speach, please transcribe accurately.',
+                       model_name: str = "gpt-4o",
+                       temperature: float = 0,
+                       max_output_tokens: int = 4096,
+                       number_of_tries: int = 4,
+                       ) -> str:
+
+        """
+        Describe an audio file using the model.
+
+        Parameters
+        ----------
+        audio_uri: str
+            Can be: a path to an audio file, a URL to an audio file, or a base64 encoded audio.
+        system:
+            System message to use
+        query  : str
+            Query to use with audio
+        model_name   : str
+            Model to use
+        temperature: float
+            Temperature to use
+        max_output_tokens  : int
+            Maximum number of tokens to use
+        number_of_tries : int
+            Number of times to try to send the request to the model
+
+        Returns
+        -------
+        str
+            Description of the audio
+
+        """
+
+        with (asection(
+                f"Asking model {model_name} to describe a given audio: '{audio_uri}':")):
+            aprint(f"Query: '{query}'")
+            aprint(f"Model: '{model_name}'")
+            aprint(f"Max tokens: '{max_output_tokens}'")
+
+            # If the model does not support audio, return an error:
+            if not self.has_audio_support(model_name):
+                return f"Model '{model_name}' does not support audio."
+
+            try:
+
+                audio_model_name = self.default_model(
+                    require_audio=True)
+
+                # Retry in case of model refusing to answer:
+                for tries in range(number_of_tries):
+
+                    messages = []
+
+                    # System message:
+                    system_message = Message(role='system')
+                    system_message.append_text(system)
+                    messages.append(system_message)
+
+                    # User message:
+                    user_message = Message(role='user')
+                    user_message.append_text(query)
+                    user_message.append_audio_uri(audio_uri)
+
+                    messages.append(user_message)
+
+                    # Run agent:
+                    response = self.completion(messages=messages,
+                                               model_name=audio_model_name,
+                                               temperature=temperature)
+
+                    # Normalise response:
+                    response = str(response)
+
+                    # Check if the response is empty:
+                    if not response:
+                        aprint(f"Response is empty. Trying again...")
+                        continue
+
+                    # response in lower case and trimmed of white spaces
+                    response_lc = response.lower().strip()
+
+                    # Check if response is too short:
+                    if len(response_lc) < 3:
+                        aprint(f"Response is empty. Trying again...")
+                        continue
+
+                    return response
 
             except Exception as e:
                 # Log the error:

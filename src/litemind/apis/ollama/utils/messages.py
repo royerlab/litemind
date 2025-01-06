@@ -1,6 +1,7 @@
 from typing import List, Dict, Any
 
 from litemind.agent.message import Message
+from litemind.apis.exceptions import APINotSupportedError
 from litemind.apis.utils.convert_image_to_png import convert_image_to_png
 from litemind.apis.utils.dowload_image_to_tempfile import \
     download_image_to_temp_file
@@ -79,6 +80,11 @@ def _convert_messages_for_ollama(messages: List[Message]) -> List[
         # Append the local image paths to the message dictionary:
         if local_image_paths:
             message_dict["images"] = local_image_paths
+
+        # If messages contain audio, raise an APINotSupportedError:
+        if msg.audio_uris:
+            raise APINotSupportedError(
+                "Anthropic API does not support audio messages")
 
         # Append the message to the list of messages:
         ollama_messages.append(message_dict)

@@ -124,7 +124,8 @@ class AnthropicApi(BaseApi):
     def has_image_support(self, model_name: Optional[str] = None) -> bool:
 
         if model_name is None:
-            model_name = self.default_model(require_images=True)
+            model_name = self.default_model()
+
         # For a simple check:
         return "3-5" in model_name or "sonnet" in model_name or "vision" in model_name
 
@@ -140,7 +141,8 @@ class AnthropicApi(BaseApi):
         We'll guess 'claude-2' or 'claude-3' or 'sonnet' => True.
         """
         if model_name is None:
-            model_name = self.default_model(require_tools=True)
+            model_name = self.default_model()
+
         return ("claude-2" in model_name or "claude-3" in model_name)
 
     def max_num_input_tokens(self, model_name: Optional[str] = None) -> int:
@@ -149,9 +151,9 @@ class AnthropicApi(BaseApi):
 
         If model_name is unrecognized, fallback = 100_000 (safe guess).
         """
+
         if model_name is None:
-            # If you have a default model, supply it here:
-            model_name = "claude-3-sonnet-latest"
+            model_name = self.default_model()
 
         name = model_name.lower()
 
@@ -186,8 +188,7 @@ class AnthropicApi(BaseApi):
         If model_name is unrecognized, fallback = 4096.
         """
         if model_name is None:
-            # If you have a default model, supply it here:
-            model_name = "claude-3-sonnet-latest"
+            model_name = self.default_model()
 
         name = model_name.lower()
 

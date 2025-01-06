@@ -17,7 +17,22 @@ class OpenAIApi(BaseApi):
 
     def __init__(self,
                  api_key: Optional[str] = None,
+                 use_whisper_for_audio_if_needed: bool = True,
                  **kwargs):
+
+        """
+        Initialize the OpenAI API client.
+        Parameters
+        ----------
+        api_key: Optional[str]
+            The API key for OpenAI. If not provided, we'll read from OPENAI_API_KEY env var.
+        use_whisper_for_audio_if_needed: bool
+            If True, use whisper to transcribe audio if the model does not support audio.
+        kwargs: dict
+            Additional options (e.g. `timeout=...`, `max_retries=...`) passed to `OpenAI(...)`.
+        """
+
+        self.use_whisper_for_audio_if_needed = use_whisper_for_audio_if_needed
 
         # get key from environmental variables:
         if api_key is None:
@@ -98,6 +113,10 @@ class OpenAIApi(BaseApi):
         return sorted_model_list[0]
 
     def has_image_support(self, model_name: Optional[str] = None) -> bool:
+
+        if model_name is None:
+            model_name = self.default_model()
+
         # Then, we check if it is a vision model:
         if 'vision' in model_name or 'gpt-4o' in model_name or 'gpt-o1' in model_name:
             return True
@@ -111,17 +130,37 @@ class OpenAIApi(BaseApi):
 
     def has_audio_support(self, model_name: Optional[str] = None) -> bool:
 
+        if model_name is None:
+            model_name = self.default_model()
+
         try:
             openai_models = self.client.models.list()
-            # Check that whisper-1 is in the list:
-            if 'whisper-1' in [model.id for model in openai_models.data]:
-                return True
+            if self.use_whisper_for_audio_if_needed:
+
+                # Check that whisper-1 is in the list:
+                if 'whisper-1' in [model.id for model in openai_models.data]:
+                    return True
+                else:
+                    return False
             else:
-                return False
+                return self._has_audio_support_no_whisper(model_name)
+
         except Exception:
             return False
 
+    def _has_audio_support_no_whisper(self,
+                                      model_name: Optional[str] = None) -> bool:
+        if model_name is None:
+            model_name = self.default_model()
+
+        # Check that the model name has 'audio' in it:
+        return 'audio' in model_name
+
     def has_tool_support(self, model_name: Optional[str] = None) -> bool:
+
+        if model_name is None:
+            model_name = self.default_model()
+
         # Only old models don't support tools:
         if 'gpt-3.5' in model_name:
             return False
@@ -368,8 +407,11 @@ class OpenAIApi(BaseApi):
         openai_tools = _format_tools_for_openai(
             toolset) if toolset else NotGiven()
 
-        # If messages contain audio, first transcribe audio:
-        messages = transcribe_audio_in_messages(messages, self.client)
+        # If whisper use is allowed, and model does not support audio, then we use whisper to transcribe audio:
+        if self.use_whisper_for_audio_if_needed and not self._has_audio_support_no_whisper(
+                model_name):
+            # If messages contain audio, first transcribe audio:
+            messages = transcribe_audio_in_messages(messages, self.client)
 
         # Format messages for OpenAI:
         openai_formatted_messages = convert_messages_for_openai(messages)

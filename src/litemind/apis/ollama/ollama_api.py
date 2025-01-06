@@ -14,13 +14,19 @@ from litemind.apis.ollama.utils.tools import _format_tools_for_ollama
 class OllamaApi(BaseApi):
     def __init__(self,
                  host: Optional[str] = None,
-                 headers: Optional[Dict[str, str]] = None, **kwargs):
+                 headers: Optional[Dict[str, str]] = None,
+                 **kwargs):
         """
         Initialize the Ollama API client.
 
-        Parameters:
-        - host (Optional[str]): The host for the Ollama client (default is `http://localhost:11434`).
-        - headers (Optional[Dict[str, str]]): Additional headers to pass to the client.
+        Parameters
+        ----------
+        host: Optional[str]
+            The host for the Ollama client (default is `http://localhost:11434`).
+        headers:
+            Additional headers to pass to the client.
+        kwargs:
+            Additional options passed to the `Client(...)`.
         """
 
         from ollama import Client
@@ -79,6 +85,9 @@ class OllamaApi(BaseApi):
 
     def has_image_support(self, model_name: Optional[str] = None) -> bool:
 
+        if model_name is None:
+            model_name = self.default_model()
+
         try:
             model_details_families = self.client.show(
                 model_name).details.families
@@ -93,14 +102,23 @@ class OllamaApi(BaseApi):
 
     def has_tool_support(self, model_name: Optional[str] = None) -> bool:
 
-        model_template = self.client.show(model_name).template
-        return '$.Tools' in model_template
+        if model_name is None:
+            model_name = self.default_model()
+
+        try:
+            model_template = self.client.show(model_name).template
+            return '$.Tools' in model_template
+        except:
+            return False
 
     def max_num_input_tokens(self, model_name: Optional[str] = None) -> int:
 
+        if model_name is None:
+            model_name = self.default_model()
+
         model_info = self.client.show(model_name).modelinfo
 
-        # search key hat contains 'context_length'
+        # search key that contains 'context_length'
         for key in model_info.keys():
             if 'context_length' in key:
                 return model_info[key]
@@ -109,6 +127,9 @@ class OllamaApi(BaseApi):
         return 2500
 
     def max_num_output_tokens(self, model_name: Optional[str] = None) -> int:
+
+        if model_name is None:
+            model_name = self.default_model()
 
         model_info = self.client.show(model_name).modelinfo
 
