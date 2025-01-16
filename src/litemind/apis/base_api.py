@@ -17,7 +17,7 @@ class BaseApi(ABC):
     @abstractmethod
     def check_availability_and_credentials(self,
                                            api_key: Optional[str] = None) -> \
-    Optional[bool]:
+            Optional[bool]:
         """
         Check if this API is available and whether credentials are valid.
         If no API key is provided, checks if the API key available in the environment is valid.
@@ -38,7 +38,7 @@ class BaseApi(ABC):
 
     @abstractmethod
     def model_list(self, features: Optional[Sequence[ModelFeatures]] = None) -> \
-    List[str]:
+            List[str]:
         """
         Get the list of models available that satisfy a given set of features.
 
@@ -240,7 +240,9 @@ class BaseApi(ABC):
         """
         pass
 
-    def transcribe_audio(self, audio_uri: str, model_name: Optional[str] = None,
+    def transcribe_audio(self,
+                         audio_uri: str,
+                         model_name: Optional[str] = None,
                          **kwargs) -> str:
         """
         Transcribe an audio file using the model.
@@ -298,6 +300,35 @@ class BaseApi(ABC):
                 message.audio_uris = []
 
         return messages
+
+    def generate_audio(self,
+                       text: str,
+                       voice: Optional[str] = None,
+                       audio_format: Optional[str] = None,
+                       model_name: Optional[str] = None,
+                       **kwargs) -> str:
+        """
+        Generate an audio file using the model.
+
+        Parameters
+        ----------
+        text: str
+            The text to convert to audio.
+        voice: Optional[str]
+            The voice to use.
+        audio_format: Optional[str]
+            The format of the audio file. Can be: "mp3", "flac", "wav", or "pcm". By default "mp3" is used.
+        model_name: Optional[str]
+            The name of the model to use.
+        kwargs: dict
+            Additional arguments to pass to the audio generation function.
+
+        Returns
+        -------
+        str
+            URI of the audio file.
+
+        """
 
     def generate_image(self,
                        model_name: str,

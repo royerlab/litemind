@@ -83,7 +83,7 @@ class AnthropicApi(BaseApi):
             return False
 
     def model_list(self, features: Optional[Sequence[ModelFeatures]] = None) -> \
-    List[str]:
+            List[str]:
         """
         Return a list of known Anthropic models.
         """
@@ -112,7 +112,7 @@ class AnthropicApi(BaseApi):
 
     def get_best_model(self, features: Optional[Union[
         str, List[str], ModelFeatures, Sequence[ModelFeatures]]] = None) -> \
-    Optional[str]:
+            Optional[str]:
 
         # Normalise the features:
         features = ModelFeatures.normalise(features)

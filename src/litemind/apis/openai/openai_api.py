@@ -1,4 +1,5 @@
 import os
+import tempfile
 from io import BytesIO
 from typing import List, Optional, Sequence, Union
 
@@ -81,7 +82,7 @@ class OpenAIApi(BaseApi):
             return False
 
     def model_list(self, features: Optional[Sequence[ModelFeatures]] = None) -> \
-    List[str]:
+            List[str]:
         # Base filtering of models:
         filters = ['dall-e', 'audio', 'gpt', 'text-embedding']
 
@@ -96,7 +97,7 @@ class OpenAIApi(BaseApi):
 
     def get_best_model(self, features: Optional[Union[
         str, List[str], ModelFeatures, Sequence[ModelFeatures]]] = None) -> \
-    Optional[str]:
+            Optional[str]:
 
         # Normalise the features:
         features = ModelFeatures.normalise(features)
@@ -172,6 +173,9 @@ class OpenAIApi(BaseApi):
             if feature == ModelFeatures.TextGeneration:
                 if 'text-embedding' in model_name or 'dall-e' in model_name:
                     return False
+
+            elif feature == ModelFeatures.AudioGeneration:
+                pass
 
             elif feature == ModelFeatures.ImageGeneration:
                 if 'dall-e' not in model_name:
@@ -592,6 +596,39 @@ class OpenAIApi(BaseApi):
                 )
 
         return transcription
+
+    def generate_audio(self,
+                       text: str,
+                       voice: Optional[str] = None,
+                       audio_format: Optional[str] = None,
+                       model_name: Optional[str] = None,
+                       **kwargs) -> str:
+
+        # If no voice is provided, use the default voice:
+        if voice is None:
+            voice = 'onyx'
+
+        # If no file format is provided, use mp3:
+        if audio_format is None:
+            audio_format = 'mp3'
+
+        # Call the OpenAI API to generate audio:
+        response = self.client.audio.speech.create(
+            model="tts-1-hd",
+            voice=voice,
+            response_format=audio_format,
+            input=text,
+            **kwargs
+        )
+
+        # Get the path of a temporary file to save the audio using tempfile, file should not be created:
+        with tempfile.NamedTemporaryFile(suffix=".mp3",
+                                         delete=False) as temp_file:
+            # Save the audio to the temporary file:
+            response.write_to_file(temp_file.name)
+
+            # Return the URI to the temporary file:
+            return 'file://' + temp_file.name
 
     def generate_image(self,
                        model_name: str,

@@ -1,4 +1,5 @@
 from io import BytesIO
+from pathlib import Path
 
 import pytest
 from PIL import Image
@@ -11,6 +12,9 @@ from litemind.apis.base_api import ModelFeatures
 from litemind.apis.google.google_api import GeminiApi
 from litemind.apis.ollama.ollama_api import OllamaApi
 from litemind.apis.openai.openai_api import OpenAIApi
+from litemind.apis.test.utils.levenshtein import levenshtein_distance
+from litemind.apis.utils.dowload_audio_to_tempfile import \
+    download_audio_to_temp_file
 
 # Put all your implementations in this list:
 API_IMPLEMENTATIONS = [
@@ -766,6 +770,68 @@ class TestBaseApiImplementations:
 
             # If exception happened then test failed:
             assert False
+
+    def test_generate_audio(self, ApiClass):
+        # Test audio generation with generate_audio:
+        api_instance = ApiClass()
+        audio_gen_model_name = api_instance.get_best_model(
+            ModelFeatures.AudioGeneration)
+
+        if not api_instance.has_model_support_for(
+                model_name=audio_gen_model_name,
+                features=ModelFeatures.AudioGeneration):
+            pytest.skip(
+                f"{ApiClass.__name__} does not support audio generation. Skipping test.")
+
+        aprint("Audio generation model name: ", audio_gen_model_name)
+
+        # Define the text to generate audio from:
+        text = "Success is the ability to go from one failure to another with no loss of enthusiasm"
+
+        # Print the text:
+        aprint(f"Text to generate audio from: '{text}'")
+
+        # Generate the audio:
+        generated_audio_uri = api_instance.generate_audio(
+            model_name=audio_gen_model_name,
+            text=text,
+        )
+
+        # save URI to file:
+        generated_audio_file = download_audio_to_temp_file(generated_audio_uri)
+
+        # Convert the path string to a file to check its properties:
+        generated_audio_file = Path(generated_audio_file)
+
+        # Check that the file exists:
+        assert generated_audio_file.exists(), (
+            "The generated audio file should exist."
+        )
+        # Check the audio file length:
+        assert generated_audio_file.stat().st_size > 0, (
+            "The generated audio file should not be empty."
+        )
+        # Check that it is an MP3 file:
+        assert generated_audio_file.suffix == '.mp3', (
+            "The generated audio file should be an MP3 file."
+        )
+
+        # Transcribe the audio to check its contents:
+        if api_instance.has_model_support_for(model_name=audio_gen_model_name,
+                                              features=ModelFeatures.AudioTranscription):
+            # Transcribe audio:
+            transcription = api_instance.transcribe_audio(generated_audio_uri)
+
+            # compute the edit distance between the two strings:
+
+            edit_distance = levenshtein_distance(text, transcription)
+
+            # Make sure that the distance is not more than the number of words in the text:
+            assert edit_distance <= len(text.split()), (
+                "The edit distance between the generated audio and the original text should be small."
+            )
+
+            aprint(f"Transcription: '{transcription}'")
 
     def test_generate_image(self, ApiClass):
         api_instance = ApiClass()

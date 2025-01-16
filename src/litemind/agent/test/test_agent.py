@@ -91,6 +91,3 @@ def test_message_image():
     # Check response:
     assert len(agent.conversation) == 3
     assert 'sepia' in reply or 'photograph' in reply
-
-
-

@@ -8,6 +8,11 @@ def download_audio_to_temp_file(url: str) -> str:
     Downloads the audio from an HTTP(S) URL and saves it to a temp file.
     Tries to infer extension from Content-Type or from the URL.
     """
+
+    # If file is already local, just return the path:
+    if url.startswith("file://"):
+        return url.replace("file://", "")
+
     headers = {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
     }
