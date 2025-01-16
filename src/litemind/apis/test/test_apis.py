@@ -1,9 +1,13 @@
+from io import BytesIO
+
 import pytest
+from PIL import Image
 from arbol import aprint
 
 from litemind.agent.message import Message
 from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.anthropic.anthropic_api import AnthropicApi
+from litemind.apis.base_api import ModelFeatures
 from litemind.apis.google.google_api import GeminiApi
 from litemind.apis.ollama.ollama_api import OllamaApi
 from litemind.apis.openai.openai_api import OpenAIApi
@@ -24,13 +28,13 @@ class TestBaseApiImplementations:
     implementing the abstract BaseApi interface.
     """
 
-    def test_check_api_key(self, ApiClass):
+    def test_availability_and_credentials(self, ApiClass):
         """
         Test that check_api_key() returns True (or behaves appropriately)
         for each implementation.
         """
         api_instance = ApiClass()
-        assert api_instance.check_api_key() is True, (
+        assert api_instance.check_availability_and_credentials() is True, (
             f"{ApiClass.__name__}.check_api_key() should be True!"
         )
 
@@ -47,90 +51,63 @@ class TestBaseApiImplementations:
         assert len(
             models) > 0, f"{ApiClass.__name__}.model_list() should not be empty!"
 
-    def test_has_image_support(self, ApiClass):
-        """
-        Test has_image_support's return type (True/False).
-        We simply call it to ensure it's not blowing up.
-        """
+    def test_has_has_model_support_for(self, ApiClass):
+
         api_instance = ApiClass()
 
-        # Get a model that does not necessarily support images:
-        default_model_name = api_instance.default_model()
-        support = api_instance.has_image_support(model_name=default_model_name)
-        # We don't assert True or False globally, because some implementations
-        # might support it, others might not. Just ensure it's a boolean.
-        assert isinstance(support, bool), (
-            f"{ApiClass.__name__}.has_image_support() should return a bool."
-        )
+        for feature in ModelFeatures:
 
-        # Then we get a model that does necessarily support vision:
-        default_model_name = api_instance.default_model(require_images=True)
+            aprint(f"Checking support for feature: {feature} in {ApiClass}")
 
-        # if a model is returned, check if it supports images:
-        if default_model_name:
-            assert api_instance.has_image_support(model_name=default_model_name)
+            # Get a model that does not necessarily support feature:
+            default_model_name = api_instance.get_best_model()
+            support = api_instance.has_model_support_for(
+                model_name=default_model_name, features=feature)
+            # We don't assert True or False globally, because some implementations
+            # might support it, others might not. Just ensure it's a boolean.
+            assert isinstance(support, bool), (
+                f"{ApiClass.__name__}.has_model_support_for({feature}) should return a bool."
+            )
 
-        # Let's list models that support vision:
-        models = api_instance.model_list()
-        for model in models:
-            if api_instance.has_image_support(model):
-                aprint(model)
+            # Then we get a model that does necessarily support feature:
+            default_model_name = api_instance.get_best_model(features=feature)
 
-    def test_has_audio_support(self, ApiClass):
+            # if a model is returned, check if it supports feature:
+            if default_model_name:
+                assert api_instance.has_model_support_for(
+                    model_name=default_model_name, features=feature)
+            else:
+                aprint(f"No model in {ApiClass} supports feature: {feature}")
+
+            # Let's list models that support feature:
+            models = api_instance.model_list()
+            for model in models:
+                if api_instance.has_model_support_for(model_name=model,
+                                                      features=feature):
+                    aprint(model)
+
+            aprint(
+                f"Checked support for feature: {feature} in {ApiClass}: all good!")
+
+    def test_get_model_features(self, ApiClass):
         """
-        Test has_audio_support's return type (True/False).
-        We simply call it to ensure it's not blowing up.
+        Test that get_model_features() returns a non-empty list of features for all API models.
         """
+
         api_instance = ApiClass()
-
-        # Get a model that does not necessarily support audio:
-        default_model_name = api_instance.default_model()
-        support = api_instance.has_image_support(model_name=default_model_name)
-        # We don't assert True or False globally, because some implementations
-        # might support it, others might not. Just ensure it's a boolean.
-        assert isinstance(support, bool), (
-            f"{ApiClass.__name__}.has_audio_support() should return a bool."
-        )
-
-        # Then we get a model that does necessarily support audio:
-        default_model_name = api_instance.default_model(require_audio=True)
-
-        # If a model is returned, check if it supports audio:
-        if default_model_name:
-            assert api_instance.has_audio_support(model_name=default_model_name)
-
-        # Let's list models that support audio:
         models = api_instance.model_list()
         for model in models:
-            if api_instance.has_audio_support(model):
-                aprint(model)
-
-    def test_has_tool_support(self, ApiClass):
-        """
-        Tests whether the model supports tool usage. Some models may or may not.
-        Just verify that the method returns a bool and possibly confirm
-        certain models do or do not support tools.
-        """
-        api_instance = ApiClass()
-
-        # Check default model:
-        default_model_name = api_instance.default_model()
-        support = api_instance.has_tool_support(model_name=default_model_name)
-
-        assert isinstance(support, bool), (
-            f"{ApiClass.__name__}.has_tool_support() should return a bool!"
-        )
-
-        tool_model_name = api_instance.default_model(require_tools=True)
-
-        if default_model_name:
-            assert api_instance.has_tool_support(model_name=tool_model_name)
-
-        # Let's list models that support tools:
-        models = api_instance.model_list()
-        for model in models:
-            if api_instance.has_tool_support(model):
-                aprint(model)
+            features = api_instance.get_model_features(model_name=model)
+            assert isinstance(features, list), (
+                f"{ApiClass.__name__}.get_model_features() should return a list!"
+            )
+            assert len(features) > 0, (
+                f"{ApiClass.__name__}.get_model_features() should not be empty!"
+            )
+            for feature in features:
+                assert isinstance(feature, ModelFeatures), (
+                    f"{ApiClass.__name__}.get_model_features() should return a list of ModelFeatures!"
+                )
 
     def test_max_num_input_token(self, ApiClass):
         """
@@ -138,7 +115,7 @@ class TestBaseApiImplementations:
         """
 
         api_instance = ApiClass()
-        default_model_name = api_instance.default_model()
+        default_model_name = api_instance.get_best_model()
         max_tokens = api_instance.max_num_input_tokens(
             model_name=default_model_name)
         assert isinstance(max_tokens, int), (
@@ -153,7 +130,7 @@ class TestBaseApiImplementations:
         Test that max_num_output_tokens() returns a valid integer.
         """
         api_instance = ApiClass()
-        default_model_name = api_instance.default_model()
+        default_model_name = api_instance.get_best_model()
         max_tokens = api_instance.max_num_output_tokens(
             model_name=default_model_name)
         assert isinstance(max_tokens, int), (
@@ -163,13 +140,14 @@ class TestBaseApiImplementations:
             f"{ApiClass.__name__}.max_num_output_tokens() should be a positive integer!"
         )
 
-    def test_completion_simple(self, ApiClass):
+    def test_text_generation_simple(self, ApiClass):
         """
         Test a simple completion with the default or a known good model.
         """
         api_instance = ApiClass()
 
-        default_model_name = api_instance.default_model()
+        default_model_name = api_instance.get_best_model(
+            ModelFeatures.TextGeneration)
 
         messages = [
             Message(role="system",
@@ -177,9 +155,7 @@ class TestBaseApiImplementations:
             Message(role="user", text="Who are you?")
         ]
 
-        # Some implementations let you omit `model_name` if they have a default.
-        # If your API requires a model_name, supply it here:
-        response = api_instance.completion(
+        response = api_instance.generate_text_completion(
             model_name=default_model_name,
             messages=messages,
             temperature=0.7
@@ -210,13 +186,14 @@ class TestBaseApiImplementations:
 
         api_instance = ApiClass()
 
-        default_model_name = api_instance.default_model(require_tools=True)
+        default_model_name = api_instance.get_best_model(
+            [ModelFeatures.Tools, ModelFeatures.TextGeneration])
 
         user_message = Message(role="user",
                                text="When will my order order_12345 be delivered?")
         messages = [user_message]
 
-        response = api_instance.completion(
+        response = api_instance.generate_text_completion(
             model_name=default_model_name,  # or a specific model name if needed
             messages=messages,
             toolset=toolset
@@ -267,7 +244,14 @@ class TestBaseApiImplementations:
 
         api_instance = ApiClass()
 
-        default_model_name = api_instance.default_model(require_tools=True)
+        default_model_name = api_instance.get_best_model(
+            [ModelFeatures.Tools, ModelFeatures.TextGeneration])
+
+        if not default_model_name or not api_instance.has_model_support_for(
+                model_name=default_model_name,
+                features=[ModelFeatures.TextGeneration, ModelFeatures.Tools]):
+            pytest.skip(
+                f"{ApiClass.__name__} does not support text generation and tools. Skipping test.")
 
         messages = []
 
@@ -275,7 +259,7 @@ class TestBaseApiImplementations:
                                text="When will my order 'order_12345' be delivered?")
         messages += [user_message]
 
-        response = api_instance.completion(
+        response = api_instance.generate_text_completion(
             model_name=default_model_name,  # or a specific model name if needed
             messages=messages,
             toolset=toolset
@@ -289,7 +273,7 @@ class TestBaseApiImplementations:
                                text="What is the name of product 1393?")
         messages += [user_message]
 
-        response = api_instance.completion(
+        response = api_instance.generate_text_completion(
             model_name=default_model_name,  # or a specific model name if needed
             messages=messages,
             toolset=toolset
@@ -303,7 +287,7 @@ class TestBaseApiImplementations:
                                text="How many Olea Tables can I find in store 17?")
         messages += [user_message]
 
-        response = api_instance.completion(
+        response = api_instance.generate_text_completion(
             model_name=default_model_name,  # or a specific model name if needed
             messages=messages,
             toolset=toolset
@@ -318,9 +302,11 @@ class TestBaseApiImplementations:
 
     def test_completion_with_image_url(self, ApiClass):
         api_instance = ApiClass()
-        default_model_name = api_instance.default_model(require_images=True)
-        if not default_model_name or not api_instance.has_image_support(
-                default_model_name):
+        default_model_name = api_instance.get_best_model(
+            [ModelFeatures.TextGeneration, ModelFeatures.Image])
+        if not default_model_name or not api_instance.has_model_support_for(
+                model_name=default_model_name,
+                features=[ModelFeatures.TextGeneration, ModelFeatures.Image]):
             pytest.skip(
                 f"{ApiClass.__name__} does not support images. Skipping image test.")
         aprint(default_model_name)
@@ -341,8 +327,8 @@ class TestBaseApiImplementations:
         messages.append(user_message)
 
         # Run agent:
-        response = api_instance.completion(messages=messages,
-                                           model_name=default_model_name)
+        response = api_instance.generate_text_completion(messages=messages,
+                                                         model_name=default_model_name)
 
         # Normalise response:
         response = str(response)
@@ -354,9 +340,11 @@ class TestBaseApiImplementations:
 
     def test_completion_with_png_image_path(self, ApiClass):
         api_instance = ApiClass()
-        default_model_name = api_instance.default_model(require_images=True)
-        if not default_model_name or not api_instance.has_image_support(
-                default_model_name):
+        default_model_name = api_instance.get_best_model(
+            [ModelFeatures.TextGeneration, ModelFeatures.Image])
+        if not default_model_name or not api_instance.has_model_support_for(
+                model_name=default_model_name,
+                features=[ModelFeatures.TextGeneration, ModelFeatures.Image]):
             pytest.skip(
                 f"{ApiClass.__name__} does not support images. Skipping image test.")
         aprint(default_model_name)
@@ -378,22 +366,28 @@ class TestBaseApiImplementations:
         messages.append(user_message)
 
         # Run agent:
-        response = api_instance.completion(messages=messages,
-                                           model_name=default_model_name)
+        response = api_instance.generate_text_completion(messages=messages,
+                                                         model_name=default_model_name)
 
         # Normalise response:
         response = str(response)
 
         # Check response:
-        assert 'snake' in response or 'python' in response
+        if ApiClass.__name__ == 'OllamaApi':
+            # open source models are typically not yet strong enough.
+            assert 'blue' in response or 'logo' in response
+        else:
+            assert 'snake' in response or 'python' in response
 
         print('\n' + response)
 
     def test_completion_with_jpg_image_path(self, ApiClass):
         api_instance = ApiClass()
-        default_model_name = api_instance.default_model(require_images=True)
-        if not default_model_name or not api_instance.has_image_support(
-                default_model_name):
+        default_model_name = api_instance.get_best_model(
+            [ModelFeatures.TextGeneration, ModelFeatures.Image])
+        if not default_model_name or not api_instance.has_model_support_for(
+                model_name=default_model_name,
+                features=[ModelFeatures.TextGeneration, ModelFeatures.Image]):
             pytest.skip(
                 f"{ApiClass.__name__} does not support images. Skipping image test.")
         aprint(default_model_name)
@@ -415,8 +409,8 @@ class TestBaseApiImplementations:
         messages.append(user_message)
 
         # Run agent:
-        response = api_instance.completion(messages=messages,
-                                           model_name=default_model_name)
+        response = api_instance.generate_text_completion(messages=messages,
+                                                         model_name=default_model_name)
 
         # Normalise response:
         response = str(response)
@@ -428,9 +422,11 @@ class TestBaseApiImplementations:
 
     def test_completion_with_webp_image_path(self, ApiClass):
         api_instance = ApiClass()
-        default_model_name = api_instance.default_model(require_images=True)
-        if not default_model_name or not api_instance.has_image_support(
-                default_model_name):
+        default_model_name = api_instance.get_best_model(
+            [ModelFeatures.TextGeneration, ModelFeatures.Image])
+        if not default_model_name or not api_instance.has_model_support_for(
+                model_name=default_model_name,
+                features=[ModelFeatures.TextGeneration, ModelFeatures.Image]):
             pytest.skip(
                 f"{ApiClass.__name__} does not support images. Skipping image test.")
         aprint(default_model_name)
@@ -452,8 +448,8 @@ class TestBaseApiImplementations:
         messages.append(user_message)
 
         # Run agent:
-        response = api_instance.completion(messages=messages,
-                                           model_name=default_model_name)
+        response = api_instance.generate_text_completion(messages=messages,
+                                                         model_name=default_model_name)
 
         # Normalise response:
         response = str(response)
@@ -465,9 +461,11 @@ class TestBaseApiImplementations:
 
     def test_completion_with_gif_image_path(self, ApiClass):
         api_instance = ApiClass()
-        default_model_name = api_instance.default_model(require_images=True)
-        if not default_model_name or not api_instance.has_image_support(
-                default_model_name):
+        default_model_name = api_instance.get_best_model(
+            [ModelFeatures.TextGeneration, ModelFeatures.Image])
+        if not default_model_name or not api_instance.has_model_support_for(
+                model_name=default_model_name,
+                features=[ModelFeatures.TextGeneration, ModelFeatures.Image]):
             pytest.skip(
                 f"{ApiClass.__name__} does not support images. Skipping image test.")
         aprint(default_model_name)
@@ -490,8 +488,8 @@ class TestBaseApiImplementations:
         messages.append(user_message)
 
         # Run agent:
-        response = api_instance.completion(messages=messages,
-                                           model_name=default_model_name)
+        response = api_instance.generate_text_completion(messages=messages,
+                                                         model_name=default_model_name)
 
         # Normalise response:
         response = str(response)
@@ -503,9 +501,11 @@ class TestBaseApiImplementations:
 
     def test_completion_with_multiple_images(self, ApiClass):
         api_instance = ApiClass()
-        default_model_name = api_instance.default_model(require_images=True)
-        if not default_model_name or not api_instance.has_image_support(
-                default_model_name):
+        default_model_name = api_instance.get_best_model(
+            [ModelFeatures.TextGeneration, ModelFeatures.Image])
+        if not default_model_name or not api_instance.has_model_support_for(
+                model_name=default_model_name,
+                features=[ModelFeatures.TextGeneration, ModelFeatures.Image]):
             pytest.skip(
                 f"{ApiClass.__name__} does not support images. Skipping image test.")
         aprint(default_model_name)
@@ -530,8 +530,8 @@ class TestBaseApiImplementations:
         messages.append(user_message)
 
         # Run agent:
-        response = api_instance.completion(messages=messages,
-                                           model_name=default_model_name)
+        response = api_instance.generate_text_completion(messages=messages,
+                                                         model_name=default_model_name)
 
         # Normalise response:
         response = str(response)
@@ -544,9 +544,11 @@ class TestBaseApiImplementations:
 
     def test_completion_with_audio_path(self, ApiClass):
         api_instance = ApiClass()
-        default_model_name = api_instance.default_model(require_audio=True)
-        if not default_model_name or not api_instance.has_audio_support(
-                default_model_name):
+        default_model_name = api_instance.get_best_model(
+            [ModelFeatures.TextGeneration, ModelFeatures.Audio])
+        if not default_model_name or not api_instance.has_model_support_for(
+                model_name=default_model_name,
+                features=[ModelFeatures.TextGeneration, ModelFeatures.Audio]):
             pytest.skip(
                 f"{ApiClass.__name__} does not support audio. Skipping audio test.")
         aprint(default_model_name)
@@ -569,14 +571,55 @@ class TestBaseApiImplementations:
         messages.append(user_message)
 
         # Run agent:
-        response = api_instance.completion(messages=messages,
-                                           model_name=default_model_name)
+        response = api_instance.generate_text_completion(messages=messages,
+                                                         model_name=default_model_name)
 
         # Normalise response:
         response = str(response)
 
         # Check response:
         assert 'smell' in response or 'ham' in response or 'beer' in response
+
+        print('\n' + response)
+
+    def test_completion_with_video_path(self, ApiClass):
+        api_instance = ApiClass()
+        default_model_name = api_instance.get_best_model(
+            [ModelFeatures.TextGeneration, ModelFeatures.Video])
+        if not default_model_name or not api_instance.has_model_support_for(
+                model_name=default_model_name,
+                features=[ModelFeatures.TextGeneration, ModelFeatures.Video]):
+            pytest.skip(
+                f"{ApiClass.__name__} does not support videos. Skipping video test.")
+        aprint(default_model_name)
+
+        messages = []
+
+        # System message:
+        system_message = Message(role='system')
+        system_message.append_text(
+            'You are an omniscient all-knowing being called Ohmm')
+        messages.append(system_message)
+
+        # User message:
+        user_message = Message(role='user')
+        user_message.append_text('Can you describe what you see in the video?')
+        video_path = self._get_local_test_video_uri('avrocar.mp4')
+        user_message.append_video_path(video_path)
+        messages.append(user_message)
+
+        # Run agent:
+        response = api_instance.generate_text_completion(messages=messages,
+                                                         model_name=default_model_name)
+
+        # Normalize response:
+        response = str(response)
+
+        # Check response:
+        assert (
+                       'disc' in response or 'circular' in response or 'saucer' in response or 'rotor' in response) and (
+                       'vehicle' in response or 'aircraft' in response) and (
+                       'hovering' in response or 'hover' in response)
 
         print('\n' + response)
 
@@ -587,9 +630,13 @@ class TestBaseApiImplementations:
         """
         api_instance = ApiClass()
 
-        default_model_name = api_instance.default_model(require_images=True)
+        default_model_name = api_instance.get_best_model(
+            [ModelFeatures.TextGeneration, ModelFeatures.Image])
 
-        if not api_instance.has_image_support(default_model_name):
+        if not api_instance.has_model_support_for(model_name=default_model_name,
+                                                  features=[
+                                                      ModelFeatures.TextGeneration,
+                                                      ModelFeatures.Image]):
             pytest.skip(
                 f"{ApiClass.__name__} does not support images. Skipping image test.")
 
@@ -613,6 +660,10 @@ class TestBaseApiImplementations:
             assert 'robot' in description or 'futuristic' in description or 'sky' in description
 
         except:
+            # Print stacktrace:
+            import traceback
+            traceback.print_exc()
+
             # If exception happened then test failed:
             assert False
 
@@ -623,9 +674,13 @@ class TestBaseApiImplementations:
         """
         api_instance = ApiClass()
 
-        default_model_name = api_instance.default_model(require_audio=True)
+        default_model_name = api_instance.get_best_model(
+            [ModelFeatures.TextGeneration, ModelFeatures.Audio])
 
-        if not api_instance.has_audio_support(default_model_name):
+        if not api_instance.has_model_support_for(model_name=default_model_name,
+                                                  features=[
+                                                      ModelFeatures.TextGeneration,
+                                                      ModelFeatures.Audio]):
             pytest.skip(
                 f"{ApiClass.__name__} does not support audio. Skipping audio test.")
 
@@ -648,14 +703,217 @@ class TestBaseApiImplementations:
             assert 'smell' in description or 'ham' in description or 'beer' in description
 
         except:
+            # Print stacktrace:
+            import traceback
+            traceback.print_exc()
+
             # If exception happened then test failed:
             assert False
+
+    def test_describe_video_if_supported(self, ApiClass):
+        """
+        Test describe_video if the implementation supports videos.
+        If not, we skip it.
+        """
+        api_instance = ApiClass()
+
+        default_model_name = api_instance.get_best_model(
+            [ModelFeatures.TextGeneration, ModelFeatures.Video])
+
+        if not api_instance.has_model_support_for(model_name=default_model_name,
+                                                  features=[
+                                                      ModelFeatures.TextGeneration,
+                                                      ModelFeatures.Video]):
+            pytest.skip(
+                f"{ApiClass.__name__} does not support videos. Skipping video test.")
+
+        try:
+            video_path = self._get_local_test_video_uri('lunar_park.mov')
+
+            description = api_instance.describe_video(video_path,
+                                                      model_name=default_model_name)
+
+            aprint(description)
+
+            assert isinstance(description, str), (
+                f"{ApiClass.__name__}.describe_video() should return a string!"
+            )
+            assert len(description) > 0, (
+                f"{ApiClass.__name__}.describe_video() should return a non-empty string!"
+            )
+
+            # Lower case:
+            description = description.lower()
+
+            # If ApiClass.__name__ is 'OllamaApi', we relax the test to allow for more flexibility:
+            if ApiClass.__name__ == 'OllamaApi':
+                # Open source models are not yet strong enough to understand that a sequence of images is a video:
+                assert 'elephant' in description.lower()
+            else:
+
+                # Check the contents of the string:
+                assert (
+                               'roller coaster' in description or 'amusement park' in description) and (
+                               '20th century' in description or '20th-century' in description)
+
+
+
+
+        except:
+            # Print stacktrace:
+            import traceback
+            traceback.print_exc()
+
+            # If exception happened then test failed:
+            assert False
+
+    def test_generate_image(self, ApiClass):
+        api_instance = ApiClass()
+        image_gen_model_name = api_instance.get_best_model(
+            ModelFeatures.ImageGeneration)
+
+        if not api_instance.has_model_support_for(
+                model_name=image_gen_model_name,
+                features=ModelFeatures.ImageGeneration):
+            pytest.skip(
+                f"{ApiClass.__name__} does not support image generation. Skipping test.")
+
+        aprint("Image generation model name: ", image_gen_model_name)
+
+        prompt = "a white siamese cat"
+        image_width = 1024
+        image_height = 1024
+
+        # Generate the image
+        generated_image = api_instance.generate_image(
+            model_name=image_gen_model_name,
+            positive_prompt=prompt,
+            image_width=image_width,
+            image_height=image_height,
+            preserve_aspect_ratio=True,
+            allow_resizing=True
+        )
+
+        assert isinstance(generated_image,
+                          Image.Image), "The generated image should be a PIL Image instance."
+
+        # Save the generated image to a BytesIO object
+        image_bytes = BytesIO()
+        generated_image.save(image_bytes, format='PNG')
+        image_bytes.seek(0)
+
+        # Save image to temp PNG file using tempfile:
+        import tempfile
+        temp_image_path = tempfile.NamedTemporaryFile(suffix='.png').name
+        generated_image.save(temp_image_path, format='PNG')
+
+        # Convert filepath to URI:
+        image_uri = 'file://' + temp_image_path
+
+        # Get model with image support:
+        image_model_name = api_instance.get_best_model(ModelFeatures.Image)
+        aprint("Image model name: ", image_model_name)
+
+        # If describe_image is available, use it to check the content of the generated image
+        if image_model_name and api_instance.has_model_support_for(
+                model_name=image_model_name, features=ModelFeatures.Image):
+            # Ask model to describe image:
+            description = api_instance.describe_image(
+                model_name=image_model_name,
+                image_uri=image_uri)
+
+            aprint(f"Description of the generated image: {description}")
+
+            # Asserts:
+            assert isinstance(description,
+                              str), "The description should be a string."
+            assert len(description) > 0, "The description should not be empty."
+            assert 'cat' in description.lower(), "The description should mention a 'cat'."
+            assert (
+                    'white' in description.lower() or 'blue' in description.lower()), "The description should mention 'white' or 'blue'."
+
+    def test_text_embedding(self, ApiClass):
+        """
+        Test that text_embedding() returns a valid list of floats.
+        """
+        api_instance = ApiClass()
+
+        embedding_model_name = api_instance.get_best_model(
+            ModelFeatures.TextEmbeddings)
+
+        # Skip test if the model does not support embeddings:
+        if not embedding_model_name or not api_instance.has_model_support_for(
+                model_name=embedding_model_name,
+                features=ModelFeatures.TextEmbeddings):
+            pytest.skip(
+                f"{ApiClass.__name__} does not support embeddings. Skipping test.")
+
+        texts = ["Hello, world!", "Testing embeddings."]
+        embeddings = api_instance.embed_texts(texts=texts,
+                                              model_name=embedding_model_name,
+                                              dimensions=512)
+
+        # Check that the returned embeddings are a list of length 2:
+        assert isinstance(embeddings, list), "The embeddings should be a list."
+        assert len(
+            embeddings) == 2, "The embeddings should be a list of length 2."
+
+        # Check that each embeddings are lists of floats:
+        for embedding in embeddings:
+            assert isinstance(embedding,
+                              list), "Each embedding should be a list."
+            assert len(
+                embedding) == 512, "Each embedding should be of length 512 as reequested."
+
+            for value in embedding:
+                assert isinstance(value,
+                                  float), "Each value in the embedding should be a float."
+
+    def test_audio_embedding(self, ApiClass):
+        """
+        Test that text_embedding() returns a valid list of floats.
+        """
+        api_instance = ApiClass()
+
+        embedding_model_name = api_instance.get_best_model(
+            ModelFeatures.TextEmbeddings)
+
+        # Skip test if the model does not support embeddings:
+        if not embedding_model_name or not api_instance.has_model_support_for(
+                model_name=embedding_model_name,
+                features=ModelFeatures.TextEmbeddings):
+            pytest.skip(
+                f"{ApiClass.__name__} does not support embeddings. Skipping test.")
+
+        texts = ["Hello, world!", "Testing embeddings."]
+        embeddings = api_instance.embed_texts(texts=texts,
+                                              model_name=embedding_model_name,
+                                              dimensions=512)
+
+        # Check that the returned embeddings are a list of length 2:
+        assert isinstance(embeddings, list), "The embeddings should be a list."
+        assert len(
+            embeddings) == 2, "The embeddings should be a list of length 2."
+
+        # Check that each embeddings are lists of floats:
+        for embedding in embeddings:
+            assert isinstance(embedding,
+                              list), "Each embedding should be a list."
+            assert len(
+                embedding) == 512, "Each embedding should be of length 512 as reequested."
+
+            for value in embedding:
+                assert isinstance(value,
+                                  float), "Each value in the embedding should be a float."
 
     def _get_local_test_image_uri(self, image_name: str):
         return self._get_local_test_file_uri('images', image_name)
 
     def _get_local_test_audio_uri(self, image_name: str):
         return self._get_local_test_file_uri('audio', image_name)
+
+    def _get_local_test_video_uri(self, image_name: str):
+        return self._get_local_test_file_uri('videos', image_name)
 
     def _get_local_test_file_uri(self, filetype, image_name):
         import os

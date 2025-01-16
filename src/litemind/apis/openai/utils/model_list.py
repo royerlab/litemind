@@ -1,59 +1,58 @@
 import traceback
+from typing import List, Optional
 
-from arbol import asection, aprint
+from arbol import aprint
 
 
-def get_openai_model_list(filter: str = 'gpt',
-                          verbose: bool = False) -> list:
+def get_openai_model_list(filters: Optional[List[str]] = ['gpt'],
+                          verbose: bool = False) -> list[str]:
     """
     Get the list of all OpenAI ChatGPT models.
 
     Parameters
     ----------
-    filter : str
+    filters : str
         Filter to apply to the list of models.
     verbose : bool
         Verbosity flag.
 
     Returns
     -------
-    list
+    list[str
         List of models.
 
     """
 
-    with asection(f"Enumerating all OpenAI ChatGPT models:"):
+    # Local imports to avoid issues:
+    from openai import OpenAI
 
-        # Local imports to avoid issues:
-        from openai import OpenAI
+    try:
+        # Model list to populate:
+        model_list = []
 
-        try:
-            # Model list to populate:
-            model_list = []
+        # Instantiate API entry point
+        client = OpenAI()
 
-            # Instantiate API entry point
-            client = OpenAI()
+        # Goes through models and populate the list:
+        for model in client.models.list().data:
+            model_id = model.id
 
-            # Goes through models and populate the list:
-            for model in client.models.list().data:
-                model_id = model.id
+            # only keep models that match the filter:
+            if not filters or any(f in model_id for f in filters):
+                model_list.append(model_id)
+                if verbose:
+                    aprint(model_id)
 
-                # only keep models that match the filter:
-                if filter in model_id:
-                    model_list.append(model_id)
-                    if verbose:
-                        aprint(model_id)
+        return model_list
 
-            return model_list
+    except Exception as e:
+        # Error message:
+        aprint(
+            f"Error: {type(e).__name__} with message: '{str(e)}' occured while trying to get the list of OpenAI models. ")
+        # print stacktrace:
+        traceback.print_exc()
 
-        except Exception as e:
-            # Error message:
-            aprint(
-                f"Error: {type(e).__name__} with message: '{str(e)}' occured while trying to get the list of OpenAI models. ")
-            # print stacktrace:
-            traceback.print_exc()
-
-            return []
+        return []
 
 
 def postprocess_openai_model_list(model_list: list) -> list:

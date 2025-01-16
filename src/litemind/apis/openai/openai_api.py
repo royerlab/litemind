@@ -1,23 +1,30 @@
 import os
-from typing import List, Optional
+from io import BytesIO
+from typing import List, Optional, Sequence, Union
+
+import requests
+from PIL import Image
+from arbol import aprint
 
 from litemind.agent.message import Message
 from litemind.agent.tools.toolset import ToolSet
-from litemind.apis.base_api import BaseApi
-from litemind.apis.exceptions import APIError
+from litemind.apis.base_api import BaseApi, ModelFeatures
+from litemind.apis.exceptions import APIError, APINotAvailableError
 from litemind.apis.openai.utils.messages import convert_messages_for_openai
 from litemind.apis.openai.utils.model_list import get_openai_model_list
 from litemind.apis.openai.utils.process_response import _process_response
 from litemind.apis.openai.utils.tools import _format_tools_for_openai
-from litemind.apis.openai.utils.transcribe_audio import \
-    transcribe_audio_in_messages
+from litemind.apis.utils.dowload_audio_to_tempfile import \
+    download_audio_to_temp_file
+from litemind.apis.utils.write_base64_to_temp_file import \
+    write_base64_to_temp_file
 
 
 class OpenAIApi(BaseApi):
 
     def __init__(self,
                  api_key: Optional[str] = None,
-                 use_whisper_for_audio_if_needed: bool = True,
+                 use_local_whisper: bool = True,
                  **kwargs):
 
         """
@@ -28,11 +35,13 @@ class OpenAIApi(BaseApi):
             The API key for OpenAI. If not provided, we'll read from OPENAI_API_KEY env var.
         use_whisper_for_audio_if_needed: bool
             If True, use whisper to transcribe audio if the model does not support audio.
+        use_local_whisper: bool
+            If True, use the local whisper instance for audio transcription.
         kwargs: dict
             Additional options (e.g. `timeout=...`, `max_retries=...`) passed to `OpenAI(...)`.
         """
 
-        self.use_whisper_for_audio_if_needed = use_whisper_for_audio_if_needed
+        self.use_local_whisper = use_local_whisper
 
         # get key from environmental variables:
         if api_key is None:
@@ -42,11 +51,18 @@ class OpenAIApi(BaseApi):
                 "The api_key client option must be set either by passing api_key to the client or by setting the OPENAI_API_KEY environment variable"
             )
 
-        # Create an OpenAI client:
-        from openai import OpenAI
-        self.client = OpenAI(api_key=api_key, **kwargs)
+        try:
+            # Create an OpenAI client:
+            from openai import OpenAI
+            self.client = OpenAI(api_key=api_key, **kwargs)
+        except Exception as e:
+            # Print stack trace:
+            import traceback
+            traceback.print_exc()
+            raise APINotAvailableError(f"Error initializing Gemini client: {e}")
 
-    def check_api_key(self, api_key: Optional[str] = None) -> bool:
+    def check_availability_and_credentials(self, api_key: Optional[
+        str] = None) -> bool:
         messages = []
 
         user_message = Message(role='user')
@@ -54,68 +70,186 @@ class OpenAIApi(BaseApi):
         messages.append(user_message)
 
         try:
-            self.completion(messages)
+            self.generate_text_completion(messages)
             return True
 
-        except Exception:
+        except Exception as e:
+            # print error message from exception:
+            aprint(f"Error while trying to check the OpenAI API key: {e}")
             import traceback
             traceback.print_exc()
             return False
 
-    def model_list(self) -> List[str]:
-        return get_openai_model_list()
-
-    def default_model(self,
-                      require_images: bool = False,
-                      require_audio: bool = False,
-                      require_tools: bool = False) -> Optional[str]:
+    def model_list(self, features: Optional[Sequence[ModelFeatures]] = None) -> \
+    List[str]:
+        # Base filtering of models:
+        filters = ['dall-e', 'audio', 'gpt', 'text-embedding']
 
         # Get the list of models:
-        model_list = get_openai_model_list()
+        model_list = get_openai_model_list(filters=filters)
 
-        if require_images:
-            # Filter out models that don't support vision:
-            model_list = [model for model in model_list if
-                          self.has_image_support(model)]
+        # Filter the models based on the features:
+        if features:
+            model_list = self._filter_models(model_list, features=features)
 
-        if require_audio:
-            # Filter out models that don't support audio:
-            model_list = [model for model in model_list if
-                          self.has_audio_support(model)]
+        return model_list
 
-        if require_tools:
-            # Filter out models that don't support tools:
-            model_list = [model for model in model_list if
-                          self.has_tool_support(model)]
+    def get_best_model(self, features: Optional[Union[
+        str, List[str], ModelFeatures, Sequence[ModelFeatures]]] = None) -> \
+    Optional[str]:
+
+        # Normalise the features:
+        features = ModelFeatures.normalise(features)
+
+        # Get model list:
+        model_list = self.model_list()
+
+        # Filter the models based on the requirements:
+        model_list = self._filter_models(model_list,
+                                         features=features)
 
         if len(model_list) == 0:
             return None
+        elif len(model_list) == 1:
+            return model_list[0]
+        else:
+            # Next we sort models so the best ones are at the beginning of the list:
+            def model_key(model):
+                # Split the model name into parts
+                parts = model.split('-')
 
-        # Next we sort models so the best ones are at the beginning of the list:
-        def model_key(model):
-            # Split the model name into parts
-            parts = model.split('-')
-            # Get the main version (e.g., '3.5' or '4' from 'gpt-3.5' or 'gpt-4')
-            main_version = parts[1]
+                # If a part is '4o' or 'o1', replace it with 'o1.25' or '4.25' respectively:
+                parts = [part if part not in ['4o', 'o1'] else part.replace('o',
+                                                                            '.25')
+                         for part in parts]
 
-            if 'o' in main_version:
-                main_version = main_version.replace('o', '.25')
+                # Remove all the parts that are not numbers (integer or float):
+                parts = [part for part in parts if
+                         part.replace('.', '', 1).isdigit()]
 
-            # Use the length of the model name as a secondary sorting criterion
-            length = len(model)
-            # Sort by main version (descending), then by length (ascending)
-            return (-float(main_version), length)
+                # Remove parts that are integers but that lead with a zero:
+                if len(parts) > 1:
+                    parts = [part for part in parts if not part.startswith('0')]
 
-        # Actual sorting:
-        sorted_model_list = sorted(model_list, key=model_key)
+                # Remove parts that are numbers (float or int) that are too big (>10.0)
+                if len(parts) > 1:
+                    parts = [part for part in parts if float(part) < 5]
 
-        # return the first in the list which we assume to eb the best:
-        return sorted_model_list[0]
+                # Get the main version (e.g., '3.5' or '4' from 'gpt-3.5' or 'gpt-4')
+                main_version = float(parts[-1])
 
-    def has_image_support(self, model_name: Optional[str] = None) -> bool:
+                # If we find 'mini' in the model name then substract 0.25 from the main version:
+                if 'mini' in model:
+                    main_version -= 0.12
+
+                # Use the length of the model name as a secondary sorting criterion
+                length = len(model)
+                # Sort by main version (descending), then by length (ascending)
+                return (-(main_version), length)
+
+            # Actual sorting:
+            sorted_model_list = sorted(model_list, key=model_key)
+
+            # return the first in the list which we assume to eb the best:
+            return sorted_model_list[0]
+
+    def has_model_support_for(self,
+                              features: Union[
+                                  str, List[str], ModelFeatures, Sequence[
+                                      ModelFeatures]],
+                              model_name: Optional[str] = None) -> bool:
+
+        # Get the best model if not provided:
+        if model_name is None:
+            model_name = self.get_best_model()
+
+        # Normalise the features:
+        features = ModelFeatures.normalise(features)
+
+        # Check that the model has all the required features:
+        for feature in features:
+
+            if feature == ModelFeatures.TextGeneration:
+                if 'text-embedding' in model_name or 'dall-e' in model_name:
+                    return False
+
+            elif feature == ModelFeatures.ImageGeneration:
+                if 'dall-e' not in model_name:
+                    return False
+
+            elif feature == ModelFeatures.TextEmbeddings:
+                if 'text-embedding' not in model_name:
+                    return False
+
+            elif feature == ModelFeatures.ImageEmbeddings:
+
+                if 'dall-e' not in model_name:
+                    return False
+
+                if not self.has_model_support_for(
+                        [ModelFeatures.Image, ModelFeatures.TextEmbeddings],
+                        model_name):
+                    return False
+
+            elif feature == ModelFeatures.AudioEmbeddings:
+
+                if 'dall-e' not in model_name:
+                    return False
+
+                if not self.has_model_support_for(
+                        [ModelFeatures.Audio, ModelFeatures.TextEmbeddings],
+                        model_name):
+                    return False
+
+            elif feature == ModelFeatures.VideoEmbeddings:
+
+                if 'dall-e' not in model_name:
+                    return False
+
+                if not self.has_model_support_for(
+                        [ModelFeatures.Video, ModelFeatures.TextEmbeddings],
+                        model_name):
+                    return False
+
+            elif feature == ModelFeatures.Image:
+
+                if 'text-embedding' in model_name or 'dall-e' in model_name:
+                    return False
+
+                if not self._has_image_support(model_name):
+                    return False
+
+            elif feature == ModelFeatures.Audio:
+
+                if 'text-embedding' in model_name or 'dall-e' in model_name:
+                    return False
+
+                if not self._has_audio_support(model_name):
+                    return False
+
+            elif feature == ModelFeatures.Video:
+
+                if 'text-embedding' in model_name or 'dall-e' in model_name:
+                    return False
+
+                if not self.has_model_support_for(ModelFeatures.Image,
+                                                  model_name):
+                    return False
+
+            elif feature == ModelFeatures.Tools:
+                if 'gpt-3.5' in model_name or 'dall-e' in model_name or 'text-embedding' in model_name:
+                    return False
+
+            else:
+                if not super().has_model_support_for(feature, model_name):
+                    return False
+
+        return True
+
+    def _has_image_support(self, model_name: Optional[str] = None) -> bool:
 
         if model_name is None:
-            model_name = self.default_model()
+            model_name = self.get_best_model()
 
         # Then, we check if it is a vision model:
         if 'vision' in model_name or 'gpt-4o' in model_name or 'gpt-o1' in model_name:
@@ -128,50 +262,30 @@ class OpenAIApi(BaseApi):
         # Any other model is not a vision model:
         return False
 
-    def has_audio_support(self, model_name: Optional[str] = None) -> bool:
+    def _has_audio_support(self, model_name: Optional[str] = None) -> bool:
 
         if model_name is None:
-            model_name = self.default_model()
+            model_name = self.get_best_model()
 
         try:
-            openai_models = self.client.models.list()
-            if self.use_whisper_for_audio_if_needed:
-
-                # Check that whisper-1 is in the list:
-                if 'whisper-1' in [model.id for model in openai_models.data]:
-                    return True
-                else:
-                    return False
+            if self.use_local_whisper:
+                return super().has_model_support_for(model_name=model_name,
+                                                     features=ModelFeatures.AudioTranscription) or 'audio' in model_name
             else:
-                return self._has_audio_support_no_whisper(model_name)
+                # Check that whisper-1 is in the list:
+                openai_models = self.client.models.list()
+
+                return 'audio' in model_name or 'whisper-1' in [model.id for
+                                                                model in
+                                                                openai_models.data]
 
         except Exception:
             return False
 
-    def _has_audio_support_no_whisper(self,
-                                      model_name: Optional[str] = None) -> bool:
-        if model_name is None:
-            model_name = self.default_model()
-
-        # Check that the model name has 'audio' in it:
-        return 'audio' in model_name
-
-    def has_tool_support(self, model_name: Optional[str] = None) -> bool:
-
-        if model_name is None:
-            model_name = self.default_model()
-
-        # Only old models don't support tools:
-        if 'gpt-3.5' in model_name:
-            return False
-
-        # Any other model supports tools:
-        return True
-
     def max_num_input_tokens(self, model_name: Optional[str] = None) -> int:
 
         if model_name is None:
-            model_name = self.default_model()
+            model_name = self.get_best_model()
 
         if ('gpt-4-1106-preview' in model_name
                 or 'gpt-4-0125-preview' in model_name
@@ -202,7 +316,7 @@ class OpenAIApi(BaseApi):
         If model_name is None, this uses the default model name as a fallback.
         """
         if model_name is None:
-            model_name = self.default_model()
+            model_name = self.get_best_model()
 
         name = model_name.lower()
 
@@ -312,7 +426,7 @@ class OpenAIApi(BaseApi):
         """
 
         if model_name is None:
-            model_name = self.default_model()
+            model_name = self.get_best_model()
 
         name = model_name.lower()
 
@@ -385,19 +499,30 @@ class OpenAIApi(BaseApi):
         # If a model isn't recognized, return a safe default (4k).
         return 4096
 
-    def completion(self,
-                   messages: List[Message],
-                   model_name: Optional[str] = None,
-                   temperature: Optional[float] = 0.0,
-                   max_output_tokens: Optional[int] = None,
-                   toolset: Optional[ToolSet] = None,
-                   **kwargs) -> Message:
+    def generate_text_completion(self,
+                                 messages: List[Message],
+                                 model_name: Optional[str] = None,
+                                 temperature: Optional[float] = 0.0,
+                                 max_output_tokens: Optional[int] = None,
+                                 toolset: Optional[ToolSet] = None,
+                                 **kwargs) -> Message:
 
         from openai import NotGiven
 
         # Set default model if not provided
         if model_name is None:
-            model_name = self.default_model()
+            model_name = self.get_best_model()
+
+        # o1 models have special needs:
+        if "o1" in model_name:
+            # o1 models do not support any temperature except the default 1:
+            temperature = 1.0
+
+            # o1 models do not support system messages, make a copy of messages and recast system messages as user messages:
+            messages = [m.copy() for m in messages]
+            for message in messages:
+                if message.role == 'system':
+                    message.role = 'user'
 
         # Get max num of output tokens for model if not provided:
         if max_output_tokens is None:
@@ -407,11 +532,11 @@ class OpenAIApi(BaseApi):
         openai_tools = _format_tools_for_openai(
             toolset) if toolset else NotGiven()
 
-        # If whisper use is allowed, and model does not support audio, then we use whisper to transcribe audio:
-        if self.use_whisper_for_audio_if_needed and not self._has_audio_support_no_whisper(
-                model_name):
-            # If messages contain audio, first transcribe audio:
-            messages = transcribe_audio_in_messages(messages, self.client)
+        # If model does not support audio but audio transcription is available, then we use it to transcribe audio:
+        if self.use_local_whisper and self.has_model_support_for(
+                model_name=model_name,
+                features=ModelFeatures.AudioTranscription):
+            messages = self._transcribe_audio_in_messages(messages)
 
         # Format messages for OpenAI:
         openai_formatted_messages = convert_messages_for_openai(messages)
@@ -421,7 +546,7 @@ class OpenAIApi(BaseApi):
             model=model_name,
             messages=openai_formatted_messages,
             temperature=temperature,
-            max_tokens=max_output_tokens,
+            max_completion_tokens=max_output_tokens,
             tools=openai_tools,
             **kwargs
         )
@@ -430,3 +555,123 @@ class OpenAIApi(BaseApi):
         response_message = _process_response(response, toolset)
         messages.append(response_message)
         return response_message
+
+    def transcribe_audio(self, audio_uri: str, model_name: Optional[str] = None,
+                         **kwargs) -> str:
+
+        if self.use_local_whisper:
+            transcription = super().transcribe_audio(audio_uri, model_name,
+                                                     **kwargs)
+        else:
+            # Save original filename fromm URI:
+            original_filename = audio_uri.split("/")[-1]
+
+            # Remove the "file://" prefix if it exists:
+            if audio_uri.startswith("file://"):
+                audio_uri = audio_uri.replace("file://", "")
+
+            # if the audio_uri is a remote url:
+            if audio_uri.startswith("http://") or audio_uri.startswith(
+                    "https://"):
+                # Download the audio file:
+                audio_uri = download_audio_to_temp_file(audio_uri)
+
+            # if the audio_uri is a data uri:
+            elif audio_uri.startswith("data:audio/"):
+                # Write the audio data to a temp file:
+                audio_uri = write_base64_to_temp_file(audio_uri)
+
+            # Open the audio file:
+            with open(audio_uri, "rb") as audio_file:
+
+                # Transcribe the audio file:
+                transcription = self.client.audio.transcriptions.create(
+                    model="whisper-1",
+                    file=audio_file,
+                    response_format="text"
+                )
+
+        return transcription
+
+    def generate_image(self,
+                       model_name: str,
+                       positive_prompt: str,
+                       negative_prompt: Optional[str] = None,
+                       image_width: int = 512,
+                       image_height: int = 512,
+                       preserve_aspect_ratio: bool = True,
+                       allow_resizing: bool = True,
+                       **kwargs
+                       ) -> 'Image':
+
+        # Make prompt from positive and negative prompts:
+        if negative_prompt:
+            prompt = f"Image must consist in: {positive_prompt}\nBut NOT of: {negative_prompt}"
+        else:
+            prompt = positive_prompt
+
+        allowed_sizes = ["256x256", "512x512", "1024x1024", "1792x1024",
+                         "1024x1792"]
+        requested_size = f"{image_width}x{image_height}"
+
+        if requested_size not in allowed_sizes:
+            if not allow_resizing:
+                raise ValueError(
+                    f"Requested resolution {requested_size} is not allowed and resizing is not permitted.")
+
+            # Find the closest higher resolution
+            allowed_widths = sorted(
+                set(int(size.split('x')[0]) for size in allowed_sizes))
+            allowed_heights = sorted(
+                set(int(size.split('x')[1]) for size in allowed_sizes))
+
+            closest_width = next(
+                (w for w in allowed_widths if w >= image_width),
+                allowed_widths[-1])
+            closest_height = next(
+                (h for h in allowed_heights if h >= image_height),
+                allowed_heights[-1])
+
+            closest_size = f"{closest_width}x{closest_height}"
+        else:
+            closest_size = requested_size
+
+        response = self.client.images.generate(
+            model=model_name,
+            prompt=prompt,
+            size=closest_size,
+            quality="hd",
+            n=1,
+            **kwargs
+        )
+
+        image_url = response.data[0].url
+        image = Image.open(BytesIO(requests.get(image_url).content))
+
+        if closest_size != requested_size:
+            if preserve_aspect_ratio:
+                image.thumbnail((image_width, image_height),
+                                Image.ANTIALIAS)
+            else:
+                image = image.resize((image_width, image_height),
+                                     Image.ANTIALIAS)
+
+        return image
+
+    def embed_texts(self,
+                    texts: List[str],
+                    model_name: Optional[str] = None,
+                    dimensions: int = 512,
+                    **kwargs) -> Sequence[Sequence[float]]:
+
+        if model_name is None:
+            model_name = self.get_best_model(require_embeddings=True)
+
+        response = self.client.embeddings.create(
+            model=model_name,
+            dimensions=dimensions,
+            input=texts,
+            **kwargs
+        )
+
+        return list([e.embedding for e in response.data])

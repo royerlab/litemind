@@ -1,14 +1,16 @@
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Sequence, Union
 
 from arbol import aprint
 
 from litemind.agent.message import Message
 from litemind.agent.tools.toolset import ToolSet
-from litemind.apis.base_api import BaseApi
-from litemind.apis.exceptions import APIError
+from litemind.apis.base_api import BaseApi, ModelFeatures
+from litemind.apis.exceptions import APIError, APINotAvailableError
 from litemind.apis.ollama.utils.messages import _convert_messages_for_ollama
 from litemind.apis.ollama.utils.process_response import _process_response
 from litemind.apis.ollama.utils.tools import _format_tools_for_ollama
+from litemind.apis.utils.whisper_transcribe_audio import \
+    is_local_whisper_available
 
 
 class OllamaApi(BaseApi):
@@ -28,46 +30,56 @@ class OllamaApi(BaseApi):
         kwargs:
             Additional options passed to the `Client(...)`.
         """
+        try:
+            from ollama import Client
+            self.client = Client(host=host,
+                                 headers=headers,
+                                 **kwargs)
 
-        from ollama import Client
-        self.client = Client(host=host,
-                             headers=headers,
-                             **kwargs)
+            self.host = host
+            self.headers = headers
 
-        self.host = host
-        self.headers = headers
+            self._model_list_names = [model.model for model in
+                                      self.client.list().models]
+            self._model_list_sizes = [model.size for model in
+                                      self.client.list().models]
+        except Exception as e:
+            # Print stack trace:
+            import traceback
+            traceback.print_exc()
+            raise APINotAvailableError(
+                f"Error initializing Ollama client: {e}")
 
-        self._model_list = [model.model for model in self.client.list().models]
-
-    def model_list(self) -> List[str]:
+    def model_list(self, features: Optional[Sequence[ModelFeatures]] = None) -> \
+    List[str]:
 
         try:
-            return list(self._model_list)
+            # Sort by decreasing ollama model size:
+            model_list = [x for _, x in sorted(zip(self._model_list_sizes,
+                                                   self._model_list_names),
+                                               reverse=True)]
+
+            # Filter the models based on the features:
+            if features:
+                model_list = self._filter_models(model_list, features=features)
+
+            return model_list
         except Exception:
             raise APIError("Error fetching model list from Ollama.")
 
-    def default_model(self,
-                      require_images: bool = False,
-                      require_audio: bool = False,
-                      require_tools: bool = False) -> Optional[str]:
+    def get_best_model(self, features: Optional[Union[
+        str, List[str], ModelFeatures, Sequence[ModelFeatures]]] = None) -> \
+    Optional[str]:
+
+        # Normalise the features:
+        features = ModelFeatures.normalise(features)
 
         # Get the list of models:
         model_list = self.model_list()
 
-        if require_images:
-            # Filter out models that don't support vision:
-            model_list = [model for model in model_list if
-                          self.has_image_support(model)]
-
-        if require_audio:
-            # Filter out models that don't support audio:
-            model_list = [model for model in model_list if
-                          self.has_audio_support(model)]
-
-        if require_tools:
-            # Filter out models that don't support tools:
-            model_list = [model for model in model_list if
-                          self.has_tool_support(model)]
+        # Filter the models based on the requirements:
+        model_list = self._filter_models(model_list,
+                                         features=features)
 
         # If we have any models left, return the first one
         if model_list:
@@ -75,35 +87,106 @@ class OllamaApi(BaseApi):
         else:
             return None
 
-    def check_api_key(self, api_key: Optional[str] = None) -> bool:
+    def check_availability_and_credentials(self, api_key: Optional[
+        str] = None) -> bool:
 
         try:
             self.client.list()
             return True
         except Exception:
+            # If we get an error, we assume it's because Ollama is not running:
             return False
 
-    def has_image_support(self, model_name: Optional[str] = None) -> bool:
+    def has_model_support_for(self,
+                              features: Union[
+                                  str, List[str], ModelFeatures, Sequence[
+                                      ModelFeatures]],
+                              model_name: Optional[str] = None) -> bool:
+
+        # Get the best model if not provided:
+        if model_name is None:
+            model_name = self.get_best_model()
+
+        # Normalise the features:
+        features = ModelFeatures.normalise(features)
+
+        # Check that the model has all the required features:
+        for feature in features:
+
+            if feature == ModelFeatures.TextGeneration:
+                pass
+
+            elif feature == ModelFeatures.ImageGeneration:
+                return False
+
+            elif feature == ModelFeatures.TextEmbeddings:
+                pass
+
+            elif feature == ModelFeatures.ImageEmbeddings:
+                if not self.has_model_support_for(
+                        [ModelFeatures.Image, ModelFeatures.TextEmbeddings],
+                        model_name):
+                    return False
+
+            elif feature == ModelFeatures.AudioEmbeddings:
+                if not self.has_model_support_for(
+                        [ModelFeatures.Audio, ModelFeatures.TextEmbeddings],
+                        model_name):
+                    return False
+
+            elif feature == ModelFeatures.VideoEmbeddings:
+                if not self.has_model_support_for(
+                        [ModelFeatures.Video, ModelFeatures.TextEmbeddings],
+                        model_name):
+                    return False
+
+            elif feature == ModelFeatures.Image:
+                if not self._has_image_support(model_name):
+                    return False
+
+            elif feature == ModelFeatures.Audio:
+                if not self._has_audio_support(model_name):
+                    return False
+
+            elif feature == ModelFeatures.Video:
+                if not self._has_image_support(model_name):
+                    return False
+
+            elif feature == ModelFeatures.Tools:
+                if not self._has_tool_support(model_name):
+                    return False
+
+            else:
+                if not super().has_model_support_for(feature, model_name):
+                    return False
+
+        return True
+
+    def _has_image_support(self, model_name: Optional[str] = None) -> bool:
 
         if model_name is None:
-            model_name = self.default_model()
+            model_name = self.get_best_model()
+
+        if 'vision' in model_name:
+            return True
 
         try:
             model_details_families = self.client.show(
                 model_name).details.families
-            return model_details_families and 'clip' in model_details_families
+            return model_details_families and (
+                    'clip' in model_details_families or 'mllama' in model_details_families)
         except:
             return False
 
-    def has_audio_support(self, model_name: Optional[str] = None) -> bool:
+    def _has_audio_support(self, model_name: Optional[str] = None) -> bool:
 
-        # Ollama does not support, per se, audio inputs.
-        return False
+        # No Ollama models currently support Audio, but we use local whisper as a fallback:
+        return is_local_whisper_available()
 
-    def has_tool_support(self, model_name: Optional[str] = None) -> bool:
+    def _has_tool_support(self, model_name: Optional[str] = None) -> bool:
 
         if model_name is None:
-            model_name = self.default_model()
+            model_name = self.get_best_model()
 
         try:
             model_template = self.client.show(model_name).template
@@ -114,7 +197,7 @@ class OllamaApi(BaseApi):
     def max_num_input_tokens(self, model_name: Optional[str] = None) -> int:
 
         if model_name is None:
-            model_name = self.default_model()
+            model_name = self.get_best_model()
 
         model_info = self.client.show(model_name).modelinfo
 
@@ -129,7 +212,7 @@ class OllamaApi(BaseApi):
     def max_num_output_tokens(self, model_name: Optional[str] = None) -> int:
 
         if model_name is None:
-            model_name = self.default_model()
+            model_name = self.get_best_model()
 
         model_info = self.client.show(model_name).modelinfo
 
@@ -141,21 +224,26 @@ class OllamaApi(BaseApi):
         # return default value if nothing else works:
         return 4096
 
-    def completion(self,
-                   messages: List[Message],
-                   model_name: Optional[str] = None,
-                   temperature: Optional[float] = 0.0,
-                   max_output_tokens: Optional[int] = None,
-                   toolset: Optional[ToolSet] = None,
-                   **kwargs) -> Message:
+    def generate_text_completion(self,
+                                 messages: List[Message],
+                                 model_name: Optional[str] = None,
+                                 temperature: Optional[float] = 0.0,
+                                 max_output_tokens: Optional[int] = None,
+                                 toolset: Optional[ToolSet] = None,
+                                 **kwargs) -> Message:
 
         # Set default model if not provided
         if model_name is None:
-            model_name = self.default_model()
+            model_name = self.get_best_model()
 
         # Get max num of output tokens for model if not provided:
         if max_output_tokens is None:
             max_output_tokens = self.max_num_output_tokens(model_name)
+
+        # If model does not support audio but audio transcription is available, then we use it to transcribe audio:
+        if self.has_model_support_for(model_name=model_name,
+                                      features=ModelFeatures.AudioTranscription):
+            messages = self._transcribe_audio_in_messages(messages)
 
         # 1) Convert user messages into Ollama's format
         ollama_messages = _convert_messages_for_ollama(messages)
@@ -184,3 +272,28 @@ class OllamaApi(BaseApi):
         except ResponseError as e:
             raise APIError(
                 f"Error during completion: {e.error} (status code: {e.status_code})")
+
+    def embed_texts(self,
+                    texts: List[str],
+                    model_name: Optional[str] = None,
+                    dimensions: int = 512,
+                    **kwargs) -> Sequence[Sequence[float]]:
+
+        if model_name is None:
+            model_name = self.get_best_model(require_embeddings=True)
+
+        from ollama import EmbedResponse
+        embed_response: EmbedResponse = self.client.embed(model=model_name,
+                                                          input=texts)
+
+        # Extract embeddings:
+        embeddings = embed_response.embeddings
+
+        # Check that the embeddings are of the correct dimension:
+        if len(embeddings[0]) != dimensions:
+            # use function _reduce_embdedding_dimension to reduce or increase the dimension
+            resized_embeddings = self._reduce_embdeddings_dimension(embeddings,
+                                                                    dimensions)
+            return resized_embeddings
+        else:
+            return embeddings

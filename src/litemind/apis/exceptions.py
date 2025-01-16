@@ -2,5 +2,5 @@ class APIError(Exception):
     pass
 
 
-class APINotSupportedError(APIError):
+class APINotAvailableError(APIError):
     pass

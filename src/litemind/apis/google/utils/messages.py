@@ -1,7 +1,9 @@
 import pathlib
+import time
 from typing import List, Union
 
 from PIL import Image
+from arbol import aprint
 
 from litemind.agent.message import Message
 from litemind.apis.utils.dowload_audio_to_tempfile import \
@@ -81,4 +83,38 @@ def _convert_messages_for_gemini(messages: List[Message]) -> List[
             except Exception as e:
                 raise ValueError(f"Could not open audio '{audio_uri}': {e}")
 
+        # Append the video content:
+        for video_uri in msg.video_uris:
+            try:
+                if video_uri.startswith("data:video/"):
+                    local_path = write_base64_to_temp_file(video_uri)
+                elif video_uri.startswith("http://") or video_uri.startswith(
+                        "https://"):
+                    local_path = download_audio_to_temp_file(video_uri)
+                elif video_uri.startswith("file://"):
+                    local_path = video_uri.replace("file://", "")
+                else:
+                    raise ValueError(f"Invalid video URI: '{video_uri}'")
+
+                import google.generativeai as genai
+                myfile = genai.upload_file(local_path)
+                while myfile.state.name == "PROCESSING":
+                    time.sleep(0.1)
+                    myfile = genai.get_file(myfile.name)
+
+                gemini_messages.append(myfile)
+
+
+            except Exception as e:
+                raise ValueError(f"Could not process video '{video_uri}': {e}")
+
     return gemini_messages
+
+
+def _list_and_delete_uploaded_videos():
+    import google.generativeai as genai
+    for f in genai.list_files():
+        if f.mime_type.startswith("video/"):
+            aprint("  ", f.name)
+            f.delete()
+            aprint(f"Deleted {f.name}")

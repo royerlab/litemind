@@ -1,12 +1,10 @@
 from typing import Optional, List
 
-from anthropic.types import ToolParam
-
 from litemind.agent.tools.toolset import ToolSet
 
 
 def _convert_toolset_to_anthropic(toolset: Optional[ToolSet]) -> Optional[
-    List[ToolParam]]:
+    List['ToolParam']]:
     """
     Convert a ToolSet into Anthropic's list[ToolParam] format.
 
@@ -25,6 +23,7 @@ def _convert_toolset_to_anthropic(toolset: Optional[ToolSet]) -> Optional[
     if not toolset:
         return None
 
+    from anthropic.types import ToolParam
     tools: List[ToolParam] = []
     for tool in toolset.list_tools():
         tool_def = {

@@ -1,8 +1,10 @@
 import pytest
+from arbol import aprint
 
 from litemind.agent.agent import Agent
 from litemind.agent.conversation import Conversation
 from litemind.agent.message import Message
+from litemind.apis.model_features import ModelFeatures
 from litemind.apis.openai.openai_api import OpenAIApi
 from litemind.apis.openai.utils.openai_api_key import \
     is_openai_api_key_available
@@ -26,11 +28,15 @@ def test_agent_text_with_openai():
     # Create OpenAI API object:
     api = OpenAIApi()
 
+    aprint(f"Default model: {api.get_best_model()}")
+
     # Create agent:
     agent = Agent(api=api)
 
     # Run agent:
     reply = agent(conversation)
+
+    aprint(conversation)
 
     # Check response:
     assert len(agent.conversation) == 3
@@ -72,8 +78,12 @@ def test_message_image():
     # Create OpenAI API object:
     api = OpenAIApi()
 
+    image_model_name = api.get_best_model(features=ModelFeatures.Image)
+
+    aprint(f"Image model: {image_model_name}")
+
     # Create agent:
-    agent = Agent(api=api)
+    agent = Agent(api=api, model=image_model_name)
 
     # Run agent:
     reply = agent(conversation)
@@ -81,3 +91,6 @@ def test_message_image():
     # Check response:
     assert len(agent.conversation) == 3
     assert 'sepia' in reply or 'photograph' in reply
+
+
+

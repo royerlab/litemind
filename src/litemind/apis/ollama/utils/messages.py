@@ -1,10 +1,11 @@
 from typing import List, Dict, Any
 
 from litemind.agent.message import Message
-from litemind.apis.exceptions import APINotSupportedError
 from litemind.apis.utils.convert_image_to_png import convert_image_to_png
 from litemind.apis.utils.dowload_image_to_tempfile import \
     download_image_to_temp_file
+from litemind.apis.utils.transform_video_uris_to_images_and_audio import \
+    transform_video_uris_to_images_and_video
 from litemind.apis.utils.write_base64_to_temp_file import \
     write_base64_to_temp_file
 
@@ -35,19 +36,22 @@ def _convert_messages_for_ollama(messages: List[Message]) -> List[
     ollama_messages = []
 
     # Iterate over each message:
-    for msg in messages:
+    for message in messages:
+
+        # Convert video URIs to images and audio because Ollama does not natively support videos:
+        message = transform_video_uris_to_images_and_video(message)
 
         # Initialize the message dictionary:
         message_dict = {
-            "role": msg.role,
-            "content": msg.text,
+            "role": message.role,
+            "content": message.text,
         }
 
         # Initialize the list of local image paths:
         local_image_paths = []
 
         # Append the image content:
-        for image_url in msg.image_uris:
+        for image_url in message.image_uris:
 
             if image_url.startswith("data:image/"):
                 # It's a data URI -> decode Base64 -> local file
@@ -80,11 +84,6 @@ def _convert_messages_for_ollama(messages: List[Message]) -> List[
         # Append the local image paths to the message dictionary:
         if local_image_paths:
             message_dict["images"] = local_image_paths
-
-        # If messages contain audio, raise an APINotSupportedError:
-        if msg.audio_uris:
-            raise APINotSupportedError(
-                "Anthropic API does not support audio messages")
 
         # Append the message to the list of messages:
         ollama_messages.append(message_dict)

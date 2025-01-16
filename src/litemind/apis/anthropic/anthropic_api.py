@@ -1,5 +1,5 @@
 import os
-from typing import List, Optional
+from typing import List, Optional, Sequence, Union
 
 from litemind.agent.message import Message
 from litemind.agent.tools.toolset import ToolSet
@@ -7,8 +7,10 @@ from litemind.apis.anthropic.utils.messages import \
     _convert_messages_for_anthropic
 from litemind.apis.anthropic.utils.process_response import _process_response
 from litemind.apis.anthropic.utils.tools import _convert_toolset_to_anthropic
-from litemind.apis.base_api import BaseApi
-from litemind.apis.exceptions import APIError
+from litemind.apis.base_api import BaseApi, ModelFeatures
+from litemind.apis.exceptions import APIError, APINotAvailableError
+from litemind.apis.utils.whisper_transcribe_audio import \
+    is_local_whisper_available
 
 
 class AnthropicApi(BaseApi):
@@ -38,14 +40,22 @@ class AnthropicApi(BaseApi):
                 "Set ANTHROPIC_API_KEY or pass `api_key=...` explicitly."
             )
 
-        # Create the Anthropic client
-        from anthropic import Anthropic
-        self.client = Anthropic(
-            api_key=api_key,
-            **kwargs  # e.g. timeout=30.0, max_retries=2, etc.
-        )
+        try:
+            # Create the Anthropic client
+            from anthropic import Anthropic
+            self.client = Anthropic(
+                api_key=api_key,
+                **kwargs  # e.g. timeout=30.0, max_retries=2, etc.
+            )
+        except Exception as e:
+            # Print stack trace:
+            import traceback
+            traceback.print_exc()
+            raise APINotAvailableError(
+                f"Error initializing Anthropic client: {e}")
 
-    def check_api_key(self, api_key: Optional[str] = None) -> bool:
+    def check_availability_and_credentials(self, api_key: Optional[
+        str] = None) -> bool:
 
         # Use the provided key if any, else the one from the client
         candidate_key = api_key or os.environ.get("ANTHROPIC_API_KEY")
@@ -59,7 +69,7 @@ class AnthropicApi(BaseApi):
                 "content": "Hello, is this key valid?",
             }
             resp = self.client.messages.create(
-                model=self.default_model(),
+                model=self.get_best_model(),
                 max_tokens=16,
                 messages=[test_message],
             )
@@ -72,7 +82,8 @@ class AnthropicApi(BaseApi):
             traceback.print_exc()
             return False
 
-    def model_list(self) -> List[str]:
+    def model_list(self, features: Optional[Sequence[ModelFeatures]] = None) -> \
+    List[str]:
         """
         Return a list of known Anthropic models.
         """
@@ -88,6 +99,10 @@ class AnthropicApi(BaseApi):
             # Extract model IDs
             model_list: List[str] = list([str(info.id) for info in models_info])
 
+            # Filter the models based on the features:
+            if features:
+                model_list = self._filter_models(model_list, features=features)
+
             return model_list
         except Exception as e:
             # Handle error and return an empty list
@@ -95,25 +110,20 @@ class AnthropicApi(BaseApi):
             traceback.print_exc()
             return []
 
-    def default_model(self,
-                      require_images: bool = False,
-                      require_audio: bool = False,
-                      require_tools: bool = False) -> Optional[str]:
+    def get_best_model(self, features: Optional[Union[
+        str, List[str], ModelFeatures, Sequence[ModelFeatures]]] = None) -> \
+    Optional[str]:
+
+        # Normalise the features:
+        features = ModelFeatures.normalise(features)
 
         # Get the list of models:
         model_list = self.model_list()
 
-        if require_images:
-            # Filter out models that don't support images
-            model_list = [m for m in model_list if self.has_image_support(m)]
-
-        if require_audio:
-            # Filter out models that don't support audio
-            model_list = [m for m in model_list if self.has_audio_support(m)]
-
-        if require_tools:
-            # Filter out models that don't support tools
-            model_list = [m for m in model_list if self.has_tool_support(m)]
+        # Filter models based on requirements:
+        # Filter the models based on the requirements:
+        model_list = self._filter_models(model_list,
+                                         features=features)
 
         # If we have any models left, return the first one
         if model_list:
@@ -121,27 +131,83 @@ class AnthropicApi(BaseApi):
         else:
             return None
 
-    def has_image_support(self, model_name: Optional[str] = None) -> bool:
+    def has_model_support_for(self,
+                              features: Union[
+                                  str, List[str], ModelFeatures, Sequence[
+                                      ModelFeatures]],
+                              model_name: Optional[str] = None) -> bool:
+
+        # Get the best model if not provided:
+        if model_name is None:
+            model_name = self.get_best_model()
+
+        # Normalise the features:
+        features = ModelFeatures.normalise(features)
+
+        # Check that the model has all the required features:
+        for feature in features:
+
+            if feature == ModelFeatures.TextGeneration:
+                pass
+
+            elif feature == ModelFeatures.ImageGeneration:
+                return False
+
+            elif feature == ModelFeatures.TextEmbeddings:
+                return False
+
+            elif feature == ModelFeatures.ImageEmbeddings:
+                return False
+
+            elif feature == ModelFeatures.AudioEmbeddings:
+                return False
+
+            elif feature == ModelFeatures.VideoEmbeddings:
+                return False
+
+            elif feature == ModelFeatures.Image:
+                if not self._has_image_support(model_name):
+                    return False
+
+            elif feature == ModelFeatures.Audio:
+                if not self._has_audio_support(model_name):
+                    return False
+
+            elif feature == ModelFeatures.Video:
+                if not self._has_image_support(model_name):
+                    return False
+
+            elif feature == ModelFeatures.Tools:
+                if not self._has_tool_support(model_name):
+                    return False
+
+            else:
+                if not super().has_model_support_for(feature, model_name):
+                    return False
+
+        return True
+
+    def _has_image_support(self, model_name: Optional[str] = None) -> bool:
 
         if model_name is None:
-            model_name = self.default_model()
+            model_name = self.get_best_model()
 
         # For a simple check:
         return "3-5" in model_name or "sonnet" in model_name or "vision" in model_name
 
-    def has_audio_support(self, model_name: Optional[str] = None) -> bool:
+    def _has_audio_support(self, model_name: Optional[str] = None) -> bool:
 
-        # No Anthropic models currently support Audio.
-        return False
+        # No Anthropic models currently support Audio, but we use local whisper as a fallback:
+        return is_local_whisper_available()
 
-    def has_tool_support(self, model_name: Optional[str] = None) -> bool:
+    def _has_tool_support(self, model_name: Optional[str] = None) -> bool:
         """
         Return True if the model supports function-calling (tools).
         Per Anthropic's samples, Claude 2+ often does.
         We'll guess 'claude-2' or 'claude-3' or 'sonnet' => True.
         """
         if model_name is None:
-            model_name = self.default_model()
+            model_name = self.get_best_model()
 
         return ("claude-2" in model_name or "claude-3" in model_name)
 
@@ -153,7 +219,7 @@ class AnthropicApi(BaseApi):
         """
 
         if model_name is None:
-            model_name = self.default_model()
+            model_name = self.get_best_model()
 
         name = model_name.lower()
 
@@ -188,7 +254,7 @@ class AnthropicApi(BaseApi):
         If model_name is unrecognized, fallback = 4096.
         """
         if model_name is None:
-            model_name = self.default_model()
+            model_name = self.get_best_model()
 
         name = model_name.lower()
 
@@ -215,13 +281,13 @@ class AnthropicApi(BaseApi):
         # Fallback
         return 4096
 
-    def completion(self,
-                   model_name: str,
-                   messages: List[Message],
-                   temperature: float = 0.0,
-                   max_output_tokens: Optional[int] = None,
-                   toolset: Optional[ToolSet] = None,
-                   **kwargs) -> Message:
+    def generate_text_completion(self,
+                                 messages: List[Message],
+                                 model_name: Optional[str] = None,
+                                 temperature: float = 0.0,
+                                 max_output_tokens: Optional[int] = None,
+                                 toolset: Optional[ToolSet] = None,
+                                 **kwargs) -> Message:
 
         from anthropic import NotGiven
 
@@ -233,6 +299,11 @@ class AnthropicApi(BaseApi):
                 system_messages += msg.text
             else:
                 non_system_messages.append(msg)
+
+        # If model does not support audio but audio transcription is available, then we use it to transcribe audio:
+        if self.has_model_support_for(model_name=model_name,
+                                      features=ModelFeatures.AudioTranscription):
+            messages = self._transcribe_audio_in_messages(messages)
 
         # Convert remaining non-system litemind Messages to Anthropic messages:
         anthropic_messages = _convert_messages_for_anthropic(

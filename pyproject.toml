@@ -10,10 +10,14 @@ dependencies = [
     "google-generativeai",
     "chromadb",
     "pillow",
+    "ffmpeg-python",
     "arbol",
 ]
 
 [project.optional-dependencies]
 test = [
     "pytest"
+]
+whisper = [
+    "openai-whisper"
 ]

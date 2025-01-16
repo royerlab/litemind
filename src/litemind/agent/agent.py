@@ -18,7 +18,7 @@ class Agent():
 
         # get key from environmental variables:
         self.api = api
-        self.model = model or api.default_model()
+        self.model = model or api.get_best_model()
         self.temperature = temperature
         self.toolset = toolset
         self.name = name
@@ -97,7 +97,7 @@ class Agent():
                 raise ValueError("text must be a string")
 
         # Call the OpenAI API:
-        response = self.api.completion(
+        response = self.api.generate_text_completion(
             model_name=self.model,
             messages=self.conversation.get_all_messages(),
             temperature=self.temperature,

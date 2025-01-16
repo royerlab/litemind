@@ -1,5 +1,5 @@
 from abc import ABC
-from typing import Optional
+from typing import Optional, List
 
 
 class Message(ABC):
@@ -7,7 +7,8 @@ class Message(ABC):
     def __init__(self, role: str,
                  text: Optional[str] = None,
                  image_uri: Optional[str] = None,
-                 audio_uri: Optional[str] = None):
+                 audio_uri: Optional[str] = None,
+                 video_uri: Optional[str] = None):
         """
         Create a new message.
 
@@ -21,12 +22,33 @@ class Message(ABC):
             The URI of the image to include in the message.
         audio_uri: Optional[str]
             The URI of the audio to include in the message.
+        video_uri: Optional[str]
+            The URI of the video to include in the message
         """
 
         self.role = role
         self.text = "" if text is None else text
         self.image_uris = [] if image_uri is None else [image_uri]
         self.audio_uris = [] if audio_uri is None else [audio_uri]
+        self.video_uris = [] if video_uri is None else [video_uri]
+
+    def copy(self):
+        """
+        Create a copy of the message.
+
+        Returns
+        -------
+        Message
+            A copy of the message.
+        """
+        return Message(role=self.role,
+                       text=self.text,
+                       image_uri=self.image_uris[
+                           0] if self.image_uris else None,
+                       audio_uri=self.audio_uris[
+                           0] if self.audio_uris else None,
+                       video_uri=self.video_uris[
+                           0] if self.video_uris else None)
 
     def append_text(self, text: str):
         """
@@ -40,124 +62,80 @@ class Message(ABC):
         """
         self.text += text
 
-    def append_image_uri(self, image_uri: str):
+    def _append_uri(self, uri: str, uri_list: List[str],
+                    valid_prefixes: List[str]):
         """
-        Append image url to the message.
+        Append a URI to the specified list if it has a valid prefix.
 
         Parameters
         ----------
-        image_uri : str
-            The uri of the image to append to the message.
-            Can be: 'data:image/...', 'http://...', 'https://...', or a local file path.
-
+        uri : str
+            The URI to append.
+        uri_list : List[str]
+            The list to append the URI to.
+        valid_prefixes : List[str]
+            The list of valid prefixes for the URI.
         """
-        # Check if the image URI is valid:
-        if not image_uri.startswith("data:image/") and \
-                not image_uri.startswith("http://") and \
-                not image_uri.startswith("https://") and \
-                not image_uri.startswith("file://"):
+        if not any(uri.startswith(prefix) for prefix in valid_prefixes):
             raise ValueError(
-                f"Invalid image URI: '{image_uri}' (must start with 'data:image/', 'http://', 'https://', or 'file://')")
+                f"Invalid URI: '{uri}' (must start with one of {valid_prefixes})")
+        uri_list.append(uri)
 
-        # Add the image URI to the list of image URIs:
-        self.image_uris.append(image_uri)
+    def _append_url(self, url: str, uri_list: List[str]):
+        """
+        Append a URL to the specified list if it starts with 'http://' or 'https://'.
+
+        Parameters
+        ----------
+        url : str
+            The URL to append.
+        uri_list : List[str]
+            The list to append the URL to.
+        """
+        self._append_uri(url, uri_list, ["http://", "https://"])
+
+    def _append_path(self, path: str, uri_list: List[str]):
+        """
+        Append a file path to the specified list if it starts with 'file://'.
+
+        Parameters
+        ----------
+        path : str
+            The file path to append.
+        uri_list : List[str]
+            The list to append the file path to.
+        """
+        self._append_uri(path, uri_list, ["file://"])
+
+    def append_image_uri(self, image_uri: str):
+        self._append_uri(image_uri, self.image_uris,
+                         ["data:image/", "http://", "https://", "file://"])
 
     def append_image_url(self, image_url: str):
-        """
-        Append image url to the message.
-
-        Parameters
-        ----------
-        image_url : str
-            The url of the image to append to the message.
-
-        """
-        # Check if the image URL is valid:
-        if not image_url.startswith("http://") and not image_url.startswith(
-                "https://"):
-            raise ValueError(
-                f"Invalid image URL: '{image_url}' (must start with 'http://' or 'https://')")
-
-        # Add the image URL to the list of image URIs:
-        self.image_uris.append(image_url)
+        self._append_url(image_url, self.image_uris)
 
     def append_image_path(self, image_path: str):
-        """
-        Append image path to the message.
-
-        Parameters
-        ----------
-        image_path : str
-            The path of the image to append to the message.
-
-        """
-
-        # First we check if the image path is valid:
-        if not image_path.startswith("file://"):
-            raise ValueError(
-                f"Invalid image path: '{image_path}' (must start with 'file://')")
-
-        # Add the image path to the list of image URIs:
-        self.image_uris.append(image_path)
+        self._append_path(image_path, self.image_uris)
 
     def append_audio_uri(self, audio_uri: str):
-        """
-        Append audio URI to the message.
-
-        Parameters
-        ----------
-        audio_uri : str
-            The URI of the audio to append to the message.
-            Can be: 'data:audio/...', 'http://...', 'https://...', or a local file path.
-
-        """
-        # Check if the audio URI is valid:
-        if not audio_uri.startswith("data:audio/") and \
-                not audio_uri.startswith("http://") and \
-                not audio_uri.startswith("https://") and \
-                not audio_uri.startswith("file://"):
-            raise ValueError(
-                f"Invalid audio URI: '{audio_uri}' (must start with 'data:audio/', 'http://', 'https://', or 'file://')")
-
-        # Add the audio URI to the list of audio URIs:
-        self.audio_uris.append(audio_uri)
+        self._append_uri(audio_uri, self.audio_uris,
+                         ["data:audio/", "http://", "https://", "file://"])
 
     def append_audio_url(self, audio_url: str):
-        """
-        Append audio URL to the message.
-
-        Parameters
-        ----------
-        audio_url : str
-            The URL of the audio to append to the message.
-
-        """
-        # Check if the audio URL is valid:
-        if not audio_url.startswith("http://") and not audio_url.startswith(
-                "https://"):
-            raise ValueError(
-                f"Invalid audio URL: '{audio_url}' (must start with 'http://' or 'https://')")
-
-        # Add the audio URL to the list of audio URIs:
-        self.audio_uris.append(audio_url)
+        self._append_url(audio_url, self.audio_uris)
 
     def append_audio_path(self, audio_path: str):
-        """
-        Append audio path to the message.
+        self._append_path(audio_path, self.audio_uris)
 
-        Parameters
-        ----------
-        audio_path : str
-            The path of the audio to append to the message.
+    def append_video_uri(self, video_uri: str):
+        self._append_uri(video_uri, self.video_uris,
+                         ["data:video/", "http://", "https://", "file://"])
 
-        """
-        # First we check if the audio path is valid:
-        if not audio_path.startswith("file://"):
-            raise ValueError(
-                f"Invalid audio path: '{audio_path}' (must start with 'file://')")
+    def append_video_url(self, video_url: str):
+        self._append_url(video_url, self.video_uris)
 
-        # Add the audio path to the list of audio URIs:
-        self.audio_uris.append(audio_path)
+    def append_video_path(self, video_path: str):
+        self._append_path(video_path, self.video_uris)
 
     def __contains__(self, item: str) -> bool:
         """
@@ -181,6 +159,9 @@ class Message(ABC):
         for audio_uri in self.audio_uris:
             if item in audio_uri:
                 return True
+        for video_uri in self.video_uris:
+            if item in video_uri:
+                return True
         return False
 
     def __str__(self):
@@ -193,6 +174,7 @@ class Message(ABC):
         """
         message_string = f"*{self.role}*:\n"
         message_string += self.text
+        message_string += '\n'
         for image_uri in self.image_uris:
             message_string += f"Image: {image_uri}\n"
         for audio_uri in self.audio_uris:

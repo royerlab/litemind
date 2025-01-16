@@ -1,8 +1,4 @@
-import google.generativeai as genai
-from google.generativeai import protos
-
-
-def create_genai_tools_from_toolset(toolset) -> list[genai.protos.Tool]:
+def create_genai_tools_from_toolset(toolset) -> list['Tool']:
     """
     Convert your custom tool objects into genai.protos.Tool
     for fine-grained control of parameter schemas and descriptions.
@@ -12,6 +8,9 @@ def create_genai_tools_from_toolset(toolset) -> list[genai.protos.Tool]:
         - description (string)
         - parameters (JSON schema)  # from FunctionTool._generate_parameters_schema()
     """
+
+    from google.generativeai import protos
+
     tools = []
     for tool in toolset.list_tools():
         # Build a FunctionDeclaration for each tool
@@ -27,7 +26,7 @@ def create_genai_tools_from_toolset(toolset) -> list[genai.protos.Tool]:
     return tools
 
 
-def _create_protos_schema(json_schema: dict) -> protos.Schema:
+def _create_protos_schema(json_schema: dict) -> 'Schema':
     """
     Convert a JSON-schema-like dict (such as tool.parameters) into a genai.protos.Schema.
     This supports a single level of object properties: "type": "object", "properties": {...}.

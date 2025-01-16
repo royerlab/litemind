@@ -14,7 +14,7 @@ def is_openai_api_key_available() -> bool:
 
     # check if the OpenAI API key is valid:
     openai = OpenAIApi(api_key=openai_api_key)
-    is_valid = openai.check_api_key()
+    is_valid = openai.check_availability_and_credentials()
     if is_valid:
         aprint("OpenAI API key is valid.")
     else:

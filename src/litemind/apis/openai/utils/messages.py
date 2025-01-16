@@ -1,6 +1,8 @@
 from litemind.apis.utils.get_media_type_from_uri import get_media_type_from_uri
 from litemind.apis.utils.read_file_and_convert_to_base64 import \
     read_file_and_convert_to_base64, base64_to_data_uri
+from litemind.apis.utils.transform_video_uris_to_images_and_audio import \
+    transform_video_uris_to_images_and_video
 
 
 def convert_messages_for_openai(messages):
@@ -23,6 +25,9 @@ def convert_messages_for_openai(messages):
 
     # Iterate over each message:
     for message in messages:
+
+        # Convert video URIs to images and audio because OpenAI does not natively support videos:
+        message = transform_video_uris_to_images_and_video(message)
 
         # Start with the role of the message
         formatted_message = {
