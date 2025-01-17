@@ -7,6 +7,8 @@ from arbol import asection, aprint
 from litemind.agent.message import Message
 from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.model_features import ModelFeatures
+from litemind.apis.utils.document_processing import is_pymupdf_available, \
+    convert_document_to_markdown, extract_images_from_document
 from litemind.apis.utils.random_projector import DeterministicRandomProjector
 from litemind.apis.utils.whisper_transcribe_audio import \
     is_local_whisper_available, transcribe_audio_with_local_whisper
@@ -135,10 +137,14 @@ class BaseApi(ABC):
         for feature in features:
 
             if feature == ModelFeatures.AudioTranscription:
-
                 # We provide a default implementation for audio transcription using local whisper is available:
                 if not is_local_whisper_available():
                     return False
+            elif feature == ModelFeatures.Documents:
+                # Checks if document processing library is installed:
+                if not is_pymupdf_available():
+                    return False
+
             else:
                 return False
 
@@ -298,6 +304,52 @@ class BaseApi(ABC):
 
                 # If the audio was transcribed, remove the audio_uris from the message:
                 message.audio_uris = []
+
+        return messages
+
+    def _convert_documents_to_markdown_in_messages(self,
+                                                   messages: List[Message]) -> \
+    List[Message]:
+
+        # similarly to _transcribe_audio_in_messages, iterate over each message in the list and convert documents in messages into text in markdown format:
+
+        # Iterate over each message in the list:
+        for message in messages:
+
+            # If the message has audio_uris:
+            if message.document_uris:
+
+                # Iterate over each document URI in the message:
+                for document_uri in message.document_uris:
+                    try:
+                        # Extract filename from URI:
+                        original_filename = document_uri.split("/")[-1]
+
+                        # Extract the file extension from URI:
+                        file_extension = document_uri.split(".")[-1]
+
+                        # We use a local instance of whisper instead:
+                        markdown = convert_document_to_markdown(document_uri)
+
+                        # Add markdown quotes around the text, and add the extension, for example: ```pdf for extension 'pdf':
+                        text = f"\nText extracted from document '{original_filename}': \n'''{file_extension}\n{markdown}\n'''\n"
+
+                        # Add the extracted text to the message
+                        message.append_text(text)
+
+                        # Extract images from document:
+                        image_uris = extract_images_from_document(document_uri)
+
+                        # Add the extracted images to the message:
+                        for image_uri in image_uris:
+                            message.append_image_uri(image_uri)
+
+                    except Exception as e:
+                        raise ValueError(
+                            f"Could not extract text from document: '{document_uri}', error: {e}")
+
+                # If the documents have been converted, remove the document_uris from the message:
+                message.document_uris = []
 
         return messages
 

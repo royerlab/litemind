@@ -8,7 +8,9 @@ class Message(ABC):
                  text: Optional[str] = None,
                  image_uri: Optional[str] = None,
                  audio_uri: Optional[str] = None,
-                 video_uri: Optional[str] = None):
+                 video_uri: Optional[str] = None,
+                 document_uri: Optional[str] = None):
+
         """
         Create a new message.
 
@@ -23,7 +25,9 @@ class Message(ABC):
         audio_uri: Optional[str]
             The URI of the audio to include in the message.
         video_uri: Optional[str]
-            The URI of the video to include in the message
+            The URI of the video to include in the message.
+        document_uri: Optional[str]
+            The URI of the document to include in the message.
         """
 
         self.role = role
@@ -31,6 +35,7 @@ class Message(ABC):
         self.image_uris = [] if image_uri is None else [image_uri]
         self.audio_uris = [] if audio_uri is None else [audio_uri]
         self.video_uris = [] if video_uri is None else [video_uri]
+        self.document_uris = [] if document_uri is None else [document_uri]
 
     def copy(self):
         """
@@ -48,7 +53,9 @@ class Message(ABC):
                        audio_uri=self.audio_uris[
                            0] if self.audio_uris else None,
                        video_uri=self.video_uris[
-                           0] if self.video_uris else None)
+                           0] if self.video_uris else None,
+                       document_uri=self.document_uris[
+                           0] if self.document_uris else None)
 
     def append_text(self, text: str):
         """
@@ -62,7 +69,9 @@ class Message(ABC):
         """
         self.text += text
 
-    def _append_uri(self, uri: str, uri_list: List[str],
+    def _append_uri(self,
+                    uri: str,
+                    uri_list: List[str],
                     valid_prefixes: List[str]):
         """
         Append a URI to the specified list if it has a valid prefix.
@@ -81,7 +90,9 @@ class Message(ABC):
                 f"Invalid URI: '{uri}' (must start with one of {valid_prefixes})")
         uri_list.append(uri)
 
-    def _append_url(self, url: str, uri_list: List[str]):
+    def _append_url(self,
+                    url: str,
+                    uri_list: List[str]):
         """
         Append a URL to the specified list if it starts with 'http://' or 'https://'.
 
@@ -94,7 +105,9 @@ class Message(ABC):
         """
         self._append_uri(url, uri_list, ["http://", "https://"])
 
-    def _append_path(self, path: str, uri_list: List[str]):
+    def _append_path(self,
+                     path: str,
+                     uri_list: List[str]):
         """
         Append a file path to the specified list if it starts with 'file://'.
 
@@ -137,6 +150,17 @@ class Message(ABC):
     def append_video_path(self, video_path: str):
         self._append_path(video_path, self.video_uris)
 
+    def append_document_uri(self, document_uri: str):
+        # Allow only http, https, and file URIs for documents, including local file paths, and data uris for documents (PDF, HTML, etc...)
+        self._append_uri(document_uri, self.document_uris,
+                         ["http://", "https://", "file://", "data:"])
+
+    def append_document_url(self, document_url: str):
+        self._append_url(document_url, self.document_uris)
+
+    def append_document_path(self, document_path: str):
+        self._append_path(document_path, self.document_uris)
+
     def __contains__(self, item: str) -> bool:
         """
         Check if the given string is in the message text, image URLs, or audio URLs.
@@ -162,6 +186,10 @@ class Message(ABC):
         for video_uri in self.video_uris:
             if item in video_uri:
                 return True
+        for document_uri in self.document_uris:
+            if item in document_uri:
+                return True
+
         return False
 
     def __str__(self):
@@ -176,9 +204,13 @@ class Message(ABC):
         message_string += self.text
         message_string += '\n'
         for image_uri in self.image_uris:
-            message_string += f"Image: {image_uri}\n"
+            message_string += f"  Image: {image_uri}\n"
         for audio_uri in self.audio_uris:
-            message_string += f"Audio: {audio_uri}\n"
+            message_string += f"  Audio: {audio_uri}\n"
+        for video_uri in self.video_uris:
+            message_string += f"  Video: {video_uri}\n"
+        for document_uri in self.document_uris:
+            message_string += f"  Document: {document_uri}\n"
         return message_string
 
     def __repr__(self):

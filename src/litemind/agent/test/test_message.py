@@ -61,3 +61,18 @@ def test_message_video():
 
     # Checks contains operator:
     assert 'example' in user_message
+
+
+def test_message_document():
+    user_message = Message(role='user')
+    user_message.append_text('Can you describe what you see in the document?')
+    user_message.append_document_url(
+        'https://www.biorxiv.org/content/10.1101/2023.03.06.531398v2')
+
+    assert user_message.role == 'user'
+    assert user_message.text == 'Can you describe what you see in the document?'
+    assert len(user_message.document_uris) == 1
+    assert '10.1101' in user_message.document_uris[0]
+
+    # Checks contains operator:
+    assert '10.1101' in user_message

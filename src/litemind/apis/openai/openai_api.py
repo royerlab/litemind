@@ -15,6 +15,7 @@ from litemind.apis.openai.utils.messages import convert_messages_for_openai
 from litemind.apis.openai.utils.model_list import get_openai_model_list
 from litemind.apis.openai.utils.process_response import _process_response
 from litemind.apis.openai.utils.tools import _format_tools_for_openai
+from litemind.apis.utils.document_processing import is_pymupdf_available
 from litemind.apis.utils.dowload_audio_to_tempfile import \
     download_audio_to_temp_file
 from litemind.apis.utils.write_base64_to_temp_file import \
@@ -541,6 +542,10 @@ class OpenAIApi(BaseApi):
                 model_name=model_name,
                 features=ModelFeatures.AudioTranscription):
             messages = self._transcribe_audio_in_messages(messages)
+
+        # Convert documents to markdown and images:
+        if is_pymupdf_available():
+            messages = self._convert_documents_to_markdown_in_messages(messages)
 
         # Format messages for OpenAI:
         openai_formatted_messages = convert_messages_for_openai(messages)

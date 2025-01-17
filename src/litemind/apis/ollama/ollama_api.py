@@ -9,6 +9,7 @@ from litemind.apis.exceptions import APIError, APINotAvailableError
 from litemind.apis.ollama.utils.messages import _convert_messages_for_ollama
 from litemind.apis.ollama.utils.process_response import _process_response
 from litemind.apis.ollama.utils.tools import _format_tools_for_ollama
+from litemind.apis.utils.document_processing import is_pymupdf_available
 from litemind.apis.utils.whisper_transcribe_audio import \
     is_local_whisper_available
 
@@ -245,13 +246,17 @@ class OllamaApi(BaseApi):
                                       features=ModelFeatures.AudioTranscription):
             messages = self._transcribe_audio_in_messages(messages)
 
-        # 1) Convert user messages into Ollama's format
+        # Convert documents to markdown and images:
+        if is_pymupdf_available():
+            messages = self._convert_documents_to_markdown_in_messages(messages)
+
+        # Convert user messages into Ollama's format
         ollama_messages = _convert_messages_for_ollama(messages)
 
-        # 2) Convert toolset (if any) to Ollama's tools schema
+        # Convert toolset (if any) to Ollama's tools schema
         ollama_tools = _format_tools_for_ollama(toolset) if toolset else None
 
-        # 3) Make the request to Ollama
+        # Make the request to Ollama
         from ollama import ResponseError
         try:
             aprint(f"Sending request to Ollama with model: {model_name}")

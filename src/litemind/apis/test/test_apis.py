@@ -172,7 +172,7 @@ class TestBaseApiImplementations:
             f"Expected 'I am' in the output of {ApiClass.__name__}.completion()"
         )
 
-    def test_completion_with_simple_toolset(self, ApiClass):
+    def test_text_generation_with_simple_toolset(self, ApiClass):
         """
         Test that the completion method can interact with a simple toolset.
         """
@@ -210,7 +210,7 @@ class TestBaseApiImplementations:
             f"The response of {ApiClass.__name__} should contain the delivery date."
         )
 
-    def test_completion_with_complex_toolset(self, ApiClass):
+    def test_text_generation_with_complex_toolset(self, ApiClass):
         """
         Test that the completion method can interact with a complex toolset.
         """
@@ -304,7 +304,7 @@ class TestBaseApiImplementations:
             f"The response of {ApiClass.__name__} should contain the delivery date."
         )
 
-    def test_completion_with_image_url(self, ApiClass):
+    def test_text_generation_with_image_url(self, ApiClass):
         api_instance = ApiClass()
         default_model_name = api_instance.get_best_model(
             [ModelFeatures.TextGeneration, ModelFeatures.Image])
@@ -342,7 +342,7 @@ class TestBaseApiImplementations:
 
         print('\n' + response)
 
-    def test_completion_with_png_image_path(self, ApiClass):
+    def test_text_generation_with_png_image_path(self, ApiClass):
         api_instance = ApiClass()
         default_model_name = api_instance.get_best_model(
             [ModelFeatures.TextGeneration, ModelFeatures.Image])
@@ -385,7 +385,7 @@ class TestBaseApiImplementations:
 
         print('\n' + response)
 
-    def test_completion_with_jpg_image_path(self, ApiClass):
+    def test_text_generation_with_jpg_image_path(self, ApiClass):
         api_instance = ApiClass()
         default_model_name = api_instance.get_best_model(
             [ModelFeatures.TextGeneration, ModelFeatures.Image])
@@ -424,7 +424,7 @@ class TestBaseApiImplementations:
 
         print('\n' + response)
 
-    def test_completion_with_webp_image_path(self, ApiClass):
+    def test_text_generation_with_webp_image_path(self, ApiClass):
         api_instance = ApiClass()
         default_model_name = api_instance.get_best_model(
             [ModelFeatures.TextGeneration, ModelFeatures.Image])
@@ -463,7 +463,7 @@ class TestBaseApiImplementations:
 
         print('\n' + response)
 
-    def test_completion_with_gif_image_path(self, ApiClass):
+    def test_text_generation_with_gif_image_path(self, ApiClass):
         api_instance = ApiClass()
         default_model_name = api_instance.get_best_model(
             [ModelFeatures.TextGeneration, ModelFeatures.Image])
@@ -503,7 +503,7 @@ class TestBaseApiImplementations:
 
         print('\n' + response)
 
-    def test_completion_with_multiple_images(self, ApiClass):
+    def test_text_generation_with_multiple_images(self, ApiClass):
         api_instance = ApiClass()
         default_model_name = api_instance.get_best_model(
             [ModelFeatures.TextGeneration, ModelFeatures.Image])
@@ -546,7 +546,7 @@ class TestBaseApiImplementations:
 
         print('\n' + response)
 
-    def test_completion_with_audio_path(self, ApiClass):
+    def test_text_generation_with_audio_path(self, ApiClass):
         api_instance = ApiClass()
         default_model_name = api_instance.get_best_model(
             [ModelFeatures.TextGeneration, ModelFeatures.Audio])
@@ -586,7 +586,7 @@ class TestBaseApiImplementations:
 
         print('\n' + response)
 
-    def test_completion_with_video_path(self, ApiClass):
+    def test_text_generation_with_video_path(self, ApiClass):
         api_instance = ApiClass()
         default_model_name = api_instance.get_best_model(
             [ModelFeatures.TextGeneration, ModelFeatures.Video])
@@ -619,13 +619,117 @@ class TestBaseApiImplementations:
         # Normalize response:
         response = str(response)
 
+        aprint('\n' + response)
+
         # Check response:
         assert (
                        'disc' in response or 'circular' in response or 'saucer' in response or 'rotor' in response) and (
                        'vehicle' in response or 'aircraft' in response) and (
                        'hovering' in response or 'hover' in response)
 
-        print('\n' + response)
+    def test_text_generation_with_pdf_document(self, ApiClass):
+
+        api_instance = ApiClass()
+
+        default_model_name = api_instance.get_best_model(
+            [ModelFeatures.TextGeneration, ModelFeatures.Documents,
+             ModelFeatures.Image])
+        if not default_model_name or not api_instance.has_model_support_for(
+                model_name=default_model_name,
+                features=[ModelFeatures.TextGeneration, ModelFeatures.Documents,
+                          ModelFeatures.Image]):
+            pytest.skip(
+                f"{ApiClass.__name__} does not support documents. Skipping image test.")
+        aprint(default_model_name)
+
+        messages = []
+
+        # System message:
+        system_message = Message(role='system')
+        system_message.append_text(
+            'You are a highly qualified scientist with extensive experience in Microscopy, Biology and Bioimage processing and analysis.')
+        messages.append(system_message)
+
+        # User message:
+        user_message = Message(role='user')
+        user_message.append_text(
+            'Can you write a review for the provided paper? Please break down your comments into major and minor comments.')
+        doc_path = self._get_local_test_document_uri('intracktive_preprint.pdf')
+        user_message.append_document_path(doc_path)
+
+        messages.append(user_message)
+
+        # Run agent:
+        response = api_instance.generate_text_completion(messages=messages,
+                                                         model_name=default_model_name)
+
+        # Normalise response:
+        response = str(response)
+
+        aprint('\n' + response)
+
+        # Make sure that the answer is not empty:
+        assert len(response) > 0, (
+            f"{ApiClass.__name__}.completion() should return a non-empty string!"
+        )
+
+        # Check response details:
+        assert 'microscopy' in response.lower() or 'biology' in response.lower()
+
+        # Check if the response is detailed and follows instructions:
+
+        if not ('inTRACKtive' in response and 'review' in response.lower()):
+            # printout message that warns that the response miight lack in detail:
+            aprint(
+                "The response might lack in detail!! Please check the response for more details.")
+
+    def test_text_generation_with_webpage(self, ApiClass):
+
+        api_instance = ApiClass()
+
+        default_model_name = api_instance.get_best_model(
+            [ModelFeatures.TextGeneration, ModelFeatures.Documents,
+             ModelFeatures.Image])
+        if not default_model_name or not api_instance.has_model_support_for(
+                model_name=default_model_name,
+                features=[ModelFeatures.TextGeneration, ModelFeatures.Documents,
+                          ModelFeatures.Image]):
+            pytest.skip(
+                f"{ApiClass.__name__} does not support documents. Skipping image test.")
+        aprint(default_model_name)
+
+        messages = []
+
+        # System message:
+        system_message = Message(role='system')
+        system_message.append_text(
+            'You are a highly qualified scientist with extensive experience in Zebrafish biology.')
+        messages.append(system_message)
+
+        # User message:
+        user_message = Message(role='user')
+        user_message.append_text(
+            'Can you summarise the contents of the webpage and what is known about this gene in zebrafish? Which tissue do you think this gene is expressed in?')
+        user_message.append_document_url("https://zfin.org/ZDB-GENE-060606-1")
+
+        messages.append(user_message)
+
+        # Run agent:
+        response = api_instance.generate_text_completion(messages=messages,
+                                                         model_name=default_model_name)
+
+        # Normalise response:
+        response = str(response)
+
+        aprint('\n' + response)
+
+        # Make sure that the answer is not empty:
+        assert len(response) > 0, (
+            f"{ApiClass.__name__}.completion() should return a non-empty string!"
+        )
+
+        # Check response details:
+        assert 'ZFIN' in response or 'COMP' in response or 'zebrafish' in response
 
     def test_describe_image_if_supported(self, ApiClass):
         """
@@ -980,6 +1084,9 @@ class TestBaseApiImplementations:
 
     def _get_local_test_video_uri(self, image_name: str):
         return self._get_local_test_file_uri('videos', image_name)
+
+    def _get_local_test_document_uri(self, doc_name: str):
+        return self._get_local_test_file_uri('documents', doc_name)
 
     def _get_local_test_file_uri(self, filetype, image_name):
         import os

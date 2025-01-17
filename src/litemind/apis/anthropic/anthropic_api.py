@@ -9,6 +9,7 @@ from litemind.apis.anthropic.utils.process_response import _process_response
 from litemind.apis.anthropic.utils.tools import _convert_toolset_to_anthropic
 from litemind.apis.base_api import BaseApi, ModelFeatures
 from litemind.apis.exceptions import APIError, APINotAvailableError
+from litemind.apis.utils.document_processing import is_pymupdf_available
 from litemind.apis.utils.whisper_transcribe_audio import \
     is_local_whisper_available
 
@@ -304,6 +305,10 @@ class AnthropicApi(BaseApi):
         if self.has_model_support_for(model_name=model_name,
                                       features=ModelFeatures.AudioTranscription):
             messages = self._transcribe_audio_in_messages(messages)
+
+        # Convert documents to markdown and images:
+        if is_pymupdf_available():
+            messages = self._convert_documents_to_markdown_in_messages(messages)
 
         # Convert remaining non-system litemind Messages to Anthropic messages:
         anthropic_messages = _convert_messages_for_anthropic(

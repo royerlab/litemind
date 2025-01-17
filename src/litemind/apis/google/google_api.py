@@ -10,6 +10,7 @@ from litemind.apis.exceptions import APIError, APINotAvailableError
 from litemind.apis.google.utils.messages import _convert_messages_for_gemini, \
     _list_and_delete_uploaded_videos
 from litemind.apis.google.utils.tools import create_genai_tools_from_toolset
+from litemind.apis.utils.document_processing import is_pymupdf_available
 
 
 class GeminiApi(BaseApi):
@@ -263,17 +264,22 @@ class GeminiApi(BaseApi):
                                  toolset: Optional[ToolSet] = None,
                                  **kwargs) -> Message:
 
-        # 1. Fallback defaults
+        # Get the best model if not provided:
         if model_name is None:
             model_name = self.get_best_model()
 
+        # Get the maximum number of output tokens if not provided:
         if max_output_tokens is None:
             max_output_tokens = self.max_num_output_tokens(model_name)
 
-        # 2. Convert user messages
+        # Convert documents to markdown and images:
+        if is_pymupdf_available():
+            messages = self._convert_documents_to_markdown_in_messages(messages)
+
+        # Convert messages to the gemini format:
         gemini_messages = _convert_messages_for_gemini(messages)
 
-        # 3. Build a GenerationConfig
+        # Build a GenerationConfig
         import google.generativeai as genai
         from google.generativeai import types
         generation_cfg = types.GenerationConfig(

@@ -19,6 +19,7 @@ class ModelFeatures(Enum):
     Image = 'Image'
     Audio = 'Audio'
     Video = 'Video'
+    Documents = 'Documents'
     Tools = 'Tools'
     AudioTranscription = 'AudioTranscription'
 
