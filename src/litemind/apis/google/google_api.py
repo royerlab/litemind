@@ -276,8 +276,11 @@ class GeminiApi(BaseApi):
         if is_pymupdf_available():
             messages = self._convert_documents_to_markdown_in_messages(messages)
 
+        # We will use _messages to process the messages:
+        preprocessed_messages = messages
+
         # Convert messages to the gemini format:
-        gemini_messages = _convert_messages_for_gemini(messages)
+        gemini_messages = _convert_messages_for_gemini(preprocessed_messages)
 
         # Build a GenerationConfig
         import google.generativeai as genai

@@ -8,7 +8,6 @@ dependencies = [
     "ollama",
     "anthropic",
     "google-generativeai",
-    "chromadb",
     "pillow",
     "ffmpeg-python",
     "arbol",
@@ -26,7 +25,15 @@ rag = [
 whisper = [
     "openai-whisper"
 ]
+
 documents = [
     "pymupdf",
     "pymupdf4llm",
+]
+
+tables = [
+    "pandas",
+    "numpy",
+    "chardet",
+    "tabulate"
 ]

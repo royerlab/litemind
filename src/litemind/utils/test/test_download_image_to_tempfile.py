@@ -1,6 +1,6 @@
 import os
 
-from src.litemind.apis.utils.dowload_image_to_tempfile import \
+from litemind.utils.dowload_image_to_tempfile import \
     download_image_to_temp_file
 
 

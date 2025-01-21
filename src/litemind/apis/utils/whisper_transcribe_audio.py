@@ -1,4 +1,4 @@
-from litemind.apis.utils.dowload_audio_to_tempfile import \
+from litemind.utils.dowload_audio_to_tempfile import \
     download_audio_to_temp_file
 
 

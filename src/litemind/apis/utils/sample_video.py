@@ -68,16 +68,22 @@ def append_video_frames_and_audio_to_message(video_path: str,
         # estimate time in seconds:
         time = i * frame_interval
 
+        # Format time into hours, minutes, and seconds:
+        hours = int(time // 3600)
+        minutes = int((time % 3600) // 60)
+        seconds = int(time % 60)
+        time_str = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+
         # Append frame to the message
-        message.append_text(f"Frame: {i}/ {total_frames} at {time} seconds.\n")
-        message.append_image_path('file://' + frame_path)
+        message.append_text(f"Frame at {time_str} ({i}/ {total_frames}).\n")
+        message.append_image('file://' + frame_path)
 
     # Append audio to the message if it exists:
     if audio_path is not None:
         message.append_text(
             f"The video's audio is provided as a separate audio file.\n")
         # Append audio to the message
-        message.append_audio_path('file://' + audio_path)
+        message.append_audio('file://' + audio_path)
 
     return message
 
@@ -119,6 +125,7 @@ def get_video_info(video_path: str):
 def extract_frames_and_audio(
         input_video_path: str,
         output_dir: str,
+        image_format: str = "png",
         fps: float = 1.0,
         use_keyframes: bool = False,
         audio_filename: str = "audio.wav",
@@ -132,6 +139,7 @@ def extract_frames_and_audio(
     Args:
         input_video_path (str): Path to the input video file.
         output_dir (str): Directory where the frames and audio will be written.
+        image_format (str, optional): The format to use for the extracted frames. Defaults to 'png'.
         fps (float, optional): The frame rate at which to sample video. Defaults to 1.0.
             Ignored if use_keyframes is True.
         use_keyframes (bool, optional): If True, extract only keyframes. Defaults to False.
@@ -149,7 +157,7 @@ def extract_frames_and_audio(
         os.makedirs(output_dir)
 
     # Generate pattern for output frames
-    frame_pattern = os.path.join(output_dir, "frame_%06d.jpg")
+    frame_pattern = os.path.join(output_dir, f"frame_%06d.{image_format}")
 
     # Extract frames
     # If use_keyframes is True, select only I-frames (a.k.a. keyframes).
@@ -208,7 +216,7 @@ def extract_frames_and_audio(
     extracted_frames = sorted(
         os.path.join(output_dir, f)
         for f in os.listdir(output_dir)
-        if f.lower().endswith((".jpg", ".jpeg", ".png"))
+        if f.lower().endswith(f".{image_format}")
     )
 
     return extracted_frames, audio_output_path

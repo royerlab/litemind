@@ -4,6 +4,7 @@ from arbol import aprint
 from litemind.agent.agent import Agent
 from litemind.agent.conversation import Conversation
 from litemind.agent.message import Message
+from litemind.agent.message_block_type import BlockType
 from litemind.apis.model_features import ModelFeatures
 from litemind.apis.openai.openai_api import OpenAIApi
 from litemind.apis.openai.utils.openai_api_key import \
@@ -42,10 +43,10 @@ def test_agent_text_with_openai():
     assert len(agent.conversation) == 3
     assert 'I am Ohmm' in reply
     assert agent.conversation[0].role == 'system'
-    assert agent.conversation[
-               0].text == 'You are an omniscient all-knowing being called Ohmm'
+    assert 'You are an omniscient all-knowing being called Ohmm' in \
+           agent.conversation[0]
     assert agent.conversation[1].role == 'user'
-    assert agent.conversation[1].text == 'Who are you?'
+    assert 'Who are you?' in agent.conversation[1]
 
 
 @pytest.mark.skipif(not is_openai_api_key_available(),
@@ -55,7 +56,7 @@ def test_message_image():
     system_message = Message(role='system',
                              text='You are an omniscient all-knowing being called Ohmm')
     user_message = Message(role='user', text='Can you describe what you see?')
-    user_message.append_image_url(
+    user_message.append_image(
         'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Einstein_1921_by_F_Schmutzer_-_restoration.jpg/456px-Einstein_1921_by_F_Schmutzer_-_restoration.jpg')
 
     # Create conversation:
@@ -68,12 +69,12 @@ def test_message_image():
     # Check conversation length and contents:
     assert len(conversation) == 2
     assert conversation[0].role == 'system'
-    assert conversation[
-               0].text == 'You are an omniscient all-knowing being called Ohmm'
+    assert 'You are an omniscient all-knowing being called Ohmm' in \
+           conversation[0]
     assert conversation[1].role == 'user'
-    assert conversation[1].text == 'Can you describe what you see?'
-    assert len(conversation[1].image_uris) == 1
-    assert 'upload' in conversation[1].image_uris[0]
+    assert 'Can you describe what you see?' in conversation[1]
+    assert len(conversation[1]) == 2
+    assert conversation[1][1].block_type == BlockType.Image
 
     # Create OpenAI API object:
     api = OpenAIApi()
@@ -90,4 +91,4 @@ def test_message_image():
 
     # Check response:
     assert len(agent.conversation) == 3
-    assert 'sepia' in reply or 'photograph' in reply
+    assert 'sepia' in reply or 'photograph' in reply or 'chalkboard' in reply

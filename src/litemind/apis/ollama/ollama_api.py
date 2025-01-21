@@ -6,7 +6,7 @@ from litemind.agent.message import Message
 from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.base_api import BaseApi, ModelFeatures
 from litemind.apis.exceptions import APIError, APINotAvailableError
-from litemind.apis.ollama.utils.messages import _convert_messages_for_ollama
+from litemind.apis.ollama.utils.messages import convert_messages_for_ollama
 from litemind.apis.ollama.utils.process_response import _process_response
 from litemind.apis.ollama.utils.tools import _format_tools_for_ollama
 from litemind.apis.utils.document_processing import is_pymupdf_available
@@ -241,17 +241,26 @@ class OllamaApi(BaseApi):
         if max_output_tokens is None:
             max_output_tokens = self.max_num_output_tokens(model_name)
 
+        # We will use _messages to process the messages:
+        preprocessed_messages = messages
+
+        # Convert video URIs to images and audio because Ollama does not natively support videos:
+        preprocessed_messages = self._convert_videos_to_images_and_audio(
+            preprocessed_messages)
+
         # If model does not support audio but audio transcription is available, then we use it to transcribe audio:
         if self.has_model_support_for(model_name=model_name,
                                       features=ModelFeatures.AudioTranscription):
-            messages = self._transcribe_audio_in_messages(messages)
+            preprocessed_messages = self._transcribe_audio_in_messages(
+                preprocessed_messages)
 
         # Convert documents to markdown and images:
         if is_pymupdf_available():
-            messages = self._convert_documents_to_markdown_in_messages(messages)
+            preprocessed_messages = self._convert_documents_to_markdown_in_messages(
+                preprocessed_messages)
 
         # Convert user messages into Ollama's format
-        ollama_messages = _convert_messages_for_ollama(messages)
+        ollama_messages = convert_messages_for_ollama(preprocessed_messages)
 
         # Convert toolset (if any) to Ollama's tools schema
         ollama_tools = _format_tools_for_ollama(toolset) if toolset else None

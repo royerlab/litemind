@@ -1,8 +1,7 @@
+from litemind.agent.message_block_type import BlockType
 from litemind.apis.utils.get_media_type_from_uri import get_media_type_from_uri
 from litemind.apis.utils.read_file_and_convert_to_base64 import \
     read_file_and_convert_to_base64, base64_to_data_uri
-from litemind.apis.utils.transform_video_uris_to_images_and_audio import \
-    transform_video_uris_to_images_and_video
 
 
 def convert_messages_for_openai(messages):
@@ -26,75 +25,40 @@ def convert_messages_for_openai(messages):
     # Iterate over each message:
     for message in messages:
 
-        # Convert video URIs to images and audio because OpenAI does not natively support videos:
-        message = transform_video_uris_to_images_and_video(message)
-
         # Start with the role of the message
         formatted_message = {
             "role": message.role,
             "content": []
         }
 
-        # Add text content, if any
-        if message.text:
-            formatted_message["content"].append(
-                {"type": "text", "text": message.text})
-
-        # Add each image URL in the required format
-        for image_uri in message.image_uris:
-
-            # OpenAI API requires the image to be a valid remote URL or in base64 format:
-
-            # Determine media type:
-            media_type = get_media_type_from_uri(image_uri)
-
-            if image_uri.startswith("data:image/"):
-                # All good
-                pass
-
-            elif image_uri.startswith("http://") or image_uri.startswith(
-                    "https://"):
-                # All good
-                pass
-
-            elif image_uri.startswith("file://"):
-                # If it's a local file path, read the file and convert to base64:
-                local_path = image_uri.replace("file://", "")
-                base64_data = read_file_and_convert_to_base64(local_path)
-                image_uri = base64_to_data_uri(base64_data, media_type)
-
-            else:
-                # raise exception:
-                raise ValueError(
-                    f"Invalid image URI: '{image_uri}' (must start with 'data:image/', 'http://', 'https://', or 'file://')")
-
-            formatted_message["content"].append({
-                "type": "image_url",
-                "image_url": {"url": image_uri}
-            })
-
-        # Add each audio URL in the required format
-        for audio_uri in message.audio_uris:
-            media_type = get_media_type_from_uri(audio_uri)
-
-            if audio_uri.startswith("data:audio/"):
-                pass
-            elif audio_uri.startswith("http://") or audio_uri.startswith(
-                    "https://"):
-                pass
-            elif audio_uri.startswith("file://"):
-                local_path = audio_uri.replace("file://", "")
-                base64_data = read_file_and_convert_to_base64(local_path)
-                audio_uri = base64_to_data_uri(base64_data, media_type)
-            else:
-                raise ValueError(
-                    f"Invalid audio URI: '{audio_uri}' (must start with 'data:audio/', 'http://', 'https://', or 'file://')")
-
-            formatted_message["content"].append({
-                "type": "input_audio",
-                "input_audio": {"data": audio_uri,
-                                "format": media_type.split('/')[1]}
-            })
+        # Iterate over each block in the message
+        for block in message.blocks:
+            if block.block_type == BlockType.Text:
+                formatted_message["content"].append(
+                    {"type": "text", "text": block.content})
+            elif block.block_type == BlockType.Image:
+                image_uri = block.content
+                media_type = get_media_type_from_uri(image_uri)
+                if image_uri.startswith("file://"):
+                    local_path = image_uri.replace("file://", "")
+                    base64_data = read_file_and_convert_to_base64(local_path)
+                    image_uri = base64_to_data_uri(base64_data, media_type)
+                formatted_message["content"].append(
+                    {"type": "image_url", "image_url": {"url": image_uri}})
+            elif block.block_type == BlockType.Audio:
+                audio_uri = block.content
+                media_type = get_media_type_from_uri(audio_uri)
+                if audio_uri.startswith("file://"):
+                    local_path = audio_uri.replace("file://", "")
+                    base64_data = read_file_and_convert_to_base64(local_path)
+                    audio_uri = base64_to_data_uri(base64_data, media_type)
+                formatted_message["content"].append({"type": "input_audio",
+                                                     "input_audio": {
+                                                         "data": audio_uri,
+                                                         "format":
+                                                             media_type.split(
+                                                                 '/')[1]}})
+            # Add more block types as needed
 
         # Append the formatted message to the list
         openai_formatted_messages.append(formatted_message)

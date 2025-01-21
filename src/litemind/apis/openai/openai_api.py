@@ -16,10 +16,10 @@ from litemind.apis.openai.utils.model_list import get_openai_model_list
 from litemind.apis.openai.utils.process_response import _process_response
 from litemind.apis.openai.utils.tools import _format_tools_for_openai
 from litemind.apis.utils.document_processing import is_pymupdf_available
-from litemind.apis.utils.dowload_audio_to_tempfile import \
-    download_audio_to_temp_file
 from litemind.apis.utils.write_base64_to_temp_file import \
     write_base64_to_temp_file
+from litemind.utils.dowload_audio_to_tempfile import \
+    download_audio_to_temp_file
 
 
 class OpenAIApi(BaseApi):
@@ -518,14 +518,17 @@ class OpenAIApi(BaseApi):
         if model_name is None:
             model_name = self.get_best_model()
 
+        # We will use _messages to process the messages:
+        preprocessed_messages = messages
+
         # o1 models have special needs:
         if "o1" in model_name:
             # o1 models do not support any temperature except the default 1:
             temperature = 1.0
 
             # o1 models do not support system messages, make a copy of messages and recast system messages as user messages:
-            messages = [m.copy() for m in messages]
-            for message in messages:
+            preprocessed_messages = [m.copy() for m in preprocessed_messages]
+            for message in preprocessed_messages:
                 if message.role == 'system':
                     message.role = 'user'
 
@@ -537,18 +540,25 @@ class OpenAIApi(BaseApi):
         openai_tools = _format_tools_for_openai(
             toolset) if toolset else NotGiven()
 
+        # Convert video URIs to images and audio because OenAI's API does not natively support videos:
+        preprocessed_messages = self._convert_videos_to_images_and_audio(
+            preprocessed_messages)
+
         # If model does not support audio but audio transcription is available, then we use it to transcribe audio:
         if self.use_local_whisper and self.has_model_support_for(
                 model_name=model_name,
                 features=ModelFeatures.AudioTranscription):
-            messages = self._transcribe_audio_in_messages(messages)
+            preprocessed_messages = self._transcribe_audio_in_messages(
+                preprocessed_messages)
 
         # Convert documents to markdown and images:
         if is_pymupdf_available():
-            messages = self._convert_documents_to_markdown_in_messages(messages)
+            preprocessed_messages = self._convert_documents_to_markdown_in_messages(
+                preprocessed_messages)
 
         # Format messages for OpenAI:
-        openai_formatted_messages = convert_messages_for_openai(messages)
+        openai_formatted_messages = convert_messages_for_openai(
+            preprocessed_messages)
 
         # Call OpenAI Chat Completions API
         response = self.client.chat.completions.create(

@@ -2,9 +2,10 @@ import os
 from typing import List, Optional, Sequence, Union
 
 from litemind.agent.message import Message
+from litemind.agent.message_block_type import BlockType
 from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.anthropic.utils.messages import \
-    _convert_messages_for_anthropic
+    convert_messages_for_anthropic
 from litemind.apis.anthropic.utils.process_response import _process_response
 from litemind.apis.anthropic.utils.tools import _convert_toolset_to_anthropic
 from litemind.apis.base_api import BaseApi, ModelFeatures
@@ -295,24 +296,38 @@ class AnthropicApi(BaseApi):
         # Extract system message if present
         system_messages = ''
         non_system_messages = []
-        for msg in messages:
-            if msg.role == "system":
-                system_messages += msg.text
+        for message in messages:
+            if message.role == "system":
+                for block in message.blocks:
+                    if block.block_type == BlockType.Text:
+                        system_messages += block.content
+                    else:
+                        raise ValueError(
+                            "System message should only contain text blocks.")
             else:
-                non_system_messages.append(msg)
+                non_system_messages.append(message)
+
+        # We will use _messages to process the messages:
+        preprocessed_messages = non_system_messages
+
+        # Convert video URIs to images and audio because anthropic does not natively support videos:
+        preprocessed_messages = self._convert_videos_to_images_and_audio(
+            preprocessed_messages)
 
         # If model does not support audio but audio transcription is available, then we use it to transcribe audio:
         if self.has_model_support_for(model_name=model_name,
                                       features=ModelFeatures.AudioTranscription):
-            messages = self._transcribe_audio_in_messages(messages)
+            preprocessed_messages = self._transcribe_audio_in_messages(
+                preprocessed_messages)
 
         # Convert documents to markdown and images:
         if is_pymupdf_available():
-            messages = self._convert_documents_to_markdown_in_messages(messages)
+            preprocessed_messages = self._convert_documents_to_markdown_in_messages(
+                preprocessed_messages)
 
         # Convert remaining non-system litemind Messages to Anthropic messages:
-        anthropic_messages = _convert_messages_for_anthropic(
-            non_system_messages)
+        anthropic_messages = convert_messages_for_anthropic(
+            preprocessed_messages)
 
         # Convert a ToolSet to Anthropic "tools" param if any
         tools_param = _convert_toolset_to_anthropic(

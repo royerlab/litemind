@@ -16,10 +16,9 @@ def test_conversation():
 
     messages = conversation.get_all_messages()
     assert messages[0].role == 'system'
-    assert messages[
-               0].text == 'You are an omniscient all-knowing being called Ohmm'
+    assert 'You are an omniscient all-knowing being called Ohmm' in messages[0]
     assert messages[1].role == 'user'
-    assert messages[1].text == 'Who are you?'
+    assert 'Who are you?' in messages[1]
 
     conversation.clear_all()
     assert len(conversation) == 0

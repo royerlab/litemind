@@ -4,7 +4,7 @@ from typing import List
 
 from arbol import aprint
 
-from litemind.apis.utils.dowload_document_to_tempfile import \
+from litemind.utils.dowload_document_to_tempfile import \
     download_document_to_temp_file
 
 

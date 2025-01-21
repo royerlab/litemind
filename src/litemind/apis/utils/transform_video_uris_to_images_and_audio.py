@@ -1,29 +1,44 @@
-from litemind.apis.utils.dowload_video_to_tempfile import \
-    download_video_to_temp_file
+from litemind.agent.message import Message
+from litemind.agent.message_block_type import BlockType
 from litemind.apis.utils.sample_video import \
     append_video_frames_and_audio_to_message
 from litemind.apis.utils.write_base64_to_temp_file import \
     write_base64_to_temp_file
+from litemind.utils.dowload_video_to_tempfile import \
+    download_video_to_temp_file
 
 
-def transform_video_uris_to_images_and_video(message):
-    # Add and convert each video URI to the message as images and audio:
-    for video_uri in message.video_uris:
+def transform_video_uris_to_images_and_audio(message: Message) -> Message:
+    """
+    Convert video URIs in the message to images and audio blocks.
 
-        if video_uri.startswith("data:video/"):
-            local_path = write_base64_to_temp_file(video_uri)
+    Parameters
+    ----------
+    message : Message
+        The message object containing video URIs.
 
-        elif video_uri.startswith("http://") or video_uri.startswith(
-                "https://"):
-            local_path = download_video_to_temp_file(video_uri)
+    Returns
+    -------
+    Message
+        The message object with video URIs converted to images and audio blocks.
+    """
+    # Iterate over each block in the message:
+    for block in message.blocks:
+        if block.block_type == BlockType.Video and block.content:
+            if block.content.startswith("data:video/"):
+                local_path = write_base64_to_temp_file(block.content)
+            elif block.content.startswith(
+                    "http://") or block.content.startswith("https://"):
+                local_path = download_video_to_temp_file(block.content)
+            elif block.content.startswith("file://"):
+                local_path = block.content.replace("file://", "")
+            else:
+                raise ValueError(
+                    f"Invalid video URI: '{block.content}' (must start with 'data:video/', 'http://', 'https://', or 'file://')"
+                )
 
-        elif video_uri.startswith("file://"):
-            local_path = video_uri.replace("file://", "")
+            # Append video frames and audio to the message:
+            message = append_video_frames_and_audio_to_message(local_path,
+                                                               message)
 
-        else:
-            raise ValueError(
-                f"Invalid video URI: '{video_uri}' (must start with 'data:video/', 'http://', 'https://', or 'file://')")
-
-        message = append_video_frames_and_audio_to_message(
-            local_path, message)
     return message

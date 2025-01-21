@@ -3,13 +3,17 @@ from typing import List, Optional, Sequence, Union
 
 from PIL.Image import Image
 from arbol import asection, aprint
+from pandas import DataFrame
 
 from litemind.agent.message import Message
+from litemind.agent.message_block_type import BlockType
 from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.model_features import ModelFeatures
 from litemind.apis.utils.document_processing import is_pymupdf_available, \
     convert_document_to_markdown, extract_images_from_document
 from litemind.apis.utils.random_projector import DeterministicRandomProjector
+from litemind.apis.utils.transform_video_uris_to_images_and_audio import \
+    transform_video_uris_to_images_and_audio
 from litemind.apis.utils.whisper_transcribe_audio import \
     is_local_whisper_available, transcribe_audio_with_local_whisper
 
@@ -219,6 +223,7 @@ class BaseApi(ABC):
                                  temperature: float = 0.0,
                                  max_output_tokens: Optional[int] = None,
                                  toolset: Optional[ToolSet] = None,
+                                 # output_format: Optional[Any] = None,
                                  **kwargs) -> Message:
         """
         Generate a text completion using the given model for a given list of messages and parameters.
@@ -235,8 +240,11 @@ class BaseApi(ABC):
             The maximum number of tokens to use.
         toolset: Optional[ToolSet]
             The toolset to use.
+        #output_format: Optional[Any]
+        #    The output format to use. Provide a pydantic object to use as the output format.
         kwargs: dict
             Additional arguments to pass to the completion function, this is API specific!
+
 
         Returns
         -------
@@ -280,17 +288,15 @@ class BaseApi(ABC):
         # Iterate over each message in the list:
         for message in messages:
 
-            # If the message has audio_uris:
-            if message.audio_uris:
-
-                # Iterate over each audio URI in the message:
-                for audio_uri in message.audio_uris:
+            # Iterate over each block in the message:
+            for block in message.blocks:
+                if block.block_type == BlockType.Audio and block.content:
                     try:
                         # We use a local instance of whisper instead:
-                        transcription = self.transcribe_audio(audio_uri)
+                        transcription = self.transcribe_audio(block.content)
 
                         # Extract filename from URI:
-                        original_filename = audio_uri.split("/")[-1]
+                        original_filename = block.content.split("/")[-1]
 
                         # Add markdown quotes ''' around the transcribed text, and
                         # add prefix: "Transcription: " to the transcribed text:
@@ -298,60 +304,172 @@ class BaseApi(ABC):
 
                         # Add the transcribed text to the message
                         message.append_text(transcription)
+
+                        # Remove the audio block:
+                        message.blocks.remove(block)
+
                     except Exception as e:
                         raise ValueError(
-                            f"Could not transcribe audio from: '{audio_uri}', error: {e}")
-
-                # If the audio was transcribed, remove the audio_uris from the message:
-                message.audio_uris = []
+                            f"Could not transcribe audio from: '{block.content}', error: {e}")
 
         return messages
 
     def _convert_documents_to_markdown_in_messages(self,
                                                    messages: List[Message]) -> \
-    List[Message]:
+            List[Message]:
+        """
+        Convert documents in messages into text in markdown format.
 
-        # similarly to _transcribe_audio_in_messages, iterate over each message in the list and convert documents in messages into text in markdown format:
+        Parameters
+        ----------
+        messages : List[Message]
+            The list of Message objects to process.
+
+        Returns
+        -------
+        List[Message]
+            The list of Message objects with documents converted to markdown.
+        """
+
+        converted_messages = []
 
         # Iterate over each message in the list:
         for message in messages:
 
-            # If the message has audio_uris:
-            if message.document_uris:
+            # Create a new message object:
+            converted_message = Message(role=message.role)
 
-                # Iterate over each document URI in the message:
-                for document_uri in message.document_uris:
+            # Add the new message to the list:
+            converted_messages.append(converted_message)
+
+            # Iterate over each block in the message:
+            for block in message.blocks:
+                if block.block_type == BlockType.Document and block.content is not None:
                     try:
                         # Extract filename from URI:
-                        original_filename = document_uri.split("/")[-1]
+                        original_filename = block.content.split("/")[-1]
 
                         # Extract the file extension from URI:
-                        file_extension = document_uri.split(".")[-1]
+                        file_extension = block.content.split(".")[-1]
 
-                        # We use a local instance of whisper instead:
-                        markdown = convert_document_to_markdown(document_uri)
+                        # Convert document to markdown:
+                        markdown = convert_document_to_markdown(block.content)
 
                         # Add markdown quotes around the text, and add the extension, for example: ```pdf for extension 'pdf':
                         text = f"\nText extracted from document '{original_filename}': \n'''{file_extension}\n{markdown}\n'''\n"
 
                         # Add the extracted text to the message
-                        message.append_text(text)
+                        converted_message.append_text(text)
 
                         # Extract images from document:
-                        image_uris = extract_images_from_document(document_uri)
+                        image_uris = extract_images_from_document(block.content)
 
                         # Add the extracted images to the message:
                         for image_uri in image_uris:
-                            message.append_image_uri(image_uri)
+                            converted_message.append_image(image_uri)
+
 
                     except Exception as e:
                         raise ValueError(
-                            f"Could not extract text from document: '{document_uri}', error: {e}")
+                            f"Could not extract text from document: '{block.content}', error: {e}")
+                elif block.block_type == BlockType.Json and block.content is not None:
+                    try:
+                        # Convert JSON to markdown:
+                        markdown = f"```json\n{block.content}\n```"
 
-                # If the documents have been converted, remove the document_uris from the message:
-                message.document_uris = []
+                        # Add the markdown to the message:
+                        converted_message.append_text(markdown)
 
-        return messages
+                    except Exception as e:
+                        raise ValueError(
+                            f"Could not convert JSON to markdown: '{block.content}', error: {e}")
+                elif block.block_type == BlockType.Object and block.content is not None:
+                    try:
+                        # Convert object to json since it is a pydantic object:
+                        json_str = block.content.model_dump_json()
+                        markdown = f"```json\n{json_str}\n```"
+
+                        # Add the markdown to the message:
+                        converted_message.append_text(markdown)
+                    except Exception as e:
+                        raise ValueError(
+                            f"Could not convert object to markdown: '{block.content}', error: {e}")
+                elif block.block_type == BlockType.Code and block.content is not None:
+                    try:
+                        # Get language from block attributes with default '':
+                        language = block.attributes.get('language', '')
+
+                        # Convert code to markdown:
+                        markdown = f"```{language}\n{block.content}\n```"
+
+                        # Add the markdown to the message:
+                        converted_message.append_text(markdown)
+                    except Exception as e:
+                        raise ValueError(
+                            f"Could not convert code to markdown: '{block.content}', error: {e}")
+                elif block.block_type == BlockType.Table and block.content is not None:
+                    try:
+                        table: DataFrame = block.content
+
+                        # pretty print the pandas dataframe into markdown-like / compatible string:
+                        markdown_table = table.to_markdown()
+
+                        # Convert table to markdown:
+                        markdown = f"```dataframe\n{markdown_table}\n```"
+
+                        # Add the markdown to the message:
+                        converted_message.append_text(markdown)
+                    except Exception as e:
+                        raise ValueError(
+                            f"Could not convert table to markdown: '{block.content}', error: {e}")
+                elif block.block_type == BlockType.Text and block.content is not None:
+                    try:
+                        text: str = block.content
+
+                        # Check if the text ends with at least one '\n' if not, then add it:
+                        if not text.endswith('\n'):
+                            text += '\n'
+
+                        # Add the text to the message:
+                        converted_message.append_text(text)
+
+                    except Exception as e:
+                        raise ValueError(
+                            f"Could not convert table to markdown: '{block.content}', error: {e}")
+                elif (block.block_type == BlockType.Image or
+                      block.block_type == BlockType.Audio or
+                      block.block_type == BlockType.Video):
+
+                    # First we make a copy of the block:
+                    block = block.copy()
+
+                    # Add the block to the message:
+                    converted_message.blocks.append(block)
+
+                else:
+                    raise ValueError(
+                        f"Block type '{block.block_type}' not supported for conversion to markdown.")
+
+        return converted_messages
+
+    def _convert_videos_to_images_and_audio(self, message: Sequence[Message]) -> \
+            List[Message]:
+
+        """
+        Convert videos in the message to images and audio blocks.
+
+        Parameters
+        ----------
+        message : Sequence[Message]
+            The message object containing video URIs.
+
+        Returns
+        -------
+        List[Message]
+            The message object with video URIs converted to images and audio blocks.
+        """
+        return [transform_video_uris_to_images_and_audio(msg) for msg in
+                message]
 
     def generate_audio(self,
                        text: str,
@@ -684,7 +802,7 @@ class BaseApi(ABC):
                     # User message:
                     user_message = Message(role='user')
                     user_message.append_text(query)
-                    user_message.append_image_uri(image_uri)
+                    user_message.append_image(image_uri)
 
                     messages.append(user_message)
 
@@ -805,7 +923,7 @@ class BaseApi(ABC):
                     # User message:
                     user_message = Message(role='user')
                     user_message.append_text(query)
-                    user_message.append_audio_uri(audio_uri)
+                    user_message.append_audio(audio_uri)
 
                     messages.append(user_message)
 
@@ -917,7 +1035,7 @@ class BaseApi(ABC):
                     # User message:
                     user_message = Message(role='user')
                     user_message.append_text(query)
-                    user_message.append_video_uri(video_uri)
+                    user_message.append_video(video_uri)
 
                     messages.append(user_message)
 

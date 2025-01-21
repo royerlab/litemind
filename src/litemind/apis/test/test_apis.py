@@ -1,5 +1,6 @@
 from io import BytesIO
 from pathlib import Path
+from typing import Dict
 
 import pytest
 from PIL import Image
@@ -13,7 +14,7 @@ from litemind.apis.google.google_api import GeminiApi
 from litemind.apis.ollama.ollama_api import OllamaApi
 from litemind.apis.openai.openai_api import OpenAIApi
 from litemind.apis.test.utils.levenshtein import levenshtein_distance
-from litemind.apis.utils.dowload_audio_to_tempfile import \
+from litemind.utils.dowload_audio_to_tempfile import \
     download_audio_to_temp_file
 
 # Put all your implementations in this list:
@@ -165,12 +166,50 @@ class TestBaseApiImplementations:
             temperature=0.7
         )
 
+        print('\n' + str(response))
+
         assert response.role == "assistant", (
             f"{ApiClass.__name__} completion should return an 'assistant' role."
         )
-        assert "I am " in response.text, (
+        assert "I am " in response, (
             f"Expected 'I am' in the output of {ApiClass.__name__}.completion()"
         )
+
+    def test_text_generation_prefill(self, ApiClass):
+        """
+        Test a simple completion with prefilled answer
+        """
+        api_instance = ApiClass()
+
+        default_model_name = api_instance.get_best_model(
+            ModelFeatures.TextGeneration)
+
+        messages = [
+            Message(role="system",
+                    text="You are very good at Math."),
+            Message(role="user",
+                    text="What is 12+17 equal to? Please give the answer in parentheses."),
+            Message(role="assistant", text="(")
+        ]
+
+        response = api_instance.generate_text_completion(
+            model_name=default_model_name,
+            messages=messages,
+            temperature=0.0
+        )
+
+        print('\n' + str(response))
+
+        assert response.role == "assistant", (
+            f"{ApiClass.__name__} completion should return an 'assistant' role."
+        )
+        assert "29" in response, (
+            f"Expected '29' in the output of {ApiClass.__name__}.completion()"
+        )
+        # Better the string should just be "29)" and not "29) " or "29 )":
+        if not str(response[0]).startswith("29)"):
+            aprint(
+                "Model does not support strict prefill behaviour: The response should start with '29)'")
 
     def test_text_generation_with_simple_toolset(self, ApiClass):
         """
@@ -204,9 +243,9 @@ class TestBaseApiImplementations:
         )
 
         for message in messages:
-            aprint(message)
+            print(message)
 
-        assert "2024-11-15" in response.text, (
+        assert "2024-11-15" in response, (
             f"The response of {ApiClass.__name__} should contain the delivery date."
         )
 
@@ -269,7 +308,9 @@ class TestBaseApiImplementations:
             toolset=toolset
         )
 
-        assert "2024-11-15" in response.text, (
+        print('\n' + str(response))
+
+        assert "2024-11-15" in response, (
             f"The response of {ApiClass.__name__} should contain the delivery date."
         )
 
@@ -283,7 +324,9 @@ class TestBaseApiImplementations:
             toolset=toolset
         )
 
-        assert "Olea Table" in response.text, (
+        print('\n' + str(response))
+
+        assert "Olea Table" in response, (
             f"The response of {ApiClass.__name__} should contain the delivery date."
         )
 
@@ -300,7 +343,7 @@ class TestBaseApiImplementations:
         for message in messages:
             aprint(message)
 
-        assert "42" in response.text, (
+        assert "42" in response, (
             f"The response of {ApiClass.__name__} should contain the delivery date."
         )
 
@@ -326,7 +369,7 @@ class TestBaseApiImplementations:
         # User message:
         user_message = Message(role='user')
         user_message.append_text('Can you describe what you see in the image?')
-        user_message.append_image_url(
+        user_message.append_image(
             'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Einstein_1921_by_F_Schmutzer_-_restoration.jpg/456px-Einstein_1921_by_F_Schmutzer_-_restoration.jpg')
         messages.append(user_message)
 
@@ -334,13 +377,10 @@ class TestBaseApiImplementations:
         response = api_instance.generate_text_completion(messages=messages,
                                                          model_name=default_model_name)
 
-        # Normalise response:
-        response = str(response)
+        print('\n' + str(response))
 
         # Check response:
         assert 'sepia' in response or 'chalkboard' in response
-
-        print('\n' + response)
 
     def test_text_generation_with_png_image_path(self, ApiClass):
         api_instance = ApiClass()
@@ -365,7 +405,7 @@ class TestBaseApiImplementations:
         user_message = Message(role='user')
         user_message.append_text('Can you describe what you see in the image?')
         image_path = self._get_local_test_image_uri('python.png')
-        user_message.append_image_path(image_path)
+        user_message.append_image(image_path)
 
         messages.append(user_message)
 
@@ -373,8 +413,7 @@ class TestBaseApiImplementations:
         response = api_instance.generate_text_completion(messages=messages,
                                                          model_name=default_model_name)
 
-        # Normalise response:
-        response = str(response)
+        print('\n' + str(response))
 
         # Check response:
         if ApiClass.__name__ == 'OllamaApi':
@@ -383,7 +422,7 @@ class TestBaseApiImplementations:
         else:
             assert 'snake' in response or 'python' in response
 
-        print('\n' + response)
+        print('\n' + str(response))
 
     def test_text_generation_with_jpg_image_path(self, ApiClass):
         api_instance = ApiClass()
@@ -408,7 +447,7 @@ class TestBaseApiImplementations:
         user_message = Message(role='user')
         user_message.append_text('Can you describe what you see in the image?')
         image_path = self._get_local_test_image_uri('future.jpeg')
-        user_message.append_image_path(image_path)
+        user_message.append_image(image_path)
 
         messages.append(user_message)
 
@@ -416,13 +455,10 @@ class TestBaseApiImplementations:
         response = api_instance.generate_text_completion(messages=messages,
                                                          model_name=default_model_name)
 
-        # Normalise response:
-        response = str(response)
+        print('\n' + str(response))
 
         # Check response:
         assert 'robot' in response or 'futuristic' in response or 'sky' in response
-
-        print('\n' + response)
 
     def test_text_generation_with_webp_image_path(self, ApiClass):
         api_instance = ApiClass()
@@ -447,7 +483,7 @@ class TestBaseApiImplementations:
         user_message = Message(role='user')
         user_message.append_text('Can you describe what you see in the image?')
         image_path = self._get_local_test_image_uri('beach.webp')
-        user_message.append_image_path(image_path)
+        user_message.append_image(image_path)
 
         messages.append(user_message)
 
@@ -455,13 +491,10 @@ class TestBaseApiImplementations:
         response = api_instance.generate_text_completion(messages=messages,
                                                          model_name=default_model_name)
 
-        # Normalise response:
-        response = str(response)
+        print('\n' + str(response))
 
         # Check response:
         assert 'beach' in response or 'palm' in response or 'sunset' in response
-
-        print('\n' + response)
 
     def test_text_generation_with_gif_image_path(self, ApiClass):
         api_instance = ApiClass()
@@ -487,7 +520,7 @@ class TestBaseApiImplementations:
         user_message.append_text(
             'Can you describe what you see in the image?')
         image_path = self._get_local_test_image_uri('field.gif')
-        user_message.append_image_path(image_path)
+        user_message.append_image(image_path)
 
         messages.append(user_message)
 
@@ -495,13 +528,10 @@ class TestBaseApiImplementations:
         response = api_instance.generate_text_completion(messages=messages,
                                                          model_name=default_model_name)
 
-        # Normalise response:
-        response = str(response)
+        print('\n' + str(response))
 
         # Check response:
         assert 'field' in response or 'blue' in response or 'stars' in response
-
-        print('\n' + response)
 
     def test_text_generation_with_multiple_images(self, ApiClass):
         api_instance = ApiClass()
@@ -528,8 +558,8 @@ class TestBaseApiImplementations:
             'Can you compare these two images? What is similar and what is different?')
         cat_image_path = self._get_local_test_image_uri('cat.jpg')
         panda_image_path = self._get_local_test_image_uri('panda.jpg')
-        user_message.append_image_path(cat_image_path)
-        user_message.append_image_path(panda_image_path)
+        user_message.append_image(cat_image_path)
+        user_message.append_image(panda_image_path)
 
         messages.append(user_message)
 
@@ -537,14 +567,11 @@ class TestBaseApiImplementations:
         response = api_instance.generate_text_completion(messages=messages,
                                                          model_name=default_model_name)
 
-        # Normalise response:
-        response = str(response)
+        print('\n' + str(response))
 
         # Check response:
         assert (
                        'animals' in response or 'characters' in response) and 'cat' in response and 'panda' in response
-
-        print('\n' + response)
 
     def test_text_generation_with_audio_path(self, ApiClass):
         api_instance = ApiClass()
@@ -570,7 +597,7 @@ class TestBaseApiImplementations:
         user_message.append_text(
             'Can you describe what you heard in the audio file?')
         image_path = self._get_local_test_audio_uri('harvard.wav')
-        user_message.append_audio_path(image_path)
+        user_message.append_audio(image_path)
 
         messages.append(user_message)
 
@@ -578,13 +605,47 @@ class TestBaseApiImplementations:
         response = api_instance.generate_text_completion(messages=messages,
                                                          model_name=default_model_name)
 
-        # Normalise response:
-        response = str(response)
+        print('\n' + str(response))
 
         # Check response:
         assert 'smell' in response or 'ham' in response or 'beer' in response
 
-        print('\n' + response)
+    def test_text_generation_with_audio_url(self, ApiClass):
+        api_instance = ApiClass()
+        default_model_name = api_instance.get_best_model(
+            [ModelFeatures.TextGeneration, ModelFeatures.Audio])
+        if not default_model_name or not api_instance.has_model_support_for(
+                model_name=default_model_name,
+                features=[ModelFeatures.TextGeneration, ModelFeatures.Audio]):
+            pytest.skip(
+                f"{ApiClass.__name__} does not support audio. Skipping audio test.")
+        aprint(default_model_name)
+
+        messages = []
+
+        # System message:
+        system_message = Message(role='system')
+        system_message.append_text(
+            'You are an omniscient all-knowing being called Ohmm')
+        messages.append(system_message)
+
+        # User message:
+        user_message = Message(role='user')
+        user_message.append_text(
+            'Can you exhaustively describe what you heard in the audio file?')
+        user_message.append_audio(
+            "https://salford.figshare.com/ndownloader/files/14630270")
+
+        messages.append(user_message)
+
+        # Run agent:
+        response = api_instance.generate_text_completion(messages=messages,
+                                                         model_name=default_model_name)
+
+        print('\n' + str(response))
+
+        # Check response:
+        assert 'canoe' in response or 'chicken' in response or 'hours' in response
 
     def test_text_generation_with_video_path(self, ApiClass):
         api_instance = ApiClass()
@@ -609,23 +670,59 @@ class TestBaseApiImplementations:
         user_message = Message(role='user')
         user_message.append_text('Can you describe what you see in the video?')
         video_path = self._get_local_test_video_uri('avrocar.mp4')
-        user_message.append_video_path(video_path)
+        user_message.append_video(video_path)
         messages.append(user_message)
 
         # Run agent:
         response = api_instance.generate_text_completion(messages=messages,
                                                          model_name=default_model_name)
 
-        # Normalize response:
-        response = str(response)
-
-        aprint('\n' + response)
+        print('\n' + str(response))
 
         # Check response:
         assert (
                        'disc' in response or 'circular' in response or 'saucer' in response or 'rotor' in response) and (
                        'vehicle' in response or 'aircraft' in response) and (
                        'hovering' in response or 'hover' in response)
+
+    def test_text_generation_with_video_url(self, ApiClass):
+        api_instance = ApiClass()
+        default_model_name = api_instance.get_best_model(
+            [ModelFeatures.TextGeneration, ModelFeatures.Video])
+        if not default_model_name or not api_instance.has_model_support_for(
+                model_name=default_model_name,
+                features=[ModelFeatures.TextGeneration, ModelFeatures.Video]):
+            pytest.skip(
+                f"{ApiClass.__name__} does not support videos. Skipping video test.")
+        aprint(default_model_name)
+
+        messages = []
+
+        # System message:
+        system_message = Message(role='system')
+        system_message.append_text(
+            'You are an omniscient all-knowing being called Ohmm')
+        messages.append(system_message)
+
+        # User message:
+        user_message = Message(role='user')
+        user_message.append_text('Can you describe what you see in the video?')
+        user_message.append_video(
+            'https://ia903405.us.archive.org/27/items/archive-video-files/test.mp4')
+        messages.append(user_message)
+
+        # Run agent:
+        response = api_instance.generate_text_completion(messages=messages,
+                                                         model_name=default_model_name)
+
+        print('\n' + str(response))
+
+        # Check response:
+        if ApiClass.__name__ == 'OllamaApi':
+            # If the ApiClass is OllamaAPi then the model is open source and might not be as strong as the others:
+            assert 'image' in response
+        else:
+            assert 'rabbit' in response or 'bunny' in response or 'cartoon' in response or 'animated' in response
 
     def test_text_generation_with_pdf_document(self, ApiClass):
 
@@ -639,7 +736,7 @@ class TestBaseApiImplementations:
                 features=[ModelFeatures.TextGeneration, ModelFeatures.Documents,
                           ModelFeatures.Image]):
             pytest.skip(
-                f"{ApiClass.__name__} does not support documents. Skipping image test.")
+                f"{ApiClass.__name__} does not support documents. Skipping documents test.")
         aprint(default_model_name)
 
         messages = []
@@ -655,7 +752,7 @@ class TestBaseApiImplementations:
         user_message.append_text(
             'Can you write a review for the provided paper? Please break down your comments into major and minor comments.')
         doc_path = self._get_local_test_document_uri('intracktive_preprint.pdf')
-        user_message.append_document_path(doc_path)
+        user_message.append_document(doc_path)
 
         messages.append(user_message)
 
@@ -663,10 +760,7 @@ class TestBaseApiImplementations:
         response = api_instance.generate_text_completion(messages=messages,
                                                          model_name=default_model_name)
 
-        # Normalise response:
-        response = str(response)
-
-        aprint('\n' + response)
+        print('\n' + str(response))
 
         # Make sure that the answer is not empty:
         assert len(response) > 0, (
@@ -695,7 +789,7 @@ class TestBaseApiImplementations:
                 features=[ModelFeatures.TextGeneration, ModelFeatures.Documents,
                           ModelFeatures.Image]):
             pytest.skip(
-                f"{ApiClass.__name__} does not support documents. Skipping image test.")
+                f"{ApiClass.__name__} does not support documents. Skipping documents test.")
         aprint(default_model_name)
 
         messages = []
@@ -710,7 +804,7 @@ class TestBaseApiImplementations:
         user_message = Message(role='user')
         user_message.append_text(
             'Can you summarise the contents of the webpage and what is known about this gene in zebrafish? Which tissue do you think this gene is expressed in?')
-        user_message.append_document_url("https://zfin.org/ZDB-GENE-060606-1")
+        user_message.append_document("https://zfin.org/ZDB-GENE-060606-1")
 
         messages.append(user_message)
 
@@ -718,10 +812,7 @@ class TestBaseApiImplementations:
         response = api_instance.generate_text_completion(messages=messages,
                                                          model_name=default_model_name)
 
-        # Normalise response:
-        response = str(response)
-
-        aprint('\n' + response)
+        print('\n' + str(response))
 
         # Make sure that the answer is not empty:
         assert len(response) > 0, (
@@ -730,6 +821,165 @@ class TestBaseApiImplementations:
 
         # Check response details:
         assert 'ZFIN' in response or 'COMP' in response or 'zebrafish' in response
+
+    def test_text_generation_with_json(self, ApiClass):
+
+        api_instance = ApiClass()
+
+        default_model_name = api_instance.get_best_model(
+            ModelFeatures.TextGeneration)
+        if not default_model_name or not api_instance.has_model_support_for(
+                model_name=default_model_name,
+                features=ModelFeatures.TextGeneration):
+            pytest.skip(
+                f"{ApiClass.__name__} does not support text generation. Skipping test.")
+        aprint(default_model_name)
+
+        messages = []
+
+        # System message:
+        system_message = Message(role='system')
+        system_message.append_text(
+            'You are a computer program that can read complex json strings and understand what they contain.')
+        messages.append(system_message)
+
+        # complex and long test Json input:
+        json_str = """
+        {
+            "name": "John Doe",
+            "age": 30,
+            "cars": {
+                "car1": "Ford",
+                "car2": "BMW",
+                "car3": "Fiat"
+            }
+        }
+        """
+
+        # User message:
+        user_message = Message(role='user')
+        user_message.append_json(json_str)
+        user_message.append_text('What is the age of John?')
+        messages.append(user_message)
+
+        # Run agent:
+        response = api_instance.generate_text_completion(messages=messages,
+                                                         model_name=default_model_name)
+
+        print('\n' + str(response))
+
+        # Make sure that the answer is not empty:
+        assert len(response) > 0, (
+            f"{ApiClass.__name__}.completion() should return a non-empty string!"
+        )
+
+        # Check response details:
+        assert '30' in response
+
+    def test_text_generation_with_object(self, ApiClass):
+
+        # Check if pydantic is installed otherwise skip test:
+        try:
+            from pydantic import BaseModel
+        except ImportError:
+            pytest.skip(
+                "Pydantic is not installed. Skipping test."
+            )
+
+        api_instance = ApiClass()
+
+        default_model_name = api_instance.get_best_model(
+            ModelFeatures.TextGeneration)
+        if not default_model_name or not api_instance.has_model_support_for(
+                model_name=default_model_name,
+                features=ModelFeatures.TextGeneration):
+            pytest.skip(
+                f"{ApiClass.__name__} does not support text generation. Skipping test.")
+        aprint(default_model_name)
+
+        messages = []
+
+        # System message:
+        system_message = Message(role='system')
+        system_message.append_text(
+            'You are a computer program that can read complex json strings and understand what they contain.')
+        messages.append(system_message)
+
+        # complex pydantic object  (derives from BaseModel) for testing:
+        from pydantic import BaseModel
+        class TestObject(BaseModel):
+            name: str
+            age: int
+            cars: Dict[str, str]
+
+        # Create instance of object and fill with details:
+        test_object = TestObject(name='John Doe', age=30,
+                                 cars={'car1': 'Ford', 'car2': 'BMW',
+                                       'car3': 'Fiat'})
+
+        # User message:
+        user_message = Message(role='user')
+        user_message.append_object(test_object)
+        user_message.append_text('What is the age of John?')
+        messages.append(user_message)
+
+        # Run agent:
+        response = api_instance.generate_text_completion(messages=messages,
+                                                         model_name=default_model_name)
+
+        print('\n' + str(response))
+
+        # Make sure that the answer is not empty:
+        assert len(response) > 0, (
+            f"{ApiClass.__name__}.completion() should return a non-empty string!"
+        )
+
+        # Check response details:
+        assert '30' in response
+
+    def test_text_generation_with_csv(self, ApiClass):
+
+        api_instance = ApiClass()
+
+        default_model_name = api_instance.get_best_model(
+            ModelFeatures.TextGeneration)
+        if not default_model_name or not api_instance.has_model_support_for(
+                model_name=default_model_name,
+                features=ModelFeatures.TextGeneration):
+            pytest.skip(
+                f"{ApiClass.__name__} does not support text generation. Skipping test.")
+        aprint(default_model_name)
+
+        messages = []
+
+        # System message:
+        system_message = Message(role='system')
+        system_message.append_text('You are a highly qualified data scientist.')
+        messages.append(system_message)
+
+        # _get_local_test_table_uri
+        table_path = self._get_local_test_table_uri('spreadsheet.csv')
+
+        # User message:
+        user_message = Message(role='user')
+        user_message.append_text(
+            'List all items sold by rep Carl Jackson in the provided table.')
+        user_message.append_table(table_path)
+        messages.append(user_message)
+
+        # Run agent:
+        response = api_instance.generate_text_completion(messages=messages,
+                                                         model_name=default_model_name)
+
+        print('\n' + str(response))
+
+        # Make sure that the answer is not empty:
+        assert len(response) > 0, (
+            f"{ApiClass.__name__}.completion() should return a non-empty string!"
+        )
+
+        # Check response details:
+        assert 'Binders' in response or 'SAFCO' in response
 
     def test_describe_image_if_supported(self, ApiClass):
         """
@@ -755,7 +1005,7 @@ class TestBaseApiImplementations:
             description = api_instance.describe_image(image_path,
                                                       model_name=default_model_name)
 
-            aprint(description)
+            print('\n' + description)
 
             assert isinstance(description, str), (
                 f"{ApiClass.__name__}.describe_image() should return a string!"
@@ -798,7 +1048,7 @@ class TestBaseApiImplementations:
             description = api_instance.describe_audio(audio_path,
                                                       model_name=default_model_name)
 
-            aprint(description)
+            print('\n' + description)
 
             assert isinstance(description, str), (
                 f"{ApiClass.__name__}.describe_audio() should return a string!"
@@ -841,7 +1091,7 @@ class TestBaseApiImplementations:
             description = api_instance.describe_video(video_path,
                                                       model_name=default_model_name)
 
-            aprint(description)
+            print('\n' + description)
 
             assert isinstance(description, str), (
                 f"{ApiClass.__name__}.describe_video() should return a string!"
@@ -935,7 +1185,7 @@ class TestBaseApiImplementations:
                 "The edit distance between the generated audio and the original text should be small."
             )
 
-            aprint(f"Transcription: '{transcription}'")
+            print(f"Transcription: \n'{transcription}'")
 
     def test_generate_image(self, ApiClass):
         api_instance = ApiClass()
@@ -992,7 +1242,7 @@ class TestBaseApiImplementations:
                 model_name=image_model_name,
                 image_uri=image_uri)
 
-            aprint(f"Description of the generated image: {description}")
+            print(f"Description of the generated image: \n{description}")
 
             # Asserts:
             assert isinstance(description,
@@ -1087,6 +1337,9 @@ class TestBaseApiImplementations:
 
     def _get_local_test_document_uri(self, doc_name: str):
         return self._get_local_test_file_uri('documents', doc_name)
+
+    def _get_local_test_table_uri(self, doc_name: str):
+        return self._get_local_test_file_uri('tables', doc_name)
 
     def _get_local_test_file_uri(self, filetype, image_name):
         import os
