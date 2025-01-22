@@ -7,8 +7,6 @@ from arbol import aprint
 
 from litemind.agent.message import Message
 from litemind.agent.message_block_type import BlockType
-from litemind.apis.utils.write_base64_to_temp_file import \
-    write_base64_to_temp_file
 from litemind.utils.normalise_uri_to_local_file_path import \
     uri_to_local_file_path
 
@@ -32,16 +30,10 @@ def _convert_messages_for_gemini(messages: List[Message]) -> List[
             elif block.block_type == BlockType.Image:
                 image_uri = block.content
                 try:
-                    if image_uri.startswith("data:image/"):
-                        local_path = write_base64_to_temp_file(image_uri)
-                    elif image_uri.startswith(
-                            "http://") or image_uri.startswith("https://"):
-                        local_path = uri_to_local_file_path(image_uri)
-                    elif image_uri.startswith("file://"):
-                        local_path = image_uri.replace("file://", "")
-                    else:
-                        raise ValueError(f"Invalid image URI: '{image_uri}'")
+                    # Convert the image URI to a local file path:
+                    local_path = uri_to_local_file_path(image_uri)
 
+                    # Open the image:
                     with Image.open(local_path) as img:
                         gemini_messages.append(img)
                 except Exception as e:
@@ -49,18 +41,16 @@ def _convert_messages_for_gemini(messages: List[Message]) -> List[
             elif block.block_type == BlockType.Audio:
                 audio_uri = block.content
                 try:
-                    if audio_uri.startswith("data:audio/"):
-                        local_path = write_base64_to_temp_file(audio_uri)
-                    elif audio_uri.startswith(
-                            "http://") or audio_uri.startswith("https://"):
-                        local_path = uri_to_local_file_path(audio_uri)
-                    elif audio_uri.startswith("file://"):
-                        local_path = audio_uri.replace("file://", "")
-                    else:
-                        raise ValueError(f"Invalid audio URI: '{audio_uri}'")
+                    # Convert the audio URI to a local file path:
+                    local_path = uri_to_local_file_path(audio_uri)
 
+                    # Read the audio data:
                     audio_data = pathlib.Path(local_path).read_bytes()
+
+                    # Determine the MIME type:
                     mime_type = "audio/" + local_path.split('.')[-1]
+
+                    # Append the audio data to the list of messages:
                     gemini_messages.append(
                         {"mime_type": mime_type, "data": audio_data})
                 except Exception as e:
@@ -68,22 +58,19 @@ def _convert_messages_for_gemini(messages: List[Message]) -> List[
             elif block.block_type == BlockType.Video:
                 video_uri = block.content
                 try:
-                    if video_uri.startswith("data:video/"):
-                        local_path = write_base64_to_temp_file(video_uri)
-                    elif video_uri.startswith(
-                            "http://") or video_uri.startswith("https://"):
-                        local_path = uri_to_local_file_path(video_uri)
-                    elif video_uri.startswith("file://"):
-                        local_path = video_uri.replace("file://", "")
-                    else:
-                        raise ValueError(f"Invalid video URI: '{video_uri}'")
+                    # Convert the video URI to a local file path:
+                    local_path = uri_to_local_file_path(video_uri)
 
+                    # Upload the video file to Gemini:
                     import google.generativeai as genai
                     myfile = genai.upload_file(local_path)
+
+                    # Wait for the file to finish processing:
                     while myfile.state.name == "PROCESSING":
                         time.sleep(0.1)
                         myfile = genai.get_file(myfile.name)
 
+                    # Append the uploaded file to the list of messages:
                     gemini_messages.append(myfile)
                 except Exception as e:
                     raise ValueError(

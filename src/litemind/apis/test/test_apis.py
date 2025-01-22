@@ -387,6 +387,9 @@ class TestBaseApiImplementations:
 
         print('\n' + default_model_name)
 
+        image_url = 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Einstein_1921_by_F_Schmutzer_-_restoration.jpg/456px-Einstein_1921_by_F_Schmutzer_-_restoration.jpg'
+        print(image_url)
+
         messages = []
 
         # System message:
@@ -398,8 +401,7 @@ class TestBaseApiImplementations:
         # User message:
         user_message = Message(role='user')
         user_message.append_text('Can you describe what you see in the image?')
-        user_message.append_image(
-            'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Einstein_1921_by_F_Schmutzer_-_restoration.jpg/456px-Einstein_1921_by_F_Schmutzer_-_restoration.jpg')
+        user_message.append_image(image_url)
         messages.append(user_message)
 
         # Run agent:
@@ -413,15 +415,18 @@ class TestBaseApiImplementations:
 
     def test_text_generation_with_png_image_path(self, ApiClass):
         api_instance = ApiClass()
+
+        # Get the default model name:
         default_model_name = api_instance.get_best_model(
             [ModelFeatures.TextGeneration, ModelFeatures.Image])
+        print('\n' + default_model_name)
+
+        # Skip test if the model does not support images
         if not default_model_name or not api_instance.has_model_support_for(
                 model_name=default_model_name,
                 features=[ModelFeatures.TextGeneration, ModelFeatures.Image]):
             pytest.skip(
                 f"{ApiClass.__name__} does not support images. Skipping image test.")
-
-        print('\n' + default_model_name)
 
         messages = []
 

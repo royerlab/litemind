@@ -94,6 +94,11 @@ def uri_to_local_file_path(file_uri: str) -> str:
             mime_type = header.split(':', 1)[1].split(';', 1)[
                 0]  # 'application/pdf'
 
+    # If it is none of these cases the raise exception:
+    if not b64_data:
+        raise ValueError(
+            f"Invalid video URI: '{file_uri}' (must start with 'data:video/', 'http://', 'https://', 'ftp://', or 'file://')")
+
     # Decode base64
     file_data = base64.b64decode(b64_data)
 

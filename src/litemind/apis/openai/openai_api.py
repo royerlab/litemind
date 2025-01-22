@@ -16,8 +16,6 @@ from litemind.apis.openai.utils.model_list import get_openai_model_list
 from litemind.apis.openai.utils.process_response import _process_response
 from litemind.apis.openai.utils.tools import _format_tools_for_openai
 from litemind.apis.utils.document_processing import is_pymupdf_available
-from litemind.apis.utils.write_base64_to_temp_file import \
-    write_base64_to_temp_file
 from litemind.utils.normalise_uri_to_local_file_path import \
     uri_to_local_file_path
 
@@ -582,26 +580,11 @@ class OpenAIApi(BaseApi):
             transcription = super().transcribe_audio(audio_uri, model_name,
                                                      **kwargs)
         else:
-            # Save original filename fromm URI:
-            original_filename = audio_uri.split("/")[-1]
-
-            # Remove the "file://" prefix if it exists:
-            if audio_uri.startswith("file://"):
-                audio_uri = audio_uri.replace("file://", "")
-
-            # if the audio_uri is a remote url:
-            if audio_uri.startswith("http://") or audio_uri.startswith(
-                    "https://"):
-                # Download the audio file:
-                audio_uri = uri_to_local_file_path(audio_uri)
-
-            # if the audio_uri is a data uri:
-            elif audio_uri.startswith("data:audio/"):
-                # Write the audio data to a temp file:
-                audio_uri = write_base64_to_temp_file(audio_uri)
+            # Get the local path to the audio file:
+            audio_file_path = uri_to_local_file_path(audio_uri)
 
             # Open the audio file:
-            with open(audio_uri, "rb") as audio_file:
+            with open(audio_file_path, "rb") as audio_file:
 
                 # Transcribe the audio file:
                 transcription = self.client.audio.transcriptions.create(

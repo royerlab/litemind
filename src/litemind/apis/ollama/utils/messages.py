@@ -3,8 +3,6 @@ from typing import List, Dict, Any
 from litemind.agent.message import Message
 from litemind.agent.message_block_type import BlockType
 from litemind.apis.utils.convert_image_to_png import convert_image_to_png
-from litemind.apis.utils.write_base64_to_temp_file import \
-    write_base64_to_temp_file
 from litemind.utils.normalise_uri_to_local_file_path import \
     uri_to_local_file_path
 
@@ -50,25 +48,14 @@ def convert_messages_for_ollama(messages: List[Message]) -> List[
             if block.block_type == BlockType.Text:
                 message_dict["content"] += block.content + "\n"
             elif block.block_type == BlockType.Image:
+                # Get the image URI:
                 image_uri = block.content
-                if image_uri.startswith("data:image/"):
-                    # It's a data URI -> decode Base64 -> local file
-                    local_path = write_base64_to_temp_file(image_uri)
-                    local_image_paths.append(local_path)
-                elif image_uri.lower().startswith(
-                        "http://") or image_uri.lower().startswith("https://"):
-                    # It's a remote URL -> download -> local file
-                    local_path = uri_to_local_file_path(image_uri)
-                    local_image_paths.append(local_path)
-                elif image_uri.startswith("file://"):
-                    # If it is a local file path
-                    # First remove the 'file://' prefix:
-                    image_uri = image_uri.replace("file://", "")
-                    # Then append the image URI to the list of local image paths:
-                    local_image_paths.append(image_uri)
-                else:
-                    # Raise an error if the image URI is invalid:
-                    raise ValueError(f"Invalid image URI: '{image_uri}'")
+
+                # Convert the image URI to a local file path:
+                local_path = uri_to_local_file_path(image_uri)
+
+                # Append the local path to the list of local image paths:
+                local_image_paths.append(local_path)
 
         # If any image is in webp format, which is not supported by Ollama, convert it to PNG:
         for i, image_path in enumerate(local_image_paths):
