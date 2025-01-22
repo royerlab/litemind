@@ -981,6 +981,51 @@ class TestBaseApiImplementations:
         # Check response details:
         assert 'Binders' in response or 'SAFCO' in response
 
+
+    def test_text_generation_with_archive(self, ApiClass):
+
+        api_instance = ApiClass()
+
+        default_model_name = api_instance.get_best_model(
+            ModelFeatures.TextGeneration)
+        if not default_model_name or not api_instance.has_model_support_for(
+                model_name=default_model_name,
+                features=ModelFeatures.TextGeneration):
+            pytest.skip(
+                f"{ApiClass.__name__} does not support text generation. Skipping test.")
+        aprint(default_model_name)
+
+        messages = []
+
+        # System message:
+        system_message = Message(role='system')
+        system_message.append_text('You are a highly qualified historian and literature expert')
+        messages.append(system_message)
+
+        # _get_local_test_archive_uri
+        archive_path = self._get_local_test_archive_uri('alexander.zip')
+
+        # User message:
+        user_message = Message(role='user')
+        user_message.append_text(
+            'Make a one paragraph summary of the provided material, plus a list of all documents provided.')
+        user_message.append_archive(archive_path)
+        messages.append(user_message)
+
+        # Run agent:
+        response = api_instance.generate_text_completion(messages=messages,
+                                                         model_name=default_model_name)
+
+        print('\n' + str(response))
+
+        # Make sure that the answer is not empty:
+        assert len(response) > 0, (
+            f"{ApiClass.__name__}.completion() should return a non-empty string!"
+        )
+
+        # Check response details:
+        assert 'Binders' in response or 'SAFCO' in response
+
     def test_describe_image_if_supported(self, ApiClass):
         """
         Test describe_image if the implementation supports images.
@@ -1340,6 +1385,9 @@ class TestBaseApiImplementations:
 
     def _get_local_test_table_uri(self, doc_name: str):
         return self._get_local_test_file_uri('tables', doc_name)
+
+    def _get_local_test_archive_uri(self, doc_name: str):
+        return self._get_local_test_file_uri('archives', doc_name)
 
     def _get_local_test_file_uri(self, filetype, image_name):
         import os

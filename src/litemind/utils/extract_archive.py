@@ -18,6 +18,30 @@ def extract_archive(archive_path: str) -> str:
 
     try:
 
+        # If the path is in URI format, and local, then convert it to a local path:
+        if archive_path.startswith('file://'):
+            # remove the 'file://' prefix
+            archive_path = archive_path.replace('file://', '')
+
+        # if the file is not local, download it to a temporary file:
+        elif archive_path.startswith('http://') or archive_path.startswith('https://'):
+            import requests
+            import os
+            import shutil
+            import tempfile
+
+            # Create a temporary file
+            temp_file = tempfile.NamedTemporaryFile(delete=False)
+            temp_file.close()
+
+            # Download the file
+            response = requests.get(archive_path, stream=True)
+            with open(temp_file.name, 'wb') as f:
+                shutil.copyfileobj(response.raw, f)
+
+            # Use the temporary file as the archive path
+            archive_path = temp_file.name
+
         if archive_path.endswith('.zip'):
             try:
                 import zipfile
