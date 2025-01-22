@@ -1,10 +1,14 @@
-def extract_archive(archive_path: str) -> str:
+from litemind.utils.normalise_uri_to_local_file_path import \
+    uri_to_local_file_path
+
+
+def extract_archive(archive_file_path: str) -> str:
     """
     Extracts an archive to a temporary folder.
 
     Parameters
     ----------
-    archive_path : str
+    archive_file_path : str
         The path to the archive file.
 
     Returns
@@ -14,80 +18,62 @@ def extract_archive(archive_path: str) -> str:
     """
 
     import tempfile
-    temp_dir = tempfile.mkdtemp()
+    temp_dir = tempfile.mkdtemp(prefix='extracted_')
 
     try:
 
-        # If the path is in URI format, and local, then convert it to a local path:
-        if archive_path.startswith('file://'):
-            # remove the 'file://' prefix
-            archive_path = archive_path.replace('file://', '')
+        # Normalise the URI to a local file path:
+        archive_file_path = uri_to_local_file_path(archive_file_path)
 
-        # if the file is not local, download it to a temporary file:
-        elif archive_path.startswith('http://') or archive_path.startswith('https://'):
-            import requests
-            import os
-            import shutil
-            import tempfile
-
-            # Create a temporary file
-            temp_file = tempfile.NamedTemporaryFile(delete=False)
-            temp_file.close()
-
-            # Download the file
-            response = requests.get(archive_path, stream=True)
-            with open(temp_file.name, 'wb') as f:
-                shutil.copyfileobj(response.raw, f)
-
-            # Use the temporary file as the archive path
-            archive_path = temp_file.name
-
-        if archive_path.endswith('.zip'):
+        if archive_file_path.endswith('.zip'):
             try:
                 import zipfile
             except ImportError:
                 raise ImportError("zipfile module is not installed")
-            with zipfile.ZipFile(archive_path, 'r') as zip_ref:
+            with zipfile.ZipFile(archive_file_path, 'r') as zip_ref:
                 zip_ref.extractall(temp_dir)
 
-        elif archive_path.endswith('.tar.gz') or archive_path.endswith('.tgz'):
+        elif archive_file_path.endswith(
+                '.tar.gz') or archive_file_path.endswith('.tgz'):
             try:
                 import tarfile
             except ImportError:
                 raise ImportError("tarfile module is not installed")
-            with tarfile.open(archive_path, 'r:gz') as tar_ref:
+            with tarfile.open(archive_file_path, 'r:gz') as tar_ref:
                 tar_ref.extractall(temp_dir)
 
-        elif archive_path.endswith('.tar.bz2') or archive_path.endswith('.tbz'):
+        elif archive_file_path.endswith(
+                '.tar.bz2') or archive_file_path.endswith('.tbz'):
             try:
                 import tarfile
             except ImportError:
                 raise ImportError("tarfile module is not installed")
-            with tarfile.open(archive_path, 'r:bz2') as tar_ref:
+            with tarfile.open(archive_file_path, 'r:bz2') as tar_ref:
                 tar_ref.extractall(temp_dir)
 
-        elif archive_path.endswith('.tar.xz') or archive_path.endswith('.txz'):
+        elif archive_file_path.endswith(
+                '.tar.xz') or archive_file_path.endswith('.txz'):
             try:
                 import tarfile
             except ImportError:
                 raise ImportError("tarfile module is not installed")
-            with tarfile.open(archive_path, 'r:xz') as tar_ref:
+            with tarfile.open(archive_file_path, 'r:xz') as tar_ref:
                 tar_ref.extractall(temp_dir)
 
-        elif archive_path.endswith('.7z'):
+        elif archive_file_path.endswith('.7z'):
             try:
                 import py7zr
             except ImportError:
                 raise ImportError("py7zr module is not installed")
-            with py7zr.SevenZipFile(archive_path, 'r') as archive:
+            with py7zr.SevenZipFile(archive_file_path, 'r') as archive:
                 archive.extractall(path=temp_dir)
 
-        elif archive_path.endswith('.rar'):
+        elif archive_file_path.endswith('.rar'):
             try:
                 import patoolib
             except ImportError:
                 raise ImportError("patoolib module is not installed")
-            patoolib.extract_archive(archive_path, outdir=temp_dir)
+            patoolib.extract_archive(archive_file_path, outdir=temp_dir)
 
         else:
             raise ValueError("Unsupported archive format")
@@ -97,6 +83,13 @@ def extract_archive(archive_path: str) -> str:
         import shutil
         shutil.rmtree(temp_dir)
         raise e
+
+    # delete the __MACOSX folder if it exists:
+    import os
+    macosx_folder = os.path.join(temp_dir, "__MACOSX")
+    if os.path.exists(macosx_folder):
+        import shutil
+        shutil.rmtree(macosx_folder)
 
     return temp_dir
 

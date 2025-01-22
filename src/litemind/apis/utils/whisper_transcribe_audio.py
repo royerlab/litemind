@@ -1,5 +1,5 @@
-from litemind.utils.dowload_audio_to_tempfile import \
-    download_audio_to_temp_file
+from litemind.utils.normalise_uri_to_local_file_path import \
+    uri_to_local_file_path
 
 
 def is_local_whisper_available() -> bool:
@@ -31,7 +31,7 @@ def transcribe_audio_with_local_whisper(audio_uri: str,
 
     # Download the audio file if it's a remote URL
     if audio_uri.startswith("http://") or audio_uri.startswith("https://"):
-        local_path = download_audio_to_temp_file(audio_uri)
+        local_path = uri_to_local_file_path(audio_uri)
     elif audio_uri.startswith("file://"):
         local_path = audio_uri.replace("file://", "")
     else:

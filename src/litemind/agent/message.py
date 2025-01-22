@@ -6,11 +6,12 @@ from typing import Optional, List, Union
 from pydantic import BaseModel
 
 from litemind.agent.message_block import MessageBlock
-from litemind.utils.dowload_table_to_tempfile import download_table_to_temp_file
 from litemind.utils.extract_archive import extract_archive
 from litemind.utils.file_extensions import image_file_extensions, \
     audio_file_extensions, video_file_extensions, document_file_extensions, \
     archive_file_extensions, table_file_extensions
+from litemind.utils.normalise_uri_to_local_file_path import \
+    uri_to_local_file_path
 
 
 class Message(ABC):
@@ -320,7 +321,7 @@ class Message(ABC):
             source = table
 
             # Download the table file to a local temp file using download_table_to_temp_file:
-            table = download_table_to_temp_file(table)
+            table = uri_to_local_file_path(table)
 
             # Detect character encoding:
             import chardet
@@ -389,12 +390,14 @@ class Message(ABC):
                     self.append_text("\n###### Document file: " + file + "\n")
                     self.append_document(file_uri, source=file_path)
                 elif any(file.endswith(ext) for ext in archive_file_extensions):
+                    self.append_text("\n###### Archive file: " + file + "\n")
                     depth = None if all_archive_files or not depth else depth - 1
                     self.append_archive(file_uri, depth)
 
             # append subfolders to the message:
             if not depth or depth >= 1:
                 for dir in dirs:
+                    self.append_text(f"\n###### sub-folder: {dir} \n")
                     self.append_folder(dir, depth - 1)
 
     def append_archive(self,
@@ -414,6 +417,8 @@ class Message(ABC):
 
         # extract archive to temporary folder:
         temp_folder = extract_archive(archive)
+
+        # append the extracted folder to the message:
         self.append_text(
             f"\n##### Contents of archive: {archive} decompressed into folder: " + temp_folder + "\n")
 

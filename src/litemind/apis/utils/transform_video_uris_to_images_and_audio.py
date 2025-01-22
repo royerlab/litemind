@@ -4,8 +4,8 @@ from litemind.apis.utils.sample_video import \
     append_video_frames_and_audio_to_message
 from litemind.apis.utils.write_base64_to_temp_file import \
     write_base64_to_temp_file
-from litemind.utils.dowload_video_to_tempfile import \
-    download_video_to_temp_file
+from litemind.utils.normalise_uri_to_local_file_path import \
+    uri_to_local_file_path
 
 
 def transform_video_uris_to_images_and_audio(message: Message) -> Message:
@@ -29,7 +29,7 @@ def transform_video_uris_to_images_and_audio(message: Message) -> Message:
                 local_path = write_base64_to_temp_file(block.content)
             elif block.content.startswith(
                     "http://") or block.content.startswith("https://"):
-                local_path = download_video_to_temp_file(block.content)
+                local_path = uri_to_local_file_path(block.content)
             elif block.content.startswith("file://"):
                 local_path = block.content.replace("file://", "")
             else:

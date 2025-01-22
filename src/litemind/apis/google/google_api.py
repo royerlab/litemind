@@ -8,7 +8,7 @@ from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.base_api import BaseApi, ModelFeatures
 from litemind.apis.exceptions import APIError, APINotAvailableError
 from litemind.apis.google.utils.messages import _convert_messages_for_gemini, \
-    _list_and_delete_uploaded_videos
+    _list_and_delete_uploaded_files
 from litemind.apis.google.utils.tools import create_genai_tools_from_toolset
 from litemind.apis.utils.document_processing import is_pymupdf_available
 
@@ -272,12 +272,13 @@ class GeminiApi(BaseApi):
         if max_output_tokens is None:
             max_output_tokens = self.max_num_output_tokens(model_name)
 
-        # Convert documents to markdown and images:
-        if is_pymupdf_available():
-            messages = self._convert_documents_to_markdown_in_messages(messages)
-
         # We will use _messages to process the messages:
         preprocessed_messages = messages
+
+        # Convert documents to markdown and images:
+        if is_pymupdf_available():
+            preprocessed_messages = self._convert_documents_to_markdown_in_messages(
+                preprocessed_messages)
 
         # Convert messages to the gemini format:
         gemini_messages = _convert_messages_for_gemini(preprocessed_messages)
@@ -357,7 +358,7 @@ class GeminiApi(BaseApi):
             text_output = response.text or ""
 
         # Cleanup uploaded video or other files:
-        _list_and_delete_uploaded_videos()
+        _list_and_delete_uploaded_files()
 
         # 4. Return the final text as a single Message
         response_message = Message(role="assistant", text=text_output)

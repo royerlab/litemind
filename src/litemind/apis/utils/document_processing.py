@@ -4,8 +4,8 @@ from typing import List
 
 from arbol import aprint
 
-from litemind.utils.dowload_document_to_tempfile import \
-    download_document_to_temp_file
+from litemind.utils.normalise_uri_to_local_file_path import \
+    uri_to_local_file_path
 
 
 def is_pymupdf_available() -> bool:
@@ -43,7 +43,7 @@ def convert_document_to_markdown(document_uri: str) -> str:
     import pymupdf4llm
 
     # Download if needed document to temp folder:
-    document_path = download_document_to_temp_file(document_uri)
+    document_path = uri_to_local_file_path(document_uri)
 
     # Convert the document to markdown:
     md_text = pymupdf4llm.to_markdown(document_path)
@@ -76,10 +76,10 @@ def extract_images_from_document(document_uri: str) -> List[str]:
     import pymupdf
 
     # We need a temporary folder obtained with tempfile and mkdtemp to store the images:
-    temp_image_directory_path = mkdtemp()
+    temp_image_directory_path = mkdtemp(prefix='extracted_images_')
 
     # Download if needed document to temp folder:
-    document_path = download_document_to_temp_file(document_uri)
+    document_path = uri_to_local_file_path(document_uri)
 
     # Extract images from the document:
     doc = pymupdf.open(document_path)  # open a document

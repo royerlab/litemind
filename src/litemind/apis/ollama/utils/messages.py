@@ -5,8 +5,8 @@ from litemind.agent.message_block_type import BlockType
 from litemind.apis.utils.convert_image_to_png import convert_image_to_png
 from litemind.apis.utils.write_base64_to_temp_file import \
     write_base64_to_temp_file
-from litemind.utils.dowload_image_to_tempfile import \
-    download_image_to_temp_file
+from litemind.utils.normalise_uri_to_local_file_path import \
+    uri_to_local_file_path
 
 
 def convert_messages_for_ollama(messages: List[Message]) -> List[
@@ -58,7 +58,7 @@ def convert_messages_for_ollama(messages: List[Message]) -> List[
                 elif image_uri.lower().startswith(
                         "http://") or image_uri.lower().startswith("https://"):
                     # It's a remote URL -> download -> local file
-                    local_path = download_image_to_temp_file(image_uri)
+                    local_path = uri_to_local_file_path(image_uri)
                     local_image_paths.append(local_path)
                 elif image_uri.startswith("file://"):
                     # If it is a local file path

@@ -307,8 +307,13 @@ class AnthropicApi(BaseApi):
             else:
                 non_system_messages.append(message)
 
-        # We will use _messages to process the messages:
+        # We will use preprocessed_messages to process the messages:
         preprocessed_messages = non_system_messages
+
+        # Convert documents to markdown and images:
+        if is_pymupdf_available():
+            preprocessed_messages = self._convert_documents_to_markdown_in_messages(
+                preprocessed_messages)
 
         # Convert video URIs to images and audio because anthropic does not natively support videos:
         preprocessed_messages = self._convert_videos_to_images_and_audio(
@@ -318,11 +323,6 @@ class AnthropicApi(BaseApi):
         if self.has_model_support_for(model_name=model_name,
                                       features=ModelFeatures.AudioTranscription):
             preprocessed_messages = self._transcribe_audio_in_messages(
-                preprocessed_messages)
-
-        # Convert documents to markdown and images:
-        if is_pymupdf_available():
-            preprocessed_messages = self._convert_documents_to_markdown_in_messages(
                 preprocessed_messages)
 
         # Convert remaining non-system litemind Messages to Anthropic messages:

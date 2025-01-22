@@ -18,8 +18,8 @@ from litemind.apis.openai.utils.tools import _format_tools_for_openai
 from litemind.apis.utils.document_processing import is_pymupdf_available
 from litemind.apis.utils.write_base64_to_temp_file import \
     write_base64_to_temp_file
-from litemind.utils.dowload_audio_to_tempfile import \
-    download_audio_to_temp_file
+from litemind.utils.normalise_uri_to_local_file_path import \
+    uri_to_local_file_path
 
 
 class OpenAIApi(BaseApi):
@@ -593,7 +593,7 @@ class OpenAIApi(BaseApi):
             if audio_uri.startswith("http://") or audio_uri.startswith(
                     "https://"):
                 # Download the audio file:
-                audio_uri = download_audio_to_temp_file(audio_uri)
+                audio_uri = uri_to_local_file_path(audio_uri)
 
             # if the audio_uri is a data uri:
             elif audio_uri.startswith("data:audio/"):

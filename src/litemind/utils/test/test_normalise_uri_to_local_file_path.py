@@ -1,13 +1,12 @@
 # tests/test_get_local_file_path.py
-import pytest
-import os
 import base64
-import tempfile
-import socketserver
 import http.server
+import os
+import socketserver
+import tempfile
 import threading
 
-from pathlib import Path
+import pytest
 
 from litemind.utils.normalise_uri_to_local_file_path import \
     uri_to_local_file_path
@@ -38,6 +37,7 @@ def ephemeral_http_server():
       - content_holder is a dict holding 'content' and 'user_agent' to
         check what was requested and with which User-Agent.
     """
+
     class ContentHolder:
         content = b"Hello from test server!"
         user_agent = None  # We'll store the user agent from the request
@@ -180,4 +180,27 @@ def test_invalid_base64():
     with pytest.raises(Exception) as exc:
         uri_to_local_file_path(invalid_b64)
     # Typically, base64.binascii.Error or ValueError for bad padding, etc.
-    assert "decode" in str(exc.value).lower() or "padding" in str(exc.value).lower()
+    assert "decode" in str(exc.value).lower() or "padding" in str(
+        exc.value).lower()
+
+
+def test_wikimedia_download():
+    """
+    Download a real image from Wikimedia and check that the local file
+    has the expected name and is non-empty.
+    """
+    url = "https://upload.wikimedia.org/wikipedia/commons/8/84/Alexander_the_Great_mosaic_%28cropped%29.jpg"
+    local_file = uri_to_local_file_path(url)
+
+    # 1. Verify the file exists
+    assert os.path.isfile(local_file), "Expected a downloaded local file."
+
+    # 2. Check that the filename ends with what we expect from the URL path
+    expected_extension = ".jpg"
+    assert local_file.endswith(expected_extension), (
+        f"Downloaded file name should end with {expected_extension} but got {local_file[-len(expected_extension):]}"
+    )
+
+    # 3. Check that it's not empty
+    assert os.path.getsize(
+        local_file) > 0, "File should not be empty after download."

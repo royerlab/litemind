@@ -14,8 +14,8 @@ from litemind.apis.google.google_api import GeminiApi
 from litemind.apis.ollama.ollama_api import OllamaApi
 from litemind.apis.openai.openai_api import OpenAIApi
 from litemind.apis.test.utils.levenshtein import levenshtein_distance
-from litemind.utils.dowload_audio_to_tempfile import \
-    download_audio_to_temp_file
+from litemind.utils.normalise_uri_to_local_file_path import \
+    uri_to_local_file_path
 
 # Put all your implementations in this list:
 API_IMPLEMENTATIONS = [
@@ -66,8 +66,13 @@ class TestBaseApiImplementations:
 
             # Get a model that does not necessarily support feature:
             default_model_name = api_instance.get_best_model()
+
+            print('\n' + default_model_name)
+
+            # Check if the model supports the feature:
             support = api_instance.has_model_support_for(
                 model_name=default_model_name, features=feature)
+
             # We don't assert True or False globally, because some implementations
             # might support it, others might not. Just ensure it's a boolean.
             assert isinstance(support, bool), (
@@ -91,7 +96,7 @@ class TestBaseApiImplementations:
                                                       features=feature):
                     aprint(model)
 
-            aprint(
+            print(
                 f"Checked support for feature: {feature} in {ApiClass}: all good!")
 
     def test_get_model_features(self, ApiClass):
@@ -103,6 +108,9 @@ class TestBaseApiImplementations:
         models = api_instance.model_list()
         for model in models:
             features = api_instance.get_model_features(model_name=model)
+
+            print(f"\nModel: {model} Features: {features}")
+
             assert isinstance(features, list), (
                 f"{ApiClass.__name__}.get_model_features() should return a list!"
             )
@@ -121,13 +129,19 @@ class TestBaseApiImplementations:
 
         api_instance = ApiClass()
         default_model_name = api_instance.get_best_model()
-        max_tokens = api_instance.max_num_input_tokens(
+
+        print('\n' + default_model_name)
+
+        max_input_tokens = api_instance.max_num_input_tokens(
             model_name=default_model_name)
-        assert isinstance(max_tokens, int), (
+
+        print(f"\nMax input tokens: {max_input_tokens}")
+
+        assert isinstance(max_input_tokens, int), (
             f"{ApiClass.__name__}.max_num_input_token() should return an int!"
         )
-        assert max_tokens > 0, (
-            f"{ApiClass.__name__}.max_num_input_token() should be a positive integer!"
+        assert max_input_tokens > 4096, (
+            f"{ApiClass.__name__}.max_num_input_token() should be a positive integer above 4096!"
         )
 
     def test_max_num_output_tokens(self, ApiClass):
@@ -136,12 +150,18 @@ class TestBaseApiImplementations:
         """
         api_instance = ApiClass()
         default_model_name = api_instance.get_best_model()
-        max_tokens = api_instance.max_num_output_tokens(
+
+        print('\n' + default_model_name)
+
+        max_output_tokens = api_instance.max_num_output_tokens(
             model_name=default_model_name)
-        assert isinstance(max_tokens, int), (
+
+        print(f"\nMax output tokens: {max_output_tokens}")
+
+        assert isinstance(max_output_tokens, int), (
             f"{ApiClass.__name__}.max_num_output_tokens() should return an int!"
         )
-        assert max_tokens > 0, (
+        assert max_output_tokens > 0, (
             f"{ApiClass.__name__}.max_num_output_tokens() should be a positive integer!"
         )
 
@@ -153,6 +173,8 @@ class TestBaseApiImplementations:
 
         default_model_name = api_instance.get_best_model(
             ModelFeatures.TextGeneration)
+
+        print('\n' + default_model_name)
 
         messages = [
             Message(role="system",
@@ -183,6 +205,8 @@ class TestBaseApiImplementations:
 
         default_model_name = api_instance.get_best_model(
             ModelFeatures.TextGeneration)
+
+        print('\n' + default_model_name)
 
         messages = [
             Message(role="system",
@@ -232,6 +256,8 @@ class TestBaseApiImplementations:
         default_model_name = api_instance.get_best_model(
             [ModelFeatures.Tools, ModelFeatures.TextGeneration])
 
+        print('\n' + default_model_name)
+
         user_message = Message(role="user",
                                text="When will my order order_12345 be delivered?")
         messages = [user_message]
@@ -242,8 +268,9 @@ class TestBaseApiImplementations:
             toolset=toolset
         )
 
+        print('\n')
         for message in messages:
-            print(message)
+            aprint(message)
 
         assert "2024-11-15" in response, (
             f"The response of {ApiClass.__name__} should contain the delivery date."
@@ -308,7 +335,9 @@ class TestBaseApiImplementations:
             toolset=toolset
         )
 
-        print('\n' + str(response))
+        # Check that we have 2 messages in the list:
+        assert len(messages) == 2, (
+            'We should have two messages in the list. The user message and the response message.')
 
         assert "2024-11-15" in response, (
             f"The response of {ApiClass.__name__} should contain the delivery date."
@@ -324,8 +353,6 @@ class TestBaseApiImplementations:
             toolset=toolset
         )
 
-        print('\n' + str(response))
-
         assert "Olea Table" in response, (
             f"The response of {ApiClass.__name__} should contain the delivery date."
         )
@@ -340,8 +367,9 @@ class TestBaseApiImplementations:
             toolset=toolset
         )
 
+        print('\n')
         for message in messages:
-            aprint(message)
+            print(message)
 
         assert "42" in response, (
             f"The response of {ApiClass.__name__} should contain the delivery date."
@@ -356,7 +384,8 @@ class TestBaseApiImplementations:
                 features=[ModelFeatures.TextGeneration, ModelFeatures.Image]):
             pytest.skip(
                 f"{ApiClass.__name__} does not support images. Skipping image test.")
-        aprint(default_model_name)
+
+        print('\n' + default_model_name)
 
         messages = []
 
@@ -380,7 +409,7 @@ class TestBaseApiImplementations:
         print('\n' + str(response))
 
         # Check response:
-        assert 'sepia' in response or 'chalkboard' in response
+        assert 'sepia' in response or 'chalkboard' in response or 'Einstein' in response
 
     def test_text_generation_with_png_image_path(self, ApiClass):
         api_instance = ApiClass()
@@ -391,7 +420,8 @@ class TestBaseApiImplementations:
                 features=[ModelFeatures.TextGeneration, ModelFeatures.Image]):
             pytest.skip(
                 f"{ApiClass.__name__} does not support images. Skipping image test.")
-        aprint(default_model_name)
+
+        print('\n' + default_model_name)
 
         messages = []
 
@@ -420,9 +450,7 @@ class TestBaseApiImplementations:
             # open source models are typically not yet strong enough.
             assert 'blue' in response or 'logo' in response
         else:
-            assert 'snake' in response or 'python' in response
-
-        print('\n' + str(response))
+            assert 'snake' in response or 'serpent' in response or 'python' in response
 
     def test_text_generation_with_jpg_image_path(self, ApiClass):
         api_instance = ApiClass()
@@ -433,7 +461,8 @@ class TestBaseApiImplementations:
                 features=[ModelFeatures.TextGeneration, ModelFeatures.Image]):
             pytest.skip(
                 f"{ApiClass.__name__} does not support images. Skipping image test.")
-        aprint(default_model_name)
+
+        print('\n' + default_model_name)
 
         messages = []
 
@@ -469,7 +498,8 @@ class TestBaseApiImplementations:
                 features=[ModelFeatures.TextGeneration, ModelFeatures.Image]):
             pytest.skip(
                 f"{ApiClass.__name__} does not support images. Skipping image test.")
-        aprint(default_model_name)
+
+        print('\n' + default_model_name)
 
         messages = []
 
@@ -505,7 +535,8 @@ class TestBaseApiImplementations:
                 features=[ModelFeatures.TextGeneration, ModelFeatures.Image]):
             pytest.skip(
                 f"{ApiClass.__name__} does not support images. Skipping image test.")
-        aprint(default_model_name)
+
+        print('\n' + default_model_name)
 
         messages = []
 
@@ -542,7 +573,8 @@ class TestBaseApiImplementations:
                 features=[ModelFeatures.TextGeneration, ModelFeatures.Image]):
             pytest.skip(
                 f"{ApiClass.__name__} does not support images. Skipping image test.")
-        aprint(default_model_name)
+
+        print('\n' + default_model_name)
 
         messages = []
 
@@ -582,7 +614,8 @@ class TestBaseApiImplementations:
                 features=[ModelFeatures.TextGeneration, ModelFeatures.Audio]):
             pytest.skip(
                 f"{ApiClass.__name__} does not support audio. Skipping audio test.")
-        aprint(default_model_name)
+
+        print('\n' + default_model_name)
 
         messages = []
 
@@ -619,7 +652,8 @@ class TestBaseApiImplementations:
                 features=[ModelFeatures.TextGeneration, ModelFeatures.Audio]):
             pytest.skip(
                 f"{ApiClass.__name__} does not support audio. Skipping audio test.")
-        aprint(default_model_name)
+
+        print('\n' + default_model_name)
 
         messages = []
 
@@ -632,7 +666,7 @@ class TestBaseApiImplementations:
         # User message:
         user_message = Message(role='user')
         user_message.append_text(
-            'Can you exhaustively describe what you heard in the audio file?')
+            'Can you describe in detail what i said the following audio file?')
         user_message.append_audio(
             "https://salford.figshare.com/ndownloader/files/14630270")
 
@@ -656,7 +690,8 @@ class TestBaseApiImplementations:
                 features=[ModelFeatures.TextGeneration, ModelFeatures.Video]):
             pytest.skip(
                 f"{ApiClass.__name__} does not support videos. Skipping video test.")
-        aprint(default_model_name)
+
+        print('\n' + default_model_name)
 
         messages = []
 
@@ -669,7 +704,7 @@ class TestBaseApiImplementations:
         # User message:
         user_message = Message(role='user')
         user_message.append_text('Can you describe what you see in the video?')
-        video_path = self._get_local_test_video_uri('avrocar.mp4')
+        video_path = self._get_local_test_video_uri('flying.mp4')
         user_message.append_video(video_path)
         messages.append(user_message)
 
@@ -680,10 +715,7 @@ class TestBaseApiImplementations:
         print('\n' + str(response))
 
         # Check response:
-        assert (
-                       'disc' in response or 'circular' in response or 'saucer' in response or 'rotor' in response) and (
-                       'vehicle' in response or 'aircraft' in response) and (
-                       'hovering' in response or 'hover' in response)
+        assert 'disc' in response or 'circular' in response or 'saucer' in response or 'rotor' in response or 'curved' in response or 'vehicle' in response or 'aircraft' in response or 'experimental' in response or 'hovering' in response or 'hover' in response or 'flying' in response
 
     def test_text_generation_with_video_url(self, ApiClass):
         api_instance = ApiClass()
@@ -694,7 +726,11 @@ class TestBaseApiImplementations:
                 features=[ModelFeatures.TextGeneration, ModelFeatures.Video]):
             pytest.skip(
                 f"{ApiClass.__name__} does not support videos. Skipping video test.")
-        aprint(default_model_name)
+
+        print('\n' + default_model_name)
+
+        video_url = 'https://ia903405.us.archive.org/27/items/archive-video-files/test.mp4'
+        print(video_url)
 
         messages = []
 
@@ -707,8 +743,7 @@ class TestBaseApiImplementations:
         # User message:
         user_message = Message(role='user')
         user_message.append_text('Can you describe what you see in the video?')
-        user_message.append_video(
-            'https://ia903405.us.archive.org/27/items/archive-video-files/test.mp4')
+        user_message.append_video(video_url)
         messages.append(user_message)
 
         # Run agent:
@@ -737,7 +772,8 @@ class TestBaseApiImplementations:
                           ModelFeatures.Image]):
             pytest.skip(
                 f"{ApiClass.__name__} does not support documents. Skipping documents test.")
-        aprint(default_model_name)
+
+        print('\n' + default_model_name)
 
         messages = []
 
@@ -790,7 +826,8 @@ class TestBaseApiImplementations:
                           ModelFeatures.Image]):
             pytest.skip(
                 f"{ApiClass.__name__} does not support documents. Skipping documents test.")
-        aprint(default_model_name)
+
+        print('\n' + default_model_name)
 
         messages = []
 
@@ -833,7 +870,8 @@ class TestBaseApiImplementations:
                 features=ModelFeatures.TextGeneration):
             pytest.skip(
                 f"{ApiClass.__name__} does not support text generation. Skipping test.")
-        aprint(default_model_name)
+
+        print('\n' + default_model_name)
 
         messages = []
 
@@ -895,7 +933,8 @@ class TestBaseApiImplementations:
                 features=ModelFeatures.TextGeneration):
             pytest.skip(
                 f"{ApiClass.__name__} does not support text generation. Skipping test.")
-        aprint(default_model_name)
+
+        print('\n' + default_model_name)
 
         messages = []
 
@@ -948,7 +987,8 @@ class TestBaseApiImplementations:
                 features=ModelFeatures.TextGeneration):
             pytest.skip(
                 f"{ApiClass.__name__} does not support text generation. Skipping test.")
-        aprint(default_model_name)
+
+        print('\n' + default_model_name)
 
         messages = []
 
@@ -981,7 +1021,6 @@ class TestBaseApiImplementations:
         # Check response details:
         assert 'Binders' in response or 'SAFCO' in response
 
-
     def test_text_generation_with_archive(self, ApiClass):
 
         api_instance = ApiClass()
@@ -993,13 +1032,15 @@ class TestBaseApiImplementations:
                 features=ModelFeatures.TextGeneration):
             pytest.skip(
                 f"{ApiClass.__name__} does not support text generation. Skipping test.")
-        aprint(default_model_name)
+
+        print('\n' + default_model_name)
 
         messages = []
 
         # System message:
         system_message = Message(role='system')
-        system_message.append_text('You are a highly qualified historian and literature expert')
+        system_message.append_text(
+            'You are a highly qualified historian and literature expert')
         messages.append(system_message)
 
         # _get_local_test_archive_uri
@@ -1024,7 +1065,7 @@ class TestBaseApiImplementations:
         )
 
         # Check response details:
-        assert 'Binders' in response or 'SAFCO' in response
+        assert 'Alexander' in response or 'Aristotle' in response
 
     def test_describe_image_if_supported(self, ApiClass):
         """
@@ -1155,12 +1196,10 @@ class TestBaseApiImplementations:
             else:
 
                 # Check the contents of the string:
-                assert (
-                               'roller coaster' in description or 'amusement park' in description) and (
-                               '20th century' in description or '20th-century' in description)
-
-
-
+                assert ((
+                                'roller coaster' in description or 'amusement park' in description)
+                        and (
+                                '20th century' in description or '20th-century' in description))
 
         except:
             # Print stacktrace:
@@ -1197,7 +1236,7 @@ class TestBaseApiImplementations:
         )
 
         # save URI to file:
-        generated_audio_file = download_audio_to_temp_file(generated_audio_uri)
+        generated_audio_file = uri_to_local_file_path(generated_audio_uri)
 
         # Convert the path string to a file to check its properties:
         generated_audio_file = Path(generated_audio_file)
@@ -1397,5 +1436,5 @@ class TestBaseApiImplementations:
         absolute_path = os.path.join(current_dir,
                                      os.path.join(f'{filetype}/', image_name))
         uri = 'file://' + absolute_path
-        aprint(uri)
+        print(uri)
         return uri

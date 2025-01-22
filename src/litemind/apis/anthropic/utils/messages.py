@@ -5,7 +5,8 @@ from litemind.agent.message_block_type import BlockType
 from litemind.apis.utils.get_media_type_from_uri import get_media_type_from_uri
 from litemind.apis.utils.read_file_and_convert_to_base64 import \
     read_file_and_convert_to_base64, base64_to_data_uri
-from litemind.utils.dowload_image_to_tempfile import download_image_to_temp_file
+from litemind.utils.normalise_uri_to_local_file_path import \
+    uri_to_local_file_path
 
 
 def convert_messages_for_anthropic(messages: List[Message]) -> List[
@@ -27,7 +28,13 @@ def convert_messages_for_anthropic(messages: List[Message]) -> List[
 
         for block in message.blocks:
             if block.block_type == BlockType.Text:
-                content.append({"type": "text", "text": block.content})
+                text: str = block.content
+
+                if message.role == 'assistant':
+                    # remove trailing whitspace as it is not allowed!
+                    text = text.rstrip()
+
+                content.append({"type": "text", "text": text})
             elif block.block_type == BlockType.Image:
                 image_uri = block.content
                 media_type = get_media_type_from_uri(image_uri)
@@ -37,7 +44,7 @@ def convert_messages_for_anthropic(messages: List[Message]) -> List[
                     image_uri = base64_to_data_uri(base64_data, media_type)
                 elif image_uri.startswith("http://") or image_uri.startswith(
                         "https://"):
-                    local_path = download_image_to_temp_file(image_uri)
+                    local_path = uri_to_local_file_path(image_uri)
                     base64_data = read_file_and_convert_to_base64(local_path)
                 elif image_uri.startswith("data:image/"):
                     base64_data = image_uri.split(",")[-1]
