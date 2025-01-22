@@ -62,7 +62,7 @@ class TestBaseApiImplementations:
 
         for feature in ModelFeatures:
 
-            aprint(f"Checking support for feature: {feature} in {ApiClass}")
+            print(f"Checking support for feature: {feature} in {ApiClass}")
 
             # Get a model that does not necessarily support feature:
             default_model_name = api_instance.get_best_model()
@@ -232,7 +232,7 @@ class TestBaseApiImplementations:
         )
         # Better the string should just be "29)" and not "29) " or "29 )":
         if not str(response[0]).startswith("29)"):
-            aprint(
+            print(
                 "Model does not support strict prefill behaviour: The response should start with '29)'")
 
     def test_text_generation_with_simple_toolset(self, ApiClass):
@@ -270,7 +270,7 @@ class TestBaseApiImplementations:
 
         print('\n')
         for message in messages:
-            aprint(message)
+            print(message)
 
         assert "2024-11-15" in response, (
             f"The response of {ApiClass.__name__} should contain the delivery date."
@@ -296,7 +296,7 @@ class TestBaseApiImplementations:
             """Fetch the delivery date for a given order ID."""
 
             # Return a random integer:
-            return 42
+            return '42'
 
         toolset = ToolSet()
         toolset.add_function_tool(
@@ -815,7 +815,7 @@ class TestBaseApiImplementations:
 
         if not ('inTRACKtive' in response and 'review' in response.lower()):
             # printout message that warns that the response miight lack in detail:
-            aprint(
+            print(
                 "The response might lack in detail!! Please check the response for more details.")
 
     def test_text_generation_with_webpage(self, ApiClass):
@@ -1072,6 +1072,52 @@ class TestBaseApiImplementations:
         # Check response details:
         assert 'Alexander' in response or 'Aristotle' in response
 
+    def test_text_generation_with_folder(self, ApiClass):
+
+        api_instance = ApiClass()
+
+        default_model_name = api_instance.get_best_model(
+            ModelFeatures.TextGeneration)
+        if not default_model_name or not api_instance.has_model_support_for(
+                model_name=default_model_name,
+                features=ModelFeatures.TextGeneration):
+            pytest.skip(
+                f"{ApiClass.__name__} does not support text generation. Skipping test.")
+
+        print('\n' + default_model_name)
+
+        messages = []
+
+        # System message:
+        system_message = Message(role='system')
+        system_message.append_text(
+            'You are a highly qualified at comparing images and documents.')
+        messages.append(system_message)
+
+        # get the path of a folder at this relative path: './images' to this python file:
+        folder_path = self._get_local_test_folder_path('images')
+
+        # User message:
+        user_message = Message(role='user')
+        user_message.append_text(
+            'Make a one paragraph summary of the provided material, compare the files provided, and make a list of all documents provided.')
+        user_message.append_folder(folder_path)
+        messages.append(user_message)
+
+        # Run agent:
+        response = api_instance.generate_text_completion(messages=messages,
+                                                         model_name=default_model_name)
+
+        print('\n' + str(response))
+
+        # Make sure that the answer is not empty:
+        assert len(response) > 0, (
+            f"{ApiClass.__name__}.completion() should return a non-empty string!"
+        )
+
+        # Check response details:
+        assert 'beach' in response or 'diverse' in response or 'Python' in response or 'ball' in response
+
     def test_describe_image_if_supported(self, ApiClass):
         """
         Test describe_image if the implementation supports images.
@@ -1226,13 +1272,13 @@ class TestBaseApiImplementations:
             pytest.skip(
                 f"{ApiClass.__name__} does not support audio generation. Skipping test.")
 
-        aprint("Audio generation model name: ", audio_gen_model_name)
+        print("Audio generation model name: ", audio_gen_model_name)
 
         # Define the text to generate audio from:
         text = "Success is the ability to go from one failure to another with no loss of enthusiasm"
 
         # Print the text:
-        aprint(f"Text to generate audio from: '{text}'")
+        print(f"Text to generate audio from: '{text}'")
 
         # Generate the audio:
         generated_audio_uri = api_instance.generate_audio(
@@ -1321,7 +1367,7 @@ class TestBaseApiImplementations:
 
         # Get model with image support:
         image_model_name = api_instance.get_best_model(ModelFeatures.Image)
-        aprint("Image model name: ", image_model_name)
+        print("Image model name: ", image_model_name)
 
         # If describe_image is available, use it to check the content of the generated image
         if image_model_name and api_instance.has_model_support_for(
@@ -1432,6 +1478,16 @@ class TestBaseApiImplementations:
 
     def _get_local_test_archive_uri(self, doc_name: str):
         return self._get_local_test_file_uri('archives', doc_name)
+
+    def _get_local_test_folder_path(self, folder_name: str):
+        import os
+        # Get the directory of the current file
+        current_dir = os.path.dirname(__file__)
+
+        # Combine the two to get the absolute path
+        absolute_path = os.path.join(current_dir, folder_name)
+
+        return absolute_path
 
     def _get_local_test_file_uri(self, filetype, image_name):
         import os
