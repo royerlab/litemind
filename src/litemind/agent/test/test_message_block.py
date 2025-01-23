@@ -1,0 +1,77 @@
+from pandas import DataFrame
+from pydantic import BaseModel
+
+from litemind.agent.message_block import MessageBlock
+from litemind.agent.message_block_type import BlockType
+
+
+class ExampleModel(BaseModel):
+    key: str
+    value: str
+
+
+def test_message_block_text():
+    block = MessageBlock(block_type='text', content='This is a text block')
+    assert block.block_type == BlockType.Text
+    assert block.content == 'This is a text block'
+    assert len(block) == len('This is a text block')
+    assert block.contains('text')
+    assert str(block) == 'This is a text block'
+
+
+def test_message_block_json():
+    model = ExampleModel(key='example', value='data')
+    block = MessageBlock(block_type='json', content=model)
+    assert block.block_type == BlockType.Json
+    assert block.content == model
+    assert len(block) == len(model.model_dump())
+    assert block.contains('example')
+    assert str(block) == f"json: {model}"
+
+
+def test_message_block_image():
+    block = MessageBlock(block_type='image',
+                         content='https://example.com/image.jpg')
+    assert block.block_type == BlockType.Image
+    assert block.content == 'https://example.com/image.jpg'
+    assert len(block) == len('https://example.com/image.jpg')
+    assert block.contains('example')
+    assert str(block) == 'image: https://example.com/image.jpg'
+
+
+def test_message_block_audio():
+    block = MessageBlock(block_type='audio',
+                         content='https://example.com/audio.mp3')
+    assert block.block_type == BlockType.Audio
+    assert block.content == 'https://example.com/audio.mp3'
+    assert len(block) == len('https://example.com/audio.mp3')
+    assert block.contains('example')
+    assert str(block) == 'audio: https://example.com/audio.mp3'
+
+
+def test_message_block_video():
+    block = MessageBlock(block_type='video',
+                         content='https://example.com/video.mp4')
+    assert block.block_type == BlockType.Video
+    assert block.content == 'https://example.com/video.mp4'
+    assert len(block) == len('https://example.com/video.mp4')
+    assert block.contains('example')
+    assert str(block) == 'video: https://example.com/video.mp4'
+
+
+def test_message_block_document():
+    block = MessageBlock(block_type='document',
+                         content='https://example.com/document.pdf')
+    assert block.block_type == BlockType.Document
+    assert block.content == 'https://example.com/document.pdf'
+    assert len(block) == len('https://example.com/document.pdf')
+    assert block.contains('example')
+    assert str(block) == 'document: https://example.com/document.pdf'
+
+
+def test_message_block_table():
+    table = DataFrame({'A': [1, 2, 3], 'B': [4, 5, 6]})
+    block = MessageBlock(block_type='table', content=table)
+    assert block.block_type == BlockType.Table
+    assert block.content.equals(table)
+    assert len(block.content) == 3

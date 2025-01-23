@@ -55,7 +55,7 @@ class MessageBlock:
         bool
             True if the text is found in the message block, False otherwise.
         """
-        return text in self.content
+        return text in str(self.content)
 
     def __str__(self):
         """

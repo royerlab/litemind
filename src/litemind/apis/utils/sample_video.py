@@ -72,7 +72,7 @@ def append_video_frames_and_audio_to_message(video_path: str,
         hours = int(time // 3600)
         minutes = int((time % 3600) // 60)
         seconds = int(time % 60)
-        time_str = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+        time_str = f"{hours:02d}hr {minutes:02d}min {seconds:02d}sec"
 
         # Append frame to the message
         message.append_text(f"Frame at {time_str} ({i}/ {total_frames}).\n")

@@ -155,17 +155,17 @@ class AnthropicApi(BaseApi):
             elif feature == ModelFeatures.ImageGeneration:
                 return False
 
-            elif feature == ModelFeatures.TextEmbeddings:
-                return False
-
-            elif feature == ModelFeatures.ImageEmbeddings:
-                return False
-
-            elif feature == ModelFeatures.AudioEmbeddings:
-                return False
-
-            elif feature == ModelFeatures.VideoEmbeddings:
-                return False
+            # elif feature == ModelFeatures.TextEmbeddings:
+            #     return False
+            #
+            # elif feature == ModelFeatures.ImageEmbeddings:
+            #     return False
+            #
+            # elif feature == ModelFeatures.AudioEmbeddings:
+            #     return False
+            #
+            # elif feature == ModelFeatures.VideoEmbeddings:
+            #     return False
 
             elif feature == ModelFeatures.Image:
                 if not self._has_image_support(model_name):

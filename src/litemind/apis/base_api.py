@@ -11,6 +11,8 @@ from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.model_features import ModelFeatures
 from litemind.apis.utils.document_processing import is_pymupdf_available, \
     convert_document_to_markdown, extract_images_from_document
+from litemind.apis.utils.fastembed_embeddings import is_fastembed_available, \
+    fastembed_text
 from litemind.apis.utils.random_projector import DeterministicRandomProjector
 from litemind.apis.utils.transform_video_uris_to_images_and_audio import \
     transform_video_uris_to_images_and_audio
@@ -140,13 +142,21 @@ class BaseApi(ABC):
         # Check that the model has all the required features:
         for feature in features:
 
+            # t=The following features use 'fallback' best-of-kind libraries:
+
             if feature == ModelFeatures.AudioTranscription:
                 # We provide a default implementation for audio transcription using local whisper is available:
                 if not is_local_whisper_available():
                     return False
+
             elif feature == ModelFeatures.Documents:
                 # Checks if document processing library is installed:
                 if not is_pymupdf_available():
+                    return False
+
+            elif feature == ModelFeatures.TextEmbeddings:
+                # Check if the fastembed library is installed:
+                if not is_fastembed_available():
                     return False
 
             else:
@@ -567,14 +577,25 @@ class BaseApi(ABC):
             The embedding of the text.
 
         """
-        raise NotImplementedError(
-            "Text embedding is not supported by this API.")
+
+        if is_fastembed_available():
+            return fastembed_text(texts=texts,
+                                  dimensions=dimensions,
+                                  **kwargs)
+        else:
+            raise NotImplementedError(
+                "Text embedding is not supported by this API.")
 
     def _reduce_embdeddings_dimension(self,
                                       embeddings: Sequence[Sequence[float]],
-                                      reduced_dim: int) -> Sequence[float]:
+                                      reduced_dim: int) -> Sequence[
+        Sequence[float]]:
+
+        # Create a DeterministicRandomProjector object:
         drp = DeterministicRandomProjector(original_dim=len(embeddings[0]),
                                            reduced_dim=reduced_dim)
+
+        # Project the embeddings:
         return drp.transform(embeddings)
 
     def embed_images(self,
@@ -719,7 +740,7 @@ class BaseApi(ABC):
             video_descriptions.append(description)
 
         # Embed the video descriptions:
-        video_embeddings = self.embed_texts(text=video_descriptions,
+        video_embeddings = self.embed_texts(texts=video_descriptions,
                                             model_name=model_name,
                                             dimensions=dimensions)
 
