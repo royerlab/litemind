@@ -6,7 +6,7 @@ from litemind.apis.base_api import ModelFeatures
 from litemind.apis.google.google_api import GeminiApi
 from litemind.apis.ollama.ollama_api import OllamaApi
 from litemind.apis.openai.openai_api import OpenAIApi
-from litemind.apis.test.base_test import BaseTest
+from litemind.apis.tests.base_test import BaseTest
 
 # Put all your implementations in this list:
 API_IMPLEMENTATIONS = [
@@ -20,7 +20,7 @@ API_IMPLEMENTATIONS = [
 @pytest.mark.parametrize("ApiClass", API_IMPLEMENTATIONS)
 class TestBaseApiImplementations(BaseTest):
     """
-    A test suite that runs the same tests on each ApiClass
+    A tests suite that runs the same tests on each ApiClass
     implementing the abstract BaseApi interface.
     """
 
@@ -32,7 +32,7 @@ class TestBaseApiImplementations(BaseTest):
                 model_name=default_model_name,
                 features=[ModelFeatures.TextGeneration, ModelFeatures.Image]):
             pytest.skip(
-                f"{ApiClass.__name__} does not support images. Skipping image test.")
+                f"{ApiClass.__name__} does not support images. Skipping image tests.")
 
         print('\n' + default_model_name)
 
@@ -70,12 +70,12 @@ class TestBaseApiImplementations(BaseTest):
             [ModelFeatures.TextGeneration, ModelFeatures.Image])
         print('\n' + default_model_name)
 
-        # Skip test if the model does not support images
+        # Skip tests if the model does not support images
         if not default_model_name or not api_instance.has_model_support_for(
                 model_name=default_model_name,
                 features=[ModelFeatures.TextGeneration, ModelFeatures.Image]):
             pytest.skip(
-                f"{ApiClass.__name__} does not support images. Skipping image test.")
+                f"{ApiClass.__name__} does not support images. Skipping image tests.")
 
         messages = []
 
@@ -114,7 +114,7 @@ class TestBaseApiImplementations(BaseTest):
                 model_name=default_model_name,
                 features=[ModelFeatures.TextGeneration, ModelFeatures.Image]):
             pytest.skip(
-                f"{ApiClass.__name__} does not support images. Skipping image test.")
+                f"{ApiClass.__name__} does not support images. Skipping image tests.")
 
         print('\n' + default_model_name)
 
@@ -151,7 +151,7 @@ class TestBaseApiImplementations(BaseTest):
                 model_name=default_model_name,
                 features=[ModelFeatures.TextGeneration, ModelFeatures.Image]):
             pytest.skip(
-                f"{ApiClass.__name__} does not support images. Skipping image test.")
+                f"{ApiClass.__name__} does not support images. Skipping image tests.")
 
         print('\n' + default_model_name)
 
@@ -188,7 +188,7 @@ class TestBaseApiImplementations(BaseTest):
                 model_name=default_model_name,
                 features=[ModelFeatures.TextGeneration, ModelFeatures.Image]):
             pytest.skip(
-                f"{ApiClass.__name__} does not support images. Skipping image test.")
+                f"{ApiClass.__name__} does not support images. Skipping image tests.")
 
         print('\n' + default_model_name)
 
@@ -226,7 +226,7 @@ class TestBaseApiImplementations(BaseTest):
                 model_name=default_model_name,
                 features=[ModelFeatures.TextGeneration, ModelFeatures.Image]):
             pytest.skip(
-                f"{ApiClass.__name__} does not support images. Skipping image test.")
+                f"{ApiClass.__name__} does not support images. Skipping image tests.")
 
         print('\n' + default_model_name)
 
@@ -267,7 +267,7 @@ class TestBaseApiImplementations(BaseTest):
                 model_name=default_model_name,
                 features=[ModelFeatures.TextGeneration, ModelFeatures.Audio]):
             pytest.skip(
-                f"{ApiClass.__name__} does not support audio. Skipping audio test.")
+                f"{ApiClass.__name__} does not support audio. Skipping audio tests.")
 
         print('\n' + default_model_name)
 
@@ -305,7 +305,7 @@ class TestBaseApiImplementations(BaseTest):
                 model_name=default_model_name,
                 features=[ModelFeatures.TextGeneration, ModelFeatures.Audio]):
             pytest.skip(
-                f"{ApiClass.__name__} does not support audio. Skipping audio test.")
+                f"{ApiClass.__name__} does not support audio. Skipping audio tests.")
 
         print('\n' + default_model_name)
 
@@ -343,7 +343,7 @@ class TestBaseApiImplementations(BaseTest):
                 model_name=default_model_name,
                 features=[ModelFeatures.TextGeneration, ModelFeatures.Video]):
             pytest.skip(
-                f"{ApiClass.__name__} does not support videos. Skipping video test.")
+                f"{ApiClass.__name__} does not support videos. Skipping video tests.")
 
         print('\n' + default_model_name)
 
@@ -379,7 +379,7 @@ class TestBaseApiImplementations(BaseTest):
                 model_name=default_model_name,
                 features=[ModelFeatures.TextGeneration, ModelFeatures.Video]):
             pytest.skip(
-                f"{ApiClass.__name__} does not support videos. Skipping video test.")
+                f"{ApiClass.__name__} does not support videos. Skipping video tests.")
 
         print('\n' + default_model_name)
 

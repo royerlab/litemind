@@ -8,7 +8,7 @@ from litemind.apis.base_api import ModelFeatures
 from litemind.apis.google.google_api import GeminiApi
 from litemind.apis.ollama.ollama_api import OllamaApi
 from litemind.apis.openai.openai_api import OpenAIApi
-from litemind.apis.test.base_test import BaseTest
+from litemind.apis.tests.base_test import BaseTest
 
 # Put all your implementations in this list:
 API_IMPLEMENTATIONS = [
@@ -22,7 +22,7 @@ API_IMPLEMENTATIONS = [
 @pytest.mark.parametrize("ApiClass", API_IMPLEMENTATIONS)
 class TestBaseApiImplementations(BaseTest):
     """
-    A test suite that runs the same tests on each ApiClass
+    A tests suite that runs the same tests on each ApiClass
     implementing the abstract BaseApi interface.
     """
 
@@ -38,7 +38,7 @@ class TestBaseApiImplementations(BaseTest):
                 features=[ModelFeatures.TextGeneration, ModelFeatures.Documents,
                           ModelFeatures.Image]):
             pytest.skip(
-                f"{ApiClass.__name__} does not support documents. Skipping documents test.")
+                f"{ApiClass.__name__} does not support documents. Skipping documents tests.")
 
         print('\n' + default_model_name)
 
@@ -92,7 +92,7 @@ class TestBaseApiImplementations(BaseTest):
                 features=[ModelFeatures.TextGeneration, ModelFeatures.Documents,
                           ModelFeatures.Image]):
             pytest.skip(
-                f"{ApiClass.__name__} does not support documents. Skipping documents test.")
+                f"{ApiClass.__name__} does not support documents. Skipping documents tests.")
 
         print('\n' + default_model_name)
 
@@ -136,7 +136,7 @@ class TestBaseApiImplementations(BaseTest):
                 model_name=default_model_name,
                 features=ModelFeatures.TextGeneration):
             pytest.skip(
-                f"{ApiClass.__name__} does not support text generation. Skipping test.")
+                f"{ApiClass.__name__} does not support text generation. Skipping tests.")
 
         print('\n' + default_model_name)
 
@@ -148,7 +148,7 @@ class TestBaseApiImplementations(BaseTest):
             'You are a computer program that can read complex json strings and understand what they contain.')
         messages.append(system_message)
 
-        # complex and long test Json input:
+        # complex and long tests Json input:
         json_str = """
         {
             "name": "John Doe",
@@ -183,12 +183,12 @@ class TestBaseApiImplementations(BaseTest):
 
     def test_text_generation_with_object(self, ApiClass):
 
-        # Check if pydantic is installed otherwise skip test:
+        # Check if pydantic is installed otherwise skip tests:
         try:
             from pydantic import BaseModel
         except ImportError:
             pytest.skip(
-                "Pydantic is not installed. Skipping test."
+                "Pydantic is not installed. Skipping tests."
             )
 
         api_instance = ApiClass()
@@ -199,7 +199,7 @@ class TestBaseApiImplementations(BaseTest):
                 model_name=default_model_name,
                 features=ModelFeatures.TextGeneration):
             pytest.skip(
-                f"{ApiClass.__name__} does not support text generation. Skipping test.")
+                f"{ApiClass.__name__} does not support text generation. Skipping tests.")
 
         print('\n' + default_model_name)
 
@@ -253,7 +253,7 @@ class TestBaseApiImplementations(BaseTest):
                 model_name=default_model_name,
                 features=ModelFeatures.TextGeneration):
             pytest.skip(
-                f"{ApiClass.__name__} does not support text generation. Skipping test.")
+                f"{ApiClass.__name__} does not support text generation. Skipping tests.")
 
         print('\n' + default_model_name)
 
@@ -298,7 +298,7 @@ class TestBaseApiImplementations(BaseTest):
                 model_name=default_model_name,
                 features=ModelFeatures.TextGeneration):
             pytest.skip(
-                f"{ApiClass.__name__} does not support text generation. Skipping test.")
+                f"{ApiClass.__name__} does not support text generation. Skipping tests.")
 
         print('\n' + default_model_name)
 
@@ -344,7 +344,7 @@ class TestBaseApiImplementations(BaseTest):
                 model_name=default_model_name,
                 features=ModelFeatures.TextGeneration):
             pytest.skip(
-                f"{ApiClass.__name__} does not support text generation. Skipping test.")
+                f"{ApiClass.__name__} does not support text generation. Skipping tests.")
 
         print('\n' + default_model_name)
 

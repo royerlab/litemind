@@ -11,7 +11,7 @@ from litemind.apis.utils.read_file_and_convert_to_base64 import \
 def create_temp_file():
     temp_file_path = os.path.join(tempfile.gettempdir(), 'test_file.txt')
     with open(temp_file_path, 'w') as file:
-        file.write('This is a test file.')
+        file.write('This is a tests file.')
     yield temp_file_path
     os.remove(temp_file_path)
 

@@ -155,18 +155,6 @@ class AnthropicApi(BaseApi):
             elif feature == ModelFeatures.ImageGeneration:
                 return False
 
-            # elif feature == ModelFeatures.TextEmbeddings:
-            #     return False
-            #
-            # elif feature == ModelFeatures.ImageEmbeddings:
-            #     return False
-            #
-            # elif feature == ModelFeatures.AudioEmbeddings:
-            #     return False
-            #
-            # elif feature == ModelFeatures.VideoEmbeddings:
-            #     return False
-
             elif feature == ModelFeatures.Image:
                 if not self._has_image_support(model_name):
                     return False
@@ -337,8 +325,6 @@ class AnthropicApi(BaseApi):
         if max_output_tokens is None:
             max_output_tokens = self.max_num_output_tokens(model_name)
 
-        # We can pass temperature to anthropic via e.g. 'temperature' or 'temperature' param.
-        # The param for completions is 'temperature' in the library’s .messages.create call.
         try:
             response = self.client.messages.create(
                 model=model_name,

@@ -16,10 +16,10 @@ from litemind.utils.normalise_uri_to_local_file_path import \
 def temp_local_file():
     """
     Creates a temporary local file and returns its path.
-    Cleans up after the test.
+    Cleans up after the tests.
     """
     with tempfile.NamedTemporaryFile(delete=False) as tf:
-        tf.write(b"some test content")
+        tf.write(b"some tests content")
         tf.flush()
         temp_path = tf.name
     yield temp_path
@@ -39,7 +39,7 @@ def ephemeral_http_server():
     """
 
     class ContentHolder:
-        content = b"Hello from test server!"
+        content = b"Hello from tests server!"
         user_agent = None  # We'll store the user agent from the request
 
     class TestHandler(http.server.SimpleHTTPRequestHandler):
@@ -84,7 +84,7 @@ def test_local_file_absolute(temp_local_file):
     assert result_path == os.path.abspath(temp_local_file)
     assert os.path.isfile(result_path)
     with open(result_path, "rb") as f:
-        assert f.read() == b"some test content"
+        assert f.read() == b"some tests content"
 
 
 def test_local_file_relative(temp_local_file):
@@ -125,7 +125,7 @@ def test_remote_download(ephemeral_http_server):
     assert content_holder.user_agent is not None
     # Not specifying the entire set here, but you could do:
     #   assert content_holder.user_agent in expected_user_agents
-    # if you want to test it's one of your 10. For now, just check it's not empty:
+    # if you want to tests it's one of your 10. For now, just check it's not empty:
     assert len(content_holder.user_agent) > 0
 
 

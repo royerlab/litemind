@@ -1,16 +1,11 @@
 from typing import List
-
 from litemind.agent.message import Message
 from litemind.agent.message_block_type import BlockType
 from litemind.apis.utils.get_media_type_from_uri import get_media_type_from_uri
-from litemind.apis.utils.read_file_and_convert_to_base64 import \
-    read_file_and_convert_to_base64, base64_to_data_uri
-from litemind.utils.normalise_uri_to_local_file_path import \
-    uri_to_local_file_path
+from litemind.apis.utils.read_file_and_convert_to_base64 import read_file_and_convert_to_base64, base64_to_data_uri
+from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_path
 
-
-def convert_messages_for_anthropic(messages: List[Message]) -> List[
-    'MessageParam']:
+def convert_messages_for_anthropic(messages: List[Message]) -> List['MessageParam']:
     """
     Convert litemind Messages into Anthropic's MessageParam format:
         [
@@ -31,7 +26,7 @@ def convert_messages_for_anthropic(messages: List[Message]) -> List[
                 text: str = block.content
 
                 if message.role == 'assistant':
-                    # remove trailing whitspace as it is not allowed!
+                    # remove trailing whitespace as it is not allowed!
                     text = text.rstrip()
 
                 content.append({"type": "text", "text": text})
@@ -42,8 +37,7 @@ def convert_messages_for_anthropic(messages: List[Message]) -> List[
                     local_path = image_uri.replace("file://", "")
                     base64_data = read_file_and_convert_to_base64(local_path)
                     image_uri = base64_to_data_uri(base64_data, media_type)
-                elif image_uri.startswith("http://") or image_uri.startswith(
-                        "https://"):
+                elif image_uri.startswith("http://") or image_uri.startswith("https://"):
                     local_path = uri_to_local_file_path(image_uri)
                     base64_data = read_file_and_convert_to_base64(local_path)
                 elif image_uri.startswith("data:image/"):
@@ -54,9 +48,7 @@ def convert_messages_for_anthropic(messages: List[Message]) -> List[
                     "source": {
                         "type": "base64",
                         "media_type": media_type,
-                        "data": image_uri.split(",")[
-                            -1] if image_uri.startswith(
-                            "data:image/") else base64_data,
+                        "data": image_uri.split(",")[-1] if image_uri.startswith("data:image/") else base64_data,
                     },
                 })
             elif block.block_type == BlockType.Audio:
@@ -71,9 +63,7 @@ def convert_messages_for_anthropic(messages: List[Message]) -> List[
                     "source": {
                         "type": "base64",
                         "media_type": media_type,
-                        "data": audio_uri.split(",")[
-                            -1] if audio_uri.startswith(
-                            "data:audio/") else base64_data,
+                        "data": audio_uri.split(",")[-1] if audio_uri.startswith("data:audio/") else base64_data,
                     },
                 })
             # Add more block types as needed
@@ -82,5 +72,10 @@ def convert_messages_for_anthropic(messages: List[Message]) -> List[
             "role": message.role,
             "content": content,
         })
+
+    # Add cache_control to the last message:
+    if anthropic_messages and anthropic_messages[-1]['content']:
+        anthropic_messages[-1]['content'][-1]['cache_control'] = {"type": "ephemeral"}
+
 
     return anthropic_messages

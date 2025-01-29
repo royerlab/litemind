@@ -146,9 +146,6 @@ class GeminiApi(BaseApi):
             if feature == ModelFeatures.TextGeneration:
                 pass
 
-            elif feature == ModelFeatures.ImageGeneration:
-                return False
-
             elif feature == ModelFeatures.TextEmbeddings:
                 if not 'text-embedding' in model_name.lower():
                     return False

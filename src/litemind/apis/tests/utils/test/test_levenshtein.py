@@ -1,6 +1,6 @@
 import pytest
 
-from src.litemind.apis.test.utils.levenshtein import levenshtein_distance
+from src.litemind.apis.tests.utils.levenshtein import levenshtein_distance
 
 
 def test_levenshtein_distance():

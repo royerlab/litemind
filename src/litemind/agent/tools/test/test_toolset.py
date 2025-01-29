@@ -7,7 +7,7 @@ from litemind.apis.openai.utils.openai_api_key import \
     is_openai_api_key_available
 
 
-# Sample function to test adding a FunctionTool
+# Sample function to tests adding a FunctionTool
 def sample_function(x: int) -> int:
     """Sample function that returns the square of a number."""
     return x * x

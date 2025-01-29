@@ -9,8 +9,8 @@ from litemind.apis.base_api import ModelFeatures
 from litemind.apis.google.google_api import GeminiApi
 from litemind.apis.ollama.ollama_api import OllamaApi
 from litemind.apis.openai.openai_api import OpenAIApi
-from litemind.apis.test.base_test import BaseTest
-from litemind.apis.test.utils.levenshtein import levenshtein_distance
+from litemind.apis.tests.base_test import BaseTest
+from litemind.apis.tests.utils.levenshtein import levenshtein_distance
 from litemind.utils.normalise_uri_to_local_file_path import \
     uri_to_local_file_path
 
@@ -26,7 +26,7 @@ API_IMPLEMENTATIONS = [
 @pytest.mark.parametrize("ApiClass", API_IMPLEMENTATIONS)
 class TestBaseApiImplementations(BaseTest):
     """
-    A test suite that runs the same tests on each ApiClass
+    A tests suite that runs the same tests on each ApiClass
     implementing the abstract BaseApi interface.
     """
 
@@ -40,7 +40,7 @@ class TestBaseApiImplementations(BaseTest):
                 model_name=audio_gen_model_name,
                 features=ModelFeatures.AudioGeneration):
             pytest.skip(
-                f"{ApiClass.__name__} does not support audio generation. Skipping test.")
+                f"{ApiClass.__name__} does not support audio generation. Skipping tests.")
 
         print("Audio generation model name: ", audio_gen_model_name)
 
@@ -99,12 +99,12 @@ class TestBaseApiImplementations(BaseTest):
         image_gen_model_name = api_instance.get_best_model(
             ModelFeatures.ImageGeneration)
 
-        # Skip test if the model does not support image generation:å
+        # Skip tests if the model does not support image generation:å
         if not api_instance.has_model_support_for(
                 model_name=image_gen_model_name,
                 features=ModelFeatures.ImageGeneration):
             pytest.skip(
-                f"{ApiClass.__name__} does not support image generation. Skipping test.")
+                f"{ApiClass.__name__} does not support image generation. Skipping tests.")
 
         print("Image generation model name: ", image_gen_model_name)
 

@@ -9,7 +9,7 @@ from litemind.apis.utils.fastembed_embeddings import fastembed_text, \
 @pytest.mark.skipif(not is_fastembed_available(),
                     reason="fastembed library is not available")
 def test_fastembed_text():
-    texts = ["This is a test sentence.", "Another test sentence."]
+    texts = ["This is a tests sentence.", "Another tests sentence."]
     model_name = "BAAI/bge-small-en-v1.5"
     dimensions = 512
 

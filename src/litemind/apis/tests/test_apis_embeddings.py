@@ -7,7 +7,7 @@ from litemind.apis.base_api import ModelFeatures
 from litemind.apis.google.google_api import GeminiApi
 from litemind.apis.ollama.ollama_api import OllamaApi
 from litemind.apis.openai.openai_api import OpenAIApi
-from litemind.apis.test.base_test import BaseTest
+from litemind.apis.tests.base_test import BaseTest
 
 # Put all your implementations in this list:
 API_IMPLEMENTATIONS = [
@@ -21,7 +21,7 @@ API_IMPLEMENTATIONS = [
 @pytest.mark.parametrize("ApiClass", API_IMPLEMENTATIONS)
 class TestBaseApiImplementations(BaseTest):
     """
-    A test suite that runs the same tests on each ApiClass
+    A tests suite that runs the same tests on each ApiClass
     implementing the abstract BaseApi interface.
     """
 
@@ -34,12 +34,12 @@ class TestBaseApiImplementations(BaseTest):
         embedding_model_name = api_instance.get_best_model(
             ModelFeatures.TextEmbeddings)
 
-        # Skip test if the model does not support embeddings:
+        # Skip tests if the model does not support embeddings:
         if not embedding_model_name or not api_instance.has_model_support_for(
                 model_name=embedding_model_name,
                 features=ModelFeatures.TextEmbeddings):
             pytest.skip(
-                f"{ApiClass.__name__} does not support embeddings. Skipping test.")
+                f"{ApiClass.__name__} does not support embeddings. Skipping tests.")
 
         texts = ["Hello, world!", "Testing embeddings."]
         embeddings = api_instance.embed_texts(texts=texts,
@@ -74,12 +74,12 @@ class TestBaseApiImplementations(BaseTest):
         embedding_model_name = api_instance.get_best_model(
             ModelFeatures.TextEmbeddings)
 
-        # Skip test if the model does not support embeddings:
+        # Skip tests if the model does not support embeddings:
         if not embedding_model_name or not api_instance.has_model_support_for(
                 model_name=embedding_model_name,
                 features=ModelFeatures.TextEmbeddings):
             pytest.skip(
-                f"{ApiClass.__name__} does not support embeddings. Skipping test.")
+                f"{ApiClass.__name__} does not support embeddings. Skipping tests.")
 
         texts = ["Hello, world!", "Testing embeddings."]
         embeddings = api_instance.embed_texts(texts=texts,
@@ -111,12 +111,14 @@ class TestBaseApiImplementations(BaseTest):
         embedding_model_name = api_instance.get_best_model(
             ModelFeatures.VideoEmbeddings)
 
-        # Skip test if the model does not support embeddings:
+        # Skip tests if the model does not support embeddings:
         if not embedding_model_name or not api_instance.has_model_support_for(
                 model_name=embedding_model_name,
                 features=ModelFeatures.VideoEmbeddings):
             pytest.skip(
-                f"{ApiClass.__name__} does not support video embeddings. Skipping test.")
+                f"{ApiClass.__name__} does not support video embeddings. Skipping tests.")
+
+        print(f"Embedding model name: {embedding_model_name}")
 
         video_uri = self._get_local_test_video_uri('flying.mp4')
         embeddings = api_instance.embed_videos(video_uris=[video_uri],

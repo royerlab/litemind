@@ -9,10 +9,10 @@ from litemind.apis.utils.sample_video import extract_frames_and_audio
 @pytest.fixture
 def test_video(tmp_path):
     """
-    Generate a short 2-second synthetic test video (with audio)
+    Generate a short 2-second synthetic tests video (with audio)
     and return the path to the created file.
     """
-    # Paths for the generated video and final test file
+    # Paths for the generated video and final tests file
     video_path = tmp_path / "test_synthetic_video.mp4"
 
     # Create synthetic video input (red color)
@@ -47,7 +47,7 @@ def test_extract_frames_and_audio(tmp_path, test_video):
     output_dir = tmp_path / "output"
     output_dir.mkdir(exist_ok=True)
 
-    # Call the function under test
+    # Call the function under tests
     frames, audio_file = extract_frames_and_audio(
         input_video_path=test_video,
         output_dir=str(output_dir),

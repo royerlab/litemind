@@ -3,6 +3,9 @@ requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
+name = "litemind"  # <-- Add the project name here
+version = "2025.01.26"
+requires-python = ">=3.6"
 dependencies = [
     "openai",
     "ollama",
@@ -11,6 +14,7 @@ dependencies = [
     "pillow",
     "ffmpeg-python",
     "arbol",
+    "json-repair"
 ]
 
 [project.optional-dependencies]

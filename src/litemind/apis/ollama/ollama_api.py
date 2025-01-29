@@ -117,9 +117,6 @@ class OllamaApi(BaseApi):
             if feature == ModelFeatures.TextGeneration:
                 pass
 
-            elif feature == ModelFeatures.ImageGeneration:
-                return False
-
             elif feature == ModelFeatures.TextEmbeddings:
                 pass
 

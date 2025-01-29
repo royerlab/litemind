@@ -3,7 +3,7 @@ def has_vision_support(model_name: str) -> bool:
     Tests if an OpenAI model supports vision by attempting to send a minimal valid image.
 
     Args:
-        model_name (str): Name of the model to test.
+        model_name (str): Name of the model to tests.
 
     Returns:
         bool: True if the model supports vision, False otherwise

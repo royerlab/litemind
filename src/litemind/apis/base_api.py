@@ -717,14 +717,14 @@ class BaseApi(ABC):
         """
         # Implement similarly to embed_images:
 
-        # If no model is passed get a default model with video support:
+        # If no model is passed get a default model with video embedding support:
         if model_name is None:
-            model_name = self.get_best_model(features=[ModelFeatures.Video])
+            model_name = self.get_best_model(features=[ModelFeatures.VideoEmbeddings])
 
         # Model must support videos:
-        if not model_name or not self.has_model_support_for(
-                model_name=model_name, features=[ModelFeatures.Video]):
-            raise ValueError(f"Model '{model_name}' does not support videos.")
+        if model_name is None or not self.has_model_support_for(
+                model_name=model_name, features=ModelFeatures.VideoEmbeddings):
+            raise ValueError(f"Model '{model_name}' does not support video embedding.")
 
         # List to store video descriptions:
         video_descriptions = []

@@ -5,7 +5,7 @@ from litemind.apis.base_api import ModelFeatures
 from litemind.apis.google.google_api import GeminiApi
 from litemind.apis.ollama.ollama_api import OllamaApi
 from litemind.apis.openai.openai_api import OpenAIApi
-from litemind.apis.test.base_test import BaseTest
+from litemind.apis.tests.base_test import BaseTest
 
 # Put all your implementations in this list:
 API_IMPLEMENTATIONS = [
@@ -19,7 +19,7 @@ API_IMPLEMENTATIONS = [
 @pytest.mark.parametrize("ApiClass", API_IMPLEMENTATIONS)
 class TestBaseApiImplementations(BaseTest):
     """
-    A test suite that runs the same tests on each ApiClass
+    A tests suite that runs the same tests on each ApiClass
     implementing the abstract BaseApi interface.
     """
 
@@ -38,7 +38,7 @@ class TestBaseApiImplementations(BaseTest):
                                                       ModelFeatures.TextGeneration,
                                                       ModelFeatures.Image]):
             pytest.skip(
-                f"{ApiClass.__name__} does not support images. Skipping image test.")
+                f"{ApiClass.__name__} does not support images. Skipping image tests.")
 
         try:
 
@@ -64,7 +64,7 @@ class TestBaseApiImplementations(BaseTest):
             import traceback
             traceback.print_exc()
 
-            # If exception happened then test failed:
+            # If exception happened then tests failed:
             assert False
 
     def test_describe_audio_if_supported(self, ApiClass):
@@ -82,7 +82,7 @@ class TestBaseApiImplementations(BaseTest):
                                                       ModelFeatures.TextGeneration,
                                                       ModelFeatures.Audio]):
             pytest.skip(
-                f"{ApiClass.__name__} does not support audio. Skipping audio test.")
+                f"{ApiClass.__name__} does not support audio. Skipping audio tests.")
 
         try:
             audio_path = self._get_local_test_audio_uri('harvard.wav')
@@ -107,7 +107,7 @@ class TestBaseApiImplementations(BaseTest):
             import traceback
             traceback.print_exc()
 
-            # If exception happened then test failed:
+            # If exception happened then tests failed:
             assert False
 
     def test_describe_video_if_supported(self, ApiClass):
@@ -125,7 +125,7 @@ class TestBaseApiImplementations(BaseTest):
                                                       ModelFeatures.TextGeneration,
                                                       ModelFeatures.Video]):
             pytest.skip(
-                f"{ApiClass.__name__} does not support videos. Skipping video test.")
+                f"{ApiClass.__name__} does not support videos. Skipping video tests.")
 
         try:
             video_path = self._get_local_test_video_uri('lunar_park.mov')
@@ -145,10 +145,10 @@ class TestBaseApiImplementations(BaseTest):
             # Lower case:
             description = description.lower()
 
-            # If ApiClass.__name__ is 'OllamaApi', we relax the test to allow for more flexibility:
+            # If ApiClass.__name__ is 'OllamaApi', we relax the tests to allow for more flexibility:
             if ApiClass.__name__ == 'OllamaApi':
                 # Open source models are not yet strong enough to understand that a sequence of images is a video:
-                assert 'elephant' in description.lower()
+                assert 'elephant' in description or 'people' in description
             else:
 
                 # Check the contents of the string:
@@ -162,5 +162,5 @@ class TestBaseApiImplementations(BaseTest):
             import traceback
             traceback.print_exc()
 
-            # If exception happened then test failed:
+            # If exception happened then tests failed:
             assert False

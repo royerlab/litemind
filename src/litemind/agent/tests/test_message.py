@@ -141,7 +141,7 @@ def test_message_table():
     # Checks contains operator:
     assert 'table' in user_message
 
-    # Now test ith the remote UL of a CSV file:
+    # Now tests ith the remote UL of a CSV file:
 
     user_message = Message(role='user')
     user_message.append_text('Can you describe what you see in the table?')

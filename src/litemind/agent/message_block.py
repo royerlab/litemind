@@ -1,7 +1,7 @@
 from typing import Union
 
-from hyperframe.frame import DataFrame
 from numpy import ndarray
+from pandas import DataFrame
 from pydantic import BaseModel
 
 from litemind.agent.message_block_type import BlockType
