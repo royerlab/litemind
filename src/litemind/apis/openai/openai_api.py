@@ -1,11 +1,13 @@
 import os
 import tempfile
+from http.client import responses
 from io import BytesIO
 from typing import List, Optional, Sequence, Union
 
 import requests
 from PIL import Image
 from arbol import aprint
+from pydantic import BaseModel
 
 from litemind.agent.message import Message
 from litemind.agent.tools.toolset import ToolSet
@@ -95,7 +97,8 @@ class OpenAIApi(BaseApi):
         return model_list
 
     def get_best_model(self, features: Optional[Union[
-        str, List[str], ModelFeatures, Sequence[ModelFeatures]]] = None) -> \
+        str, List[str], ModelFeatures, Sequence[ModelFeatures]]] = None,
+                       exclusion_filters: Optional[Union[str,List[str]]] = None) -> \
             Optional[str]:
 
         # Normalise the features:
@@ -106,7 +109,8 @@ class OpenAIApi(BaseApi):
 
         # Filter the models based on the requirements:
         model_list = self._filter_models(model_list,
-                                         features=features)
+                                         features=features,
+                                         exclusion_filters=exclusion_filters)
 
         if len(model_list) == 0:
             return None
@@ -508,6 +512,7 @@ class OpenAIApi(BaseApi):
                                  temperature: Optional[float] = 0.0,
                                  max_output_tokens: Optional[int] = None,
                                  toolset: Optional[ToolSet] = None,
+                                 response_format: Optional[BaseModel] = None,
                                  **kwargs) -> Message:
 
         from openai import NotGiven
@@ -546,30 +551,40 @@ class OpenAIApi(BaseApi):
         if self.use_local_whisper and self.has_model_support_for(
                 model_name=model_name,
                 features=ModelFeatures.AudioTranscription):
-            preprocessed_messages = self._transcribe_audio_in_messages(
-                preprocessed_messages)
+            preprocessed_messages = self._transcribe_audio_in_messages(preprocessed_messages)
 
         # Convert documents to markdown and images:
         if is_pymupdf_available():
-            preprocessed_messages = self._convert_documents_to_markdown_in_messages(
-                preprocessed_messages)
+            preprocessed_messages = self._convert_documents_to_markdown_in_messages(preprocessed_messages)
 
         # Format messages for OpenAI:
-        openai_formatted_messages = convert_messages_for_openai(
-            preprocessed_messages)
+        openai_formatted_messages = convert_messages_for_openai(preprocessed_messages)
 
-        # Call OpenAI Chat Completions API
-        response = self.client.chat.completions.create(
-            model=model_name,
-            messages=openai_formatted_messages,
-            temperature=temperature,
-            max_completion_tokens=max_output_tokens,
-            tools=openai_tools,
-            **kwargs
-        )
+        # If output_format is None, we use the new OpenAI function calling format:
+        if response_format is None:
+            # Call OpenAI Chat Completions API
+            response = self.client.chat.completions.create(
+                model=model_name,
+                messages=openai_formatted_messages,
+                temperature=temperature,
+                max_completion_tokens=max_output_tokens,
+                tools=openai_tools,
+                **kwargs
+            )
+        else:
+            # Call OpenAI Chat Completions API
+            response = self.client.beta.chat.completions.parse(
+                model=model_name,
+                messages=openai_formatted_messages,
+                temperature=temperature,
+                max_completion_tokens=max_output_tokens,
+                tools=openai_tools,
+                response_format=response_format,
+                **kwargs
+            )
 
         # Process API response
-        response_message = _process_response(response, toolset)
+        response_message = _process_response(response, toolset, response_format)
         messages.append(response_message)
         return response_message
 

@@ -1,12 +1,15 @@
 import json
 from typing import Optional, Any
 
+from pydantic import BaseModel
+
 from litemind.agent.message import Message
 from litemind.agent.tools.toolset import ToolSet
 
 
 def _process_response(response: Any,
-                      toolset: Optional[ToolSet]) -> Message:
+                      toolset: Optional[ToolSet],
+                      response_format: Optional[BaseModel | str]) -> Message:
     """
     Process OpenAI response, checking for function calls and executing them if needed.
 
@@ -16,6 +19,8 @@ def _process_response(response: Any,
         The response from OpenAI API.
     toolset : Optional[ToolSet]
         The ToolSet object containing the tools to execute.
+    response_format : Optional[BaseModel | str]
+        The format of the response.
 
     Returns
     -------
@@ -42,6 +47,29 @@ def _process_response(response: Any,
                 response_content = f"Function '{function_name}' error: {e}"
 
             return Message(role='assistant', text=response_content)
+
+    if response_format is not None:
+
+        # JSON string :
+        json_string = choice.content
+
+        # We first try to repair the JSON string:
+        from json_repair import repair_json
+        repaired_json_string = repair_json(json_string)
+
+        # If the result is an empty string the string was not a JSON string or too broken:
+        if len(repaired_json_string.strip()) == 0 and len(json_string.strip())>0:
+            # In this case we just return the content of the message:
+            return Message(role='assistant', text=choice.content)
+
+        # We parse the Json string into the object:
+        try:
+            obj = response_format.model_validate_json(repaired_json_string)
+            return Message(role='assistant', obj=obj)
+        except Exception as e:
+            # If parsing fails, return the content of the message:
+            return Message(role='assistant', text=choice.content)
+
 
     # If no tool call, return the direct assistant message content
     return Message(role='assistant', text=choice.content or "")

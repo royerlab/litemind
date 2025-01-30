@@ -1,20 +1,8 @@
 import pytest
 
 from litemind.agent.message import Message
-from litemind.apis.anthropic.anthropic_api import AnthropicApi
 from litemind.apis.base_api import ModelFeatures
-from litemind.apis.google.google_api import GeminiApi
-from litemind.apis.ollama.ollama_api import OllamaApi
-from litemind.apis.openai.openai_api import OpenAIApi
-from litemind.apis.tests.base_test import BaseTest
-
-# Put all your implementations in this list:
-API_IMPLEMENTATIONS = [
-    OpenAIApi,
-    OllamaApi,
-    AnthropicApi,
-    GeminiApi
-]
+from litemind.apis.tests.base_test import BaseTest, API_IMPLEMENTATIONS
 
 
 @pytest.mark.parametrize("ApiClass", API_IMPLEMENTATIONS)

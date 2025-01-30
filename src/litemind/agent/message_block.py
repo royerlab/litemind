@@ -80,15 +80,6 @@ class MessageBlock:
         """
         return str(self)
 
-    def __repr__(self) -> str:
-        """
-        Return the message as a string.
-        Returns
-        -------
-        str
-            The message as a string.
-        """
-        return str(self)
 
     def __len__(self) -> int:
         """

@@ -1,11 +1,15 @@
-from typing import List
+from typing import List, Optional
+
+from pydantic import BaseModel
+
 from litemind.agent.message import Message
 from litemind.agent.message_block_type import BlockType
 from litemind.apis.utils.get_media_type_from_uri import get_media_type_from_uri
 from litemind.apis.utils.read_file_and_convert_to_base64 import read_file_and_convert_to_base64, base64_to_data_uri
 from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_path
 
-def convert_messages_for_anthropic(messages: List[Message]) -> List['MessageParam']:
+def convert_messages_for_anthropic(messages: List[Message],
+                                   response_format: Optional[BaseModel] = None,) -> List['MessageParam']:
     """
     Convert litemind Messages into Anthropic's MessageParam format:
         [
@@ -77,5 +81,11 @@ def convert_messages_for_anthropic(messages: List[Message]) -> List['MessagePara
     if anthropic_messages and anthropic_messages[-1]['content']:
         anthropic_messages[-1]['content'][-1]['cache_control'] = {"type": "ephemeral"}
 
+    # Add prompt that specifies that response should be in JSOn following given JSON schema:
+    if response_format:
+        anthropic_messages[-1]['content'].append({
+            "type": "text",
+            "text": f"\nPlease provide answer as a JSON string that adheres to the following schema:\n{response_format.model_json_schema()}\n\n Without text before or after.",
+        })
 
     return anthropic_messages

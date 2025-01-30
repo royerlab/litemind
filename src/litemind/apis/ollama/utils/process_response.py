@@ -1,12 +1,15 @@
 import json
 from typing import Optional
 
+from pydantic import BaseModel
+
 from litemind.agent.message import Message
 from litemind.agent.tools.toolset import ToolSet
 
 
 def _process_response(response: dict,
-                      toolset: Optional[ToolSet]) -> Message:
+                      toolset: Optional[ToolSet],
+                      response_format: Optional[BaseModel | str] = None) -> Message:
     """
     Process Ollama's response, checking for tool calls and executing them if needed.
 
@@ -28,6 +31,8 @@ def _process_response(response: dict,
         }
     toolset : Optional[ToolSet]
         The ToolSet object containing the tools to execute.
+    response_format : Optional[BaseModel | str]
+        The format of the response.
 
     Returns
     -------
@@ -66,6 +71,24 @@ def _process_response(response: dict,
             except Exception as e:
                 err_msg = f"Function '{function_name}' error: {e}"
                 return Message(role='assistant', text=err_msg)
+
+    # 4) If response_format is provided, try to parse the text content
+    if response_format:
+        # Attempt to repair the JSON string
+        from json_repair import repair_json
+        repaired_json = repair_json(text_content)
+
+        # If the repaired string is empty, return the original text content
+        if len(repaired_json.strip())==0 and len(text_content.strip())>0:
+            return Message(role='assistant', text=text_content)
+
+        # Parse the JSON string into the specified format
+        try:
+            parsed_obj = response_format.model_validate_json(repaired_json)
+            return Message(role='assistant', obj=parsed_obj)
+        except Exception as e:
+            # If parsing fails, return the original text content
+            return Message(role='assistant', text=text_content)
 
     # 3) If no tool calls or no toolset, just return the text content
     return Message(role='assistant', text=text_content)

@@ -4,6 +4,7 @@ from typing import List, Optional, Sequence, Union
 from PIL.Image import Image
 from arbol import asection, aprint
 from pandas import DataFrame
+from pydantic import BaseModel
 
 from litemind.agent.message import Message
 from litemind.agent.message_block_type import BlockType
@@ -63,6 +64,7 @@ class BaseApi(ABC):
                        features: Optional[Union[
                            str, List[str], ModelFeatures, Sequence[
                                ModelFeatures]]] = None,
+                       exclusion_filters: Optional[List[str]] = None
                        ) -> Optional[str]:
         """
         Get the name of the best possible model that satisfies a set of capability requirements.
@@ -70,6 +72,10 @@ class BaseApi(ABC):
         Parameters
         ----------
         features: Sequence[ModelFeatures], or ModelFeatures, or str, or List[str]
+            List of features to filter on.
+        exclusion_filters: Optional[List[str]]
+            List of strings that if found in the model name exclude it.
+
 
         Returns
         -------
@@ -83,7 +89,8 @@ class BaseApi(ABC):
     def _filter_models(self,
                        model_list: List[str],
                        features: Union[str, List[str], ModelFeatures, Sequence[
-                           ModelFeatures]]) -> List[str]:
+                           ModelFeatures]],
+                       exclusion_filters: Optional[Union[str,List[str]]] = None) -> List[str]:
         """
         Filter the list of models based on the given features.
         Parameters
@@ -92,6 +99,8 @@ class BaseApi(ABC):
             List of models.
         features: Sequence[ModelFeatures], or ModelFeatures, or str, or List[str]
             List of features to filter on.
+        exclusion_filters: Optional[Union[str,List[str]]]
+            List of strings that if found in the model name exclude it.
 
         Returns
         -------
@@ -105,9 +114,21 @@ class BaseApi(ABC):
             # Nothing to filter:
             return model_list
 
+        # if exclusion_filters is a string then wrap in singleton list:
+        if isinstance(exclusion_filters, str):
+            exclusion_filters = [exclusion_filters]
+
         for model in model_list:
+
+            # Check if the model should be excluded:
+            if exclusion_filters and any(
+                    [filter in model for filter in exclusion_filters]):
+                continue
+
+            # Append models that support the given features:
             if self.has_model_support_for(model_name=model, features=features):
                 filtered_model_list.append(model)
+
 
         return filtered_model_list
 
@@ -233,7 +254,7 @@ class BaseApi(ABC):
                                  temperature: float = 0.0,
                                  max_output_tokens: Optional[int] = None,
                                  toolset: Optional[ToolSet] = None,
-                                 # output_format: Optional[Any] = None,
+                                 response_format: Optional[BaseModel] = None,
                                  **kwargs) -> Message:
         """
         Generate a text completion using the given model for a given list of messages and parameters.
@@ -250,8 +271,8 @@ class BaseApi(ABC):
             The maximum number of tokens to use.
         toolset: Optional[ToolSet]
             The toolset to use.
-        #output_format: Optional[Any]
-        #    The output format to use. Provide a pydantic object to use as the output format.
+        response_format: Optional[BaseModel | str]
+            The response format to use. Provide a pydantic object to use as the output format or json schema.
         kwargs: dict
             Additional arguments to pass to the completion function, this is API specific!
 

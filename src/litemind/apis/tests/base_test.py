@@ -1,3 +1,17 @@
+from litemind.apis.anthropic.anthropic_api import AnthropicApi
+from litemind.apis.google.google_api import GeminiApi
+from litemind.apis.ollama.ollama_api import OllamaApi
+from litemind.apis.openai.openai_api import OpenAIApi
+
+# Put all your implementations in this list:
+API_IMPLEMENTATIONS = [
+    OpenAIApi,
+    OllamaApi,
+    AnthropicApi,
+    GeminiApi
+]
+
+
 class BaseTest:
 
     def _get_local_test_image_uri(self, image_name: str):

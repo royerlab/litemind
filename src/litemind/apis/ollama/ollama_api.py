@@ -1,6 +1,7 @@
 from typing import List, Dict, Optional, Sequence, Union
 
 from arbol import aprint
+from openai import BaseModel
 
 from litemind.agent.message import Message
 from litemind.agent.tools.toolset import ToolSet
@@ -69,7 +70,8 @@ class OllamaApi(BaseApi):
             raise APIError("Error fetching model list from Ollama.")
 
     def get_best_model(self, features: Optional[Union[
-        str, List[str], ModelFeatures, Sequence[ModelFeatures]]] = None) -> \
+        str, List[str], ModelFeatures, Sequence[ModelFeatures]]] = None,
+                       exclusion_filters: Optional[Union[str,List[str]]] = None) -> \
             Optional[str]:
 
         # Normalise the features:
@@ -80,7 +82,8 @@ class OllamaApi(BaseApi):
 
         # Filter the models based on the requirements:
         model_list = self._filter_models(model_list,
-                                         features=features)
+                                         features=features,
+                                         exclusion_filters=exclusion_filters)
 
         # If we have any models left, return the first one
         if model_list:
@@ -228,6 +231,7 @@ class OllamaApi(BaseApi):
                                  temperature: Optional[float] = 0.0,
                                  max_output_tokens: Optional[int] = None,
                                  toolset: Optional[ToolSet] = None,
+                                 response_format: Optional[BaseModel] = None,
                                  **kwargs) -> Message:
 
         # Set default model if not provided
@@ -262,6 +266,9 @@ class OllamaApi(BaseApi):
         # Convert toolset (if any) to Ollama's tools schema
         ollama_tools = _format_tools_for_ollama(toolset) if toolset else None
 
+        # Normalise response format to JSON schema string:
+        response_format_schema = response_format.model_json_schema() if response_format else response_format
+
         # Make the request to Ollama
         from ollama import ResponseError
         try:
@@ -272,11 +279,12 @@ class OllamaApi(BaseApi):
                 tools=ollama_tools,
                 options={"temperature": temperature,
                          "num_predict": max_output_tokens},
+                format=response_format_schema,
                 **kwargs
             )
 
             # 4) Process the response
-            response_message = _process_response(response, toolset)
+            response_message = _process_response(response, toolset, response_format)
             messages.append(response_message)
             return response_message
 

@@ -2,6 +2,7 @@ import os
 from typing import Optional, Sequence, Union
 
 from PIL import Image
+from pydantic import BaseModel
 
 from litemind.agent.message import Message
 from litemind.agent.tools.toolset import ToolSet
@@ -105,7 +106,8 @@ class GeminiApi(BaseApi):
         return model_list
 
     def get_best_model(self, features: Optional[Union[
-        str, List[str], ModelFeatures, Sequence[ModelFeatures]]] = None) -> \
+        str, List[str], ModelFeatures, Sequence[ModelFeatures]]] = None,
+                       exclusion_filters: Optional[Union[str,List[str]]] = None) -> \
             Optional[str]:
 
         # Normalise the features:
@@ -119,7 +121,8 @@ class GeminiApi(BaseApi):
 
         # Filter the models based on the requirements:
         model_list = self._filter_models(model_list,
-                                         features=features)
+                                         features=features,
+                                         exclusion_filters=exclusion_filters)
 
         if model_list:
             # If we have any models left, return the first one:
@@ -259,6 +262,7 @@ class GeminiApi(BaseApi):
                                  temperature: float = 0.0,
                                  max_output_tokens: Optional[int] = None,
                                  toolset: Optional[ToolSet] = None,
+                                 response_format: Optional[BaseModel] = None,
                                  **kwargs) -> Message:
 
         # Get the best model if not provided:
@@ -280,19 +284,32 @@ class GeminiApi(BaseApi):
         # Convert messages to the gemini format:
         gemini_messages = _convert_messages_for_gemini(preprocessed_messages)
 
-        # Build a GenerationConfig
+        # Local import to avoid loading the library if not needed:
         import google.generativeai as genai
         from google.generativeai import types
-        generation_cfg = types.GenerationConfig(
-            temperature=temperature,
-            max_output_tokens=max_output_tokens
-        )
+
+        # Build a GenerationConfig
+        if response_format is None:
+            # Default generation config:
+            generation_cfg = types.GenerationConfig(
+                temperature=temperature,
+                max_output_tokens=max_output_tokens
+            )
+        else:
+            # In this case we add a reponse format to the generation config:
+            generation_cfg = types.GenerationConfig(
+                temperature=temperature,
+                max_output_tokens=max_output_tokens,
+                response_mime_type="application/json",
+                response_schema=response_format
+            )
 
         if toolset and self.has_model_support_for(model_name=model_name,
                                                   features=ModelFeatures.Tools):
             # Build fine-grained Tools (protos)
             proto_tools = create_genai_tools_from_toolset(toolset)
 
+            # Create a GenerativeModel with the tools
             model = genai.GenerativeModel(
                 model_name=model_name,
                 tools=proto_tools,  # The Protobuf definitions
@@ -353,6 +370,23 @@ class GeminiApi(BaseApi):
                 generation_config=generation_cfg
             )
             text_output = response.text or ""
+
+        if response_format:
+            # Attempt to repair the JSON string
+            from json_repair import repair_json
+            repaired_json = repair_json(text_output)
+
+            # If the repaired string is empty, return the original text content
+            if len(repaired_json.strip()) == 0 and len(text_output.strip()) > 0:
+                return Message(role='assistant', text=text_output)
+
+            # Parse the JSON string into the specified format
+            try:
+                parsed_obj = response_format.model_validate_json(repaired_json)
+                return Message(role='assistant', obj=parsed_obj)
+            except Exception as e:
+                # If parsing fails, return the original text content
+                return Message(role='assistant', text=text_output)
 
         # Cleanup uploaded video or other files:
         _list_and_delete_uploaded_files()

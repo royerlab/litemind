@@ -67,7 +67,7 @@ class Message(ABC):
         new_message.blocks = self.blocks.copy()
         return new_message
 
-    def append_block(self, block: MessageBlock):
+    def append_block(self, block: MessageBlock) -> MessageBlock:
         """
         Append a message block to the message.
 
@@ -77,8 +77,9 @@ class Message(ABC):
             The message block to append.
         """
         self.blocks.append(block)
+        return block
 
-    def append_text(self, text: str):
+    def append_text(self, text: str) -> MessageBlock:
         """
         Append text to the message.
 
@@ -92,11 +93,12 @@ class Message(ABC):
             raise ValueError(f"Text must be a string, not {type(text)}")
 
         # Append the text block:
-        self.append_block(MessageBlock(block_type='text', content=text))
+        return self.append_block(MessageBlock(block_type='text', content=text))
+
 
     def append_json(self,
                     json_str: str,
-                    source: Optional[str] = None):
+                    source: Optional[str] = None) -> MessageBlock:
         """
         Append json to the message.
 
@@ -119,13 +121,13 @@ class Message(ABC):
             raise ValueError(f"Json must be correctly formatted")
 
         # Append the json block:
-        self.append_block(
+        return self.append_block(
             MessageBlock(block_type='json', content=json_str, source=source))
 
     def append_code(self, code: str,
                     lang: str = 'python',
                     source: Optional[str] = None
-                    ):
+                    ) -> MessageBlock:
         """
         Append code to the message.
 
@@ -144,11 +146,11 @@ class Message(ABC):
             raise ValueError(f"Code must be a string, not {type(code)}")
 
         # Append the code block:
-        self.append_block(
+        return self.append_block(
             MessageBlock(block_type='code', content=code, lang=lang,
                          source=source))
 
-    def append_object(self, obj: BaseModel):
+    def append_object(self, obj: BaseModel) -> MessageBlock:
         """
         Append a Pydantic object to the message.
 
@@ -164,12 +166,12 @@ class Message(ABC):
                 f"Object must be a Pydantic object, not {type(obj)}")
 
         # Append the object block:
-        self.append_block(MessageBlock(block_type='json', content=obj))
+        return self.append_block(MessageBlock(block_type='object', content=obj))
 
     def append_uri(self,
                    uri: str,
                    block_type: str,
-                   source: Optional[str] = None):
+                   source: Optional[str] = None) -> MessageBlock:
         """
         Append a URI to the message.
 
@@ -190,12 +192,12 @@ class Message(ABC):
                 f"Invalid URI: '{uri}' (must start with 'http', 'file', or 'data')")
 
         # Append the URI block:
-        self.append_block(
+        return self.append_block(
             MessageBlock(block_type=block_type, content=uri, source=source))
 
     def append_image(self,
                      image_uri: str,
-                     source: Optional[str] = None):
+                     source: Optional[str] = None) -> MessageBlock:
         """
         Append an image to the message.
 
@@ -214,11 +216,11 @@ class Message(ABC):
                 f"Invalid image URI: '{image_uri}' (must start with 'http', 'file', or 'data')")
 
         # Append the image block:
-        self.append_uri(image_uri, 'image', source=source)
+        return self.append_uri(image_uri, 'image', source=source)
 
     def append_audio(self,
                      audio_uri: str,
-                     source: Optional[str] = None):
+                     source: Optional[str] = None) -> MessageBlock:
         """
         Append an audio to the message.
 
@@ -237,11 +239,11 @@ class Message(ABC):
                 f"Invalid audio URI: '{audio_uri}' (must start with 'http', 'file', or 'data')")
 
         # Append the audio block:
-        self.append_uri(audio_uri, 'audio', source=source)
+        return self.append_uri(audio_uri, 'audio', source=source)
 
     def append_video(self,
                      video_uri: str,
-                     source: Optional[str] = None):
+                     source: Optional[str] = None) -> MessageBlock:
         """
         Append a video to the message.
 
@@ -259,11 +261,11 @@ class Message(ABC):
                 f"Invalid video URI: '{video_uri}' (must have a valid video file extension)")
 
         # Append the video block:
-        self.append_uri(video_uri, 'video', source=source)
+        return self.append_uri(video_uri, 'video', source=source)
 
     def append_document(self,
                         document_uri: str,
-                        source: Optional[str] = None):
+                        source: Optional[str] = None) -> MessageBlock:
         """
         Append a document to the message.
 
@@ -286,11 +288,11 @@ class Message(ABC):
                     f"Invalid document URI: '{document_uri}' (must have a valid document file extension)")
 
         # Append the document block:
-        self.append_uri(document_uri, 'document', source=source)
+        return self.append_uri(document_uri, 'document', source=source)
 
     def append_table(self,
                      table: Union[str, 'ndarray', 'DataFrame'],
-                     source: Optional[str] = None):
+                     source: Optional[str] = None) -> MessageBlock:
         """
         Append a table to the message.
 
@@ -340,7 +342,7 @@ class Message(ABC):
                 f"Table must be a numpy array or a pandas DataFrame, not {type(table)}")
 
         # Append the table block:
-        self.append_block(
+        return self.append_block(
             MessageBlock(block_type='table', content=table, source=source))
 
     def append_folder(self,

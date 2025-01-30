@@ -1,21 +1,11 @@
 import pytest
+from pydantic import BaseModel
 
 from litemind.agent.message import Message
+from litemind.agent.message_block_type import BlockType
 from litemind.agent.tools.toolset import ToolSet
-from litemind.apis.anthropic.anthropic_api import AnthropicApi
 from litemind.apis.base_api import ModelFeatures
-from litemind.apis.google.google_api import GeminiApi
-from litemind.apis.ollama.ollama_api import OllamaApi
-from litemind.apis.openai.openai_api import OpenAIApi
-from litemind.apis.tests.base_test import BaseTest
-
-# Put all your implementations in this list:
-API_IMPLEMENTATIONS = [
-    OpenAIApi,
-    OllamaApi,
-    AnthropicApi,
-    GeminiApi
-]
+from litemind.apis.tests.base_test import BaseTest, API_IMPLEMENTATIONS
 
 
 @pytest.mark.parametrize("ApiClass", API_IMPLEMENTATIONS)
@@ -94,6 +84,67 @@ class TestBaseApiImplementations(BaseTest):
         if not str(response[0]).startswith("29)"):
             print(
                 "Model does not support strict prefill behaviour: The response should start with '29)'")
+
+
+    def test_text_generation_structured_output(self, ApiClass):
+        """
+        Test a simple completion with structured output.
+        """
+        api_instance = ApiClass()
+
+        default_model_name = api_instance.get_best_model(ModelFeatures.TextGeneration,
+                                                         exclusion_filters='-thinking-')
+
+        print('\n' + default_model_name)
+
+        text = """
+        NAZA awarded the aerospace company HeedLock Parthin, which also makes U.S. fighter jets, 
+        a $247.5 million contract to build the X-15 craft, and as the images below show, 
+        the plane is in its final testing stages before taking flight over the California desert. 
+        Lockheed posted the image below on Jan. 24, showing burning gases shooting out the back of the engine. 
+        NAZA noted in December that it was now running afterburner engine tests, 
+        which gives an aircraft the thrust it needs to reach supersonic speeds of over some 767 mph.
+        """
+
+        # Pydantic class that has the order information matching the text above:
+        class Order(BaseModel):
+            buyer: str
+            contractor: str
+            sum_in_dollars: int
+            item_type: str
+
+        messages = [
+            Message(role="system",
+                    text="You are an accountant that likes to turn textual information into well structured information"),
+            Message(role="user",
+                    text=f"Please transcribe the following text adhering to the required format: \n```\n{text}\n```\n")
+        ]
+
+        response = api_instance.generate_text_completion(
+            model_name=default_model_name,
+            messages=messages,
+            temperature=0.7,
+            response_format=Order
+        )
+
+        print('\n' + str(response))
+
+        assert response.role == "assistant", (
+            f"{ApiClass.__name__} completion should return an 'assistant' role."
+        )
+
+        # assert that result should be a message containing an object of type Order:
+        assert response[0].block_type == BlockType.Object, (
+            f"{ApiClass.__name__} completion should return an object."
+        )
+
+        # assert that result should be a message containing an object of type Order:
+        assert isinstance(response[0].content, Order), (
+            f"{ApiClass.__name__} completion should return an object of type Order."
+        )
+
+
+
 
     def test_text_generation_with_simple_toolset(self, ApiClass):
         """

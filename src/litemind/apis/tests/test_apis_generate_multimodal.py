@@ -4,23 +4,11 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-from litemind.apis.anthropic.anthropic_api import AnthropicApi
 from litemind.apis.base_api import ModelFeatures
-from litemind.apis.google.google_api import GeminiApi
-from litemind.apis.ollama.ollama_api import OllamaApi
-from litemind.apis.openai.openai_api import OpenAIApi
-from litemind.apis.tests.base_test import BaseTest
+from litemind.apis.tests.base_test import BaseTest, API_IMPLEMENTATIONS
 from litemind.apis.tests.utils.levenshtein import levenshtein_distance
 from litemind.utils.normalise_uri_to_local_file_path import \
     uri_to_local_file_path
-
-# Put all your implementations in this list:
-API_IMPLEMENTATIONS = [
-    OpenAIApi,
-    OllamaApi,
-    AnthropicApi,
-    GeminiApi
-]
 
 
 @pytest.mark.parametrize("ApiClass", API_IMPLEMENTATIONS)

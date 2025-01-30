@@ -1,6 +1,8 @@
 import os
 from typing import List, Optional, Sequence, Union
 
+from pydantic import BaseModel
+
 from litemind.agent.message import Message
 from litemind.agent.message_block_type import BlockType
 from litemind.agent.tools.toolset import ToolSet
@@ -112,8 +114,10 @@ class AnthropicApi(BaseApi):
             traceback.print_exc()
             return []
 
-    def get_best_model(self, features: Optional[Union[
-        str, List[str], ModelFeatures, Sequence[ModelFeatures]]] = None) -> \
+    def get_best_model(self,
+                       features: Optional[Union[
+        str, List[str], ModelFeatures, Sequence[ModelFeatures]]] = None,
+                       exclusion_filters: Optional[Union[str,List[str]]] = None) -> \
             Optional[str]:
 
         # Normalise the features:
@@ -125,7 +129,8 @@ class AnthropicApi(BaseApi):
         # Filter models based on requirements:
         # Filter the models based on the requirements:
         model_list = self._filter_models(model_list,
-                                         features=features)
+                                         features=features,
+                                         exclusion_filters=exclusion_filters)
 
         # If we have any models left, return the first one
         if model_list:
@@ -277,6 +282,7 @@ class AnthropicApi(BaseApi):
                                  temperature: float = 0.0,
                                  max_output_tokens: Optional[int] = None,
                                  toolset: Optional[ToolSet] = None,
+                                 response_format: Optional[BaseModel] = None,
                                  **kwargs) -> Message:
 
         from anthropic import NotGiven
@@ -315,7 +321,8 @@ class AnthropicApi(BaseApi):
 
         # Convert remaining non-system litemind Messages to Anthropic messages:
         anthropic_messages = convert_messages_for_anthropic(
-            preprocessed_messages)
+            preprocessed_messages,
+            response_format=response_format)
 
         # Convert a ToolSet to Anthropic "tools" param if any
         tools_param = _convert_toolset_to_anthropic(
@@ -340,7 +347,8 @@ class AnthropicApi(BaseApi):
             raise APIError(f"Anthropic completion error: {e}")
 
         response_message = _process_response(response=response,
-                                             toolset=toolset)
+                                             toolset=toolset,
+                                             response_format=response_format)
 
         messages.append(response_message)
         return response_message

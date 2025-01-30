@@ -1,11 +1,15 @@
 import json
 from typing import Optional, Any
 
+from pydantic import BaseModel
+
 from litemind.agent.message import Message
 from litemind.agent.tools.toolset import ToolSet
 
 
-def _process_response(response: Any, toolset: Optional[ToolSet]) -> Message:
+def _process_response(response: Any,
+                      toolset: Optional[ToolSet],
+                      response_format: Optional[BaseModel | str] = None) -> Message:
     """
     Process Anthropic response, checking for function calls and executing them if needed.
 
@@ -15,6 +19,8 @@ def _process_response(response: Any, toolset: Optional[ToolSet]) -> Message:
         The response from Anthropic API.
     toolset : Optional[ToolSet]
         The ToolSet object containing the tools to execute.
+    response_format : Optional[BaseModel | str]
+        The format of the response.
 
     Returns
     -------
@@ -26,8 +32,6 @@ def _process_response(response: Any, toolset: Optional[ToolSet]) -> Message:
     if response.stop_reason == "tool_use":
         tool_item = next((c for c in response.content if c.type == "tool_use"),
                          None)
-        text = next((c.text for c in response.content if c.type == "text"),
-                    None)
 
         if tool_item:
             function_name = tool_item.name
@@ -43,16 +47,33 @@ def _process_response(response: Any, toolset: Optional[ToolSet]) -> Message:
                 return Message(role="assistant", text=response_content)
             else:
                 return Message(role="assistant",
-                               text="(Tool use requested, but tool not found.)")
+                               text=f"(Tool '{function_name}' use requested, but tool not found.)")
         else:
             return Message(role="assistant",
-                           text="(Tool use requested, but no details found.)")
+                           text=f"(Tool '{tool_item}' use requested, but no details found.)")
     else:
         content = response.content
         if isinstance(content, str):
-            text = content
+            text_content = content
         else:
             text_parts = [c.text for c in content if c.type == "text"]
-            text = "".join(text_parts)
+            text_content = "".join(text_parts)
 
-        return Message(role="assistant", text=text)
+        if response_format:
+            # Attempt to repair the JSON string
+            from json_repair import repair_json
+            repaired_json = repair_json(text_content)
+
+            # If the repaired string is empty, return the original text content
+            if len(repaired_json.strip()) == 0 and len(text_content.strip()) > 0:
+                return Message(role='assistant', text=text_content)
+
+            # Parse the JSON string into the specified format
+            try:
+                parsed_obj = response_format.model_validate_json(repaired_json)
+                return Message(role='assistant', obj=parsed_obj)
+            except Exception as e:
+                # If parsing fails, return the original text content
+                return Message(role='assistant', text=text_content)
+
+        return Message(role="assistant", text=text_content)
