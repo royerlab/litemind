@@ -1,5 +1,5 @@
 from litemind.agent.tools.toolset import ToolSet
-from litemind.apis.openai.utils.tools import _format_tools_for_openai
+from litemind.apis.openai.utils.format_tools import format_tools_for_openai
 
 
 def sample_tool_function(order_id: str) -> str:
@@ -14,7 +14,7 @@ def test_format_tools_for_openai():
                               "Retrieve delivery date for a given order ID")
 
     # Generate the OpenAI-compatible tool schema
-    formatted_tools = _format_tools_for_openai(toolset)
+    formatted_tools = format_tools_for_openai(toolset)
 
     # Expected JSON schema format for the OpenAI API
     expected_output = [{

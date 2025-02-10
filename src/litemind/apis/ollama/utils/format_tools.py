@@ -3,7 +3,7 @@ from typing import List, Dict
 from litemind.agent.tools.toolset import ToolSet
 
 
-def _format_tools_for_ollama(toolset: ToolSet) -> List[Dict]:
+def format_tools_for_ollama(toolset: ToolSet) -> List[Dict]:
     """
     Convert a litemind ToolSet into Ollama's expected `tools` JSON schema.
 

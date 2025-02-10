@@ -7,9 +7,9 @@ from litemind.agent.message import Message
 from litemind.agent.tools.toolset import ToolSet
 
 
-def _process_response(response: Any,
-                      toolset: Optional[ToolSet],
-                      response_format: Optional[BaseModel | str] = None) -> Message:
+def process_response_from_anthropic(response: Any,
+                                    toolset: Optional[ToolSet],
+                                    response_format: Optional[BaseModel | str] = None) -> Message:
     """
     Process Anthropic response, checking for function calls and executing them if needed.
 

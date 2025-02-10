@@ -1,20 +1,22 @@
 import os
-from typing import Optional, Sequence, Union
+from typing import Optional, Sequence, Union, List
 
 from PIL import Image
 from pydantic import BaseModel
 
 from litemind.agent.message import Message
 from litemind.agent.tools.toolset import ToolSet
-from litemind.apis.base_api import BaseApi, ModelFeatures
+from litemind.apis.base_api import ModelFeatures
+from litemind.apis.callback_manager import CallbackManager
+from litemind.apis.default_api import DefaultApi
 from litemind.apis.exceptions import APIError, APINotAvailableError
-from litemind.apis.google.utils.messages import _convert_messages_for_gemini, \
-    _list_and_delete_uploaded_files
-from litemind.apis.google.utils.tools import create_genai_tools_from_toolset
-from litemind.apis.utils.document_processing import is_pymupdf_available
+from litemind.apis.google.utils.convert_messages import convert_messages_for_gemini, \
+    list_and_delete_uploaded_files
+from litemind.apis.google.utils.format_tools import format_tools_for_gemini
+from litemind.apis.google.utils.list_models import _list_gemini_models
 
 
-class GeminiApi(BaseApi):
+class GeminiApi(DefaultApi):
     """
     A Gemini 1.5+ API implementation conforming to the BaseApi interface.
     Uses the google.generativeai library (previously known as Google GenAI).
@@ -22,6 +24,7 @@ class GeminiApi(BaseApi):
 
     def __init__(self,
                  api_key: Optional[str] = None,
+                 callback_manager: Optional[CallbackManager] = None,
                  **kwargs):
         """
         Initialize the Gemini client.
@@ -33,6 +36,8 @@ class GeminiApi(BaseApi):
         kwargs : dict
             Additional parameters (unused here, but accepted for consistency).
         """
+
+        super().__init__(callback_manager=callback_manager)
 
         if api_key is None:
             api_key = os.environ.get("GOOGLE_API_KEY")
@@ -49,7 +54,8 @@ class GeminiApi(BaseApi):
             import google.generativeai as genai
 
             # Register the API key with google.generativeai
-            genai.configure(api_key=self._api_key)
+            genai.configure(api_key=self._api_key,
+                            **kwargs)
         except Exception as e:
             # Print stack trace:
             import traceback
@@ -65,59 +71,68 @@ class GeminiApi(BaseApi):
         # Use the provided key or the default key:
         candidate_key = api_key or self._api_key
         if not candidate_key:
+            self.callback_manager.on_availability_check(False)
             return False
 
         # We’ll try a trivial call; if it fails, we assume invalid.
         try:
             # Minimal call: generate a short response
-            model = genai.GenerativeModel(self.get_best_model())
+            model = genai.GenerativeModel()
+
+            # Generate a short response:
             resp = model.generate_content("Hello, Gemini!")
-            _ = resp.text  # Access to ensure no error
-            return True
+
+            # If the response is not empty, we assume the API is available:
+            if len(resp.text) > 0:
+                self.callback_manager.on_availability_check(True)
+                return True
+
+            # If the response is empty, we assume the API is not available:
+            self.callback_manager.on_availability_check(False)
+            return False
         except Exception:
             import traceback
             traceback.print_exc()
+            self.callback_manager.on_availability_check(False)
             return False
 
-    from typing import List
+    def list_models(self,
+                    features: Optional[Sequence[ModelFeatures]] = None) \
+            -> List[str]:
 
-    def model_list(self, features: Optional[Sequence[ModelFeatures]] = None) -> \
-            List[str]:
+        try:
 
-        model_list = []
-        from google.generativeai import \
-            list_models  # This is the function from your snippet
-        for model_obj in list_models():
-            # model_obj is a Model protobuf (or typed dict) with a .name attribute
-            # e.g. "models/gemini-1.5-flash", "models/gemini-2.0-flash-exp", etc.
-            if ((
-                    "gemini" in model_obj.name.lower() or "imagen" in model_obj.name.lower())
-                    and not 'will be discontinued' in model_obj.description.lower()
-                    and not 'deprecated' in model_obj.description.lower()):
-                model_list.append(model_obj.name)
+            # Get the full list of models:
+            model_list = _list_gemini_models()
 
-        # Filter the models based on the features:
-        if features:
-            model_list = self._filter_models(model_list, features=features)
+            # Add the models from the super class:
+            model_list += super().list_models()
 
-        # Reverse the list so that the best models are at the beginning:
-        model_list.reverse()
+            # To be safe, we remove duplicates but keep the order:
+            model_list = list(dict.fromkeys(model_list))
 
-        return model_list
+            # Filter the models based on the features:
+            if features:
+                model_list = self._filter_models(model_list, features=features)
+
+            # Call callbacks:
+            self.callback_manager.on_model_list(model_list)
+
+            return model_list
+
+        except Exception:
+            raise APIError("Error fetching model list from Google.")
 
     def get_best_model(self, features: Optional[Union[
         str, List[str], ModelFeatures, Sequence[ModelFeatures]]] = None,
-                       exclusion_filters: Optional[Union[str,List[str]]] = None) -> \
+                       exclusion_filters: Optional[Union[str, List[str]]] = None) -> \
             Optional[str]:
 
         # Normalise the features:
         features = ModelFeatures.normalise(features)
 
         # Get the full list of models:
-        model_list = self.model_list()
-
-        # Add 'models/text-embedding-004' to the end of the list:
-        model_list.append('models/text-embedding-004')
+        model_list = self.list_models()
 
         # Filter the models based on the requirements:
         model_list = self._filter_models(model_list,
@@ -126,9 +141,14 @@ class GeminiApi(BaseApi):
 
         if model_list:
             # If we have any models left, return the first one:
-            return model_list[0]
+            model_name = model_list[0]
         else:
-            return None
+            model_name = None
+
+        # Call the callbacks:
+        self.callback_manager.on_best_model_selected(model_name)
+
+        return model_name
 
     def has_model_support_for(self,
                               features: Union[
@@ -136,33 +156,48 @@ class GeminiApi(BaseApi):
                                       ModelFeatures]],
                               model_name: Optional[str] = None) -> bool:
 
-        # Get the best model if not provided:
-        if model_name is None:
-            model_name = self.get_best_model()
-
         # Normalise the features:
         features = ModelFeatures.normalise(features)
+
+        # Get the best model if not provided:
+        if model_name is None:
+            model_name = self.get_best_model(features=features)
+
+        # If model_name is None then we return False:
+        if model_name is None:
+            return False
+
+        # We check if the superclass says that the model supports the features:
+        if super().has_model_support_for(features=features, model_name=model_name):
+            return True
 
         # Check that the model has all the required features:
         for feature in features:
 
             if feature == ModelFeatures.TextGeneration:
-                pass
+                if 'models/gemini' not in model_name.lower():
+                    return False
+
+            elif feature == ModelFeatures.ImageGeneration:
+                # FIXME: We need to figure out how to call the video generation API, not working right now.
+                return False
+                # if 'imagen' not in model_name.lower():
+                #     return False
 
             elif feature == ModelFeatures.TextEmbeddings:
-                if not 'text-embedding' in model_name.lower():
+                if 'text-embedding' not in model_name.lower():
                     return False
 
             elif feature == ModelFeatures.ImageEmbeddings:
-                if not 'text-embedding' in model_name.lower():
+                if 'text-embedding' not in model_name.lower():
                     return False
 
             elif feature == ModelFeatures.AudioEmbeddings:
-                if not 'text-embedding' in model_name.lower():
+                if 'text-embedding' not in model_name.lower():
                     return False
 
             elif feature == ModelFeatures.VideoEmbeddings:
-                if not 'text-embedding' in model_name.lower():
+                if 'text-embedding' not in model_name.lower():
                     return False
 
             elif feature == ModelFeatures.Image:
@@ -177,8 +212,16 @@ class GeminiApi(BaseApi):
                 if not self._has_image_support(model_name):
                     return False
 
+            elif feature == ModelFeatures.Document:
+                if not self._has_document_support(model_name):
+                    return False
+
             elif feature == ModelFeatures.Tools:
                 if not self._has_tool_support(model_name):
+                    return False
+
+            elif feature == ModelFeatures.StructuredTextGeneration:
+                if not self._has_structured_output_support(model_name):
                     return False
 
             else:
@@ -197,17 +240,22 @@ class GeminiApi(BaseApi):
 
         if model_name is None:
             model_name = self.get_best_model()
-        # Curent assumption: Gemini models support audio if they are multimodal:
-        return self.has_model_support_for(model_name=model_name,
-                                          features=ModelFeatures.Image)
+        # Current assumption: Gemini models support audio if they are multimodal:
+        return self._has_image_support(model_name=model_name)
 
     def _has_video_support(self, model_name: Optional[str] = None) -> bool:
 
         if model_name is None:
             model_name = self.get_best_model()
-        # Curent assumption: Gemini models support video if they are multimodal:
-        return self.has_image_support(
-            model_name) and not 'thinking' in model_name
+        # Current assumption: Gemini models support video if they are multimodal:
+        return self._has_image_support(
+            model_name) and 'thinking' not in model_name
+
+    def _has_document_support(self, model_name: Optional[str] = None) -> bool:
+        return (self.has_model_support_for([ModelFeatures.Image,
+                                            ModelFeatures.TextGeneration],
+                                           model_name)
+                and self.has_model_support_for(ModelFeatures.DocumentConversion))
 
     def _has_tool_support(self, model_name: Optional[str] = None) -> bool:
 
@@ -221,49 +269,79 @@ class GeminiApi(BaseApi):
             return False
 
         # Check for specific models that support tools:
-        return ("gemini-1.5-flash" in model_name.lower()
-                or "gemini-1.5-pro" in model_name.lower()
-                or "gemini-1.0-pro" in model_name.lower()
-                or "gemini-2.0" in model_name.lower())
+        return ("gemini-1.5-flash" in model_name
+                or "gemini-1.5-pro" in model_name
+                or "gemini-1.0-pro" in model_name
+                or "gemini-2.0" in model_name)
+
+    def _has_structured_output_support(self, model_name: Optional[str] = None) -> bool:
+        if not model_name:
+            model_name = self.get_best_model()
+
+        model_name = model_name.lower()
+
+        # Experimental models are tricky and typically don't support structured output:
+        if 'exp' in model_name:
+            return False
+
+        # Check for specific models that support structured output:
+        return ("gemini-1.5-flash" in model_name
+                or "gemini-1.5-pro" in model_name
+                or "gemini-1.0-pro" in model_name
+                or "gemini-2.0" in model_name)
 
     def max_num_input_tokens(self, model_name: Optional[str] = None) -> int:
 
+        # Get the best model if not provided:
         if model_name is None:
             model_name = self.get_best_model()
 
-        name = model_name.lower()
+        # Normalise the model name to lower case:
+        name_lower = model_name.lower()
 
         from google.generativeai import \
             list_models  # This is the function from your snippet
         for model_obj in list_models():
             # model_obj is a Model protobuf (or typed dict) with a .name attribute
             # e.g. "models/gemini-1.5-flash", "models/gemini-2.0-flash-exp", etc.
-            if name == model_obj.name.lower():
+            if name_lower == model_obj.name.lower():
                 return model_obj.input_token_limit
+
+        # If we reach this point then the model was not found!
+
+        # So we call super class method:
+        return super().max_num_input_tokens(model_name=model_name)
 
     def max_num_output_tokens(self, model_name: Optional[str] = None) -> int:
 
+        # Get the best model if not provided:
         if model_name is None:
             model_name = self.get_best_model()
 
-        name = model_name.lower()
+        # Normalise the model name to lower case:
+        name_lower = model_name.lower()
 
         from google.generativeai import \
             list_models  # This is the function from your snippet
         for model_obj in list_models():
             # model_obj is a Model protobuf (or typed dict) with a .name attribute
             # e.g. "models/gemini-1.5-flash", "models/gemini-2.0-flash-exp", etc.
-            if name == model_obj.name.lower():
+            if name_lower == model_obj.name.lower():
                 return model_obj.output_token_limit
 
-    def generate_text_completion(self,
-                                 messages: List[Message],
-                                 model_name: Optional[str] = None,
-                                 temperature: float = 0.0,
-                                 max_output_tokens: Optional[int] = None,
-                                 toolset: Optional[ToolSet] = None,
-                                 response_format: Optional[BaseModel] = None,
-                                 **kwargs) -> Message:
+        # If we reach this point then the model was not found!
+
+        # So we call super class method:
+        return super().max_num_output_tokens(model_name=model_name)
+
+    def generate_text(self,
+                      messages: List[Message],
+                      model_name: Optional[str] = None,
+                      temperature: float = 0.0,
+                      max_output_tokens: Optional[int] = None,
+                      toolset: Optional[ToolSet] = None,
+                      response_format: Optional[BaseModel] = None,
+                      **kwargs) -> Message:
 
         # Get the best model if not provided:
         if model_name is None:
@@ -273,16 +351,11 @@ class GeminiApi(BaseApi):
         if max_output_tokens is None:
             max_output_tokens = self.max_num_output_tokens(model_name)
 
-        # We will use _messages to process the messages:
-        preprocessed_messages = messages
-
-        # Convert documents to markdown and images:
-        if is_pymupdf_available():
-            preprocessed_messages = self._convert_documents_to_markdown_in_messages(
-                preprocessed_messages)
+        # Preprocess the messages:
+        preprocessed_messages = self._preprocess_messages(messages=messages, convert_videos=False)
 
         # Convert messages to the gemini format:
-        gemini_messages = _convert_messages_for_gemini(preprocessed_messages)
+        gemini_messages = convert_messages_for_gemini(preprocessed_messages)
 
         # Local import to avoid loading the library if not needed:
         import google.generativeai as genai
@@ -296,7 +369,7 @@ class GeminiApi(BaseApi):
                 max_output_tokens=max_output_tokens
             )
         else:
-            # In this case we add a reponse format to the generation config:
+            # In this case we add a response format to the generation config:
             generation_cfg = types.GenerationConfig(
                 temperature=temperature,
                 max_output_tokens=max_output_tokens,
@@ -307,7 +380,7 @@ class GeminiApi(BaseApi):
         if toolset and self.has_model_support_for(model_name=model_name,
                                                   features=ModelFeatures.Tools):
             # Build fine-grained Tools (protos)
-            proto_tools = create_genai_tools_from_toolset(toolset)
+            proto_tools = format_tools_for_gemini(toolset)
 
             # Create a GenerativeModel with the tools
             model = genai.GenerativeModel(
@@ -371,6 +444,9 @@ class GeminiApi(BaseApi):
             )
             text_output = response.text or ""
 
+        # Cleanup uploaded video or other files:
+        list_and_delete_uploaded_files()
+
         if response_format:
             # Attempt to repair the JSON string
             from json_repair import repair_json
@@ -378,28 +454,47 @@ class GeminiApi(BaseApi):
 
             # If the repaired string is empty, return the original text content
             if len(repaired_json.strip()) == 0 and len(text_output.strip()) > 0:
-                return Message(role='assistant', text=text_output)
+                response_message = Message(role='assistant', text=text_output)
+            else:
+                # Else, parse the JSON string into the specified format
+                try:
+                    parsed_obj = response_format.model_validate_json(repaired_json)
+                    response_message = Message(role='assistant', obj=parsed_obj)
+                except Exception as e:
+                    # print stacktrace:
+                    import traceback
+                    traceback.print_exc()
 
-            # Parse the JSON string into the specified format
-            try:
-                parsed_obj = response_format.model_validate_json(repaired_json)
-                return Message(role='assistant', obj=parsed_obj)
-            except Exception as e:
-                # If parsing fails, return the original text content
-                return Message(role='assistant', text=text_output)
+                    # If parsing fails, return the original text content
+                    response_message = Message(role='assistant', text=text_output)
 
-        # Cleanup uploaded video or other files:
-        _list_and_delete_uploaded_files()
+        else:
+            # Return the final text as a single Message
+            response_message = Message(role="assistant", text=text_output)
 
-        # 4. Return the final text as a single Message
-        response_message = Message(role="assistant", text=text_output)
+        # Append the response message to the list of messages:
         messages.append(response_message)
+
+        # Add all parameters to kwargs:
+        kwargs.update({
+            'model_name': model_name,
+            'temperature': temperature,
+            'max_output_tokens': max_output_tokens,
+            'toolset': toolset,
+            'response_format': response_format
+        })
+
+        # Call the callback manager:
+        self.callback_manager.on_text_generation(response=response,
+                                                 messages=messages,
+                                                 **kwargs)
+
         return response_message
 
     def generate_image(self,
-                       model_name: str,
                        positive_prompt: str,
                        negative_prompt: Optional[str] = None,
+                       model_name: str = None,
                        image_width: int = 512,
                        image_height: int = 512,
                        preserve_aspect_ratio: bool = True,
@@ -408,7 +503,7 @@ class GeminiApi(BaseApi):
                        ) -> Image:
 
         if model_name is None:
-            model_name = self.get_best_model(require_image_generation=True)
+            model_name = self.get_best_model(features=ModelFeatures.ImageGeneration)
 
         import google.generativeai as genai
         imagen = genai.ImageGenerationModel(model_id=model_name)
@@ -437,7 +532,25 @@ class GeminiApi(BaseApi):
             negative_prompt=negative_prompt,
         )
 
-        return result[0].image
+        # Get the generated image:
+        generated_image = result[0].image
+
+        # Add all parameters to kwargs:
+        kwargs.update({
+            'negative_prompt': negative_prompt,
+            'model_name': model_name,
+            'image_width': image_width,
+            'image_height': image_height,
+            'preserve_aspect_ratio': preserve_aspect_ratio,
+            'allow_resizing': allow_resizing
+        })
+
+        # Call the callback manager:
+        self.callback_manager.on_image_generation(prompt=positive_prompt,
+                                                  image=generated_image,
+                                                  **kwargs)
+
+        return generated_image
 
     def embed_texts(self,
                     texts: List[str],
@@ -445,14 +558,46 @@ class GeminiApi(BaseApi):
                     dimensions: int = 512,
                     **kwargs) -> Sequence[Sequence[float]]:
 
+        # Get the best model if not provided:
         if model_name is None:
-            model_name = self.get_best_model(require_embeddings=True)
+            model_name = self.get_best_model(features=ModelFeatures.TextEmbeddings)
 
+        # If model belongs to super class delegate to it:
+        if model_name in super().list_models():
+            return super().embed_texts(texts=texts,
+                                       model_name=model_name,
+                                       dimensions=dimensions,
+                                       **kwargs)
+
+        # Local import to avoid loading the library if not needed:
         import google.generativeai as genai
-        result = genai.embed_content(
-            model=model_name,
-            content=texts,
-            output_dimensionality=dimensions
-        )
 
-        return result['embedding']
+        # Generate the embeddings:
+        embeddings = []
+
+        for text in texts:
+            # Generate the embeddings:
+            result = genai.embed_content(
+                model=model_name,
+                content=text,
+                output_dimensionality=dimensions
+            )
+
+            # Get the embeddings:
+            embedding = result['embedding']
+
+            # Get the embeddings:
+            embeddings.append(embedding)
+
+        # Add other parameters to kwargs dict:
+        kwargs.update({
+            'model_name': model_name,
+            'dimensions': dimensions
+        })
+
+        # Call the callback manager:
+        self.callback_manager.on_text_embedding(texts=texts,
+                                                embeddings=embeddings,
+                                                **kwargs)
+
+        return embeddings

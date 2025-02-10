@@ -11,7 +11,7 @@ from litemind.utils.normalise_uri_to_local_file_path import \
     uri_to_local_file_path
 
 
-def _convert_messages_for_gemini(messages: List[Message]) -> List[
+def convert_messages_for_gemini(messages: List[Message]) -> List[
     Union[str, Image.Image]]:
     """
     Convert messages into a format suitable for Gemini, supporting both text and image inputs.
@@ -63,15 +63,15 @@ def _convert_messages_for_gemini(messages: List[Message]) -> List[
 
                     # Upload the video file to Gemini:
                     import google.generativeai as genai
-                    myfile = genai.upload_file(local_path)
+                    genai_video_file = genai.upload_file(local_path)
 
                     # Wait for the file to finish processing:
-                    while myfile.state.name == "PROCESSING":
+                    while genai_video_file.state.name == "PROCESSING":
                         time.sleep(0.1)
-                        myfile = genai.get_file(myfile.name)
+                        genai_video_file = genai.get_file(genai_video_file.name)
 
                     # Append the uploaded file to the list of messages:
-                    gemini_messages.append(myfile)
+                    gemini_messages.append(genai_video_file)
                 except Exception as e:
                     raise ValueError(
                         f"Could not process video '{video_uri}': {e}")
@@ -79,7 +79,7 @@ def _convert_messages_for_gemini(messages: List[Message]) -> List[
     return gemini_messages
 
 
-def _list_and_delete_uploaded_files():
+def list_and_delete_uploaded_files():
     import google.generativeai as genai
     for f in genai.list_files():
         if f.mime_type.startswith("video/"):

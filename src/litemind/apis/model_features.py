@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Union, List
+from typing import Union, List, Optional
 
 
 class ModelFeatures(Enum):
@@ -19,15 +19,17 @@ class ModelFeatures(Enum):
     Image = 'Image'
     Audio = 'Audio'
     Video = 'Video'
-    Documents = 'Documents'
+    Document = 'Documents'
     Tools = 'Tools'
     AudioTranscription = 'AudioTranscription'
+    VideoConversion = 'VideoConversion'
+    DocumentConversion = 'DocumentConversion'
 
     # Method that takes a single strings, a list of strings, a single ModelFeatures enum or a list of ModelFeatures and normalises to a list of enums of this class, finds the right enums independently of case:
     @staticmethod
     def normalise(features: Union[
-        str, List[str], 'ModelFeatures', List['ModelFeatures']]) -> List[
-        'ModelFeatures']:
+        str, List[str], 'ModelFeatures', List['ModelFeatures']]) -> Optional[List[
+        'ModelFeatures']]:
         """
         Normalise the input features to a list of ModelFeatures enums.
 

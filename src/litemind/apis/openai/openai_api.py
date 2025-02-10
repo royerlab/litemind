@@ -1,32 +1,35 @@
+import copy
 import os
 import tempfile
-from http.client import responses
 from io import BytesIO
 from typing import List, Optional, Sequence, Union
 
 import requests
 from PIL import Image
+from PIL.Image import Resampling
 from arbol import aprint
 from pydantic import BaseModel
 
 from litemind.agent.message import Message
 from litemind.agent.tools.toolset import ToolSet
-from litemind.apis.base_api import BaseApi, ModelFeatures
+from litemind.apis.base_api import ModelFeatures
+from litemind.apis.callback_manager import CallbackManager
+from litemind.apis.default_api import DefaultApi
 from litemind.apis.exceptions import APIError, APINotAvailableError
-from litemind.apis.openai.utils.messages import convert_messages_for_openai
+from litemind.apis.openai.utils.convert_messages import convert_messages_for_openai
+from litemind.apis.openai.utils.format_tools import format_tools_for_openai
 from litemind.apis.openai.utils.model_list import get_openai_model_list
-from litemind.apis.openai.utils.process_response import _process_response
-from litemind.apis.openai.utils.tools import _format_tools_for_openai
-from litemind.apis.utils.document_processing import is_pymupdf_available
+from litemind.apis.openai.utils.process_response import process_response_from_openai
 from litemind.utils.normalise_uri_to_local_file_path import \
     uri_to_local_file_path
 
 
-class OpenAIApi(BaseApi):
+class OpenAIApi(DefaultApi):
 
     def __init__(self,
                  api_key: Optional[str] = None,
-                 use_local_whisper: bool = True,
+                 base_url: Optional[str] = None,
+                 callback_manager: Optional[CallbackManager] = None,
                  **kwargs):
 
         """
@@ -35,15 +38,15 @@ class OpenAIApi(BaseApi):
         ----------
         api_key: Optional[str]
             The API key for OpenAI. If not provided, we'll read from OPENAI_API_KEY env var.
+        base_url: Optional[str]
+            The base URL for the OpenAI or compatible API.
         use_whisper_for_audio_if_needed: bool
             If True, use whisper to transcribe audio if the model does not support audio.
-        use_local_whisper: bool
-            If True, use the local whisper instance for audio transcription.
         kwargs: dict
             Additional options (e.g. `timeout=...`, `max_retries=...`) passed to `OpenAI(...)`.
         """
 
-        self.use_local_whisper = use_local_whisper
+        super().__init__(callback_manager=callback_manager)
 
         # get key from environmental variables:
         if api_key is None:
@@ -56,7 +59,9 @@ class OpenAIApi(BaseApi):
         try:
             # Create an OpenAI client:
             from openai import OpenAI
-            self.client = OpenAI(api_key=api_key, **kwargs)
+            self.client = OpenAI(api_key=api_key,
+                                 base_url=base_url,
+                                 **kwargs)
         except Exception as e:
             # Print stack trace:
             import traceback
@@ -66,96 +71,94 @@ class OpenAIApi(BaseApi):
     def check_availability_and_credentials(self, api_key: Optional[
         str] = None) -> bool:
         messages = []
-
-        user_message = Message(role='user')
-        user_message.append_text('Hello!')
-        messages.append(user_message)
-
         try:
-            self.generate_text_completion(messages)
-            return True
+            # Create a user message:
+            user_message = Message(role='user')
+            user_message.append_text('Hello!')
+            messages.append(user_message)
+
+            # Call the OpenAI raw API to generate a completion (not using the API wrapper):
+            response = self.client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=convert_messages_for_openai(messages),
+                max_completion_tokens=10
+            )
+
+            # Check if the response contains any choices:
+            result = len(response.choices) > 0
+            if result:
+                aprint("OpenAI API key is valid.")
+                self.callback_manager.on_availability_check(True)
+                return True
+            else:
+                aprint("OpenAI API key is invalid.")
+                self.callback_manager.on_availability_check(False)
+                return False
 
         except Exception as e:
             # print error message from exception:
             aprint(f"Error while trying to check the OpenAI API key: {e}")
             import traceback
             traceback.print_exc()
+            self.callback_manager.on_availability_check(False)
             return False
 
-    def model_list(self, features: Optional[Sequence[ModelFeatures]] = None) -> \
+    def list_models(self, features: Optional[Sequence[ModelFeatures]] = None) -> \
             List[str]:
-        # Base filtering of models:
-        filters = ['dall-e', 'audio', 'gpt', 'text-embedding']
 
-        # Get the list of models:
-        model_list = get_openai_model_list(filters=filters)
+        try:
+            # Base filtering of models:
+            included = ['dall-e', 'audio', 'gpt', 'text-embedding', 'whisper', 'ada-002']
 
-        # Filter the models based on the features:
-        if features:
-            model_list = self._filter_models(model_list, features=features)
+            # Exclude models that are not supported by the API:
+            excluded = ['ada-002']
 
-        return model_list
+            # Get the models from OpenAI:
+            model_list = get_openai_model_list(included=included, excluded=excluded)
+
+            # Add the models from the super class:
+            model_list += super().list_models()
+
+            # Filter the models based on the features:
+            if features:
+                model_list = self._filter_models(model_list, features=features)
+
+            # Call callbacks:
+            self.callback_manager.on_model_list(model_list)
+
+            return model_list
+
+        except Exception:
+            raise APIError("Error fetching model list from OpenAI.")
 
     def get_best_model(self, features: Optional[Union[
         str, List[str], ModelFeatures, Sequence[ModelFeatures]]] = None,
-                       exclusion_filters: Optional[Union[str,List[str]]] = None) -> \
+                       exclusion_filters: Optional[Union[str, List[str]]] = None) -> \
             Optional[str]:
 
         # Normalise the features:
         features = ModelFeatures.normalise(features)
 
         # Get model list:
-        model_list = self.model_list()
+        model_list = self.list_models()
 
         # Filter the models based on the requirements:
         model_list = self._filter_models(model_list,
                                          features=features,
                                          exclusion_filters=exclusion_filters)
 
+        # By default, result is None:
+        best_model = None
+
         if len(model_list) == 0:
-            return None
-        elif len(model_list) == 1:
-            return model_list[0]
+            pass
         else:
-            # Next we sort models so the best ones are at the beginning of the list:
-            def model_key(model):
-                # Split the model name into parts
-                parts = model.split('-')
+            best_model = model_list[0]
 
-                # If a part is '4o' or 'o1', replace it with 'o1.25' or '4.25' respectively:
-                parts = [part if part not in ['4o', 'o1'] else part.replace('o',
-                                                                            '.25')
-                         for part in parts]
+        # Call the callback manager:
+        self.callback_manager.on_best_model_selected(best_model)
 
-                # Remove all the parts that are not numbers (integer or float):
-                parts = [part for part in parts if
-                         part.replace('.', '', 1).isdigit()]
-
-                # Remove parts that are integers but that lead with a zero:
-                if len(parts) > 1:
-                    parts = [part for part in parts if not part.startswith('0')]
-
-                # Remove parts that are numbers (float or int) that are too big (>10.0)
-                if len(parts) > 1:
-                    parts = [part for part in parts if float(part) < 5]
-
-                # Get the main version (e.g., '3.5' or '4' from 'gpt-3.5' or 'gpt-4')
-                main_version = float(parts[-1])
-
-                # If we find 'mini' in the model name then substract 0.25 from the main version:
-                if 'mini' in model:
-                    main_version -= 0.12
-
-                # Use the length of the model name as a secondary sorting criterion
-                length = len(model)
-                # Sort by main version (descending), then by length (ascending)
-                return (-(main_version), length)
-
-            # Actual sorting:
-            sorted_model_list = sorted(model_list, key=model_key)
-
-            # return the first in the list which we assume to eb the best:
-            return sorted_model_list[0]
+        return best_model
 
     def has_model_support_for(self,
                               features: Union[
@@ -163,88 +166,78 @@ class OpenAIApi(BaseApi):
                                       ModelFeatures]],
                               model_name: Optional[str] = None) -> bool:
 
-        # Get the best model if not provided:
-        if model_name is None:
-            model_name = self.get_best_model()
-
         # Normalise the features:
         features = ModelFeatures.normalise(features)
+
+        # Get the best model if not provided:
+        if model_name is None:
+            model_name = self.get_best_model(features=features)
+
+        # If model_name is None then we return False:
+        if model_name is None:
+            return False
+
+        # We check if the superclass says that the model supports the features:
+        if super().has_model_support_for(features=features, model_name=model_name):
+            return True
 
         # Check that the model has all the required features:
         for feature in features:
 
             if feature == ModelFeatures.TextGeneration:
-                if 'text-embedding' in model_name or 'dall-e' in model_name:
+                if not self._has_text_gen_support(model_name):
                     return False
 
             elif feature == ModelFeatures.AudioGeneration:
                 pass
 
             elif feature == ModelFeatures.ImageGeneration:
-                if 'dall-e' not in model_name:
+                if not self._has_image_gen_support(model_name):
                     return False
 
             elif feature == ModelFeatures.TextEmbeddings:
-                if 'text-embedding' not in model_name:
+                if not self._has_text_embed_support(model_name):
                     return False
 
             elif feature == ModelFeatures.ImageEmbeddings:
 
-                if 'dall-e' not in model_name:
-                    return False
-
-                if not self.has_model_support_for(
-                        [ModelFeatures.Image, ModelFeatures.TextEmbeddings],
-                        model_name):
+                if not self._has_text_embed_support(model_name) \
+                        or not self.has_model_support_for(ModelFeatures.Image):
                     return False
 
             elif feature == ModelFeatures.AudioEmbeddings:
 
-                if 'dall-e' not in model_name:
-                    return False
-
-                if not self.has_model_support_for(
-                        [ModelFeatures.Audio, ModelFeatures.TextEmbeddings],
-                        model_name):
+                if not self._has_text_embed_support(model_name) \
+                        or not self.has_model_support_for(ModelFeatures.Audio):
                     return False
 
             elif feature == ModelFeatures.VideoEmbeddings:
-
-                if 'dall-e' not in model_name:
-                    return False
-
-                if not self.has_model_support_for(
-                        [ModelFeatures.Video, ModelFeatures.TextEmbeddings],
-                        model_name):
+                if not self._has_text_embed_support(model_name) \
+                        or not self.has_model_support_for(ModelFeatures.Video):
                     return False
 
             elif feature == ModelFeatures.Image:
-
-                if 'text-embedding' in model_name or 'dall-e' in model_name:
-                    return False
-
                 if not self._has_image_support(model_name):
                     return False
 
             elif feature == ModelFeatures.Audio:
-
-                if 'text-embedding' in model_name or 'dall-e' in model_name:
-                    return False
-
                 if not self._has_audio_support(model_name):
                     return False
 
             elif feature == ModelFeatures.Video:
-
-                if 'text-embedding' in model_name or 'dall-e' in model_name:
+                if not self._has_video_support(model_name):
                     return False
 
-                if not self.has_model_support_for(ModelFeatures.Image,
-                                                  model_name):
+            elif feature == ModelFeatures.Document:
+                if not self._has_document_support(model_name):
+                    return False
+
+            elif feature == ModelFeatures.StructuredTextGeneration:
+                if not self._has_structured_output_support(model_name):
                     return False
 
             elif feature == ModelFeatures.Tools:
-                if 'gpt-3.5' in model_name or 'dall-e' in model_name or 'text-embedding' in model_name:
+                if not self._has_tools_support(model_name):
                     return False
 
             else:
@@ -253,66 +246,101 @@ class OpenAIApi(BaseApi):
 
         return True
 
-    def _has_image_support(self, model_name: Optional[str] = None) -> bool:
+    def _has_text_gen_support(self, model_name: str) -> bool:
+        if 'text-embedding' in model_name or 'dall-e' in model_name or 'realtime' in model_name or 'instruct' in model_name or 'audio' in model_name:
+            return False
 
-        if model_name is None:
-            model_name = self.get_best_model()
+        if 'gpt' in model_name:
+            return True
+
+        return False
+
+    def _has_image_gen_support(self, model_name: str) -> bool:
+        if 'dall-e' not in model_name:
+            return False
+        return True
+
+    def _has_text_embed_support(self, model_name: str) -> bool:
+        if 'text-embedding' not in model_name:
+            return False
+        return True
+
+    def _has_image_support(self, model_name: str) -> bool:
+
+        # First, we check if it is a text-embedding model or image generation model:
+        if 'text-embedding' in model_name or 'dall-e' in model_name or 'audio' in model_name or 'gpt-3.5' in model_name or 'realtime' in model_name:
+            return False
 
         # Then, we check if it is a vision model:
         if 'vision' in model_name or 'gpt-4o' in model_name or 'gpt-o1' in model_name:
             return True
 
-        # then, we check if it is an audio model:
-        if 'audio' in model_name:
-            return False
-
         # Any other model is not a vision model:
         return False
 
-    def _has_audio_support(self, model_name: Optional[str] = None) -> bool:
+    def _has_audio_support(self, model_name: str) -> bool:
 
-        if model_name is None:
-            model_name = self.get_best_model()
-
-        try:
-            if self.use_local_whisper:
-                return super().has_model_support_for(model_name=model_name,
-                                                     features=ModelFeatures.AudioTranscription) or 'audio' in model_name
-            else:
-                # Check that whisper-1 is in the list:
-                openai_models = self.client.models.list()
-
-                return 'audio' in model_name or 'whisper-1' in [model.id for
-                                                                model in
-                                                                openai_models.data]
-
-        except Exception:
+        if 'text-embedding' in model_name or 'dall-e' in model_name or 'gpt-3.5' in model_name or 'gpt-4' in model_name or 'realtime' in model_name:
             return False
 
-    def max_num_input_tokens(self, model_name: Optional[str] = None) -> int:
+        # Get the list of models from OpenAI:
+        openai_models = self.client.models.list()
 
-        if model_name is None:
-            model_name = self.get_best_model()
+        # Check if the model is a whisper model:
+        return 'audio' in model_name or 'whisper-1' in [model.id for
+                                                        model in
+                                                        openai_models.data]
 
-        if ('gpt-4-1106-preview' in model_name
-                or 'gpt-4-0125-preview' in model_name
-                or 'gpt-4-vision-preview' in model_name):
-            max_token_limit = 128000
-        elif '32k' in model_name:
-            max_token_limit = 32000
-        elif '16k' in model_name:
-            max_token_limit = 16385
-        elif 'gpt-4' in model_name:
-            max_token_limit = 8192
-        elif 'gpt-3.5-turbo-1106' in model_name:
-            max_token_limit = 16385
-        elif 'gpt-3.5' in model_name:
-            max_token_limit = 4096
-        else:
-            max_token_limit = 4096
-        return max_token_limit
+    def _has_video_support(self, model_name: str) -> bool:
 
-    from typing import Optional
+        # First, we check if it is a text-embedding model or image generation model:
+        if 'text-embedding' in model_name or 'dall-e' in model_name:
+            return False
+
+        # Then, we check if it is an audio model:
+        if not self.has_model_support_for([ModelFeatures.Image, ModelFeatures.TextGeneration],
+                                          model_name) or not self.has_model_support_for(ModelFeatures.VideoConversion):
+            return False
+
+        return True
+
+    def _has_document_support(self, model_name: str) -> bool:
+
+        # Check if the model supports documents:
+        if (not self._has_image_support(model_name)
+                or not self._has_text_gen_support(model_name)
+                or not self.has_model_support_for(ModelFeatures.DocumentConversion)):
+            # If the model does not support text gen and images, and there is no model in api that supports document conversion, we return False:
+            return False
+
+        return True
+
+    def _has_structured_output_support(self, model_name: str) -> bool:
+        # Check if the model supports structured output:
+        if not self._has_text_gen_support(model_name):
+            return False
+
+        if 'dall-e' in model_name or 'text-embedding' in model_name or 'realtime' in model_name or 'instruct' in model_name or 'audio' in model_name:
+            return False
+
+        if 'o1' in model_name or 'o3' in model_name or 'gpt-4o-mini' in model_name or 'gpt-4o' in model_name:
+            return True
+
+        if 'gpt-3.5' in model_name or 'gpt-4' in model_name:
+            return False
+
+        return True
+
+    def _has_tools_support(self, model_name: str) -> bool:
+
+        # Check if the model supports tools:
+        if not self._has_text_gen_support(model_name):
+            return False
+
+        if 'gpt-3.5' in model_name or 'dall-e' in model_name or 'text-embedding' in model_name:
+            return False
+
+        return True
 
     def max_num_input_tokens(self, model_name: Optional[str] = None) -> int:
         """
@@ -506,14 +534,14 @@ class OpenAIApi(BaseApi):
         # If a model isn't recognized, return a safe default (4k).
         return 4096
 
-    def generate_text_completion(self,
-                                 messages: List[Message],
-                                 model_name: Optional[str] = None,
-                                 temperature: Optional[float] = 0.0,
-                                 max_output_tokens: Optional[int] = None,
-                                 toolset: Optional[ToolSet] = None,
-                                 response_format: Optional[BaseModel] = None,
-                                 **kwargs) -> Message:
+    def generate_text(self,
+                      messages: List[Message],
+                      model_name: Optional[str] = None,
+                      temperature: Optional[float] = 0.0,
+                      max_output_tokens: Optional[int] = None,
+                      toolset: Optional[ToolSet] = None,
+                      response_format: Optional[BaseModel] = None,
+                      **kwargs) -> Message:
 
         from openai import NotGiven
 
@@ -522,7 +550,7 @@ class OpenAIApi(BaseApi):
             model_name = self.get_best_model()
 
         # We will use _messages to process the messages:
-        preprocessed_messages = messages
+        preprocessed_messages = copy.deepcopy(messages)
 
         # o1 models have special needs:
         if "o1" in model_name:
@@ -530,7 +558,6 @@ class OpenAIApi(BaseApi):
             temperature = 1.0
 
             # o1 models do not support system messages, make a copy of messages and recast system messages as user messages:
-            preprocessed_messages = [m.copy() for m in preprocessed_messages]
             for message in preprocessed_messages:
                 if message.role == 'system':
                     message.role = 'user'
@@ -540,22 +567,12 @@ class OpenAIApi(BaseApi):
             max_output_tokens = self.max_num_output_tokens(model_name)
 
         # Convert ToolSet to OpenAI-compatible JSON schema if toolset is provided
-        openai_tools = _format_tools_for_openai(
+        openai_tools = format_tools_for_openai(
             toolset) if toolset else NotGiven()
 
-        # Convert video URIs to images and audio because OenAI's API does not natively support videos:
-        preprocessed_messages = self._convert_videos_to_images_and_audio(
-            preprocessed_messages)
-
-        # If model does not support audio but audio transcription is available, then we use it to transcribe audio:
-        if self.use_local_whisper and self.has_model_support_for(
-                model_name=model_name,
-                features=ModelFeatures.AudioTranscription):
-            preprocessed_messages = self._transcribe_audio_in_messages(preprocessed_messages)
-
-        # Convert documents to markdown and images:
-        if is_pymupdf_available():
-            preprocessed_messages = self._convert_documents_to_markdown_in_messages(preprocessed_messages)
+        # Preprocess messages:
+        preprocessed_messages = self._preprocess_messages(messages=preprocessed_messages,
+                                                          deepcopy=False)  # We have already made a deepcopy
 
         # Format messages for OpenAI:
         openai_formatted_messages = convert_messages_for_openai(preprocessed_messages)
@@ -584,29 +601,72 @@ class OpenAIApi(BaseApi):
             )
 
         # Process API response
-        response_message = _process_response(response, toolset, response_format)
+        response_message = process_response_from_openai(response, toolset, response_format)
         messages.append(response_message)
+
+        # Add all parameters to kwargs:
+        kwargs.update({
+            'model_name': model_name,
+            'temperature': temperature,
+            'max_output_tokens': max_output_tokens,
+            'toolset': toolset,
+            'response_format': response_format
+        })
+
+        # Call the callback manager:
+        self.callback_manager.on_text_generation(response=response,
+                                                 messages=messages,
+                                                 **kwargs)
+
         return response_message
 
-    def transcribe_audio(self, audio_uri: str, model_name: Optional[str] = None,
+    def transcribe_audio(self,
+                         audio_uri: str,
+                         model_name: Optional[str] = None,
                          **kwargs) -> str:
 
-        if self.use_local_whisper:
-            transcription = super().transcribe_audio(audio_uri, model_name,
-                                                     **kwargs)
-        else:
-            # Get the local path to the audio file:
-            audio_file_path = uri_to_local_file_path(audio_uri)
+        # If no model name is provided, use the best model:
+        if model_name is None:
+            model_name = self.get_best_model(features=ModelFeatures.AudioTranscription)
 
-            # Open the audio file:
-            with open(audio_file_path, "rb") as audio_file:
+        # If no model is available then we raise an error:
+        if model_name is None:
+            raise APIError("No model available for audio transcription.")
 
-                # Transcribe the audio file:
-                transcription = self.client.audio.transcriptions.create(
-                    model="whisper-1",
-                    file=audio_file,
-                    response_format="text"
-                )
+        # If the model is provided by the super class then delegate transcription to it:
+        if model_name in super().list_models():
+            return super().transcribe_audio(audio_uri=audio_uri,
+                                            model_name=model_name,
+                                            **kwargs)
+
+        # We check that the model name contains 'whisper':
+        if 'whisper' not in model_name:
+            raise APIError(f"Model {model_name} does not support audio transcription.")
+
+        # Get the local path to the audio file:
+        audio_file_path = uri_to_local_file_path(audio_uri)
+
+        # Open the audio file:
+        with open(audio_file_path, "rb") as audio_file:
+
+            # Transcribe the audio file:
+            transcription = self.client.audio.transcriptions.create(
+                model=model_name,
+                file=audio_file,
+                response_format="text"
+            )
+
+        # Update kwargs with other parameters:
+        kwargs.update({
+            'model_name': model_name
+        })
+
+        # Call the callback manager:
+        self.callback_manager.on_audio_transcription(
+            audio_uri=audio_uri,
+            transcription=transcription,
+            **kwargs
+        )
 
         return transcription
 
@@ -641,12 +701,28 @@ class OpenAIApi(BaseApi):
             response.write_to_file(temp_file.name)
 
             # Return the URI to the temporary file:
-            return 'file://' + temp_file.name
+            audio_file_uri = 'file://' + temp_file.name
+
+            # Update kwargs with other parameters:
+            kwargs.update({
+                'voice': voice,
+                'audio_format': audio_format,
+                'model_name': model_name
+            })
+
+            # Call the callback manager:
+            self.callback_manager.on_audio_generation(
+                text=text,
+                audio_uri=audio_file_uri,
+                **kwargs
+            )
+
+            return audio_file_uri
 
     def generate_image(self,
-                       model_name: str,
                        positive_prompt: str,
                        negative_prompt: Optional[str] = None,
+                       model_name: str = None,
                        image_width: int = 512,
                        image_height: int = 512,
                        preserve_aspect_ratio: bool = True,
@@ -660,10 +736,24 @@ class OpenAIApi(BaseApi):
         else:
             prompt = positive_prompt
 
-        allowed_sizes = ["256x256", "512x512", "1024x1024", "1792x1024",
-                         "1024x1792"]
+        # Get the best model if not provided:
+        if model_name is None:
+            model_name = self.get_best_model(
+                features=ModelFeatures.ImageGeneration)
+
+        # Allowed sizes by OpenAI:
+        if 'dall-e-2' in model_name:
+            allowed_sizes = ["256x256", "512x512", "1024x1024", "1792x1024",
+                             "1024x1792"]
+        elif 'dall-e-3' in model_name:
+            allowed_sizes = ["1024x1024", "1024x1792", "1792x1024"]
+        else:
+            raise ValueError(f"Model {model_name} is not supported.")
+
+        # Requested size:
         requested_size = f"{image_width}x{image_height}"
 
+        # Check if requested size is allowed:
         if requested_size not in allowed_sizes:
             if not allow_resizing:
                 raise ValueError(
@@ -686,6 +776,7 @@ class OpenAIApi(BaseApi):
         else:
             closest_size = requested_size
 
+        # Generate image:
         response = self.client.images.generate(
             model=model_name,
             prompt=prompt,
@@ -695,16 +786,35 @@ class OpenAIApi(BaseApi):
             **kwargs
         )
 
+        # Get the image URL and download the image:
         image_url = response.data[0].url
         image = Image.open(BytesIO(requests.get(image_url).content))
 
+        # Resize the image if needed:
         if closest_size != requested_size:
             if preserve_aspect_ratio:
+                # Preserve aspect ratio:
                 image.thumbnail((image_width, image_height),
-                                Image.ANTIALIAS)
+                                Resampling.LANCZOS)
             else:
+                # Resize without preserving aspect ratio:
                 image = image.resize((image_width, image_height),
-                                     Image.ANTIALIAS)
+                                     Resampling.LANCZOS)
+
+        # Update kwargs with other parameters:
+        kwargs.update({
+            'model_name': model_name,
+            'negative_prompt': negative_prompt,
+            'image_width': image_width,
+            'image_height': image_height,
+            'preserve_aspect_ratio': preserve_aspect_ratio,
+            'allow_resizing': allow_resizing
+        })
+
+        # Call the callback manager:
+        self.callback_manager.on_image_generation(image=image,
+                                                  prompt=prompt,
+                                                  **kwargs)
 
         return image
 
@@ -714,9 +824,18 @@ class OpenAIApi(BaseApi):
                     dimensions: int = 512,
                     **kwargs) -> Sequence[Sequence[float]]:
 
+        # Get the best model if not provided:
         if model_name is None:
-            model_name = self.get_best_model(require_embeddings=True)
+            model_name = self.get_best_model(features=ModelFeatures.TextEmbeddings)
 
+        # If the model belongs to the superclass, we call the superclass method:
+        if model_name in super().list_models():
+            return super().embed_texts(texts=texts,
+                                       model_name=model_name,
+                                       dimensions=dimensions,
+                                       **kwargs)
+
+        # Call OpenAI API to generate embeddings:
         response = self.client.embeddings.create(
             model=model_name,
             dimensions=dimensions,
@@ -724,4 +843,18 @@ class OpenAIApi(BaseApi):
             **kwargs
         )
 
-        return list([e.embedding for e in response.data])
+        # Extract embeddings from the response:
+        embeddings = list([e.embedding for e in response.data])
+
+        # Update kwargs with other parameters:
+        kwargs.update({
+            'model_name': model_name,
+            'dimensions': dimensions
+        })
+
+        # Call the callback manager:
+        self.callback_manager.on_text_embedding(texts=texts,
+                                                embeddings=embeddings,
+                                                **kwargs)
+
+        return embeddings

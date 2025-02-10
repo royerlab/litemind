@@ -1,3 +1,5 @@
+import copy
+
 from pandas import DataFrame
 from pydantic import BaseModel
 
@@ -8,6 +10,25 @@ from litemind.agent.message_block_type import BlockType
 class ExampleModel(BaseModel):
     key: str
     value: str
+
+
+def test_message_block_deepcopy():
+    # Create a message block
+    original_block = MessageBlock(block_type=BlockType.Text, content='Sample content')
+
+    # Perform a deep copy of the message block
+    copied_block = copy.deepcopy(original_block)
+
+    # Verify that the copied block is equal to the original
+    assert copied_block.block_type == original_block.block_type
+    assert copied_block.content == original_block.content
+
+    # Verify that the copied block is a different object
+    assert copied_block is not original_block
+
+    # if the content is a mutable object, ensure it's also copied:
+    if isinstance(original_block.content, (list, dict)):
+        assert copied_block.content is not original_block.content
 
 
 def test_message_block_text():

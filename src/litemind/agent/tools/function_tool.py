@@ -19,12 +19,16 @@ class FunctionTool(BaseTool):
             You can specify which part of the docstring will be used as description by surrounding the description with '***' (e.g. '***This is the description***').
 
         """
+        # Initialize the base tool, description is empty for now...
+        super().__init__(name=func.__name__, description='')
 
+        # Store the function
         self.func = func
 
+        # Use the provided description or extract it from the function's docstring
         if not description:
             docstring = extract_docstring(func)
-            # if '***' is present, extract the substring between the first and second occurence of '***':
+            # if '***' is present, extract the substring between the first and second occurrence of '***':
             if '***' in docstring:
                 self.description = docstring[
                                    docstring.find('***') + 3:docstring.find(

@@ -1,49 +1,99 @@
 import traceback
+from functools import lru_cache
 from typing import List, Optional
 
 from arbol import aprint
 
 
-def get_openai_model_list(filters: Optional[List[str]] = ['gpt'],
+def get_openai_model_list(included: Optional[List[str]] = None,
+                          excluded: Optional[List[str]] = None,
                           verbose: bool = False) -> list[str]:
     """
     Get the list of all OpenAI ChatGPT models.
 
     Parameters
     ----------
-    filters : str
-        Filter to apply to the list of models.
+    included : str
+        Filter to apply to the list of models. If None, all models are returned.
+        Models must contain at least one of the filters to be included in the list.
+    excluded : str
+        Excluded models. If None, no models are excluded.
+        Models must not contain any of the excluded models to be included in the list.
     verbose : bool
         Verbosity flag.
 
     Returns
     -------
-    list[str
+    list[str]
         List of models.
 
     """
 
     # Local imports to avoid issues:
-    from openai import OpenAI
 
     try:
+        if included is None:
+            included = ['gpt']
+
+        models = _get_raw_openai_model_list()
+
         # Model list to populate:
         model_list = []
 
-        # Instantiate API entry point
-        client = OpenAI()
-
         # Goes through models and populate the list:
-        for model in client.models.list().data:
+        for model in models:
             model_id = model.id
 
             # only keep models that match the filter:
-            if not filters or any(f in model_id for f in filters):
+            if not included or any(f in model_id for f in included):
                 model_list.append(model_id)
                 if verbose:
-                    aprint(model_id)
+                    aprint(f"Included: {model_id}")
 
-        return model_list
+            # Only keep models that do not match the excluded:
+            if excluded and any(e in model_id for e in excluded):
+                model_list.remove(model_id)
+                if verbose:
+                    aprint(f"Excluded: {model_id}")
+
+        # Next we sort models so the best ones are at the beginning of the list:
+        def model_key(model):
+            # Split the model name into parts
+            parts = model.split('-')
+
+            # If a part is '4o' or 'o1', replace it with 'o1.25' or '4.25' respectively:
+            parts = [part if part not in ['4o', 'o1'] else part.replace('o',
+                                                                        '.25')
+                     for part in parts]
+
+            # Remove all the parts that are not numbers (integer or float):
+            parts = [part for part in parts if
+                     part.replace('.', '', 1).isdigit()]
+
+            # Remove parts that are integers but that lead with a zero:
+            if len(parts) > 1:
+                parts = [part for part in parts if not part.startswith('0')]
+
+            # Remove parts that are numbers (float or int) that are too big (>10.0)
+            if len(parts) > 1:
+                parts = [part for part in parts if float(part) < 5]
+
+            # Get the main version (e.g., '3.5' or '4' from 'gpt-3.5' or 'gpt-4')
+            main_version = float(parts[-1])
+
+            # If we find 'mini' in the model name then subtract 0.25 from the main version:
+            if 'mini' in model:
+                main_version -= 0.12
+
+            # Use the length of the model name as a secondary sorting criterion
+            length = len(model)
+            # Sort by main version (descending), then by length (ascending)
+            return -main_version, length
+
+        # Actual sorting:
+        sorted_model_list = sorted(model_list, key=model_key)
+
+        return sorted_model_list
 
     except Exception as e:
         # Error message:
@@ -55,9 +105,21 @@ def get_openai_model_list(filters: Optional[List[str]] = ['gpt'],
         return []
 
 
+@lru_cache()
+def _get_raw_openai_model_list():
+    from openai import OpenAI
+
+    # Instantiate API entry point
+    client = OpenAI()
+
+    # Raw model list:
+    models = client.models.list().data
+    return models
+
+
 def postprocess_openai_model_list(model_list: list) -> list:
     """
-    Postprocess the list of OpenAI models. This is usefull to remove problematic models from the list and sort models in decreasing order of quality.
+    Postprocess the list of OpenAI models. This is useful to remove problematic models from the list and sort models in decreasing order of quality.
 
     Parameters
     ----------
@@ -67,7 +129,7 @@ def postprocess_openai_model_list(model_list: list) -> list:
     Returns
     -------
     list
-        Postprocessed list of models.
+        Post-processed list of models.
 
     """
 

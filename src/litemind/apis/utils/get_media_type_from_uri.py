@@ -1,4 +1,7 @@
-def get_media_type_from_uri(uri: str) -> str:
+from typing import Optional
+
+
+def get_media_type_from_uri(uri: str) -> Optional[str]:
     """
     Extract the media type from the given URI.
 

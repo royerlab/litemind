@@ -4,3 +4,7 @@ class APIError(Exception):
 
 class APINotAvailableError(APIError):
     pass
+
+
+class FeatureNotAvailableError(APIError):
+    pass

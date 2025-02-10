@@ -39,7 +39,10 @@ def parse_json(json_str: str, clazz: Type[T]) -> T:
 
     Parameters
     ----------
-    json_str
+    json_str: str
+        The JSON string to parse.
+    clazz: Type[T]
+        The class to parse the JSON string into.
 
     Returns
     -------

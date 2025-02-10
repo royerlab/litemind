@@ -3,7 +3,7 @@ from typing import Any, List, Dict
 from litemind.agent.tools.toolset import ToolSet
 
 
-def _format_tools_for_openai(toolset: ToolSet) -> List[Dict[str, Any]]:
+def format_tools_for_openai(toolset: ToolSet) -> List[Dict[str, Any]]:
     """
     Convert ToolSet into JSON schema format required by OpenAI API.
 

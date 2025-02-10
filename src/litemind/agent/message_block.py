@@ -1,3 +1,4 @@
+import copy
 from typing import Union
 
 from numpy import ndarray
@@ -24,8 +25,8 @@ class MessageBlock:
         """
         if isinstance(block_type, str):
             block_type = BlockType.from_str(block_type)
-        self.block_type = block_type
-        self.content = content
+        self.block_type: BlockType = block_type
+        self.content: Union[str, BaseModel, ndarray, DataFrame] = content
         self.attributes = attributes
 
     def copy(self) -> 'MessageBlock':
@@ -40,6 +41,19 @@ class MessageBlock:
         """
         return MessageBlock(block_type=self.block_type, content=self.content,
                             **self.attributes)
+
+    def __deepcopy__(self, memo):
+        """
+        Create a deep copy of the message block.
+
+        Returns
+        -------
+        MessageBlock
+            A deep copy of the message block.
+        """
+        return MessageBlock(block_type=self.block_type,
+                            content=copy.deepcopy(self.content, memo),
+                            **copy.deepcopy(self.attributes, memo))
 
     def contains(self, text: str) -> bool:
         """
@@ -79,7 +93,6 @@ class MessageBlock:
             The message block as a string.
         """
         return str(self)
-
 
     def __len__(self) -> int:
         """

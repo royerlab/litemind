@@ -1,4 +1,5 @@
 import os
+from functools import lru_cache
 from tempfile import mkdtemp
 from typing import List
 
@@ -8,6 +9,7 @@ from litemind.utils.normalise_uri_to_local_file_path import \
     uri_to_local_file_path
 
 
+@lru_cache(maxsize=1)
 def is_pymupdf_available() -> bool:
     # Check if package pymupdf s available:
     try:
@@ -116,7 +118,7 @@ def extract_images_from_document(document_uri: str) -> List[str]:
             pix.save(image_file_path)
 
             # Close the pixmap:
-            pix = None
+            del pix
 
             # Append the image file name to the list:
             image_files_uris.append('file://' + image_file_path)

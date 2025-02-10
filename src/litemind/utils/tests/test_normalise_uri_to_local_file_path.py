@@ -53,7 +53,7 @@ def ephemeral_http_server():
             self.end_headers()
             self.wfile.write(ContentHolder.content)
 
-        def log_message(self, format, *args):
+        def log_message(self, _, *args):
             # Silence the default HTTP server logs
             return
 

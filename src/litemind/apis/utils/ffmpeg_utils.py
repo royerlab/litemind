@@ -1,24 +1,50 @@
 import os
+# _set_ffmpeg_binary()
+import subprocess
 import tempfile
+from functools import lru_cache
+from typing import Optional, List
 
 import ffmpeg
+from arbol import aprint
+
+from litemind.agent.message_block import MessageBlock
+
+
+# function that checks if ffmpeg is available and functional:
+@lru_cache(maxsize=1)
+def is_ffmpeg_available():
+    try:
+        process = subprocess.run(['ffmpeg', '-version'], capture_output=True, text=True)
+        if process.returncode == 0:
+            aprint("FFmpeg is available.")
+            aprint(process.stdout)
+            return True
+        else:
+            aprint("FFmpeg is not available.")
+            aprint(process.stderr)
+            return False
+    except FileNotFoundError:
+        aprint("FFmpeg is not found in the system's PATH.")
+        return False
+
 
 from litemind.agent.message import Message
 
 
-def append_video_frames_and_audio_to_message(video_path: str,
-                                             message: Message,
-                                             frame_interval: int = 1,
-                                             key_frames: bool = False) -> Message:
+def convert_video_to_frames_and_audio(video_path: str,
+                                      message: Optional[Message] = None,
+                                      frame_interval: int = 1,
+                                      key_frames: bool = False) -> List[MessageBlock]:
     """
-    Describe a video by splitting it into frames and an audio file, and appending the frames, audio, and video info to a Message.
+    Converts a video into message blocks by splitting it into frames and an audio file, and appending the frames, audio, and video info.
 
     Parameters
     ----------
     video_path: str
         Path to the video file.
-    message: Message
-        The existing Message object to append the video information to.
+    message: Optional[Message]
+        The existing Message object to append the video information to. If not provided an empty message is used.
     frame_interval: int
         Interval in seconds to sample frames from the video.
     key_frames: bool
@@ -26,8 +52,8 @@ def append_video_frames_and_audio_to_message(video_path: str,
 
     Returns
     -------
-    Message
-        The updated Message object with video information appended.
+    List[MessageBlock]
+        The corresponding message blocks for the audio, images and text describing the video
     """
 
     # define a temporary folder:
@@ -43,6 +69,10 @@ def append_video_frames_and_audio_to_message(video_path: str,
 
     # Get video information
     video_info = get_video_info(video_path)
+
+    # if the message is not provided, initialise an empty message:
+    if message is None:
+        message = Message(role="_")
 
     # Append video filename:
     message.append_text(f"Video: {os.path.basename(video_path)}\n")
@@ -85,7 +115,7 @@ def append_video_frames_and_audio_to_message(video_path: str,
         # Append audio to the message
         message.append_audio('file://' + audio_path)
 
-    return message
+    return message.blocks
 
 
 def get_video_info(video_path: str):

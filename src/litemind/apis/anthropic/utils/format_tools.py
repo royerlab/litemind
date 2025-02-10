@@ -3,7 +3,7 @@ from typing import Optional, List
 from litemind.agent.tools.toolset import ToolSet
 
 
-def _convert_toolset_to_anthropic(toolset: Optional[ToolSet]) -> Optional[
+def format_tools_for_anthropic(toolset: Optional[ToolSet]) -> Optional[
     List['ToolParam']]:
     """
     Convert a ToolSet into Anthropic's list[ToolParam] format.

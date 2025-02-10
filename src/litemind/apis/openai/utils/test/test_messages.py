@@ -1,5 +1,5 @@
 from litemind.agent.message import Message
-from litemind.apis.openai.utils.messages import convert_messages_for_openai
+from litemind.apis.openai.utils.convert_messages import convert_messages_for_openai
 
 
 def test_convert_text_only_message():

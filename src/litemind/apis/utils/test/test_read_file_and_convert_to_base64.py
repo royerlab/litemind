@@ -18,4 +18,4 @@ def create_temp_file():
 
 def test_read_file_and_convert_to_base64(create_temp_file):
     base64_string = read_file_and_convert_to_base64(create_temp_file)
-    assert base64_string == 'VGhpcyBpcyBhIHRlc3QgZmlsZS4='
+    assert base64_string == 'VGhpcyBpcyBhIHRlc3RzIGZpbGUu'

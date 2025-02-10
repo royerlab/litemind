@@ -1,15 +1,16 @@
 import json
-from typing import Optional
+from typing import Optional, Iterator
 
+from google.generativeai.types.discuss_types import ChatResponse
 from pydantic import BaseModel
 
 from litemind.agent.message import Message
 from litemind.agent.tools.toolset import ToolSet
 
 
-def _process_response(response: dict,
-                      toolset: Optional[ToolSet],
-                      response_format: Optional[BaseModel | str] = None) -> Message:
+def process_response_from_ollama(response: ChatResponse | Iterator[ChatResponse],
+                                 toolset: Optional[ToolSet],
+                                 response_format: Optional[BaseModel | str] = None) -> Message:
     """
     Process Ollama's response, checking for tool calls and executing them if needed.
 
@@ -79,7 +80,7 @@ def _process_response(response: dict,
         repaired_json = repair_json(text_content)
 
         # If the repaired string is empty, return the original text content
-        if len(repaired_json.strip())==0 and len(text_content.strip())>0:
+        if len(repaired_json.strip()) == 0 and len(text_content.strip()) > 0:
             return Message(role='assistant', text=text_content)
 
         # Parse the JSON string into the specified format

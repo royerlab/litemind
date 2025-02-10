@@ -5,22 +5,24 @@ from litemind.apis.base_api import ModelFeatures
 from litemind.apis.tests.base_test import BaseTest, API_IMPLEMENTATIONS
 
 
-@pytest.mark.parametrize("ApiClass", API_IMPLEMENTATIONS)
-class TestBaseApiImplementations(BaseTest):
+@pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
+class TestBaseApiImplementationsMultimodalInputs(BaseTest):
     """
     A tests suite that runs the same tests on each ApiClass
     implementing the abstract BaseApi interface.
     """
 
-    def test_text_generation_with_image_url(self, ApiClass):
-        api_instance = ApiClass()
+    def test_text_generation_with_image_url(self, api_class):
+        api_instance = api_class()
+
+        # Get the default model name:
         default_model_name = api_instance.get_best_model(
             [ModelFeatures.TextGeneration, ModelFeatures.Image])
-        if not default_model_name or not api_instance.has_model_support_for(
-                model_name=default_model_name,
-                features=[ModelFeatures.TextGeneration, ModelFeatures.Image]):
+
+        # Skip tests if the model does not support images
+        if not default_model_name:
             pytest.skip(
-                f"{ApiClass.__name__} does not support images. Skipping image tests.")
+                f"{api_class.__name__} does not support images. Skipping image tests.")
 
         print('\n' + default_model_name)
 
@@ -41,21 +43,29 @@ class TestBaseApiImplementations(BaseTest):
         user_message.append_image(image_url)
         messages.append(user_message)
 
-        # Run agent:
-        response = api_instance.generate_text_completion(messages=messages,
-                                                         model_name=default_model_name)
+        # Generate text:
+        response = api_instance.generate_text(messages=messages,
+                                              model_name=default_model_name)
 
-        print('\n' + str(response))
+        for message in messages:
+            print(message)
 
         # Check response:
         assert 'sepia' in response or 'chalkboard' in response or 'Einstein' in response
 
-    def test_text_generation_with_png_image_path(self, ApiClass):
-        api_instance = ApiClass()
+    def test_text_generation_with_png_image_path(self, api_class):
+        api_instance = api_class()
 
         # Get the default model name:
         default_model_name = api_instance.get_best_model(
             [ModelFeatures.TextGeneration, ModelFeatures.Image])
+
+        # Skip tests if the model does not support images
+        if default_model_name is None:
+            pytest.skip(
+                f"{api_class.__name__} does not support images. Skipping image tests.")
+
+        # Print the model name:
         print('\n' + default_model_name)
 
         # Skip tests if the model does not support images
@@ -63,7 +73,7 @@ class TestBaseApiImplementations(BaseTest):
                 model_name=default_model_name,
                 features=[ModelFeatures.TextGeneration, ModelFeatures.Image]):
             pytest.skip(
-                f"{ApiClass.__name__} does not support images. Skipping image tests.")
+                f"{api_class.__name__} does not support images. Skipping image tests.")
 
         messages = []
 
@@ -81,28 +91,31 @@ class TestBaseApiImplementations(BaseTest):
 
         messages.append(user_message)
 
-        # Run agent:
-        response = api_instance.generate_text_completion(messages=messages,
-                                                         model_name=default_model_name)
+        # Generate text:
+        response = api_instance.generate_text(messages=messages,
+                                              model_name=default_model_name)
 
-        print('\n' + str(response))
+        for message in messages:
+            print(message)
 
         # Check response:
-        if ApiClass.__name__ == 'OllamaApi':
+        if api_class.__name__ == 'OllamaApi':
             # open source models are typically not yet strong enough.
             assert 'blue' in response or 'logo' in response
         else:
             assert 'snake' in response or 'serpent' in response or 'python' in response
 
-    def test_text_generation_with_jpg_image_path(self, ApiClass):
-        api_instance = ApiClass()
+    def test_text_generation_with_jpg_image_path(self, api_class):
+        api_instance = api_class()
+
+        # Get the best model for text generation and image:
         default_model_name = api_instance.get_best_model(
             [ModelFeatures.TextGeneration, ModelFeatures.Image])
-        if not default_model_name or not api_instance.has_model_support_for(
-                model_name=default_model_name,
-                features=[ModelFeatures.TextGeneration, ModelFeatures.Image]):
+
+        # Skip tests if the model does not support images
+        if default_model_name is None:
             pytest.skip(
-                f"{ApiClass.__name__} does not support images. Skipping image tests.")
+                f"{api_class.__name__} does not support images. Skipping image tests.")
 
         print('\n' + default_model_name)
 
@@ -122,24 +135,27 @@ class TestBaseApiImplementations(BaseTest):
 
         messages.append(user_message)
 
-        # Run agent:
-        response = api_instance.generate_text_completion(messages=messages,
-                                                         model_name=default_model_name)
+        # Generate text:
+        response = api_instance.generate_text(messages=messages,
+                                              model_name=default_model_name)
 
-        print('\n' + str(response))
+        for message in messages:
+            print(message)
 
         # Check response:
         assert 'robot' in response or 'futuristic' in response or 'sky' in response
 
-    def test_text_generation_with_webp_image_path(self, ApiClass):
-        api_instance = ApiClass()
+    def test_text_generation_with_webp_image_path(self, api_class):
+        api_instance = api_class()
+
+        # Get the best model for text generation and image:
         default_model_name = api_instance.get_best_model(
             [ModelFeatures.TextGeneration, ModelFeatures.Image])
-        if not default_model_name or not api_instance.has_model_support_for(
-                model_name=default_model_name,
-                features=[ModelFeatures.TextGeneration, ModelFeatures.Image]):
+
+        # Skip tests if the model does not support images
+        if default_model_name is None:
             pytest.skip(
-                f"{ApiClass.__name__} does not support images. Skipping image tests.")
+                f"{api_class.__name__} does not support images. Skipping image tests.")
 
         print('\n' + default_model_name)
 
@@ -159,24 +175,27 @@ class TestBaseApiImplementations(BaseTest):
 
         messages.append(user_message)
 
-        # Run agent:
-        response = api_instance.generate_text_completion(messages=messages,
-                                                         model_name=default_model_name)
+        # Generate text:
+        response = api_instance.generate_text(messages=messages,
+                                              model_name=default_model_name)
 
-        print('\n' + str(response))
+        for message in messages:
+            print(message)
 
         # Check response:
         assert 'beach' in response or 'palm' in response or 'sunset' in response
 
-    def test_text_generation_with_gif_image_path(self, ApiClass):
-        api_instance = ApiClass()
+    def test_text_generation_with_gif_image_path(self, api_class):
+        api_instance = api_class()
+
+        # Get the best model for text generation and image:
         default_model_name = api_instance.get_best_model(
             [ModelFeatures.TextGeneration, ModelFeatures.Image])
-        if not default_model_name or not api_instance.has_model_support_for(
-                model_name=default_model_name,
-                features=[ModelFeatures.TextGeneration, ModelFeatures.Image]):
+
+        # Skip tests if the model does not support images
+        if default_model_name is None:
             pytest.skip(
-                f"{ApiClass.__name__} does not support images. Skipping image tests.")
+                f"{api_class.__name__} does not support images. Skipping image tests.")
 
         print('\n' + default_model_name)
 
@@ -197,24 +216,27 @@ class TestBaseApiImplementations(BaseTest):
 
         messages.append(user_message)
 
-        # Run agent:
-        response = api_instance.generate_text_completion(messages=messages,
-                                                         model_name=default_model_name)
+        # Generate text:
+        response = api_instance.generate_text(messages=messages,
+                                              model_name=default_model_name)
 
-        print('\n' + str(response))
+        for message in messages:
+            print(message)
 
         # Check response:
         assert 'field' in response or 'blue' in response or 'stars' in response
 
-    def test_text_generation_with_multiple_images(self, ApiClass):
-        api_instance = ApiClass()
+    def test_text_generation_with_multiple_images(self, api_class):
+        api_instance = api_class()
+
+        # Get the best model for text generation and image:
         default_model_name = api_instance.get_best_model(
             [ModelFeatures.TextGeneration, ModelFeatures.Image])
-        if not default_model_name or not api_instance.has_model_support_for(
-                model_name=default_model_name,
-                features=[ModelFeatures.TextGeneration, ModelFeatures.Image]):
+
+        # Skip tests if the model does not support images
+        if default_model_name is None:
             pytest.skip(
-                f"{ApiClass.__name__} does not support images. Skipping image tests.")
+                f"{api_class.__name__} does not support images. Skipping image tests.")
 
         print('\n' + default_model_name)
 
@@ -237,25 +259,34 @@ class TestBaseApiImplementations(BaseTest):
 
         messages.append(user_message)
 
-        # Run agent:
-        response = api_instance.generate_text_completion(messages=messages,
-                                                         model_name=default_model_name)
+        # Generate text:
+        response = api_instance.generate_text(messages=messages,
+                                              model_name=default_model_name)
 
-        print('\n' + str(response))
+        for message in messages:
+            print(message)
+
+        # If api_class is OllamaApi then the model is open source and might not be as strong as the others:
+        if api_class.__name__ == 'OllamaApi':
+            assert 'panda' in response
 
         # Check response:
-        assert (
-                       'animals' in response or 'characters' in response) and 'cat' in response and 'panda' in response
+        assert ('animal' in response or 'character' in response or 'subject' in response) and (
+                'cat' in response or 'creature' in response) and 'panda' in response
 
-    def test_text_generation_with_audio_path(self, ApiClass):
-        api_instance = ApiClass()
+    def test_text_generation_with_audio_path(self, api_class):
+        api_instance = api_class()
+
+        # Get the default model name:
         default_model_name = api_instance.get_best_model(
             [ModelFeatures.TextGeneration, ModelFeatures.Audio])
+
+        # Skip tests if the model does not support audio
         if not default_model_name or not api_instance.has_model_support_for(
                 model_name=default_model_name,
                 features=[ModelFeatures.TextGeneration, ModelFeatures.Audio]):
             pytest.skip(
-                f"{ApiClass.__name__} does not support audio. Skipping audio tests.")
+                f"{api_class.__name__} does not support audio. Skipping audio tests.")
 
         print('\n' + default_model_name)
 
@@ -271,29 +302,32 @@ class TestBaseApiImplementations(BaseTest):
         user_message = Message(role='user')
         user_message.append_text(
             'Can you describe what you heard in the audio file?')
-        image_path = self._get_local_test_audio_uri('harvard.wav')
-        user_message.append_audio(image_path)
+        audio_path = self._get_local_test_audio_uri('harvard.wav')
+        user_message.append_audio(audio_path)
 
         messages.append(user_message)
 
         # Run agent:
-        response = api_instance.generate_text_completion(messages=messages,
-                                                         model_name=default_model_name)
+        response = api_instance.generate_text(messages=messages,
+                                              model_name=default_model_name)
 
-        print('\n' + str(response))
+        for message in messages:
+            print(message)
 
         # Check response:
         assert 'smell' in response or 'ham' in response or 'beer' in response
 
-    def test_text_generation_with_audio_url(self, ApiClass):
-        api_instance = ApiClass()
+    def test_text_generation_with_audio_url(self, api_class):
+        api_instance = api_class()
+
+        # Get the default model name:
         default_model_name = api_instance.get_best_model(
             [ModelFeatures.TextGeneration, ModelFeatures.Audio])
-        if not default_model_name or not api_instance.has_model_support_for(
-                model_name=default_model_name,
-                features=[ModelFeatures.TextGeneration, ModelFeatures.Audio]):
+
+        # Skip tests if the model does not support audio
+        if default_model_name is None:
             pytest.skip(
-                f"{ApiClass.__name__} does not support audio. Skipping audio tests.")
+                f"{api_class.__name__} does not support audio. Skipping audio tests.")
 
         print('\n' + default_model_name)
 
@@ -308,30 +342,33 @@ class TestBaseApiImplementations(BaseTest):
         # User message:
         user_message = Message(role='user')
         user_message.append_text(
-            'Can you describe in detail what i said the following audio file?')
+            'Can you describe in detail what is said the following audio file?')
         user_message.append_audio(
             "https://salford.figshare.com/ndownloader/files/14630270")
 
         messages.append(user_message)
 
-        # Run agent:
-        response = api_instance.generate_text_completion(messages=messages,
-                                                         model_name=default_model_name)
+        # Generate text:
+        response = api_instance.generate_text(messages=messages,
+                                              model_name=default_model_name)
 
-        print('\n' + str(response))
+        for message in messages:
+            print(message)
 
         # Check response:
         assert 'canoe' in response or 'chicken' in response or 'hours' in response
 
-    def test_text_generation_with_video_path(self, ApiClass):
-        api_instance = ApiClass()
+    def test_text_generation_with_video_path(self, api_class):
+        api_instance = api_class()
+
+        # Get the best model for text generation and video:
         default_model_name = api_instance.get_best_model(
             [ModelFeatures.TextGeneration, ModelFeatures.Video])
-        if not default_model_name or not api_instance.has_model_support_for(
-                model_name=default_model_name,
-                features=[ModelFeatures.TextGeneration, ModelFeatures.Video]):
+
+        # Skip tests if the model does not support videos
+        if default_model_name is None:
             pytest.skip(
-                f"{ApiClass.__name__} does not support videos. Skipping video tests.")
+                f"{api_class.__name__} does not support videos. Skipping video tests.")
 
         print('\n' + default_model_name)
 
@@ -350,24 +387,27 @@ class TestBaseApiImplementations(BaseTest):
         user_message.append_video(video_path)
         messages.append(user_message)
 
-        # Run agent:
-        response = api_instance.generate_text_completion(messages=messages,
-                                                         model_name=default_model_name)
+        # Generate text:
+        response = api_instance.generate_text(messages=messages,
+                                              model_name=default_model_name)
 
-        print('\n' + str(response))
+        for message in messages:
+            print(message)
 
         # Check response:
         assert 'disc' in response or 'circular' in response or 'saucer' in response or 'rotor' in response or 'curved' in response or 'vehicle' in response or 'aircraft' in response or 'experimental' in response or 'hovering' in response or 'hover' in response or 'flying' in response
 
-    def test_text_generation_with_video_url(self, ApiClass):
-        api_instance = ApiClass()
+    def test_text_generation_with_video_url(self, api_class):
+        api_instance = api_class()
+
+        # Get the best model for text generation and video:
         default_model_name = api_instance.get_best_model(
             [ModelFeatures.TextGeneration, ModelFeatures.Video])
-        if not default_model_name or not api_instance.has_model_support_for(
-                model_name=default_model_name,
-                features=[ModelFeatures.TextGeneration, ModelFeatures.Video]):
+
+        # Skip tests if the model does not support videos
+        if default_model_name is None:
             pytest.skip(
-                f"{ApiClass.__name__} does not support videos. Skipping video tests.")
+                f"{api_class.__name__} does not support videos. Skipping video tests.")
 
         print('\n' + default_model_name)
 
@@ -390,13 +430,14 @@ class TestBaseApiImplementations(BaseTest):
         messages.append(user_message)
 
         # Run agent:
-        response = api_instance.generate_text_completion(messages=messages,
-                                                         model_name=default_model_name)
+        response = api_instance.generate_text(messages=messages,
+                                              model_name=default_model_name)
 
-        print('\n' + str(response))
+        for message in messages:
+            print(message)
 
         # Check response:
-        if ApiClass.__name__ == 'OllamaApi':
+        if api_class.__name__ == 'OllamaApi':
             # If the ApiClass is OllamaAPi then the model is open source and might not be as strong as the others:
             assert 'image' in response
         else:

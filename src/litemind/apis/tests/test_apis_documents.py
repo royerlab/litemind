@@ -7,26 +7,32 @@ from litemind.apis.base_api import ModelFeatures
 from litemind.apis.tests.base_test import BaseTest, API_IMPLEMENTATIONS
 
 
-@pytest.mark.parametrize("ApiClass", API_IMPLEMENTATIONS)
-class TestBaseApiImplementations(BaseTest):
+@pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
+class TestBaseApiImplementationsDocuments(BaseTest):
     """
     A tests suite that runs the same tests on each ApiClass
     implementing the abstract BaseApi interface.
     """
 
-    def test_text_generation_with_pdf_document(self, ApiClass):
+    def test_text_generation_with_pdf_document(self, api_class):
 
-        api_instance = ApiClass()
+        # Get an instance of the api class:
+        api_instance = api_class()
 
+        # Get the best model for text generation:
         default_model_name = api_instance.get_best_model(
-            [ModelFeatures.TextGeneration, ModelFeatures.Documents,
+            [ModelFeatures.TextGeneration,
+             ModelFeatures.Document,
              ModelFeatures.Image])
+
+        # Skip tests if the model does not support text generation:
         if not default_model_name or not api_instance.has_model_support_for(
                 model_name=default_model_name,
-                features=[ModelFeatures.TextGeneration, ModelFeatures.Documents,
+                features=[ModelFeatures.TextGeneration,
+                          ModelFeatures.Document,
                           ModelFeatures.Image]):
             pytest.skip(
-                f"{ApiClass.__name__} does not support documents. Skipping documents tests.")
+                f"{api_class.__name__} does not support documents. Skipping documents tests.")
 
         print('\n' + default_model_name)
 
@@ -48,14 +54,14 @@ class TestBaseApiImplementations(BaseTest):
         messages.append(user_message)
 
         # Run agent:
-        response = api_instance.generate_text_completion(messages=messages,
-                                                         model_name=default_model_name)
+        response = api_instance.generate_text(messages=messages,
+                                              model_name=default_model_name)
 
         print('\n' + str(response))
 
         # Make sure that the answer is not empty:
         assert len(response) > 0, (
-            f"{ApiClass.__name__}.completion() should return a non-empty string!"
+            f"{api_class.__name__}.completion() should return a non-empty string!"
         )
 
         # Check response details:
@@ -68,19 +74,22 @@ class TestBaseApiImplementations(BaseTest):
             print(
                 "The response might lack in detail!! Please check the response for more details.")
 
-    def test_text_generation_with_webpage(self, ApiClass):
+    def test_text_generation_with_webpage(self, api_class):
 
-        api_instance = ApiClass()
+        api_instance = api_class()
 
+        # Get the best model for text generation:
         default_model_name = api_instance.get_best_model(
-            [ModelFeatures.TextGeneration, ModelFeatures.Documents,
+            [ModelFeatures.TextGeneration, ModelFeatures.Document,
              ModelFeatures.Image])
+
+        # Skip tests if the model does not support text generation:
         if not default_model_name or not api_instance.has_model_support_for(
                 model_name=default_model_name,
-                features=[ModelFeatures.TextGeneration, ModelFeatures.Documents,
+                features=[ModelFeatures.TextGeneration, ModelFeatures.Document,
                           ModelFeatures.Image]):
             pytest.skip(
-                f"{ApiClass.__name__} does not support documents. Skipping documents tests.")
+                f"{api_class.__name__} does not support documents. Skipping documents tests.")
 
         print('\n' + default_model_name)
 
@@ -101,30 +110,33 @@ class TestBaseApiImplementations(BaseTest):
         messages.append(user_message)
 
         # Run agent:
-        response = api_instance.generate_text_completion(messages=messages,
-                                                         model_name=default_model_name)
+        response = api_instance.generate_text(messages=messages,
+                                              model_name=default_model_name)
 
         print('\n' + str(response))
 
         # Make sure that the answer is not empty:
         assert len(response) > 0, (
-            f"{ApiClass.__name__}.completion() should return a non-empty string!"
+            f"{api_class.__name__}.completion() should return a non-empty string!"
         )
 
         # Check response details:
         assert 'ZFIN' in response or 'COMP' in response or 'zebrafish' in response
 
-    def test_text_generation_with_json(self, ApiClass):
+    def test_text_generation_with_json(self, api_class):
 
-        api_instance = ApiClass()
+        api_instance = api_class()
 
+        # Get the best model for text generation:
         default_model_name = api_instance.get_best_model(
             ModelFeatures.TextGeneration)
+
+        # Skip tests if the model does not support text generation:
         if not default_model_name or not api_instance.has_model_support_for(
                 model_name=default_model_name,
                 features=ModelFeatures.TextGeneration):
             pytest.skip(
-                f"{ApiClass.__name__} does not support text generation. Skipping tests.")
+                f"{api_class.__name__} does not support text generation. Skipping tests.")
 
         print('\n' + default_model_name)
 
@@ -156,20 +168,20 @@ class TestBaseApiImplementations(BaseTest):
         messages.append(user_message)
 
         # Run agent:
-        response = api_instance.generate_text_completion(messages=messages,
-                                                         model_name=default_model_name)
+        response = api_instance.generate_text(messages=messages,
+                                              model_name=default_model_name)
 
         print('\n' + str(response))
 
         # Make sure that the answer is not empty:
         assert len(response) > 0, (
-            f"{ApiClass.__name__}.completion() should return a non-empty string!"
+            f"{api_class.__name__}.completion() should return a non-empty string!"
         )
 
         # Check response details:
         assert '30' in response
 
-    def test_text_generation_with_object(self, ApiClass):
+    def test_text_generation_with_object(self, api_class):
 
         # Check if pydantic is installed otherwise skip tests:
         try:
@@ -179,15 +191,16 @@ class TestBaseApiImplementations(BaseTest):
                 "Pydantic is not installed. Skipping tests."
             )
 
-        api_instance = ApiClass()
+        api_instance = api_class()
 
+        # Get the best model for text generation:
         default_model_name = api_instance.get_best_model(
             ModelFeatures.TextGeneration)
-        if not default_model_name or not api_instance.has_model_support_for(
-                model_name=default_model_name,
-                features=ModelFeatures.TextGeneration):
+
+        # Skip tests if the model does not support text generation:
+        if default_model_name is None:
             pytest.skip(
-                f"{ApiClass.__name__} does not support text generation. Skipping tests.")
+                f"{api_class.__name__} does not support text generation. Skipping tests.")
 
         print('\n' + default_model_name)
 
@@ -218,30 +231,31 @@ class TestBaseApiImplementations(BaseTest):
         messages.append(user_message)
 
         # Run agent:
-        response = api_instance.generate_text_completion(messages=messages,
-                                                         model_name=default_model_name)
+        response = api_instance.generate_text(messages=messages,
+                                              model_name=default_model_name)
 
         print('\n' + str(response))
 
         # Make sure that the answer is not empty:
         assert len(response) > 0, (
-            f"{ApiClass.__name__}.completion() should return a non-empty string!"
+            f"{api_class.__name__}.completion() should return a non-empty string!"
         )
 
         # Check response details:
         assert '30' in response
 
-    def test_text_generation_with_csv(self, ApiClass):
+    def test_text_generation_with_csv(self, api_class):
 
-        api_instance = ApiClass()
+        api_instance = api_class()
 
+        # Get the best model for text generation:
         default_model_name = api_instance.get_best_model(
             ModelFeatures.TextGeneration)
-        if not default_model_name or not api_instance.has_model_support_for(
-                model_name=default_model_name,
-                features=ModelFeatures.TextGeneration):
+
+        # Skip tests if the model does not support text generation:
+        if default_model_name is None:
             pytest.skip(
-                f"{ApiClass.__name__} does not support text generation. Skipping tests.")
+                f"{api_class.__name__} does not support text generation. Skipping tests.")
 
         print('\n' + default_model_name)
 
@@ -263,30 +277,32 @@ class TestBaseApiImplementations(BaseTest):
         messages.append(user_message)
 
         # Run agent:
-        response = api_instance.generate_text_completion(messages=messages,
-                                                         model_name=default_model_name)
+        response = api_instance.generate_text(messages=messages,
+                                              model_name=default_model_name)
 
         print('\n' + str(response))
 
         # Make sure that the answer is not empty:
         assert len(response) > 0, (
-            f"{ApiClass.__name__}.completion() should return a non-empty string!"
+            f"{api_class.__name__}.completion() should return a non-empty string!"
         )
 
         # Check response details:
         assert 'Binders' in response or 'SAFCO' in response
 
-    def test_text_generation_with_archive(self, ApiClass):
+    def test_text_generation_with_archive(self, api_class):
 
-        api_instance = ApiClass()
+        api_instance = api_class()
 
+        # Get the best model for text generation:
         default_model_name = api_instance.get_best_model(
-            ModelFeatures.TextGeneration)
-        if not default_model_name or not api_instance.has_model_support_for(
-                model_name=default_model_name,
-                features=ModelFeatures.TextGeneration):
+            [ModelFeatures.TextGeneration, ModelFeatures.Document,
+             ModelFeatures.Image])
+
+        # Skip tests if the model does not support text generation:
+        if default_model_name is None:
             pytest.skip(
-                f"{ApiClass.__name__} does not support text generation. Skipping tests.")
+                f"{api_class.__name__} does not support text generation. Skipping tests.")
 
         print('\n' + default_model_name)
 
@@ -309,30 +325,32 @@ class TestBaseApiImplementations(BaseTest):
         messages.append(user_message)
 
         # Run agent:
-        response = api_instance.generate_text_completion(messages=messages,
-                                                         model_name=default_model_name)
+        response = api_instance.generate_text(messages=messages,
+                                              model_name=default_model_name)
 
         print('\n' + str(response))
 
         # Make sure that the answer is not empty:
         assert len(response) > 0, (
-            f"{ApiClass.__name__}.completion() should return a non-empty string!"
+            f"{api_class.__name__}.completion() should return a non-empty string!"
         )
 
         # Check response details:
         assert 'Alexander' in response or 'Aristotle' in response
 
-    def test_text_generation_with_folder(self, ApiClass):
+    def test_text_generation_with_folder(self, api_class):
 
-        api_instance = ApiClass()
+        api_instance = api_class()
 
+        # Get the best model for text generation:
         default_model_name = api_instance.get_best_model(
-            ModelFeatures.TextGeneration)
-        if not default_model_name or not api_instance.has_model_support_for(
-                model_name=default_model_name,
-                features=ModelFeatures.TextGeneration):
+            [ModelFeatures.TextGeneration, ModelFeatures.Document,
+             ModelFeatures.Image])
+
+        # Skip tests if the model does not support text generation:
+        if default_model_name is None:
             pytest.skip(
-                f"{ApiClass.__name__} does not support text generation. Skipping tests.")
+                f"{api_class.__name__} does not support text generation. Skipping tests.")
 
         print('\n' + default_model_name)
 
@@ -355,14 +373,14 @@ class TestBaseApiImplementations(BaseTest):
         messages.append(user_message)
 
         # Run agent:
-        response = api_instance.generate_text_completion(messages=messages,
-                                                         model_name=default_model_name)
+        response = api_instance.generate_text(messages=messages,
+                                              model_name=default_model_name)
 
         print('\n' + str(response))
 
         # Make sure that the answer is not empty:
         assert len(response) > 0, (
-            f"{ApiClass.__name__}.completion() should return a non-empty string!"
+            f"{api_class.__name__}.completion() should return a non-empty string!"
         )
 
         # Check response details:

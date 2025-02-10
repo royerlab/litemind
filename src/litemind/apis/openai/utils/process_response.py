@@ -7,9 +7,9 @@ from litemind.agent.message import Message
 from litemind.agent.tools.toolset import ToolSet
 
 
-def _process_response(response: Any,
-                      toolset: Optional[ToolSet],
-                      response_format: Optional[BaseModel | str]) -> Message:
+def process_response_from_openai(response: Any,
+                                 toolset: Optional[ToolSet],
+                                 response_format: Optional[BaseModel | str]) -> Message:
     """
     Process OpenAI response, checking for function calls and executing them if needed.
 
@@ -58,7 +58,7 @@ def _process_response(response: Any,
         repaired_json_string = repair_json(json_string)
 
         # If the result is an empty string the string was not a JSON string or too broken:
-        if len(repaired_json_string.strip()) == 0 and len(json_string.strip())>0:
+        if len(repaired_json_string.strip()) == 0 and len(json_string.strip()) > 0:
             # In this case we just return the content of the message:
             return Message(role='assistant', text=choice.content)
 
@@ -69,7 +69,6 @@ def _process_response(response: Any,
         except Exception as e:
             # If parsing fails, return the content of the message:
             return Message(role='assistant', text=choice.content)
-
 
     # If no tool call, return the direct assistant message content
     return Message(role='assistant', text=choice.content or "")

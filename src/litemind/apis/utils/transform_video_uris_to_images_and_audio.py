@@ -1,7 +1,7 @@
 from litemind.agent.message import Message
 from litemind.agent.message_block_type import BlockType
-from litemind.apis.utils.sample_video import \
-    append_video_frames_and_audio_to_message
+from litemind.apis.utils.ffmpeg_utils import \
+    convert_video_to_frames_and_audio
 from litemind.utils.normalise_uri_to_local_file_path import \
     uri_to_local_file_path
 
@@ -22,12 +22,17 @@ def transform_video_uris_to_images_and_audio(message: Message) -> Message:
     """
     # Iterate over each block in the message:
     for block in message.blocks:
-        if block.block_type == BlockType.Video and block.content:
+        if block.block_type == BlockType.Video and block.content is not None:
             # Normalise the URI to a local file path:
             local_path = uri_to_local_file_path(block.content)
 
-            # Append video frames and audio to the message:
-            message = append_video_frames_and_audio_to_message(local_path,
-                                                               message)
+            # Get video frames and audio:
+            blocks = convert_video_to_frames_and_audio(local_path)
+
+            # Insert the new blocks at the current position:
+            message.insert_blocks(blocks, block_before=block)
+
+            # Remove the original video block:
+            message.blocks.remove(block)
 
     return message

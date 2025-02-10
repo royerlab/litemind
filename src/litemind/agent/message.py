@@ -1,3 +1,4 @@
+import copy
 import os
 from abc import ABC
 from json import loads
@@ -67,6 +68,20 @@ class Message(ABC):
         new_message.blocks = self.blocks.copy()
         return new_message
 
+    def __deepcopy__(self, memo):
+        """
+        Create a deep copy of the message. The blocks are also deep copied.
+
+        Returns
+        -------
+        Message
+            A deep copy of the message.
+        """
+
+        new_message = Message(role=self.role)
+        new_message.blocks = [copy.deepcopy(block, memo) for block in self.blocks]
+        return new_message
+
     def append_block(self, block: MessageBlock) -> MessageBlock:
         """
         Append a message block to the message.
@@ -78,6 +93,65 @@ class Message(ABC):
         """
         self.blocks.append(block)
         return block
+
+    def insert_block(self,
+                     block: MessageBlock,
+                     block_before: MessageBlock) -> MessageBlock:
+        """
+        Append a message block to the message.
+
+        Parameters
+        ----------
+        block : MessageBlock
+            The message block to append.
+        block_before : MessageBlock
+            The message block to insert after.
+        """
+
+        # find the index of the block_before:
+        index = self.blocks.index(block_before)
+
+        # insert the block after the block_before:
+        self.blocks.insert(index + 1, block)
+
+        return block
+
+    def insert_blocks(self,
+                      blocks: List[MessageBlock],
+                      block_before: MessageBlock) -> List[MessageBlock]:
+        """
+        Insert a list of message blocks after a block in the current message.
+
+        Parameters
+        ----------
+        blocks : List[MessageBlock]
+            The message blocks to insert.
+        block_before : MessageBlock
+            The block to insert the message after.
+        """
+
+        # insert the blocks after the block_before:
+        for block in blocks:
+            self.insert_block(block, block_before)
+            block_before = block
+
+        return blocks
+
+    def insert_message(self, message: 'Message', block_before: MessageBlock) -> 'Message':
+        """
+        Insert a message after a block in the current message.
+
+        Parameters
+        ----------
+        message : Message
+            The message to insert.
+        block_before : MessageBlock
+            The block to insert the message after.
+        """
+
+        self.insert_blocks(message.blocks, block_before)
+
+        return message
 
     def append_text(self, text: str) -> MessageBlock:
         """
@@ -94,7 +168,6 @@ class Message(ABC):
 
         # Append the text block:
         return self.append_block(MessageBlock(block_type='text', content=text))
-
 
     def append_json(self,
                     json_str: str,
@@ -304,10 +377,10 @@ class Message(ABC):
             The source of the table (e.g., file path or url).
         """
 
-        # By default the source is None:
+        # By default, the source is None:
         source = None
 
-        # If table is an URI of tabel file (csv, tsv, xls, xlsx, etc) download file and load it as a pandas DataFrame:
+        # If table is an URI of table file (csv, tsv, xls, xlsx, etc.) download file and load it as a pandas DataFrame:
         if isinstance(table, str):
             # Check that it is a valid table URI:
             if not table.startswith('http') and not table.startswith('file'):
@@ -398,9 +471,9 @@ class Message(ABC):
 
             # append subfolders to the message:
             if not depth or depth >= 1:
-                for dir in dirs:
-                    self.append_text(f"\n###### sub-folder: {dir} \n")
-                    self.append_folder(dir, depth - 1)
+                for d in dirs:
+                    self.append_text(f"\n###### sub-folder: {d} \n")
+                    self.append_folder(d, depth - 1)
 
     def append_archive(self,
                        archive: str,

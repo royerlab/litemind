@@ -6,7 +6,7 @@ from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.base_api import BaseApi
 
 
-class Agent():
+class Agent:
 
     def __init__(self,
                  api: BaseApi,
@@ -39,7 +39,7 @@ class Agent():
 
     def __call__(self,
                  *args,
-                 **kwargs) -> str:
+                 **kwargs) -> Message:
 
         # if a role is provided as a keyword argument, append it:
         role = kwargs['role'] if 'role' in kwargs else 'user'
@@ -97,7 +97,7 @@ class Agent():
                 raise ValueError("text must be a string")
 
         # Call the OpenAI API:
-        response = self.api.generate_text_completion(
+        response = self.api.generate_text(
             model_name=self.model,
             messages=self.conversation.get_all_messages(),
             temperature=self.temperature,

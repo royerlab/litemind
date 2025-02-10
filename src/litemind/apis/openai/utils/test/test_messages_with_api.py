@@ -3,7 +3,7 @@ import os
 from openai import OpenAI
 
 from litemind.agent.message import Message
-from litemind.apis.openai.utils.messages import convert_messages_for_openai
+from litemind.apis.openai.utils.convert_messages import convert_messages_for_openai
 
 __url1 = 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Einstein_1921_by_F_Schmutzer_-_restoration.jpg/456px-Einstein_1921_by_F_Schmutzer_-_restoration.jpg'
 __url2 = 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/2560px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg'

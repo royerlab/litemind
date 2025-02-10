@@ -11,24 +11,25 @@ from litemind.utils.normalise_uri_to_local_file_path import \
     uri_to_local_file_path
 
 
-@pytest.mark.parametrize("ApiClass", API_IMPLEMENTATIONS)
-class TestBaseApiImplementations(BaseTest):
+@pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
+class TestBaseApiImplementationsGenerateMultimodal(BaseTest):
     """
     A tests suite that runs the same tests on each ApiClass
     implementing the abstract BaseApi interface.
     """
 
-    def test_generate_audio(self, ApiClass):
+    def test_generate_audio(self, api_class):
         # Test audio generation with generate_audio:
-        api_instance = ApiClass()
+        api_instance = api_class()
+
+        # Get the best audio generation model:
         audio_gen_model_name = api_instance.get_best_model(
             ModelFeatures.AudioGeneration)
 
-        if not api_instance.has_model_support_for(
-                model_name=audio_gen_model_name,
-                features=ModelFeatures.AudioGeneration):
+        # Skip tests if the model does not support audio generation:
+        if audio_gen_model_name is None:
             pytest.skip(
-                f"{ApiClass.__name__} does not support audio generation. Skipping tests.")
+                f"{api_class.__name__} does not support audio generation. Skipping tests.")
 
         print("Audio generation model name: ", audio_gen_model_name)
 
@@ -80,8 +81,8 @@ class TestBaseApiImplementations(BaseTest):
 
             print(f"Transcription: \n'{transcription}'")
 
-    def test_generate_image(self, ApiClass):
-        api_instance = ApiClass()
+    def test_generate_image(self, api_class):
+        api_instance = api_class()
 
         # Get the best image generation model:
         image_gen_model_name = api_instance.get_best_model(
@@ -92,7 +93,7 @@ class TestBaseApiImplementations(BaseTest):
                 model_name=image_gen_model_name,
                 features=ModelFeatures.ImageGeneration):
             pytest.skip(
-                f"{ApiClass.__name__} does not support image generation. Skipping tests.")
+                f"{api_class.__name__} does not support image generation. Skipping tests.")
 
         print("Image generation model name: ", image_gen_model_name)
 

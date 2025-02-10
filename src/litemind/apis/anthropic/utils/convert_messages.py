@@ -8,8 +8,10 @@ from litemind.apis.utils.get_media_type_from_uri import get_media_type_from_uri
 from litemind.apis.utils.read_file_and_convert_to_base64 import read_file_and_convert_to_base64, base64_to_data_uri
 from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_path
 
+
 def convert_messages_for_anthropic(messages: List[Message],
-                                   response_format: Optional[BaseModel] = None,) -> List['MessageParam']:
+                                   response_format: Optional[BaseModel] = None,
+                                   cache_support: bool = True) -> List['MessageParam']:
     """
     Convert litemind Messages into Anthropic's MessageParam format:
         [
@@ -46,6 +48,8 @@ def convert_messages_for_anthropic(messages: List[Message],
                     base64_data = read_file_and_convert_to_base64(local_path)
                 elif image_uri.startswith("data:image/"):
                     base64_data = image_uri.split(",")[-1]
+                else:
+                    raise ValueError(f"Unsupported image URI: {image_uri}")
 
                 content.append({
                     "type": "image",
@@ -77,9 +81,10 @@ def convert_messages_for_anthropic(messages: List[Message],
             "content": content,
         })
 
-    # Add cache_control to the last message:
-    if anthropic_messages and anthropic_messages[-1]['content']:
-        anthropic_messages[-1]['content'][-1]['cache_control'] = {"type": "ephemeral"}
+    # Add cache_control to the last message if requested:
+    if cache_support:
+        if anthropic_messages and anthropic_messages[-1]['content']:
+            anthropic_messages[-1]['content'][-1]['cache_control'] = {"type": "ephemeral"}
 
     # Add prompt that specifies that response should be in JSOn following given JSON schema:
     if response_format:

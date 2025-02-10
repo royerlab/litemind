@@ -1,4 +1,4 @@
-def create_genai_tools_from_toolset(toolset) -> list['Tool']:
+def format_tools_for_gemini(toolset) -> list['Tool']:
     """
     Convert your custom tool objects into genai.protos.Tool
     for fine-grained control of parameter schemas and descriptions.

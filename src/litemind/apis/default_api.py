@@ -1,0 +1,1184 @@
+import copy
+from typing import List, Optional, Sequence, Union
+
+from PIL.Image import Image
+from arbol import asection, aprint
+from pandas import DataFrame
+from pydantic import BaseModel
+
+from litemind.agent.message import Message
+from litemind.agent.message_block import MessageBlock
+from litemind.agent.message_block_type import BlockType
+from litemind.agent.tools.toolset import ToolSet
+from litemind.apis.base_api import BaseApi
+from litemind.apis.callback_manager import CallbackManager
+from litemind.apis.exceptions import FeatureNotAvailableError
+from litemind.apis.model_features import ModelFeatures
+from litemind.apis.utils.document_processing import is_pymupdf_available, \
+    convert_document_to_markdown, extract_images_from_document
+from litemind.apis.utils.fastembed_embeddings import is_fastembed_available, \
+    fastembed_text
+from litemind.apis.utils.ffmpeg_utils import is_ffmpeg_available, convert_video_to_frames_and_audio
+from litemind.apis.utils.random_projector import DeterministicRandomProjector
+from litemind.apis.utils.whisper_transcribe_audio import \
+    is_local_whisper_available, transcribe_audio_with_local_whisper
+from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_path
+
+
+class DefaultApi(BaseApi):
+    """
+    This is the default API that provides default local models (whisper-local) and features (Video2Image, DocumentConversion, ...).
+
+    """
+
+    # constructor:
+    def __init__(self, callback_manager: Optional[CallbackManager] = None):
+
+        super().__init__(callback_manager=callback_manager)
+
+    def check_availability_and_credentials(self,
+                                           api_key: Optional[str] = None) -> Optional[bool]:
+
+        # Call the callback manager if available:
+        self.callback_manager.on_availability_check(True)
+
+        # The default API is always available:
+        return True
+
+    def list_models(self, features: Optional[Sequence[ModelFeatures]] = None) -> \
+            List[str]:
+        """
+        Get the list of models available that satisfy a given set of features.
+
+        Returns
+        -------
+        List[str]
+            The list of models available
+
+        """
+
+        # We start with an empty list:
+        model_list = []
+
+        # If whisper-local is available then add to the list:
+        if is_local_whisper_available():
+            model_list.append("whisper-local")
+
+        # If fastembed is available then add to the list:
+        if is_fastembed_available():
+            model_list.append("fastembed")
+
+        # If pymupdf is available then add to the list:
+        if is_pymupdf_available():
+            model_list.append("pymupdf")
+
+        # If ffmpeg is available then add to the list:
+        if is_ffmpeg_available():
+            model_list.append("ffmpeg")
+
+        # Filter the models based on the features:
+        if features:
+            model_list = self._filter_models(model_list, features=features)
+
+        # Call callbacks:
+        self.callback_manager.on_model_list(model_list)
+
+        return model_list
+
+    def get_best_model(self,
+                       features: Optional[Union[
+                           str, List[str], ModelFeatures, Sequence[
+                               ModelFeatures]]] = None,
+                       exclusion_filters: Optional[List[str]] = None
+                       ) -> Optional[str]:
+
+        # Normalise the features:
+        features = ModelFeatures.normalise(features)
+
+        # Get model list:
+        model_list = self.list_models()
+
+        # Filter the models based on the requirements:
+        model_list = self._filter_models(model_list,
+                                         features=features,
+                                         exclusion_filters=exclusion_filters)
+
+        # If no model is left, return None:
+        if len(model_list) == 0:
+            return None
+
+        # Best model is first in list:
+        best_model = model_list[0]
+
+        # Set kwargs to other parameters:
+        kwargs = {'features': features,
+                  'exclusion_filters': exclusion_filters}
+
+        # Call callbacks:
+        self.callback_manager.on_best_model_selected(best_model, **kwargs)
+
+        return best_model
+
+    def _filter_models(self,
+                       model_list: List[str],
+                       features: Union[str, List[str], ModelFeatures, Sequence[
+                           ModelFeatures]],
+                       exclusion_filters: Optional[Union[str, List[str]]] = None) -> List[str]:
+        """
+        Filter the list of models based on the given features.
+        Parameters
+        ----------
+        model_list: List[str]
+            List of models.
+        features: Sequence[ModelFeatures], or ModelFeatures, or str, or List[str]
+            List of features to filter on.
+        exclusion_filters: Optional[Union[str,List[str]]]
+            List of strings that if found in the model name exclude it.
+
+        Returns
+        -------
+        List[str]
+            Filtered list of models.
+
+        """
+        filtered_model_list = []
+
+        if not features:
+            # Nothing to filter:
+            return model_list
+
+        # if exclusion_filters is a string then wrap in singleton list:
+        if isinstance(exclusion_filters, str):
+            exclusion_filters = [exclusion_filters]
+
+        for model in model_list:
+
+            # Check if the model should be excluded:
+            if exclusion_filters and any(
+                    [f in model for f in exclusion_filters]):
+                continue
+
+            # Append models that support the given features:
+            if self.has_model_support_for(model_name=model, features=features):
+                filtered_model_list.append(model)
+
+        return filtered_model_list
+
+    def has_model_support_for(self,
+                              features: Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]],
+                              model_name: Optional[str] = None) -> bool:
+
+        # Normalise the features:
+        features = ModelFeatures.normalise(features)
+
+        # Get the best model if not provided:
+        if model_name is None:
+            model_name = self.get_best_model(features=features)
+
+        # If model_name is None then we return False:
+        if model_name is None:
+            return False
+
+        # We check if the superclass says that the model supports the features:
+        if super().has_model_support_for(features=features, model_name=model_name):
+            return True
+
+        # Check that the model has all the required features:
+        for feature in features:
+
+            # The following features use 'fallback' best-of-kind libraries:
+
+            if feature == ModelFeatures.AudioTranscription:
+
+                # In this class we only support whisper-local:
+                if not model_name == 'whisper-local':
+                    return False
+
+                # We provide a default implementation for audio transcription using local whisper is available:
+                if model_name == 'whisper-local' and not is_local_whisper_available():
+                    aprint(
+                        "Audio Transcription feature: whisper is not available! \n Install with: pip install openai-whisper")
+                    return False
+
+            elif feature == ModelFeatures.DocumentConversion:
+
+                # In this class we only support pymupdf:
+                if not model_name == 'pymupdf':
+                    return False
+
+                # Checks if document processing library is installed:
+                if model_name == 'pymupdf' and not is_pymupdf_available():
+                    aprint(
+                        "Documents feature: pymupdf is not available! \n Install with: pip install pymupdf pymupdf4llm")
+                    return False
+
+            elif feature == ModelFeatures.TextEmbeddings or feature == ModelFeatures.ImageEmbeddings or feature == ModelFeatures.AudioEmbeddings or feature == ModelFeatures.VideoEmbeddings:
+
+                # In this class we only support fastembed:
+                if not model_name == 'fastembed':
+                    return False
+
+                # Check if the fastembed library is installed:
+                if model_name == 'fastembed' and not is_fastembed_available():
+                    aprint(
+                        "Text Embeddings feature: fastembed is not available! \n Install with: pip install fastembed")
+                    return False
+
+                # Check if there is a model that supports the corresponding modality:
+                if feature == ModelFeatures.ImageEmbeddings and not self.has_model_support_for(ModelFeatures.Image):
+                    aprint("Image Embeddings feature: model does not support images!")
+                    return False
+                elif feature == ModelFeatures.AudioEmbeddings and not self.has_model_support_for(ModelFeatures.Audio):
+                    aprint("Audio Embeddings feature: model does not support audio!")
+                    return False
+                elif feature == ModelFeatures.VideoEmbeddings and not self.has_model_support_for(ModelFeatures.Video):
+                    aprint("Video Embeddings feature: model does not support video!")
+                    return False
+
+            elif feature == ModelFeatures.VideoConversion:
+
+                # In this class we only support ffmpeg:
+                if not model_name == 'ffmpeg':
+                    return False
+
+                # Check if the ffmpeg library is installed:
+                if model_name == 'ffmpeg' and not is_ffmpeg_available():
+                    aprint(
+                        "Video Conversion feature: ffmpeg is not available! \n Install with: pip install ffmpeg-python")
+                    return False
+
+            else:
+                return False
+
+        return True
+
+    def get_model_features(self, model_name: str) -> List[ModelFeatures]:
+
+        # List to store model features:
+        model_features: List[ModelFeatures] = []
+
+        # Get all the features:
+        for feature in ModelFeatures:
+            if self.has_model_support_for(model_name=model_name,
+                                          features=feature):
+                model_features.append(feature)
+
+        return model_features
+
+    def max_num_input_tokens(self, model_name: Optional[str] = None) -> int:
+        # TODO: we need to figure out what to do here:
+        return 1000
+
+    def max_num_output_tokens(self, model_name: Optional[str] = None) -> int:
+        # TODO: we need to figure out what to do here:
+        return 1000
+
+    def generate_text(self,
+                      messages: List[Message],
+                      model_name: Optional[str] = None,
+                      temperature: float = 0.0,
+                      max_output_tokens: Optional[int] = None,
+                      toolset: Optional[ToolSet] = None,
+                      response_format: Optional[BaseModel] = None,
+                      **kwargs) -> Message:
+
+        raise NotImplementedError("Text generation is not supported by this API.")
+
+    def _preprocess_messages(self,
+                             messages: List[Message],
+                             convert_videos: bool = True,
+                             convert_documents: bool = True,
+                             transcribe_audio: bool = True,
+                             deepcopy: bool = True
+                             ) -> List[Message]:
+
+        # Make a deep copy of the messages and their blocks to prevent damaging the original messages:
+        if deepcopy:
+            messages = copy.deepcopy(messages)
+
+        # Convert videos to images and audio:
+        if convert_videos:
+            # Get the best model for video processing:
+            video_conversion_model_name = self.get_best_model(features=ModelFeatures.VideoConversion)
+
+            # Convert videos to images and audio:
+            messages = self.convert_videos_to_images_and_audio_in_messages(messages=messages,
+                                                                           model_name=video_conversion_model_name)
+
+        # Convert audio messages to text:
+        if transcribe_audio:
+            # Get the best model for audio transcription:
+            audio_transcription_model_name = self.get_best_model(features=ModelFeatures.AudioTranscription)
+
+            # Convert audio message blocks:
+            messages = self.convert_audio_in_messages(messages=messages,
+                                                      model_name=audio_transcription_model_name)
+
+        # Convert documents to markdown:
+        if convert_documents:
+            # Get the best model for document conversion:
+            document_conversion_model = self.get_best_model(features=ModelFeatures.DocumentConversion)
+
+            # Convert documents to markdown:
+            messages = self.convert_documents_to_markdown_in_messages(messages,
+                                                                      model_name=document_conversion_model)
+
+        return messages
+
+    def transcribe_audio(self,
+                         audio_uri: str,
+                         model_name: Optional[str] = None,
+                         **kwargs) -> str:
+
+        # If model is not provided, get the best model:
+        if model_name is None:
+            model_name = self.get_best_model(features=[ModelFeatures.AudioTranscription])
+
+        # Check if the model is None:
+        if model_name is None:
+            raise FeatureNotAvailableError("No model available for audio transcription.")
+
+        # Check if the model is whisper-local:
+        if model_name == 'whisper-local':
+            # Check if whisper is available:
+            if not is_local_whisper_available():
+                # This is redundant, but we check again:
+                raise FeatureNotAvailableError(
+                    "Audio Transcription feature: whisper is not available! \n Install with: pip install openai-whisper")
+
+            transcription = transcribe_audio_with_local_whisper(audio_uri=audio_uri,
+                                                                **kwargs)
+
+            # Call the callback manager:
+            self.callback_manager.on_audio_transcription(audio_uri=audio_uri,
+                                                         transcription=transcription,
+                                                         **kwargs)
+
+            return transcription
+
+        else:
+            raise NotImplementedError("Unknown transcription model")
+
+    def convert_audio_in_messages(self,
+                                  messages: Sequence[Message],
+                                  model_name: Optional[str] = None) -> Sequence[Message]:
+
+        # If model is not provided, get the best model:
+        if model_name is None:
+            model_name = self.get_best_model(features=[ModelFeatures.AudioTranscription])
+
+        # Check if the model is None:
+        if model_name is None:
+            raise FeatureNotAvailableError("No model available for audio transcription.")
+
+        # Iterate over each message in the list:
+        for message in messages:
+
+            # Iterate over each block in the message:
+            for block in message.blocks:
+
+                # Check if the block is an audio block:
+                if block.block_type == BlockType.Audio and block.content:
+                    try:
+                        # We use a local instance of whisper instead:
+                        transcription = self.transcribe_audio(block.content,
+                                                              model_name=model_name)
+
+                        # Extract filename from URI:
+                        original_filename = block.content.split("/")[-1]
+
+                        # Add markdown quotes ''' around the transcribed text, and
+                        # add prefix: "Transcription: " to the transcribed text:
+                        transcription = f"\nTranscription of audio file '{original_filename}': \n'''\n{transcription}\n'''\n"
+
+                        # Make a new text block:
+                        transcription_block = MessageBlock(block_type=BlockType.Text,
+                                                           content=transcription)
+
+                        # Add the transcribed text to the message right after the audio block:
+                        message.insert_block(transcription_block, block_before=block)
+
+                        # Remove the audio block:
+                        message.blocks.remove(block)
+
+                    except Exception as e:
+                        # Print stacktrace:
+                        import traceback
+                        traceback.print_exc()
+                        raise ValueError(
+                            f"Could not transcribe audio from: '{block.content}', error: {e}")
+
+        return messages
+
+    def convert_documents_to_markdown_in_messages(self,
+                                                  messages: Sequence[Message],
+                                                  model_name: Optional[str] = None) -> Sequence[Message]:
+
+        # If model is not provided, get the best model:
+        if model_name is None:
+            model_name = self.get_best_model(features=[ModelFeatures.Document])
+
+        # Check if the model is None:
+        if model_name is None:
+            raise FeatureNotAvailableError("No model available for document conversion.")
+
+        # Check if the model is pymupdf:
+        if model_name == 'pymupdf':
+            # Check if pymupdf is available:
+            if not is_pymupdf_available():
+                # This is redundant, but we check again:
+                raise FeatureNotAvailableError(
+                    "Documents feature: pymupdf is not available! \n Install with: pip install pymupdf pymupdf4llm")
+        else:
+            raise NotImplementedError("Unknown document conversion model")
+
+        # Iterate over each message in the list:
+        for message in messages:
+
+            # Iterate over each block in the message:
+            for block in message.blocks:
+
+                # Check if the block is a document block:
+                if block.block_type == BlockType.Document and block.content is not None:
+                    try:
+                        # Extract filename from URI:
+                        original_filename = block.content.split("/")[-1]
+
+                        # Extract the file extension from URI:
+                        file_extension = block.content.split(".")[-1]
+
+                        # Convert document to markdown:
+                        markdown = convert_document_to_markdown(block.content)
+
+                        # Add markdown quotes around the text, and add the extension, for example: ```pdf for extension 'pdf':
+                        text = f"\nText extracted from document '{original_filename}': \n'''{file_extension}\n{markdown}\n'''\n"
+
+                        # Create text block:
+                        text_block = MessageBlock(block_type=BlockType.Text,
+                                                  content=text)
+
+                        # Insert the text block after the document block:
+                        message.insert_block(text_block, block_before=block)
+
+                        # Extract images from document:
+                        image_uris = extract_images_from_document(block.content)
+
+                        # Iterate over the image URIs:
+                        for image_uri in image_uris:
+                            # Create an image block:
+                            image_block = MessageBlock(block_type=BlockType.Image,
+                                                       content=image_uri)
+
+                            # Insert image block right after the text block:
+                            message.insert_block(image_block, block_before=text_block)
+
+                        # Call the callback manager:
+                        self.callback_manager.on_document_conversion(document_uri=block.content,
+                                                                     markdown=text)
+
+                        # Remove the document block:
+                        message.blocks.remove(block)
+
+                    except Exception as e:
+                        raise ValueError(
+                            f"Could not extract text from document: '{block.content}', error: {e}")
+
+
+                elif block.block_type == BlockType.Json and block.content is not None:
+                    try:
+                        # Convert JSON to markdown:
+                        markdown = f"```json\n{block.content}\n```"
+
+                        # Create a text block:
+                        text_block = MessageBlock(block_type=BlockType.Text,
+                                                  content=markdown)
+
+                        # Insert the text block after the JSON block:
+                        message.insert_block(text_block, block_before=block)
+
+                        # Remove the JSON block:
+                        message.blocks.remove(block)
+
+                    except Exception as e:
+                        raise ValueError(
+                            f"Could not convert JSON to markdown: '{block.content}', error: {e}")
+                elif block.block_type == BlockType.Object and block.content is not None:
+                    try:
+                        # Convert object to json since it is a pydantic object:
+                        json_str = block.content.model_dump_json()
+                        markdown = f"```json\n{json_str}\n```"
+
+                        # Create a text block:
+                        text_block = MessageBlock(block_type=BlockType.Text,
+                                                  content=markdown)
+
+                        # Insert the text block after the object block:
+                        message.insert_block(text_block, block_before=block)
+
+                        # Remove the object block:
+                        message.blocks.remove(block)
+
+                    except Exception as e:
+                        raise ValueError(
+                            f"Could not convert object to markdown: '{block.content}', error: {e}")
+                elif block.block_type == BlockType.Code and block.content is not None:
+                    try:
+                        # Get language from block attributes with default '':
+                        language = block.attributes.get('language', '')
+
+                        # Convert code to markdown:
+                        markdown = f"```{language}\n{block.content}\n```"
+
+                        # Create a text block:
+                        text_block = MessageBlock(block_type=BlockType.Text,
+                                                  content=markdown)
+
+                        # Insert the text block after the code block:
+                        message.insert_block(text_block, block_before=block)
+
+                        # Remove the code block:
+                        message.blocks.remove(block)
+
+                    except Exception as e:
+                        raise ValueError(
+                            f"Could not convert code to markdown: '{block.content}', error: {e}")
+                elif block.block_type == BlockType.Table and block.content is not None:
+                    try:
+                        table: DataFrame = block.content
+
+                        # pretty print the pandas dataframe into markdown-like / compatible string:
+                        markdown_table = table.to_markdown()
+
+                        # Convert table to markdown:
+                        markdown = f"```dataframe\n{markdown_table}\n```"
+
+                        # Create a text block:
+                        text_block = MessageBlock(block_type=BlockType.Text,
+                                                  content=markdown)
+
+                        # Insert the text block after the table block:
+                        message.insert_block(text_block, block_before=block)
+
+                        # Remove the table block:
+                        message.blocks.remove(block)
+
+                    except Exception as e:
+                        raise ValueError(
+                            f"Could not convert table to markdown: '{block.content}', error: {e}")
+                elif block.block_type == BlockType.Text and block.content is not None:
+                    try:
+                        text: str = block.content
+
+                        # Check if the text ends with at least one '\n' if not, then add it:
+                        if not text.endswith('\n'):
+                            text += '\n'
+
+                        # Set the block content to the text:
+                        block.content = text
+
+                    except Exception as e:
+                        raise ValueError(
+                            f"Could not convert table to markdown: '{block.content}', error: {e}")
+
+                else:
+                    # Other block types go through unchanged...
+                    pass
+
+        return messages
+
+    def convert_videos_to_images_and_audio_in_messages(self,
+                                                       messages: Sequence[Message],
+                                                       model_name: Optional[str] = None) -> Sequence[Message]:
+
+        # If model is not provided, get the best model:
+        if model_name is None:
+            model_name = self.get_best_model(features=[ModelFeatures.VideoConversion])
+
+        # Check if the model is None:
+        if model_name is None:
+            raise FeatureNotAvailableError("No model available for video conversion.")
+
+        # Check if the model is ffmpeg:
+        if model_name == 'ffmpeg':
+            # Check if ffmpeg is available:
+            if not is_ffmpeg_available():
+                # This is redundant, but we check again:
+                raise FeatureNotAvailableError(
+                    "Video Conversion feature: ffmpeg is not available! \n Install with: pip install ffmpeg-python")
+
+        else:
+            raise NotImplementedError(f"Unknown video conversion model: {model_name}")
+
+        # Iterate over each message in the list:
+        for message in messages:
+
+            # Iterate over each block in the message:
+            for block in message.blocks:
+
+                # Check if the block is a video block:
+                if block.block_type == BlockType.Video and block.content:
+                    # Normalise the URI to a local file path:
+                    local_path = uri_to_local_file_path(block.content)
+
+                    # Append video frames and audio to the message:
+                    blocks = convert_video_to_frames_and_audio(local_path)
+
+                    # Insert this message -- al its blocks -- right after the video block:
+                    message.insert_blocks(blocks, block_before=block)
+
+                    # Remove the video block:
+                    message.blocks.remove(block)
+
+        return messages
+
+    def generate_audio(self,
+                       text: str,
+                       voice: Optional[str] = None,
+                       audio_format: Optional[str] = None,
+                       model_name: Optional[str] = None,
+                       **kwargs) -> str:
+
+        raise NotImplementedError("Audio generation is not supported by this API.")
+
+    def generate_image(self,
+                       positive_prompt: str,
+                       negative_prompt: Optional[str] = None,
+                       model_name: str = None,
+                       image_width: int = 512,
+                       image_height: int = 512,
+                       preserve_aspect_ratio: bool = True,
+                       allow_resizing: bool = True,
+                       **kwargs
+                       ) -> Image:
+
+        raise NotImplementedError("Image generation is not supported by this API.")
+
+    def generate_video(self,
+                       description: str,
+                       model_name: Optional[str] = None,
+                       **kwargs) -> str:
+
+        raise NotImplementedError("Video generation is not supported by this API.")
+
+    def embed_texts(self,
+                    texts: List[str],
+                    model_name: Optional[str] = None,
+                    dimensions: int = 512,
+                    **kwargs) -> Sequence[Sequence[float]]:
+
+        # if no model is passed get a default model with text embedding support:
+        if model_name is None:
+            model_name = self.get_best_model(features=ModelFeatures.TextEmbeddings)
+
+        # Check that the model requested is fastembed:
+        if not model_name == 'fastembed':
+            raise FeatureNotAvailableError(f"Model '{model_name}' does not support text embedding.")
+
+        # Check if fastembed is available:
+        if not is_fastembed_available():
+            raise FeatureNotAvailableError(
+                "Text Embedding feature: fastembed is not available! \n Install with: pip install fastembed")
+
+        # Embed the text using fastembed:
+        embeddings = fastembed_text(texts=texts,
+                                    dimensions=dimensions,
+                                    **kwargs)
+
+        # Update kwargs with other parameters:
+        kwargs.update({'model_name': model_name,
+                       'dimensions': dimensions})
+
+        # Call the callback manager:
+        self.callback_manager.on_text_embedding(texts=texts,
+                                                embeddings=embeddings,
+                                                **kwargs)
+
+        # Return the embeddings:
+        return embeddings
+
+    def _reduce_embeddings_dimension(self,
+                                     embeddings: Sequence[Sequence[float]],
+                                     reduced_dim: int) -> Sequence[
+        Sequence[float]]:
+
+        # Create a DeterministicRandomProjector object:
+        drp = DeterministicRandomProjector(original_dim=len(embeddings[0]),
+                                           reduced_dim=reduced_dim)
+
+        # Project the embeddings:
+        return drp.transform(embeddings)
+
+    def embed_images(self,
+                     image_uris: List[str],
+                     model_name: Optional[str] = None,
+                     dimensions: int = 512,
+                     **kwargs) -> Sequence[Sequence[float]]:
+
+        # If no model is passed get a default model with image support:
+        if model_name is None:
+            model_name = self.get_best_model(features=ModelFeatures.ImageEmbeddings)
+
+        # Get best image model name:
+        image_text_model_name = self.get_best_model([ModelFeatures.Image, ModelFeatures.TextGeneration])
+
+        # Check model is not None:
+        if not image_text_model_name:
+            raise FeatureNotAvailableError("Can't find a text generation model that supports images.")
+
+        # List to store image descriptions:
+        image_descriptions = []
+
+        # Iterate over the image_uris:
+        for image_uri in image_uris:
+            # Describe image and then embed the description of the image:
+            description = self.describe_image(image_uri=image_uri,
+                                              model_name=image_text_model_name,
+                                              **kwargs)
+
+            # Append the description to the list:
+            image_descriptions.append(description)
+
+        # Embed the image descriptions:
+        image_embeddings = self.embed_texts(texts=image_descriptions,
+                                            model_name=model_name,
+                                            dimensions=dimensions)
+
+        # Update kwargs with other parameters:
+        kwargs.update({'model_name': model_name,
+                       'image_descriptions': image_descriptions,
+                       'dimensions': dimensions})
+
+        # Call the callback manager:
+        self.callback_manager.on_image_embedding(image_uris=image_uris,
+                                                 embeddings=image_embeddings,
+                                                 **kwargs)
+
+        # Return the image embeddings:
+        return image_embeddings
+
+    def embed_audios(self,
+                     audio_uris: List[str],
+                     model_name: Optional[str] = None,
+                     dimensions: int = 512,
+                     **kwargs) -> Sequence[Sequence[float]]:
+
+        # If no model is passed get a default model with text embedding support:
+        if model_name is None:
+            model_name = self.get_best_model(features=[ModelFeatures.TextEmbeddings])
+
+        # Get the best audio text gen model:
+        audio_text_model_name = self.get_best_model([ModelFeatures.Audio, ModelFeatures.TextGeneration])
+
+        # Check model is not None:
+        if not audio_text_model_name:
+            # We can't find a text generation model that supports audio.
+            # Instead, we use the best model that supports audio transcription:
+            audio_transcription_model_name = self.get_best_model([ModelFeatures.AudioTranscription])
+        else:
+            audio_transcription_model_name = None
+
+        # List to store audio descriptions:
+        audio_descriptions = []
+
+        # Iterate over the audio_uris:
+        for audio_uri in audio_uris:
+
+            if audio_text_model_name is not None:
+                # Describe video and then embed the description of the video:
+                description = self.describe_audio(audio_uri=audio_uri,
+                                                  model_name=audio_text_model_name,
+                                                  **kwargs)
+            elif audio_transcription_model_name is not None:
+                # Transcribe audio and then embed the transcription of the audio:
+                description = self.transcribe_audio(audio_uri=audio_uri,
+                                                    model_name=audio_transcription_model_name,
+                                                    **kwargs)
+            else:
+                raise FeatureNotAvailableError(
+                    "Can't find a model that supports audio in text generation or an audio transcription model.")
+
+            # Append the description to the list:
+            audio_descriptions.append(description)
+
+        # Embed the audio descriptions:
+        audio_embeddings = self.embed_texts(texts=audio_descriptions,
+                                            model_name=model_name,
+                                            dimensions=dimensions)
+
+        # Update kwargs with other parameters:
+        kwargs.update({'model_name': model_name,
+                       'audio_descriptions': audio_descriptions,
+                       'dimensions': dimensions})
+
+        # Call the callback manager:
+        self.callback_manager.on_audio_embedding(audio_uris=audio_uris,
+                                                 embeddings=audio_embeddings,
+                                                 **kwargs)
+
+        # Return the audio embeddings:
+        return audio_embeddings
+
+    def embed_videos(self,
+                     video_uris: List[str],
+                     model_name: Optional[str] = None,
+                     dimensions: int = 512,
+                     **kwargs) -> Sequence[Sequence[float]]:
+
+        # If no model is passed get a default model with text embedding support:
+        if model_name is None:
+            model_name = self.get_best_model(features=[ModelFeatures.TextEmbeddings])
+
+        # Get best image model name:
+        video_text_model_name = self.get_best_model([ModelFeatures.Video, ModelFeatures.TextGeneration])
+
+        # Check model is not None:
+        if not video_text_model_name:
+            raise FeatureNotAvailableError("Can't find a text generation model that supports video.")
+
+        # List to store video descriptions:
+        video_descriptions = []
+
+        # Iterate over the video_uris:
+        for video_uri in video_uris:
+            # Describe video and then embed the description of the video:
+            description = self.describe_video(video_uri=video_uri,
+                                              model_name=video_text_model_name,
+                                              **kwargs)
+
+            # Append the description to the list:
+            video_descriptions.append(description)
+
+        # Embed the video descriptions:
+        video_embeddings = self.embed_texts(texts=video_descriptions,
+                                            model_name=model_name,
+                                            dimensions=dimensions)
+
+        # Update kwargs with other parameters:
+        kwargs.update({'model_name': model_name,
+                       'video_descriptions': video_descriptions,
+                       'dimensions': dimensions})
+
+        # Call the callback manager:
+        self.callback_manager.on_video_embedding(video_uris=video_uris,
+                                                 embeddings=video_embeddings,
+                                                 **kwargs)
+
+        # Return the video embeddings:
+        return video_embeddings
+
+    def describe_image(self,
+                       image_uri: str,
+                       system: str = 'You are a helpful AI assistant that can describe and analyse images.',
+                       query: str = 'Here is an image, please carefully describe it completely and in detail.',
+                       model_name: Optional[str] = None,
+                       temperature: float = 0,
+                       max_output_tokens: Optional[int] = None,
+                       number_of_tries: int = 4,
+                       ) -> str:
+
+        with (asection(
+                f"Asking model {model_name} to describe a given image: '{image_uri}':")):
+            aprint(f"Query: '{query}'")
+            aprint(f"Model: '{model_name}'")
+            aprint(f"Max tokens: '{max_output_tokens}'")
+
+            # If no model is passed get a default model with image support:
+            if model_name is None:
+                model_name = self.get_best_model(features=[ModelFeatures.TextGeneration,
+                                                           ModelFeatures.Image])
+
+            # If the model does not support vision, return an error:
+            if not self.has_model_support_for(model_name=model_name,
+                                              features=[ModelFeatures.TextGeneration,
+                                                        ModelFeatures.Image]):
+                raise FeatureNotAvailableError(f"Model '{model_name}' does not support images.")
+
+            # if no max_output_tokens is passed, get the default value:
+            if max_output_tokens is None:
+                max_output_tokens = self.max_num_output_tokens(model_name)
+            else:
+                # Limit the number of tokens to the maximum allowed by the model:
+                max_output_tokens = min(max_output_tokens,
+                                        self.max_num_output_tokens(model_name))
+
+            try:
+                # Get best image model name:
+                image_model_name = self.get_best_model(ModelFeatures.Image)
+
+                # Default response:
+                response = None
+
+                # Retry in case of model refusing to answer:
+                for tries in range(number_of_tries):
+
+                    messages = []
+
+                    # System message:
+                    system_message = Message(role='system')
+                    system_message.append_text(system)
+                    messages.append(system_message)
+
+                    # User message:
+                    user_message = Message(role='user')
+                    user_message.append_text(query)
+                    user_message.append_image(image_uri)
+
+                    messages.append(user_message)
+
+                    # Run agent:
+                    response = self.generate_text(messages=messages,
+                                                  model_name=image_model_name,
+                                                  temperature=temperature,
+                                                  max_output_tokens=max_output_tokens)
+
+                    # Normalise response:
+                    response = str(response)
+
+                    # Check if the response is empty:
+                    if not response:
+                        aprint(f"Response is empty. Trying again...")
+                        continue
+
+                    # response in lower case and trimmed of white spaces
+                    response_lc = response.lower().strip()
+
+                    # Check if response is too short:
+                    if len(response_lc) < 3:
+                        aprint(f"Response is empty. Trying again...")
+                        continue
+
+                    # if the model refused to answer, we try again!
+                    if ("sorry" in response_lc and (
+                            "i cannot" in response_lc or "i can't" in response_lc or 'i am unable' in response_lc)) \
+                            or "i cannot assist" in response_lc or "i can't assist" in response_lc or 'i am unable to assist' in response_lc or "I'm sorry" in response_lc:
+                        aprint(
+                            f"Model {model_name} refuses to assist (response: {response}). Trying again...")
+                        continue
+
+                # Update kwargs with other parameters:
+                kwargs = {'model_name': model_name,
+                          'temperature': temperature,
+                          'max_output_tokens': max_output_tokens,
+                          'number_of_tries': number_of_tries,
+                          'system': system,
+                          'query': query
+                          }
+
+                # call the callback manager:
+                self.callback_manager.on_image_description(image_uri=image_uri,
+                                                           description=response,
+                                                           **kwargs)
+
+                return response
+
+            except Exception as e:
+                # Log the error:
+                aprint(f"Error: '{e}'")
+                # print stack trace:
+                import traceback
+                traceback.print_exc()
+                return f"Error: '{e}'"
+
+    def describe_audio(self,
+                       audio_uri: str,
+                       system: str = 'You are a helpful AI assistant that can describe and analyse audio.',
+                       query: str = 'Here is an audio file, please carefully describe its contents in detail. If it is speech, please transcribe completely and accurately.',
+                       model_name: Optional[str] = None,
+                       temperature: float = 0,
+                       max_output_tokens: Optional[int] = None,
+                       number_of_tries: int = 4,
+                       ) -> str | None:
+
+        with (asection(
+                f"Asking model {model_name} to describe a given audio: '{audio_uri}':")):
+            aprint(f"Query: '{query}'")
+            aprint(f"Model: '{model_name}'")
+            aprint(f"Max tokens: '{max_output_tokens}'")
+
+            # If no model is passed get a default model with image support:
+            if model_name is None:
+                model_name = self.get_best_model(features=[ModelFeatures.TextGeneration,
+                                                           ModelFeatures.Audio])
+
+            # If the model does not support audio, return an error:
+            if not self.has_model_support_for(model_name=model_name,
+                                              features=[ModelFeatures.TextGeneration,
+                                                        ModelFeatures.Audio]):
+                raise FeatureNotAvailableError(f"Model '{model_name}' does not support audio.")
+
+            # if no max_output_tokens is passed, get the default value:
+            if max_output_tokens is None:
+                max_output_tokens = self.max_num_output_tokens(model_name)
+            else:
+                # Limit the number of tokens to the maximum allowed by the model:
+                max_output_tokens = min(max_output_tokens,
+                                        self.max_num_output_tokens(model_name))
+
+            try:
+
+                audio_model_name = self.get_best_model(ModelFeatures.Audio)
+
+                # Retry in case of model refusing to answer:
+                for tries in range(number_of_tries):
+
+                    messages = []
+
+                    # System message:
+                    system_message = Message(role='system')
+                    system_message.append_text(system)
+                    messages.append(system_message)
+
+                    # User message:
+                    user_message = Message(role='user')
+                    user_message.append_text(query)
+                    user_message.append_audio(audio_uri)
+
+                    messages.append(user_message)
+
+                    # Run agent:
+                    response = self.generate_text(messages=messages,
+                                                  model_name=audio_model_name,
+                                                  temperature=temperature,
+                                                  max_output_tokens=max_output_tokens)
+
+                    # Normalise response:
+                    response = str(response)
+
+                    # Check if the response is empty:
+                    if not response:
+                        aprint(f"Response is empty. Trying again...")
+                        continue
+
+                    # response in lower case and trimmed of white spaces
+                    response_lc = response.lower().strip()
+
+                    # Check if response is too short:
+                    if len(response_lc) < 3:
+                        aprint(f"Response is empty. Trying again...")
+                        continue
+
+                    # Update kwargs with other parameters:
+                    kwargs = {'model_name': model_name,
+                              'temperature': temperature,
+                              'max_output_tokens': max_output_tokens,
+                              'number_of_tries': number_of_tries,
+                              'system': system,
+                              'query': query
+                              }
+
+                    # call the callback manager:
+                    self.callback_manager.on_audio_description(audio_uri=audio_uri,
+                                                               description=response,
+                                                               **kwargs)
+
+                    return response
+
+            except Exception as e:
+                # Log the error:
+                aprint(f"Error: '{e}'")
+                # print stack trace:
+                import traceback
+                traceback.print_exc()
+                return f"Error: '{e}'"
+
+    def describe_video(self,
+                       video_uri: str,
+                       system: str = 'You are a helpful AI assistant that can describe/analyse videos.',
+                       query: str = 'Here is a video file, please carefully and completely describe it in detail.',
+                       model_name: Optional[str] = None,
+                       temperature: float = 0,
+                       max_output_tokens: Optional[int] = None,
+                       number_of_tries: int = 4,
+                       ) -> str | None:
+
+        with (asection(
+                f"Asking model {model_name} to describe a given video: '{video_uri}':")):
+            aprint(f"Query: '{query}'")
+            aprint(f"Model: '{model_name}'")
+            aprint(f"Max tokens: '{max_output_tokens}'")
+
+            # If no model is passed get a default model with video support:
+            if model_name is None:
+                model_name = self.get_best_model(features=[ModelFeatures.TextGeneration,
+                                                           ModelFeatures.Video])
+
+            # If the model does not support video, return an error:
+            if not self.has_model_support_for(model_name=model_name,
+                                              features=[ModelFeatures.TextGeneration,
+                                                        ModelFeatures.Video]):
+                raise FeatureNotAvailableError(f"Model '{model_name}' does not support video.")
+
+            # if no max_output_tokens is passed, get the default value:
+            if max_output_tokens is None:
+                max_output_tokens = self.max_num_output_tokens(model_name)
+            else:
+                # Limit the number of tokens to the maximum allowed by the model:
+                max_output_tokens = min(max_output_tokens,
+                                        self.max_num_output_tokens(model_name))
+
+            try:
+
+                video_model_name = self.get_best_model(ModelFeatures.Video)
+
+                # Retry in case of model refusing to answer:
+                for tries in range(number_of_tries):
+
+                    messages = []
+
+                    # System message:
+                    system_message = Message(role='system')
+                    system_message.append_text(system)
+                    messages.append(system_message)
+
+                    # User message:
+                    user_message = Message(role='user')
+                    user_message.append_text(query)
+                    user_message.append_video(video_uri)
+
+                    messages.append(user_message)
+
+                    # Run agent:
+                    response = self.generate_text(messages=messages,
+                                                  model_name=video_model_name,
+                                                  temperature=temperature,
+                                                  max_output_tokens=max_output_tokens)
+
+                    # Normalize response:
+                    response = str(response)
+
+                    # Check if the response is empty:
+                    if not response:
+                        aprint(f"Response is empty. Trying again...")
+                        continue
+
+                    # response in lower case and trimmed of white spaces
+                    response_lc = response.lower().strip()
+
+                    # Check if response is too short:
+                    if len(response_lc) < 3:
+                        aprint(f"Response is empty. Trying again...")
+                        continue
+
+                    # Update kwargs with other parameters:
+                    kwargs = {'model_name': model_name,
+                              'temperature': temperature,
+                              'max_output_tokens': max_output_tokens,
+                              'number_of_tries': number_of_tries,
+                              'system': system,
+                              'query': query
+                              }
+
+                    # call the callback manager:
+                    self.callback_manager.on_video_description(video_uri=video_uri,
+                                                               description=response,
+                                                               **kwargs)
+
+                    return response
+
+            except Exception as e:
+                # Log the error:
+                aprint(f"Error: '{e}'")
+                # print stack trace:
+                import traceback
+                traceback.print_exc()
+                return f"Error: '{e}'"

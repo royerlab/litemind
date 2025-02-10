@@ -1,4 +1,4 @@
-from pprint import pprint
+from typing import Sequence
 
 import pytest
 
@@ -6,19 +6,20 @@ from litemind.apis.base_api import ModelFeatures
 from litemind.apis.tests.base_test import BaseTest, API_IMPLEMENTATIONS
 
 
-@pytest.mark.parametrize("ApiClass", API_IMPLEMENTATIONS)
-class TestBaseApiImplementations(BaseTest):
+@pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
+class TestBaseApiImplementationsEmbeddings(BaseTest):
     """
     A tests suite that runs the same tests on each ApiClass
     implementing the abstract BaseApi interface.
     """
 
-    def test_text_embedding(self, ApiClass):
+    def test_text_embedding(self, api_class):
         """
         Test that text_embedding() returns a valid list of floats.
         """
-        api_instance = ApiClass()
+        api_instance = api_class()
 
+        # Get the best model for text embeddings:
         embedding_model_name = api_instance.get_best_model(
             ModelFeatures.TextEmbeddings)
 
@@ -27,52 +28,68 @@ class TestBaseApiImplementations(BaseTest):
                 model_name=embedding_model_name,
                 features=ModelFeatures.TextEmbeddings):
             pytest.skip(
-                f"{ApiClass.__name__} does not support embeddings. Skipping tests.")
+                f"{api_class.__name__} does not support embeddings. Skipping tests.")
 
+        # Two sequences of texts:
         texts = ["Hello, world!", "Testing embeddings."]
+
+        # Get the embeddings:
         embeddings = api_instance.embed_texts(texts=texts,
                                               model_name=embedding_model_name,
                                               dimensions=512)
 
+        # Make sure that the embeddings is not None:
+        assert embeddings is not None, "The embeddings should not be None."
+
         # Check that the returned embeddings are a list of length 2:
-        assert isinstance(embeddings, list), "The embeddings should be a list."
+        assert isinstance(embeddings, Sequence), "The embeddings should be a list."
         assert len(
             embeddings) == 2, "The embeddings should be a list of length 2."
 
+        # Check that each embedding is a list of floats:
         for embedding in embeddings:
-            print(len(embedding))
 
-        # Check that each embeddings are lists of floats:
-        for embedding in embeddings:
+            # Check that each embedding is a sequence of floats, not necessarily a list:
             assert isinstance(embedding,
-                              list), "Each embedding should be a list."
+                              Sequence), "Each embedding should be a list."
+
             assert len(
-                embedding) == 512, "Each embedding should be of length 512 as reequested."
+                embedding) == 512, "Each embedding should be of length 512 as requested."
 
             for value in embedding:
                 assert isinstance(value,
                                   float), "Each value in the embedding should be a float."
 
-    def test_audio_embedding(self, ApiClass):
-        """
-        Test that text_embedding() returns a valid list of floats.
-        """
-        api_instance = ApiClass()
+        # turn embeddings into a numpy array:
+        import numpy as np
+        embeddings = np.array(embeddings)
+        print(embeddings.shape)
 
+    def test_audio_embedding(self, api_class):
+        """
+        Test that embed_audio() returns a valid list of floats.
+        """
+        api_instance = api_class()
+
+        # Get the best model for audio embeddings:
         embedding_model_name = api_instance.get_best_model(
-            ModelFeatures.TextEmbeddings)
+            ModelFeatures.AudioEmbeddings)
 
         # Skip tests if the model does not support embeddings:
         if not embedding_model_name or not api_instance.has_model_support_for(
                 model_name=embedding_model_name,
-                features=ModelFeatures.TextEmbeddings):
+                features=ModelFeatures.AudioEmbeddings):
             pytest.skip(
-                f"{ApiClass.__name__} does not support embeddings. Skipping tests.")
+                f"{api_class.__name__} does not support audio embeddings. Skipping tests.")
 
-        texts = ["Hello, world!", "Testing embeddings."]
-        embeddings = api_instance.embed_texts(texts=texts,
-                                              model_name=embedding_model_name,
-                                              dimensions=512)
+        # Get the audio URIs:
+        audio_1_uri = BaseTest._get_local_test_audio_uri('harvard.wav')
+        audio_2_uri = BaseTest._get_local_test_audio_uri('preamble.wav')
+
+        # Get the embeddings:
+        embeddings = api_instance.embed_audios(audio_uris=[audio_1_uri, audio_2_uri],
+                                               model_name=embedding_model_name,
+                                               dimensions=512)
 
         # Check that the returned embeddings are a list of length 2:
         assert isinstance(embeddings, list), "The embeddings should be a list."
@@ -90,12 +107,18 @@ class TestBaseApiImplementations(BaseTest):
                 assert isinstance(value,
                                   float), "Each value in the embedding should be a float."
 
-    def test_video_embedding(self, ApiClass):
+        # turn embeddings into a numpy array:
+        import numpy as np
+        embeddings = np.array(embeddings)
+        print(embeddings.shape)
+
+    def test_video_embedding(self, api_class):
         """
         Test that video_embedding() returns a valid list of floats.
         """
-        api_instance = ApiClass()
+        api_instance = api_class()
 
+        # Get the best model for video embeddings:
         embedding_model_name = api_instance.get_best_model(
             ModelFeatures.VideoEmbeddings)
 
@@ -104,23 +127,25 @@ class TestBaseApiImplementations(BaseTest):
                 model_name=embedding_model_name,
                 features=ModelFeatures.VideoEmbeddings):
             pytest.skip(
-                f"{ApiClass.__name__} does not support video embeddings. Skipping tests.")
+                f"{api_class.__name__} does not support video embeddings. Skipping tests.")
 
         print(f"Embedding model name: {embedding_model_name}")
 
-        video_uri = self._get_local_test_video_uri('flying.mp4')
-        embeddings = api_instance.embed_videos(video_uris=[video_uri],
+        # Get the video URIs:
+        video_uri_1 = self._get_local_test_video_uri('flying.mp4')
+        video_uri_2 = self._get_local_test_video_uri('lunar_park.mp4')
+
+        # Get the embeddings:
+        embeddings = api_instance.embed_videos(video_uris=[video_uri_1, video_uri_2],
                                                model_name=embedding_model_name,
                                                dimensions=512)
-
-        pprint(embeddings)
 
         # Check that the returned embeddings are a list of floats:
         assert isinstance(embeddings, list), "The embeddings should be a list."
 
         # Check that the embeddings are a list of length 1:
         assert len(
-            embeddings) == 1, "The embeddings should be a list of length 1."
+            embeddings) == 2, "The embeddings should be a list of length 1."
 
         # Check that each embedding is a list of floats of length 512:
         assert len(
@@ -131,3 +156,8 @@ class TestBaseApiImplementations(BaseTest):
         for value in embeddings[0]:
             assert isinstance(value,
                               float), "Each value in the embedding should be a float."
+
+        # turn embeddings into a numpy array:
+        import numpy as np
+        embeddings = np.array(embeddings)
+        print(embeddings.shape)

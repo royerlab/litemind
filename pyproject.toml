@@ -12,7 +12,6 @@ dependencies = [
     "anthropic",
     "google-generativeai",
     "pillow",
-    "ffmpeg-python",
     "arbol",
     "json-repair"
 ]
@@ -40,4 +39,13 @@ tables = [
     "numpy",
     "chardet",
     "tabulate"
+]
+
+videos = [
+    "ffmpeg-python",
+    "imageio[ffmpeg]",
+]
+
+embed = [
+    "fastembed",
 ]

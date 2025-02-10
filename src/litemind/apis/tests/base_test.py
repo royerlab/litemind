@@ -1,38 +1,25 @@
 from litemind.apis.anthropic.anthropic_api import AnthropicApi
+from litemind.apis.combined_api import CombinedApi
+from litemind.apis.default_api import DefaultApi
 from litemind.apis.google.google_api import GeminiApi
 from litemind.apis.ollama.ollama_api import OllamaApi
 from litemind.apis.openai.openai_api import OpenAIApi
 
 # Put all your implementations in this list:
 API_IMPLEMENTATIONS = [
+    DefaultApi,
     OpenAIApi,
     OllamaApi,
     AnthropicApi,
-    GeminiApi
+    GeminiApi,
+    CombinedApi,
 ]
 
 
 class BaseTest:
 
-    def _get_local_test_image_uri(self, image_name: str):
-        return self._get_local_test_file_uri('images', image_name)
-
-    def _get_local_test_audio_uri(self, image_name: str):
-        return self._get_local_test_file_uri('audio', image_name)
-
-    def _get_local_test_video_uri(self, image_name: str):
-        return self._get_local_test_file_uri('videos', image_name)
-
-    def _get_local_test_document_uri(self, doc_name: str):
-        return self._get_local_test_file_uri('documents', doc_name)
-
-    def _get_local_test_table_uri(self, doc_name: str):
-        return self._get_local_test_file_uri('tables', doc_name)
-
-    def _get_local_test_archive_uri(self, doc_name: str):
-        return self._get_local_test_file_uri('archives', doc_name)
-
-    def _get_local_test_folder_path(self, folder_name: str):
+    @staticmethod
+    def _get_local_test_folder_path(folder_name: str):
         import os
         # Get the directory of the current file
         current_dir = os.path.dirname(__file__)
@@ -42,7 +29,8 @@ class BaseTest:
 
         return absolute_path
 
-    def _get_local_test_file_uri(self, filetype, image_name):
+    @staticmethod
+    def _get_local_test_file_uri(filetype, image_name):
         import os
         # Get the directory of the current file
         current_dir = os.path.dirname(__file__)
@@ -52,3 +40,27 @@ class BaseTest:
         uri = 'file://' + absolute_path
         print(uri)
         return uri
+
+    @staticmethod
+    def _get_local_test_image_uri(image_name: str):
+        return BaseTest._get_local_test_file_uri('images', image_name)
+
+    @staticmethod
+    def _get_local_test_audio_uri(image_name: str):
+        return BaseTest._get_local_test_file_uri('audio', image_name)
+
+    @staticmethod
+    def _get_local_test_video_uri(image_name: str):
+        return BaseTest._get_local_test_file_uri('videos', image_name)
+
+    @staticmethod
+    def _get_local_test_document_uri(doc_name: str):
+        return BaseTest._get_local_test_file_uri('documents', doc_name)
+
+    @staticmethod
+    def _get_local_test_table_uri(doc_name: str):
+        return BaseTest._get_local_test_file_uri('tables', doc_name)
+
+    @staticmethod
+    def _get_local_test_archive_uri(doc_name: str):
+        return BaseTest._get_local_test_file_uri('archives', doc_name)

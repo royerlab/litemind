@@ -1,9 +1,11 @@
 import os
 
+# _set_ffmpeg_binary()
 import ffmpeg
 import pytest
 
-from litemind.apis.utils.sample_video import extract_frames_and_audio
+from litemind.apis.utils.ffmpeg_utils import extract_frames_and_audio
+from litemind.apis.utils.ffmpeg_utils import is_ffmpeg_available
 
 
 @pytest.fixture
@@ -38,6 +40,15 @@ def test_video(tmp_path):
     )
 
     return str(video_path)
+
+
+def test_is_ffmpeg_available():
+    """
+    Test if ffmpeg is available.
+    """
+
+    # Check that the return of is_ffmpeg_available() is boolean:
+    assert isinstance(is_ffmpeg_available(), bool), "is_ffmpeg_available() should return a boolean."
 
 
 def test_extract_frames_and_audio(tmp_path, test_video):

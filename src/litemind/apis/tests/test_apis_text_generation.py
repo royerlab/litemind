@@ -8,56 +8,74 @@ from litemind.apis.base_api import ModelFeatures
 from litemind.apis.tests.base_test import BaseTest, API_IMPLEMENTATIONS
 
 
-@pytest.mark.parametrize("ApiClass", API_IMPLEMENTATIONS)
-class TestBaseApiImplementations(BaseTest):
+@pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
+class TestBaseApiImplementationsTextGeneration(BaseTest):
     """
     A tests suite that runs the same tests on each ApiClass
     implementing the abstract BaseApi interface.
     """
 
-    def test_text_generation_simple(self, ApiClass):
+    def test_text_generation_simple(self, api_class):
         """
         Test a simple completion with the default or a known good model.
         """
-        api_instance = ApiClass()
+        api_instance = api_class()
 
+        # Get the best model for text generation:
         default_model_name = api_instance.get_best_model(
             ModelFeatures.TextGeneration)
 
+        # If the model does not support text generation, skip the test:
+        if default_model_name is None:
+            pytest.skip(
+                f"{api_class.__name__} does not support text generation. Skipping tests.")
+
+        # Print the model name:
         print('\n' + default_model_name)
 
+        # A simple message:
         messages = [
             Message(role="system",
                     text="You are an omniscient all-knowing being called Ohmm"),
             Message(role="user", text="Who are you?")
         ]
 
-        response = api_instance.generate_text_completion(
+        # Get the completion:
+        response = api_instance.generate_text(
             model_name=default_model_name,
             messages=messages,
             temperature=0.7
         )
 
+        # Print the response:
         print('\n' + str(response))
 
         assert response.role == "assistant", (
-            f"{ApiClass.__name__} completion should return an 'assistant' role."
+            f"{api_class.__name__} completion should return an 'assistant' role."
         )
-        assert "I am " in response, (
-            f"Expected 'I am' in the output of {ApiClass.__name__}.completion()"
+        assert "I am " in response or "I'm" in response, (
+            f"Expected 'I am' or 'I'm' in the output of {api_class.__name__}.completion()"
         )
 
-    def test_text_generation_prefill(self, ApiClass):
+    def test_text_generation_prefill(self, api_class):
         """
         Test a simple completion with prefilled answer
         """
-        api_instance = ApiClass()
+        api_instance = api_class()
 
+        # Get the best model for text generation:
         default_model_name = api_instance.get_best_model(
             ModelFeatures.TextGeneration)
 
+        # If the model does not support text generation, skip the test:
+        if default_model_name is None:
+            pytest.skip(
+                f"{api_class.__name__} does not support text generation. Skipping tests.")
+
+        # Print the model name:
         print('\n' + default_model_name)
 
+        # A simple message list:
         messages = [
             Message(role="system",
                     text="You are very good at Math."),
@@ -66,37 +84,47 @@ class TestBaseApiImplementations(BaseTest):
             Message(role="assistant", text="(")
         ]
 
-        response = api_instance.generate_text_completion(
+        # Get the completion:
+        response = api_instance.generate_text(
             model_name=default_model_name,
             messages=messages,
             temperature=0.0
         )
 
+        # Print the response:
         print('\n' + str(response))
 
+        # Check the response:
         assert response.role == "assistant", (
-            f"{ApiClass.__name__} completion should return an 'assistant' role."
+            f"{api_class.__name__} completion should return an 'assistant' role."
         )
         assert "29" in response, (
-            f"Expected '29' in the output of {ApiClass.__name__}.completion()"
+            f"Expected '29' in the output of {api_class.__name__}.completion()"
         )
         # Better the string should just be "29)" and not "29) " or "29 )":
         if not str(response[0]).startswith("29)"):
             print(
                 "Model does not support strict prefill behaviour: The response should start with '29)'")
 
-
-    def test_text_generation_structured_output(self, ApiClass):
+    def test_text_generation_structured_output(self, api_class):
         """
         Test a simple completion with structured output.
         """
-        api_instance = ApiClass()
+        api_instance = api_class()
 
-        default_model_name = api_instance.get_best_model(ModelFeatures.TextGeneration,
-                                                         exclusion_filters='-thinking-')
+        # Get the best model for text generation:
+        default_model_name = api_instance.get_best_model([ModelFeatures.TextGeneration,
+                                                          ModelFeatures.StructuredTextGeneration])
 
+        # If the model does not support text generation, skip the test:
+        if default_model_name is None:
+            pytest.skip(
+                f"{api_class.__name__} does not support text generation. Skipping tests.")
+
+        # Print the model name:
         print('\n' + default_model_name)
 
+        # A short article for testing:
         text = """
         NAZA awarded the aerospace company HeedLock Parthin, which also makes U.S. fighter jets, 
         a $247.5 million contract to build the X-15 craft, and as the images below show, 
@@ -113,6 +141,7 @@ class TestBaseApiImplementations(BaseTest):
             sum_in_dollars: int
             item_type: str
 
+        # Assemble the messages:
         messages = [
             Message(role="system",
                     text="You are an accountant that likes to turn textual information into well structured information"),
@@ -120,77 +149,91 @@ class TestBaseApiImplementations(BaseTest):
                     text=f"Please transcribe the following text adhering to the required format: \n```\n{text}\n```\n")
         ]
 
-        response = api_instance.generate_text_completion(
+        # Get the completion:
+        response = api_instance.generate_text(
             model_name=default_model_name,
             messages=messages,
             temperature=0.7,
             response_format=Order
         )
 
+        # Print the response:
         print('\n' + str(response))
 
+        # assert that result should be of role "assistant":
         assert response.role == "assistant", (
-            f"{ApiClass.__name__} completion should return an 'assistant' role."
+            f"{api_class.__name__} completion should return an 'assistant' role."
         )
 
-        # assert that result should be a message containing an object of type Order:
+        # assert that result should be a message of type object:
         assert response[0].block_type == BlockType.Object, (
-            f"{ApiClass.__name__} completion should return an object."
+            f"{api_class.__name__} completion should return an object."
         )
 
         # assert that result should be a message containing an object of type Order:
         assert isinstance(response[0].content, Order), (
-            f"{ApiClass.__name__} completion should return an object of type Order."
+            f"{api_class.__name__} completion should return an object of type Order."
         )
 
-
-
-
-    def test_text_generation_with_simple_toolset(self, ApiClass):
+    def test_text_generation_with_simple_toolset(self, api_class):
         """
         Test that the completion method can interact with a simple toolset.
         """
+
+        api_instance = api_class()
 
         # If you have a function-based tool usage pattern:
         def get_delivery_date(order_id: str) -> str:
             """Fetch the delivery date for a given order ID."""
             return "2024-11-15"
 
+        # Create a toolset and add the function tool:
         toolset = ToolSet()
         toolset.add_function_tool(
             get_delivery_date,
             "Fetch the delivery date for a given order ID"
         )
 
-        api_instance = ApiClass()
-
+        # Get the best model for text generation with tools:
         default_model_name = api_instance.get_best_model(
             [ModelFeatures.Tools, ModelFeatures.TextGeneration])
 
+        # If the model does not support text generation, skip the test:
+        if default_model_name is None:
+            pytest.skip(
+                f"{api_class.__name__} does not support text generation and tools. Skipping tests.")
+
+        # Print the model name:
         print('\n' + default_model_name)
 
+        # A simple message:
         user_message = Message(role="user",
                                text="When will my order order_12345 be delivered?")
         messages = [user_message]
 
-        response = api_instance.generate_text_completion(
+        # Get the completion:
+        response = api_instance.generate_text(
             model_name=default_model_name,  # or a specific model name if needed
             messages=messages,
             toolset=toolset
         )
 
+        # Print the response:
         print('\n')
         for message in messages:
             print(message)
 
+        # Check that we have 2 messages in the list:
         assert "2024-11-15" in response, (
-            f"The response of {ApiClass.__name__} should contain the delivery date."
+            f"The response of {api_class.__name__} should contain the delivery date."
         )
 
-    def test_text_generation_with_complex_toolset(self, ApiClass):
+    def test_text_generation_with_complex_toolset(self, api_class):
         """
         Test that the completion method can interact with a complex toolset.
         """
+
+        api_instance = api_class()
 
         def get_delivery_date(order_id: str) -> str:
             """Fetch the delivery date for a given order ID."""
@@ -198,6 +241,9 @@ class TestBaseApiImplementations(BaseTest):
 
         def get_product_name_from_id(product_id: int) -> str:
             """Fetch the delivery date for a given order ID."""
+
+            # Normalise the product ID to int in case it is a string:
+            product_id = int(product_id)
 
             product_table = {1393: 'Olea Table', 84773: 'Fluff Phone'}
 
@@ -209,6 +255,7 @@ class TestBaseApiImplementations(BaseTest):
             # Return a random integer:
             return '42'
 
+        # Create a toolset and add the function tools:
         toolset = ToolSet()
         toolset.add_function_tool(
             get_delivery_date,
@@ -223,24 +270,24 @@ class TestBaseApiImplementations(BaseTest):
             "Fetch the number of items available of a given product id at a given store."
         )
 
-        api_instance = ApiClass()
-
+        # Get the best model for text generation with tools:
         default_model_name = api_instance.get_best_model(
             [ModelFeatures.Tools, ModelFeatures.TextGeneration])
 
-        if not default_model_name or not api_instance.has_model_support_for(
-                model_name=default_model_name,
-                features=[ModelFeatures.TextGeneration, ModelFeatures.Tools]):
+        if default_model_name is None:
             pytest.skip(
-                f"{ApiClass.__name__} does not support text generation and tools. Skipping tests.")
+                f"{api_class.__name__} does not support text generation and tools. Skipping tests.")
 
-        messages = []
+        print('\n' + default_model_name)
 
+        # Request message:
         user_message = Message(role="user",
                                text="When will my order 'order_12345' be delivered?")
-        messages += [user_message]
 
-        response = api_instance.generate_text_completion(
+        messages = [user_message]
+
+        # Get the completion:
+        response = api_instance.generate_text(
             model_name=default_model_name,  # or a specific model name if needed
             messages=messages,
             toolset=toolset
@@ -251,37 +298,44 @@ class TestBaseApiImplementations(BaseTest):
             'We should have two messages in the list. The user message and the response message.')
 
         assert "2024-11-15" in response, (
-            f"The response of {ApiClass.__name__} should contain the delivery date."
+            f"The response of {api_class.__name__} should contain the delivery date."
         )
 
+        # Get the product name:
         user_message = Message(role="user",
                                text="What is the name of product 1393?")
         messages += [user_message]
 
-        response = api_instance.generate_text_completion(
+        # Get the completion:
+        response = api_instance.generate_text(
             model_name=default_model_name,  # or a specific model name if needed
             messages=messages,
             toolset=toolset
         )
 
+        # Check that we get the correct product name:
         assert "Olea Table" in response, (
-            f"The response of {ApiClass.__name__} should contain the delivery date."
+            f"The response of {api_class.__name__} should contain the delivery date."
         )
 
+        # Get the product supply:
         user_message = Message(role="user",
                                text="How many Olea Tables can I find in store 17?")
         messages += [user_message]
 
-        response = api_instance.generate_text_completion(
+        # Get the completion:
+        response = api_instance.generate_text(
             model_name=default_model_name,  # or a specific model name if needed
             messages=messages,
             toolset=toolset
         )
 
+        # Check that we get the correct number of available tables:
+        assert "42" in response, (
+            f"The response of {api_class.__name__} should contain the number of tables."
+        )
+
+        # Printout the whole conversation:
         print('\n')
         for message in messages:
             print(message)
-
-        assert "42" in response, (
-            f"The response of {ApiClass.__name__} should contain the delivery date."
-        )

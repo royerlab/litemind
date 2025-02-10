@@ -2,31 +2,28 @@ from abc import ABC, abstractmethod
 from typing import List, Optional, Sequence, Union
 
 from PIL.Image import Image
-from arbol import asection, aprint
-from pandas import DataFrame
 from pydantic import BaseModel
 
 from litemind.agent.message import Message
-from litemind.agent.message_block_type import BlockType
 from litemind.agent.tools.toolset import ToolSet
+from litemind.apis.callback_manager import CallbackManager
 from litemind.apis.model_features import ModelFeatures
-from litemind.apis.utils.document_processing import is_pymupdf_available, \
-    convert_document_to_markdown, extract_images_from_document
-from litemind.apis.utils.fastembed_embeddings import is_fastembed_available, \
-    fastembed_text
 from litemind.apis.utils.random_projector import DeterministicRandomProjector
-from litemind.apis.utils.transform_video_uris_to_images_and_audio import \
-    transform_video_uris_to_images_and_audio
-from litemind.apis.utils.whisper_transcribe_audio import \
-    is_local_whisper_available, transcribe_audio_with_local_whisper
 
 
 class BaseApi(ABC):
 
+    # constructor:
+    def __init__(self, callback_manager: Optional[CallbackManager] = None):
+
+        if callback_manager is not None:
+            self.callback_manager = callback_manager
+        else:
+            self.callback_manager = CallbackManager()
+
     @abstractmethod
     def check_availability_and_credentials(self,
-                                           api_key: Optional[str] = None) -> \
-            Optional[bool]:
+                                           api_key: Optional[str] = None) -> Optional[bool]:
         """
         Check if this API is available and whether credentials are valid.
         If no API key is provided, checks if the API key available in the environment is valid.
@@ -46,7 +43,7 @@ class BaseApi(ABC):
         pass
 
     @abstractmethod
-    def model_list(self, features: Optional[Sequence[ModelFeatures]] = None) -> \
+    def list_models(self, features: Optional[Sequence[ModelFeatures]] = None) -> \
             List[str]:
         """
         Get the list of models available that satisfy a given set of features.
@@ -86,52 +83,6 @@ class BaseApi(ABC):
         """
         pass
 
-    def _filter_models(self,
-                       model_list: List[str],
-                       features: Union[str, List[str], ModelFeatures, Sequence[
-                           ModelFeatures]],
-                       exclusion_filters: Optional[Union[str,List[str]]] = None) -> List[str]:
-        """
-        Filter the list of models based on the given features.
-        Parameters
-        ----------
-        model_list: List[str]
-            List of models.
-        features: Sequence[ModelFeatures], or ModelFeatures, or str, or List[str]
-            List of features to filter on.
-        exclusion_filters: Optional[Union[str,List[str]]]
-            List of strings that if found in the model name exclude it.
-
-        Returns
-        -------
-        List[str]
-            Filtered list of models.
-
-        """
-        filtered_model_list = []
-
-        if not features:
-            # Nothing to filter:
-            return model_list
-
-        # if exclusion_filters is a string then wrap in singleton list:
-        if isinstance(exclusion_filters, str):
-            exclusion_filters = [exclusion_filters]
-
-        for model in model_list:
-
-            # Check if the model should be excluded:
-            if exclusion_filters and any(
-                    [filter in model for filter in exclusion_filters]):
-                continue
-
-            # Append models that support the given features:
-            if self.has_model_support_for(model_name=model, features=features):
-                filtered_model_list.append(model)
-
-
-        return filtered_model_list
-
     @abstractmethod
     def has_model_support_for(self, features: Union[
         str, List[str], ModelFeatures, Sequence[ModelFeatures]],
@@ -153,38 +104,9 @@ class BaseApi(ABC):
             True if the model has text generation support, False otherwise.
 
         """
-        # Get the best model if not provided:
-        if model_name is None:
-            model_name = self.get_best_model()
+        pass
 
-        # Normalise the features:
-        features = ModelFeatures.normalise(features)
-
-        # Check that the model has all the required features:
-        for feature in features:
-
-            # t=The following features use 'fallback' best-of-kind libraries:
-
-            if feature == ModelFeatures.AudioTranscription:
-                # We provide a default implementation for audio transcription using local whisper is available:
-                if not is_local_whisper_available():
-                    return False
-
-            elif feature == ModelFeatures.Documents:
-                # Checks if document processing library is installed:
-                if not is_pymupdf_available():
-                    return False
-
-            elif feature == ModelFeatures.TextEmbeddings:
-                # Check if the fastembed library is installed:
-                if not is_fastembed_available():
-                    return False
-
-            else:
-                return False
-
-        return True
-
+    @abstractmethod
     def get_model_features(self, model_name: str) -> List[ModelFeatures]:
         """
         Get the features of the given model.
@@ -200,17 +122,7 @@ class BaseApi(ABC):
             The features of the model.
 
         """
-
-        # List to store model features:
-        model_features: List[ModelFeatures] = []
-
-        # Get all the features:
-        for feature in ModelFeatures:
-            if self.has_model_support_for(model_name=model_name,
-                                          features=feature):
-                model_features.append(feature)
-
-        return model_features
+        pass
 
     @abstractmethod
     def max_num_input_tokens(self, model_name: Optional[str] = None) -> int:
@@ -248,14 +160,14 @@ class BaseApi(ABC):
         pass
 
     @abstractmethod
-    def generate_text_completion(self,
-                                 messages: List[Message],
-                                 model_name: Optional[str] = None,
-                                 temperature: float = 0.0,
-                                 max_output_tokens: Optional[int] = None,
-                                 toolset: Optional[ToolSet] = None,
-                                 response_format: Optional[BaseModel] = None,
-                                 **kwargs) -> Message:
+    def generate_text(self,
+                      messages: List[Message],
+                      model_name: Optional[str] = None,
+                      temperature: float = 0.0,
+                      max_output_tokens: Optional[int] = None,
+                      toolset: Optional[ToolSet] = None,
+                      response_format: Optional[BaseModel] = None,
+                      **kwargs) -> Message:
         """
         Generate a text completion using the given model for a given list of messages and parameters.
 
@@ -285,6 +197,7 @@ class BaseApi(ABC):
         """
         pass
 
+    @abstractmethod
     def transcribe_audio(self,
                          audio_uri: str,
                          model_name: Optional[str] = None,
@@ -307,49 +220,32 @@ class BaseApi(ABC):
             The transcription of the audio.
 
         """
+        pass
 
-        transcription = transcribe_audio_with_local_whisper(audio_uri=audio_uri,
-                                                            **kwargs)
+    @abstractmethod
+    def convert_audio_in_messages(self,
+                                  messages: List[Message]) -> List[Message]:
+        """
+        Convert audio in messages into text.
 
-        return transcription
+        Parameters
+        ----------
+        messages: List[Message]
+            The list of Message objects to process.
 
-    def _transcribe_audio_in_messages(self,
-                                      messages: List[Message]) -> List[Message]:
+        Returns
+        -------
+        List[Message]
+            The list of Message objects with audio converted to text.
 
-        # Iterate over each message in the list:
-        for message in messages:
+        """
 
-            # Iterate over each block in the message:
-            for block in message.blocks:
-                if block.block_type == BlockType.Audio and block.content:
-                    try:
-                        # We use a local instance of whisper instead:
-                        transcription = self.transcribe_audio(block.content)
-
-                        # Extract filename from URI:
-                        original_filename = block.content.split("/")[-1]
-
-                        # Add markdown quotes ''' around the transcribed text, and
-                        # add prefix: "Transcription: " to the transcribed text:
-                        transcription = f"\nTranscription of audio file '{original_filename}': \n'''\n{transcription}\n'''\n"
-
-                        # Add the transcribed text to the message
-                        message.append_text(transcription)
-
-                        # Remove the audio block:
-                        message.blocks.remove(block)
-
-                    except Exception as e:
-                        raise ValueError(
-                            f"Could not transcribe audio from: '{block.content}', error: {e}")
-
-        return messages
-
-    def _convert_documents_to_markdown_in_messages(self,
-                                                   messages: List[Message]) -> \
+    @abstractmethod
+    def convert_documents_to_markdown_in_messages(self,
+                                                  messages: List[Message]) -> \
             List[Message]:
         """
-        Convert documents in messages into text in markdown format.
+        Convert documents in messages into text in Markdown format.
 
         Parameters
         ----------
@@ -362,129 +258,11 @@ class BaseApi(ABC):
             The list of Message objects with documents converted to markdown.
         """
 
-        converted_messages = []
+    pass
 
-        # Iterate over each message in the list:
-        for message in messages:
-
-            # Create a new message object:
-            converted_message = Message(role=message.role)
-
-            # Add the new message to the list:
-            converted_messages.append(converted_message)
-
-            # Iterate over each block in the message:
-            for block in message.blocks:
-                if block.block_type == BlockType.Document and block.content is not None:
-                    try:
-                        # Extract filename from URI:
-                        original_filename = block.content.split("/")[-1]
-
-                        # Extract the file extension from URI:
-                        file_extension = block.content.split(".")[-1]
-
-                        # Convert document to markdown:
-                        markdown = convert_document_to_markdown(block.content)
-
-                        # Add markdown quotes around the text, and add the extension, for example: ```pdf for extension 'pdf':
-                        text = f"\nText extracted from document '{original_filename}': \n'''{file_extension}\n{markdown}\n'''\n"
-
-                        # Add the extracted text to the message
-                        converted_message.append_text(text)
-
-                        # Extract images from document:
-                        image_uris = extract_images_from_document(block.content)
-
-                        # Add the extracted images to the message:
-                        for image_uri in image_uris:
-                            converted_message.append_image(image_uri)
-
-
-                    except Exception as e:
-                        raise ValueError(
-                            f"Could not extract text from document: '{block.content}', error: {e}")
-                elif block.block_type == BlockType.Json and block.content is not None:
-                    try:
-                        # Convert JSON to markdown:
-                        markdown = f"```json\n{block.content}\n```"
-
-                        # Add the markdown to the message:
-                        converted_message.append_text(markdown)
-
-                    except Exception as e:
-                        raise ValueError(
-                            f"Could not convert JSON to markdown: '{block.content}', error: {e}")
-                elif block.block_type == BlockType.Object and block.content is not None:
-                    try:
-                        # Convert object to json since it is a pydantic object:
-                        json_str = block.content.model_dump_json()
-                        markdown = f"```json\n{json_str}\n```"
-
-                        # Add the markdown to the message:
-                        converted_message.append_text(markdown)
-                    except Exception as e:
-                        raise ValueError(
-                            f"Could not convert object to markdown: '{block.content}', error: {e}")
-                elif block.block_type == BlockType.Code and block.content is not None:
-                    try:
-                        # Get language from block attributes with default '':
-                        language = block.attributes.get('language', '')
-
-                        # Convert code to markdown:
-                        markdown = f"```{language}\n{block.content}\n```"
-
-                        # Add the markdown to the message:
-                        converted_message.append_text(markdown)
-                    except Exception as e:
-                        raise ValueError(
-                            f"Could not convert code to markdown: '{block.content}', error: {e}")
-                elif block.block_type == BlockType.Table and block.content is not None:
-                    try:
-                        table: DataFrame = block.content
-
-                        # pretty print the pandas dataframe into markdown-like / compatible string:
-                        markdown_table = table.to_markdown()
-
-                        # Convert table to markdown:
-                        markdown = f"```dataframe\n{markdown_table}\n```"
-
-                        # Add the markdown to the message:
-                        converted_message.append_text(markdown)
-                    except Exception as e:
-                        raise ValueError(
-                            f"Could not convert table to markdown: '{block.content}', error: {e}")
-                elif block.block_type == BlockType.Text and block.content is not None:
-                    try:
-                        text: str = block.content
-
-                        # Check if the text ends with at least one '\n' if not, then add it:
-                        if not text.endswith('\n'):
-                            text += '\n'
-
-                        # Add the text to the message:
-                        converted_message.append_text(text)
-
-                    except Exception as e:
-                        raise ValueError(
-                            f"Could not convert table to markdown: '{block.content}', error: {e}")
-                elif (block.block_type == BlockType.Image or
-                      block.block_type == BlockType.Audio or
-                      block.block_type == BlockType.Video):
-
-                    # First we make a copy of the block:
-                    block = block.copy()
-
-                    # Add the block to the message:
-                    converted_message.blocks.append(block)
-
-                else:
-                    raise ValueError(
-                        f"Block type '{block.block_type}' not supported for conversion to markdown.")
-
-        return converted_messages
-
-    def _convert_videos_to_images_and_audio(self, message: Sequence[Message]) -> \
-            List[Message]:
+    @abstractmethod
+    def convert_videos_to_images_and_audio_in_messages(self,
+                                                       message: Sequence[Message]) -> List[Message]:
 
         """
         Convert videos in the message to images and audio blocks.
@@ -499,9 +277,9 @@ class BaseApi(ABC):
         List[Message]
             The message object with video URIs converted to images and audio blocks.
         """
-        return [transform_video_uris_to_images_and_audio(msg) for msg in
-                message]
+        pass
 
+    @abstractmethod
     def generate_audio(self,
                        text: str,
                        voice: Optional[str] = None,
@@ -518,7 +296,7 @@ class BaseApi(ABC):
         voice: Optional[str]
             The voice to use.
         audio_format: Optional[str]
-            The format of the audio file. Can be: "mp3", "flac", "wav", or "pcm". By default "mp3" is used.
+            The format of the audio file. Can be: "mp3", "flac", "wav", or "pcm". By default, "mp3" is used.
         model_name: Optional[str]
             The name of the model to use.
         kwargs: dict
@@ -530,11 +308,13 @@ class BaseApi(ABC):
             URI of the audio file.
 
         """
+        pass
 
+    @abstractmethod
     def generate_image(self,
-                       model_name: str,
                        positive_prompt: str,
                        negative_prompt: Optional[str] = None,
+                       model_name: str = None,
                        image_width: int = 512,
                        image_height: int = 512,
                        preserve_aspect_ratio: bool = True,
@@ -546,12 +326,12 @@ class BaseApi(ABC):
 
         Parameters
         ----------
-        model_name: str
-            The name of the model to use.
         positive_prompt: str
             The prompt to use for image generation.
         negative_prompt: str
             Prompt to specifying what not to generate
+        model_name: str
+            The name of the model to use.
         image_width: int
             The width of the image.
         image_height: int
@@ -570,8 +350,33 @@ class BaseApi(ABC):
             The generated image.
 
         """
-        raise NotImplementedError(
-            "Image generation is not supported by this API.")
+        pass
+
+    @abstractmethod
+    def generate_video(self,
+                       description: str,
+                       model_name: Optional[str] = None,
+                       **kwargs) -> str:
+        """
+        Generate a video using the model.
+
+        Parameters
+        ----------
+        description: str
+            The description of the video.
+        model_name: Optional[str]
+            The name of the model to use.
+        kwargs: dict
+            Additional arguments to pass to the video generation function.
+
+        Returns
+        -------
+        str
+            URI of the generated video.
+
+        """
+
+        pass
 
     def embed_texts(self,
                     texts: List[str],
@@ -599,17 +404,11 @@ class BaseApi(ABC):
 
         """
 
-        if is_fastembed_available():
-            return fastembed_text(texts=texts,
-                                  dimensions=dimensions,
-                                  **kwargs)
-        else:
-            raise NotImplementedError(
-                "Text embedding is not supported by this API.")
+        pass
 
-    def _reduce_embdeddings_dimension(self,
-                                      embeddings: Sequence[Sequence[float]],
-                                      reduced_dim: int) -> Sequence[
+    def _reduce_embeddings_dimension(self,
+                                     embeddings: Sequence[Sequence[float]],
+                                     reduced_dim: int) -> Sequence[
         Sequence[float]]:
 
         # Create a DeterministicRandomProjector object:
@@ -619,41 +418,34 @@ class BaseApi(ABC):
         # Project the embeddings:
         return drp.transform(embeddings)
 
+    @abstractmethod
     def embed_images(self,
-                     image_uris: str,
+                     image_uris: List[str],
                      model_name: Optional[str] = None,
                      dimensions: int = 512,
                      **kwargs) -> Sequence[Sequence[float]]:
+        """
+        Embed images using the model.
 
-        # If no model is passed get a default model with image support:
-        if model_name is None:
-            model_name = self.get_best_model(features=[ModelFeatures.Image])
+        Parameters
+        ----------
+        image_uris: List[str]
+            List of image URIs.
+        model_name: Optional[str]
+            The name of the model to use.
+        dimensions: int
+            The number of dimensions for the embedding.
+        kwargs: dict
+            Additional arguments to pass to the embedding function.
 
-        # Model must support images:
-        if not model_name or not self.has_model_support_for(
-                model_name=model_name, features=[ModelFeatures.Image]):
-            raise ValueError(f"Model '{model_name}' does not support images.")
+        Returns
+        -------
+        Sequence[Sequence[float]]
+            The embeddings of the images.
 
-        # List to store image descriptions:
-        image_descriptions = []
+        """
 
-        # Iterate over the image_uris:
-        for image_uri in image_uris:
-            # Describe image and then embed the description of the image:
-            description = self.describe_image(image_uri=image_uri,
-                                              model_name=model_name,
-                                              **kwargs)
-
-            # Append the description to the list:
-            image_descriptions.append(description)
-
-        # Embed the image descriptions:
-        image_embeddings = self.embed_texts(text=image_descriptions,
-                                            model_name=model_name,
-                                            dimensions=dimensions)
-        # Return the image embeddings:
-        return image_embeddings
-
+    @abstractmethod
     def embed_audios(self,
                      audio_uris: List[str],
                      model_name: Optional[str] = None,
@@ -679,38 +471,10 @@ class BaseApi(ABC):
             The embeddings of the audios.
 
         """
-        # Implement similarly to embed_images:
 
-        # If no model is passed get a default model with audio support:
-        if model_name is None:
-            model_name = self.get_best_model(features=[ModelFeatures.Audio])
+        pass
 
-        # Model must support audios:
-        if not model_name or not self.has_model_support_for(
-                model_name=model_name, features=[ModelFeatures.Audio]):
-            raise ValueError(f"Model '{model_name}' does not support audios.")
-
-        # List to store audio descriptions:
-        audio_descriptions = []
-
-        # Iterate over the audio_uris:
-        for audio_uri in audio_uris:
-            # Describe video and then embed the description of the video:
-            description = self.describe_audio(audio_uri=audio_uri,
-                                              model_name=model_name,
-                                              **kwargs)
-
-            # Append the description to the list:
-            audio_descriptions.append(description)
-
-        # Embed the audio descriptions:
-        audio_embeddings = self.embed_texts(text=audio_descriptions,
-                                            model_name=model_name,
-                                            dimensions=dimensions)
-
-        # Return the audio embeddings:
-        return audio_embeddings
-
+    @abstractmethod
     def embed_videos(self,
                      video_uris: List[str],
                      model_name: Optional[str] = None,
@@ -736,42 +500,14 @@ class BaseApi(ABC):
             The embeddings of the videos.
 
         """
-        # Implement similarly to embed_images:
 
-        # If no model is passed get a default model with video embedding support:
-        if model_name is None:
-            model_name = self.get_best_model(features=[ModelFeatures.VideoEmbeddings])
+        pass
 
-        # Model must support videos:
-        if model_name is None or not self.has_model_support_for(
-                model_name=model_name, features=ModelFeatures.VideoEmbeddings):
-            raise ValueError(f"Model '{model_name}' does not support video embedding.")
-
-        # List to store video descriptions:
-        video_descriptions = []
-
-        # Iterate over the video_uris:
-        for video_uri in video_uris:
-            # Describe video and then embed the description of the video:
-            description = self.describe_video(video_uri=video_uri,
-                                              model_name=model_name,
-                                              **kwargs)
-
-            # Append the description to the list:
-            video_descriptions.append(description)
-
-        # Embed the video descriptions:
-        video_embeddings = self.embed_texts(texts=video_descriptions,
-                                            model_name=model_name,
-                                            dimensions=dimensions)
-
-        # Return the video embeddings:
-        return video_embeddings
-
+    @abstractmethod
     def describe_image(self,
                        image_uri: str,
-                       system: str = 'You are a helpful AI assistant that can describe/analyse images.',
-                       query: str = 'Here is an image, please carefully describe it in detail.',
+                       system: str = 'You are a helpful AI assistant that can describe and analyse images.',
+                       query: str = 'Here is an image, please carefully describe it completely and in detail.',
                        model_name: Optional[str] = None,
                        temperature: float = 0,
                        max_output_tokens: Optional[int] = None,
@@ -804,99 +540,18 @@ class BaseApi(ABC):
 
         """
 
-        with (asection(
-                f"Asking model {model_name} to descrbe a given image: '{image_uri}':")):
-            aprint(f"Query: '{query}'")
-            aprint(f"Model: '{model_name}'")
-            aprint(f"Max tokens: '{max_output_tokens}'")
+        pass
 
-            # If no model is passed get a default model with image support:
-            if model_name is None:
-                model_name = self.get_best_model(require_images=True)
-
-            # If the model does not support vision, return an error:
-            if not self.has_model_support_for(model_name=model_name,
-                                              features=ModelFeatures.Image):
-                return f"Model '{model_name}' does not support images."
-
-            # if no max_output_tokens is passed, get the default value:
-            if max_output_tokens is None:
-                max_output_tokens = self.max_num_output_tokens(model_name)
-            else:
-                # Limit the number of tokens to the maximum allowed by the model:
-                max_output_tokens = min(max_output_tokens,
-                                        self.max_num_output_tokens(model_name))
-
-            try:
-
-                image_model_name = self.get_best_model(ModelFeatures.Image)
-
-                # Retry in case of model refusing to answer:
-                for tries in range(number_of_tries):
-
-                    messages = []
-
-                    # System message:
-                    system_message = Message(role='system')
-                    system_message.append_text(system)
-                    messages.append(system_message)
-
-                    # User message:
-                    user_message = Message(role='user')
-                    user_message.append_text(query)
-                    user_message.append_image(image_uri)
-
-                    messages.append(user_message)
-
-                    # Run agent:
-                    response = self.generate_text_completion(messages=messages,
-                                                             model_name=image_model_name,
-                                                             temperature=temperature,
-                                                             max_output_tokens=max_output_tokens)
-
-                    # Normalise response:
-                    response = str(response)
-
-                    # Check if the response is empty:
-                    if not response:
-                        aprint(f"Response is empty. Trying again...")
-                        continue
-
-                    # response in lower case and trimmed of white spaces
-                    response_lc = response.lower().strip()
-
-                    # Check if response is too short:
-                    if len(response_lc) < 3:
-                        aprint(f"Response is empty. Trying again...")
-                        continue
-
-                    # if the model refused to answer, we try again!
-                    if ("sorry" in response_lc and (
-                            "i cannot" in response_lc or "i can't" in response_lc or 'i am unable' in response_lc)) \
-                            or "i cannot assist" in response_lc or "i can't assist" in response_lc or 'i am unable to assist' in response_lc or "I'm sorry" in response_lc:
-                        aprint(
-                            f"Model {model_name} refuses to assist (response: {response}). Trying again...")
-                        continue
-                    else:
-                        return response
-
-            except Exception as e:
-                # Log the error:
-                aprint(f"Error: '{e}'")
-                # print stack trace:
-                import traceback
-                traceback.print_exc()
-                return f"Error: '{e}'"
-
+    @abstractmethod
     def describe_audio(self,
                        audio_uri: str,
-                       system: str = 'You are a helpful AI assistant that can describe/analyse audio.',
-                       query: str = 'Here is an audio file, please carefully describe it in detail. If it is speach, please transcribe accurately.',
+                       system: str = 'You are a helpful AI assistant that can describe and analyse audio.',
+                       query: str = 'Here is an audio file, please carefully describe its contents in detail. If it is speech, please transcribe completely and accurately.',
                        model_name: Optional[str] = None,
                        temperature: float = 0,
                        max_output_tokens: Optional[int] = None,
                        number_of_tries: int = 4,
-                       ) -> str:
+                       ) -> str | None:
 
         """
         Describe an audio file using the model.
@@ -925,91 +580,16 @@ class BaseApi(ABC):
 
         """
 
-        with (asection(
-                f"Asking model {model_name} to describe a given audio: '{audio_uri}':")):
-            aprint(f"Query: '{query}'")
-            aprint(f"Model: '{model_name}'")
-            aprint(f"Max tokens: '{max_output_tokens}'")
-
-            # If no model is passed get a default model with image support:
-            if model_name is None:
-                model_name = self.get_best_model(require_audio=True)
-
-            # If the model does not support audio, return an error:
-            if not self.has_model_support_for(model_name=model_name,
-                                              features=ModelFeatures.Audio):
-                return f"Model '{model_name}' does not support audio."
-
-            # if no max_output_tokens is passed, get the default value:
-            if max_output_tokens is None:
-                max_output_tokens = self.max_num_output_tokens(model_name)
-            else:
-                # Limit the number of tokens to the maximum allowed by the model:
-                max_output_tokens = min(max_output_tokens,
-                                        self.max_num_output_tokens(model_name))
-
-            try:
-
-                audio_model_name = self.get_best_model(ModelFeatures.Audio)
-
-                # Retry in case of model refusing to answer:
-                for tries in range(number_of_tries):
-
-                    messages = []
-
-                    # System message:
-                    system_message = Message(role='system')
-                    system_message.append_text(system)
-                    messages.append(system_message)
-
-                    # User message:
-                    user_message = Message(role='user')
-                    user_message.append_text(query)
-                    user_message.append_audio(audio_uri)
-
-                    messages.append(user_message)
-
-                    # Run agent:
-                    response = self.generate_text_completion(messages=messages,
-                                                             model_name=audio_model_name,
-                                                             temperature=temperature,
-                                                             max_output_tokens=max_output_tokens)
-
-                    # Normalise response:
-                    response = str(response)
-
-                    # Check if the response is empty:
-                    if not response:
-                        aprint(f"Response is empty. Trying again...")
-                        continue
-
-                    # response in lower case and trimmed of white spaces
-                    response_lc = response.lower().strip()
-
-                    # Check if response is too short:
-                    if len(response_lc) < 3:
-                        aprint(f"Response is empty. Trying again...")
-                        continue
-
-                    return response
-
-            except Exception as e:
-                # Log the error:
-                aprint(f"Error: '{e}'")
-                # print stack trace:
-                import traceback
-                traceback.print_exc()
-                return f"Error: '{e}'"
-
+    @abstractmethod
     def describe_video(self,
                        video_uri: str,
                        system: str = 'You are a helpful AI assistant that can describe/analyse videos.',
-                       query: str = 'Here is a video file, please carefully describe it in detail.',
+                       query: str = 'Here is a video file, please carefully and completely describe it in detail.',
                        model_name: Optional[str] = None,
                        temperature: float = 0,
                        max_output_tokens: Optional[int] = None,
                        number_of_tries: int = 4,
-                       ) -> str:
+                       ) -> str | None:
         """
         Describe a video file using the model.
 
@@ -1032,83 +612,9 @@ class BaseApi(ABC):
 
         Returns
         -------
-        str
+        str | None
             Description of the video
 
         """
 
-        with (asection(
-                f"Asking model {model_name} to describe a given video: '{video_uri}':")):
-            aprint(f"Query: '{query}'")
-            aprint(f"Model: '{model_name}'")
-            aprint(f"Max tokens: '{max_output_tokens}'")
-
-            # If no model is passed get a default model with video support:
-            if model_name is None:
-                model_name = self.get_best_model(require_video=True)
-
-            # If the model does not support video, return an error:
-            if not self.has_model_support_for(model_name=model_name,
-                                              features=ModelFeatures.Video):
-                return f"Model '{model_name}' does not support video."
-
-            # if no max_output_tokens is passed, get the default value:
-            if max_output_tokens is None:
-                max_output_tokens = self.max_num_output_tokens(model_name)
-            else:
-                # Limit the number of tokens to the maximum allowed by the model:
-                max_output_tokens = min(max_output_tokens,
-                                        self.max_num_output_tokens(model_name))
-
-            try:
-
-                video_model_name = self.get_best_model(ModelFeatures.Video)
-
-                # Retry in case of model refusing to answer:
-                for tries in range(number_of_tries):
-
-                    messages = []
-
-                    # System message:
-                    system_message = Message(role='system')
-                    system_message.append_text(system)
-                    messages.append(system_message)
-
-                    # User message:
-                    user_message = Message(role='user')
-                    user_message.append_text(query)
-                    user_message.append_video(video_uri)
-
-                    messages.append(user_message)
-
-                    # Run agent:
-                    response = self.generate_text_completion(messages=messages,
-                                                             model_name=video_model_name,
-                                                             temperature=temperature,
-                                                             max_output_tokens=max_output_tokens)
-
-                    # Normalize response:
-                    response = str(response)
-
-                    # Check if the response is empty:
-                    if not response:
-                        aprint(f"Response is empty. Trying again...")
-                        continue
-
-                    # response in lower case and trimmed of white spaces
-                    response_lc = response.lower().strip()
-
-                    # Check if response is too short:
-                    if len(response_lc) < 3:
-                        aprint(f"Response is empty. Trying again...")
-                        continue
-
-                    return response
-
-            except Exception as e:
-                # Log the error:
-                aprint(f"Error: '{e}'")
-                # print stack trace:
-                import traceback
-                traceback.print_exc()
-                return f"Error: '{e}'"
+        pass

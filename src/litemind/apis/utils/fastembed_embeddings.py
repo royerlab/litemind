@@ -1,3 +1,4 @@
+from functools import lru_cache
 from typing import List, Optional, Sequence
 
 from arbol import aprint
@@ -5,6 +6,7 @@ from arbol import aprint
 from litemind.apis.utils.random_projector import DeterministicRandomProjector
 
 
+@lru_cache(maxsize=1)
 def is_fastembed_available() -> bool:
     # Check that the fastembed library is installed:
     try:
@@ -47,4 +49,8 @@ def fastembed_text(texts: List[str],
     # Project the embeddings:
     embeddings = drp.transform(embeddings)
 
+    # Make sure that the embeddings are a list of lists by conversion:
+    embeddings = [list(embedding) for embedding in embeddings]
+
+    # Return the embeddings:
     return embeddings
