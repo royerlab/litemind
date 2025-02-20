@@ -14,6 +14,8 @@ from litemind.apis.google.utils.convert_messages import convert_messages_for_gem
     list_and_delete_uploaded_files
 from litemind.apis.google.utils.format_tools import format_tools_for_gemini
 from litemind.apis.google.utils.list_models import _list_gemini_models
+from litemind.apis.google.utils.text_generation_helpers import _stream_chat_with_tools, _stream_chat_no_tools
+from litemind.apis.tests.test_callback_manager import callback_manager
 
 
 class GeminiApi(DefaultApi):
@@ -184,6 +186,10 @@ class GeminiApi(DefaultApi):
                 # if 'imagen' not in model_name.lower():
                 #     return False
 
+            elif feature == ModelFeatures.Reasoning:
+                if 'models/gemini' not in model_name.lower() or 'thinking' in model_name.lower():
+                    return False
+
             elif feature == ModelFeatures.TextEmbeddings:
                 if 'text-embedding' not in model_name.lower():
                     return False
@@ -342,34 +348,33 @@ class GeminiApi(DefaultApi):
                       toolset: Optional[ToolSet] = None,
                       response_format: Optional[BaseModel] = None,
                       **kwargs) -> Message:
+        """
+        Always uses streaming behind the scenes, so partial text is available
+        (via self.callback_manager.on_llm_partial_response).
+        If a toolset is provided and the model supports function-calling,
+        we handle multiple calls in a loop.
+        Returns the final text as one assistant Message.
+        """
 
-        # Get the best model if not provided:
-        if model_name is None:
-            model_name = self.get_best_model()
-
-        # Get the maximum number of output tokens if not provided:
-        if max_output_tokens is None:
-            max_output_tokens = self.max_num_output_tokens(model_name)
-
-        # Preprocess the messages:
-        preprocessed_messages = self._preprocess_messages(messages=messages, convert_videos=False)
-
-        # Convert messages to the gemini format:
-        gemini_messages = convert_messages_for_gemini(preprocessed_messages)
-
-        # Local import to avoid loading the library if not needed:
         import google.generativeai as genai
         from google.generativeai import types
 
-        # Build a GenerationConfig
+        if model_name is None:
+            model_name = self.get_best_model()
+        if max_output_tokens is None:
+            max_output_tokens = self.max_num_output_tokens(model_name)
+
+        # Convert user messages -> gemini format
+        preprocessed_messages = self._preprocess_messages(messages=messages, convert_videos=False)
+        gemini_messages = convert_messages_for_gemini(preprocessed_messages)
+
+        # Build GenerationConfig
         if response_format is None:
-            # Default generation config:
             generation_cfg = types.GenerationConfig(
                 temperature=temperature,
                 max_output_tokens=max_output_tokens
             )
         else:
-            # In this case we add a response format to the generation config:
             generation_cfg = types.GenerationConfig(
                 temperature=temperature,
                 max_output_tokens=max_output_tokens,
@@ -377,105 +382,71 @@ class GeminiApi(DefaultApi):
                 response_schema=response_format
             )
 
-        if toolset and self.has_model_support_for(model_name=model_name,
-                                                  features=ModelFeatures.Tools):
-            # Build fine-grained Tools (protos)
-            proto_tools = format_tools_for_gemini(toolset)
+        # Decide if we have Tools
+        has_tools = (toolset is not None) and self.has_model_support_for(
+            model_name=model_name, features=ModelFeatures.Tools
+        )
 
-            # Create a GenerativeModel with the tools
+        final_text_output = ""
+        if has_tools:
+            # function-calling approach
+            proto_tools = format_tools_for_gemini(toolset)
             model = genai.GenerativeModel(
                 model_name=model_name,
-                tools=proto_tools,  # The Protobuf definitions
+                tools=proto_tools,
                 generation_config=generation_cfg
             )
             chat = model.start_chat()
-
-            # (A) Send user's query
-            response = chat.send_message(gemini_messages)
-
-            # (B) Check if there's a FunctionCall
-            # Typically for single-turn usage, you see whether response is suggesting
-            # a function call. If so, do it manually.
-            function_calls = []
-            for part in response.parts:
-                if part.function_call:
-                    function_calls.append(part.function_call)
-
-            # (C) If there's a function call, manually call the function and
-            #     send the result back.
-            text_output = ""
-            if function_calls:
-                # For simplicity, handle the first function call only
-                fn_call = function_calls[0]
-                fn_name = fn_call.name
-                fn_args = fn_call.args
-
-                # Find the corresponding Python tool
-                # (We still need a real Python function behind the scenes.)
-                python_tool = toolset.get_tool(fn_name)
-                if not python_tool:
-                    # The model called a function we don't have
-                    text_output = f"Function {fn_name} not found."
-                else:
-                    # Execute the tool
-                    result = python_tool(**fn_args)
-
-                    # (D) Send the function result back to the model
-                    # Build a function_response to pass back
-                    response_parts = [
-                        genai.protos.Part(
-                            function_response=genai.protos.FunctionResponse(
-                                name=fn_name,
-                                response={"result": result}
-                            )
-                        )
-                    ]
-                    response2 = chat.send_message(response_parts)
-                    text_output = response2.text or ""
-            else:
-                # If no function call, just use the model's text response
-                text_output = response.text or ""
+            final_text_output = _stream_chat_with_tools(
+                chat_obj=chat,
+                initial_message_parts=gemini_messages,
+                toolset=toolset,
+                model_name=model_name,
+                temperature=temperature,
+                max_output_tokens=max_output_tokens,
+                on_text_streaming=self.callback_manager.on_text_streaming,
+                **kwargs
+            )
         else:
-            # No tool usage
-            model = genai.GenerativeModel(model_name=model_name)
-            response = model.generate_content(
-                gemini_messages,
+            # single-turn streaming
+            model = genai.GenerativeModel(
+                model_name=model_name,
                 generation_config=generation_cfg
             )
-            text_output = response.text or ""
+            final_text_output = _stream_chat_no_tools(
+                model_obj=model,
+                gemini_messages=gemini_messages,
+                model_name=model_name,
+                temperature=temperature,
+                max_output_tokens=max_output_tokens,
+                on_text_streaming=self.callback_manager.on_text_streaming,
+                **kwargs
+            )
 
-        # Cleanup uploaded video or other files:
+        # Clean up temporary uploads:
         list_and_delete_uploaded_files()
 
+        # Possibly parse JSON if response_format is given
         if response_format:
-            # Attempt to repair the JSON string
             from json_repair import repair_json
-            repaired_json = repair_json(text_output)
-
-            # If the repaired string is empty, return the original text content
-            if len(repaired_json.strip()) == 0 and len(text_output.strip()) > 0:
-                response_message = Message(role='assistant', text=text_output)
+            repaired_json = repair_json(final_text_output)
+            if len(repaired_json.strip()) == 0 and len(final_text_output.strip()) > 0:
+                response_message = Message(role='assistant', text=final_text_output)
             else:
-                # Else, parse the JSON string into the specified format
                 try:
                     parsed_obj = response_format.model_validate_json(repaired_json)
                     response_message = Message(role='assistant', obj=parsed_obj)
                 except Exception as e:
-                    # print stacktrace:
                     import traceback
                     traceback.print_exc()
-
-                    # If parsing fails, return the original text content
-                    response_message = Message(role='assistant', text=text_output)
-
+                    response_message = Message(role='assistant', text=final_text_output)
         else:
-            # Return the final text as a single Message
-            response_message = Message(role="assistant", text=text_output)
+            response_message = Message(role="assistant", text=final_text_output)
 
-        # Append the response message to the list of messages:
+        # Add to conversation
         messages.append(response_message)
 
-        # Add all parameters to kwargs:
+        # Fire final callback:
         kwargs.update({
             'model_name': model_name,
             'temperature': temperature,
@@ -485,10 +456,11 @@ class GeminiApi(DefaultApi):
         })
 
         # Call the callback manager:
-        self.callback_manager.on_text_generation(response=response,
-                                                 messages=messages,
-                                                 **kwargs)
-
+        self.callback_manager.on_text_generation(
+            response=response_message,
+            messages=messages,
+            **kwargs
+        )
         return response_message
 
     def generate_image(self,

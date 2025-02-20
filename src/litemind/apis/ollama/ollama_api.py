@@ -10,6 +10,7 @@ from litemind.apis.base_api import ModelFeatures
 from litemind.apis.callback_manager import CallbackManager
 from litemind.apis.default_api import DefaultApi
 from litemind.apis.exceptions import APIError, APINotAvailableError
+from litemind.apis.ollama.utils.aggregate_chat_responses import aggregate_chat_responses
 from litemind.apis.ollama.utils.convert_messages import convert_messages_for_ollama
 from litemind.apis.ollama.utils.format_tools import format_tools_for_ollama
 from litemind.apis.ollama.utils.process_response import process_response_from_ollama
@@ -330,16 +331,20 @@ class OllamaApi(DefaultApi):
         try:
             aprint(f"Sending request to Ollama with model: {model_name}")
 
-            # Call the Ollama API:
-            response = self.client.chat(
+            # Call the Ollama API in streaming mode:
+            chunks = self.client.chat(
                 model=model_name,
                 messages=ollama_messages,
                 tools=ollama_tools,
                 options={"temperature": temperature,
                          "num_predict": max_output_tokens},
                 format=response_format_schema,
+                stream=True,
                 **kwargs
             )
+
+            # Aggregate the streamed response:
+            response = aggregate_chat_responses(chunks, callback=self.callback_manager.on_text_streaming)
 
             # Process the response
             response_message = process_response_from_ollama(response, toolset, response_format)

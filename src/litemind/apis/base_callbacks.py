@@ -66,7 +66,7 @@ class BaseCallbacks(ABC):
         """
         pass
 
-    def on_streaming(self, fragment: str, **kwargs) -> None:
+    def on_text_streaming(self, fragment: str, **kwargs) -> None:
         """
         Called when a text completion is generated.
 

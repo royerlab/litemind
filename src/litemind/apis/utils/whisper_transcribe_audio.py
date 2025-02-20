@@ -1,7 +1,6 @@
 from functools import lru_cache
 
-from litemind.utils.normalise_uri_to_local_file_path import \
-    uri_to_local_file_path
+from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_path
 
 
 @lru_cache(maxsize=1)

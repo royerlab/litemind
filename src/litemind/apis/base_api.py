@@ -242,7 +242,9 @@ class BaseApi(ABC):
 
     @abstractmethod
     def convert_documents_to_markdown_in_messages(self,
-                                                  messages: List[Message]) -> \
+                                                  messages: List[Message],
+                                                  exclude_extensions: Optional[List[str]] = None,
+                                                  model_name: Optional[str] = None) -> \
             List[Message]:
         """
         Convert documents in messages into text in Markdown format.
@@ -251,6 +253,11 @@ class BaseApi(ABC):
         ----------
         messages : List[Message]
             The list of Message objects to process.
+        exclude_extensions : Optional[List[str]]
+            The list of file extensions to exclude from processing.
+        model_name : Optional[str]
+            The name of the model to use.
+
 
         Returns
         -------

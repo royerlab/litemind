@@ -289,6 +289,7 @@ class DefaultApi(BaseApi):
                              convert_videos: bool = True,
                              convert_documents: bool = True,
                              transcribe_audio: bool = True,
+                             exclude_extensions: Optional[List[str]] = None,
                              deepcopy: bool = True
                              ) -> List[Message]:
 
@@ -303,6 +304,7 @@ class DefaultApi(BaseApi):
 
             # Convert videos to images and audio:
             messages = self.convert_videos_to_images_and_audio_in_messages(messages=messages,
+                                                                           exclude_extensions=exclude_extensions,
                                                                            model_name=video_conversion_model_name)
 
         # Convert audio messages to text:
@@ -312,6 +314,7 @@ class DefaultApi(BaseApi):
 
             # Convert audio message blocks:
             messages = self.convert_audio_in_messages(messages=messages,
+                                                      exclude_extensions=exclude_extensions,
                                                       model_name=audio_transcription_model_name)
 
         # Convert documents to markdown:
@@ -321,6 +324,7 @@ class DefaultApi(BaseApi):
 
             # Convert documents to markdown:
             messages = self.convert_documents_to_markdown_in_messages(messages,
+                                                                      exclude_extensions=exclude_extensions,
                                                                       model_name=document_conversion_model)
 
         return messages
@@ -361,6 +365,7 @@ class DefaultApi(BaseApi):
 
     def convert_audio_in_messages(self,
                                   messages: Sequence[Message],
+                                  exclude_extensions: Optional[List[str]] = None,
                                   model_name: Optional[str] = None) -> Sequence[Message]:
 
         # If model is not provided, get the best model:
@@ -376,42 +381,52 @@ class DefaultApi(BaseApi):
 
             # Iterate over each block in the message:
             for block in message.blocks:
-
-                # Check if the block is an audio block:
-                if block.block_type == BlockType.Audio and block.content:
-                    try:
-                        # We use a local instance of whisper instead:
-                        transcription = self.transcribe_audio(block.content,
-                                                              model_name=model_name)
-
-                        # Extract filename from URI:
-                        original_filename = block.content.split("/")[-1]
-
-                        # Add markdown quotes ''' around the transcribed text, and
-                        # add prefix: "Transcription: " to the transcribed text:
-                        transcription = f"\nTranscription of audio file '{original_filename}': \n'''\n{transcription}\n'''\n"
-
-                        # Make a new text block:
-                        transcription_block = MessageBlock(block_type=BlockType.Text,
-                                                           content=transcription)
-
-                        # Add the transcribed text to the message right after the audio block:
-                        message.insert_block(transcription_block, block_before=block)
-
-                        # Remove the audio block:
-                        message.blocks.remove(block)
-
-                    except Exception as e:
-                        # Print stacktrace:
-                        import traceback
-                        traceback.print_exc()
-                        raise ValueError(
-                            f"Could not transcribe audio from: '{block.content}', error: {e}")
+                self._convert_audio_block(block, message, exclude_extensions, model_name)
 
         return messages
 
+    def _convert_audio_block(self, block, message, exclude_extensions, model_name):
+        # Check if the block is an audio block:
+        if block.block_type == BlockType.Audio and block.content:
+            try:
+                # Extract filename from URI:
+                original_filename = block.content.split("/")[-1]
+
+                # Extract the file extension from URI:
+                file_extension = block.content.split(".")[-1]
+
+                # Check if the file extension is in the exclude list:
+                if exclude_extensions and file_extension in exclude_extensions:
+                    return
+
+                # We use a local instance of whisper instead:
+                transcription = self.transcribe_audio(block.content,
+                                                      model_name=model_name)
+
+                # Add markdown quotes ''' around the transcribed text, and
+                # add prefix: "Transcription: " to the transcribed text:
+                transcription = f"\nTranscription of audio file '{original_filename}': \n'''\n{transcription}\n'''\n"
+
+                # Make a new text block:
+                transcription_block = MessageBlock(block_type=BlockType.Text,
+                                                   content=transcription)
+
+                # Add the transcribed text to the message right after the audio block:
+                message.insert_block(transcription_block, block_before=block)
+
+                # Remove the audio block:
+                message.blocks.remove(block)
+
+            except Exception as e:
+                # Print stacktrace:
+                import traceback
+                traceback.print_exc()
+                raise ValueError(
+                    f"Could not transcribe audio from: '{block.content}', error: {e}")
+
     def convert_documents_to_markdown_in_messages(self,
                                                   messages: Sequence[Message],
+                                                  exclude_extensions: Optional[List[str]] = None,
                                                   model_name: Optional[str] = None) -> Sequence[Message]:
 
         # If model is not provided, get the best model:
@@ -446,6 +461,10 @@ class DefaultApi(BaseApi):
 
                         # Extract the file extension from URI:
                         file_extension = block.content.split(".")[-1]
+
+                        # Check if the file extension is in the exclude list:
+                        if exclude_extensions and file_extension in exclude_extensions:
+                            continue
 
                         # Convert document to markdown:
                         markdown = convert_document_to_markdown(block.content)
@@ -588,6 +607,7 @@ class DefaultApi(BaseApi):
 
     def convert_videos_to_images_and_audio_in_messages(self,
                                                        messages: Sequence[Message],
+                                                       exclude_extensions: Optional[List[str]] = None,
                                                        model_name: Optional[str] = None) -> Sequence[Message]:
 
         # If model is not provided, get the best model:
@@ -619,6 +639,13 @@ class DefaultApi(BaseApi):
                 if block.block_type == BlockType.Video and block.content:
                     # Normalise the URI to a local file path:
                     local_path = uri_to_local_file_path(block.content)
+
+                    # extract the file extension from the URI:
+                    file_extension = block.content.split(".")[-1]
+
+                    # Check if the file extension is in the exclude list:
+                    if exclude_extensions and file_extension in exclude_extensions:
+                        continue
 
                     # Append video frames and audio to the message:
                     blocks = convert_video_to_frames_and_audio(local_path)

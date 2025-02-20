@@ -1,8 +1,9 @@
 TODO:
 
-- Deal with message sizes in tokens sent to models
-- Implement streaming callbacks
-- ReAct Agent
-- RAG
-- Improve document conversion (page per page text and video interleaving + whole page images)
-- Improve folder/archive conversion: add ascii folder tree
+-[ ] ReAct Agent
+-[ ] RAG
+-[ ] Add support for adding nD images to messages.
+-[ ] Improve document conversion (page per page text and video interleaving + whole page images)
+-[ ] Deal with message sizes in tokens sent to models
+-[x] Implement streaming callbacks
+-[x] Improve folder/archive conversion: add ascii folder tree

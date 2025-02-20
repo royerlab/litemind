@@ -12,6 +12,7 @@ class ModelFeatures(Enum):
     ImageGeneration = 'ImageGeneration'
     AudioGeneration = 'AudioGeneration'
     VideoGeneration = 'VideoGeneration'
+    Reasoning = 'Reasoning',
     TextEmbeddings = 'TextEmbeddings'
     ImageEmbeddings = 'ImageEmbeddings'
     AudioEmbeddings = 'AudioEmbeddings'

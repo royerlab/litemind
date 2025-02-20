@@ -74,6 +74,29 @@ def convert_messages_for_anthropic(messages: List[Message],
                         "data": audio_uri.split(",")[-1] if audio_uri.startswith("data:audio/") else base64_data,
                     },
                 })
+            elif block.block_type == BlockType.Document and block.content.endswith('.pdf'):
+                pdf_uri = block.content
+                media_type = "application/pdf"
+                if pdf_uri.startswith("file://"):
+                    local_path = pdf_uri.replace("file://", "")
+                    base64_data = read_file_and_convert_to_base64(local_path)
+                    pdf_uri = base64_to_data_uri(base64_data, media_type)
+                elif pdf_uri.startswith("http://") or pdf_uri.startswith("https://"):
+                    local_path = uri_to_local_file_path(pdf_uri)
+                    base64_data = read_file_and_convert_to_base64(local_path)
+                elif pdf_uri.startswith("data:application/pdf;"):
+                    base64_data = pdf_uri.split(",")[-1]
+                else:
+                    raise ValueError(f"Unsupported PDF URI: {pdf_uri}")
+
+                content.append({
+                    "type": "document",
+                    "source": {
+                        "type": "base64",
+                        "media_type": media_type,
+                        "data": pdf_uri.split(",")[-1] if pdf_uri.startswith("data:application/pdf;") else base64_data,
+                    },
+                })
             # Add more block types as needed
 
         anthropic_messages.append({
@@ -86,7 +109,7 @@ def convert_messages_for_anthropic(messages: List[Message],
         if anthropic_messages and anthropic_messages[-1]['content']:
             anthropic_messages[-1]['content'][-1]['cache_control'] = {"type": "ephemeral"}
 
-    # Add prompt that specifies that response should be in JSOn following given JSON schema:
+    # Add prompt that specifies that response should be in JSON following given JSON schema:
     if response_format:
         anthropic_messages[-1]['content'].append({
             "type": "text",

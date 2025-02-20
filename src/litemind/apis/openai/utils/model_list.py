@@ -7,6 +7,7 @@ from arbol import aprint
 
 def get_openai_model_list(included: Optional[List[str]] = None,
                           excluded: Optional[List[str]] = None,
+                          exclude_dated_models: bool = True,
                           verbose: bool = False) -> list[str]:
     """
     Get the list of all OpenAI ChatGPT models.
@@ -19,6 +20,8 @@ def get_openai_model_list(included: Optional[List[str]] = None,
     excluded : str
         Excluded models. If None, no models are excluded.
         Models must not contain any of the excluded models to be included in the list.
+    exclude_dated_models: bool
+        If True, remove models with a date in the model id. This is useful to keep only the most recent version of each model.
     verbose : bool
         Verbosity flag.
 
@@ -29,69 +32,43 @@ def get_openai_model_list(included: Optional[List[str]] = None,
 
     """
 
-    # Local imports to avoid issues:
-
     try:
         if included is None:
             included = ['gpt']
 
+        # Get the raw list of models:
         models = _get_raw_openai_model_list()
+
+        # Convert to list of model ids:
+        models = [model.id for model in models]
+
+        if exclude_dated_models:
+            models = _remove_dated_models(models)
 
         # Model list to populate:
         model_list = []
 
         # Goes through models and populate the list:
         for model in models:
-            model_id = model.id
 
             # only keep models that match the filter:
-            if not included or any(f in model_id for f in included):
-                model_list.append(model_id)
+            if not included or any(f in model for f in included):
+                model_list.append(model)
                 if verbose:
-                    aprint(f"Included: {model_id}")
+                    aprint(f"Included: {model}")
 
             # Only keep models that do not match the excluded:
-            if excluded and any(e in model_id for e in excluded):
-                model_list.remove(model_id)
+            if excluded and any(e in model for e in excluded):
+                model_list.remove(model)
                 if verbose:
-                    aprint(f"Excluded: {model_id}")
-
-        # Next we sort models so the best ones are at the beginning of the list:
-        def model_key(model):
-            # Split the model name into parts
-            parts = model.split('-')
-
-            # If a part is '4o' or 'o1', replace it with 'o1.25' or '4.25' respectively:
-            parts = [part if part not in ['4o', 'o1'] else part.replace('o',
-                                                                        '.25')
-                     for part in parts]
-
-            # Remove all the parts that are not numbers (integer or float):
-            parts = [part for part in parts if
-                     part.replace('.', '', 1).isdigit()]
-
-            # Remove parts that are integers but that lead with a zero:
-            if len(parts) > 1:
-                parts = [part for part in parts if not part.startswith('0')]
-
-            # Remove parts that are numbers (float or int) that are too big (>10.0)
-            if len(parts) > 1:
-                parts = [part for part in parts if float(part) < 5]
-
-            # Get the main version (e.g., '3.5' or '4' from 'gpt-3.5' or 'gpt-4')
-            main_version = float(parts[-1])
-
-            # If we find 'mini' in the model name then subtract 0.25 from the main version:
-            if 'mini' in model:
-                main_version -= 0.12
-
-            # Use the length of the model name as a secondary sorting criterion
-            length = len(model)
-            # Sort by main version (descending), then by length (ascending)
-            return -main_version, length
+                    aprint(f"Excluded: {model}")
 
         # Actual sorting:
-        sorted_model_list = sorted(model_list, key=model_key)
+        sorted_model_list = sorted(model_list, key=model_key, reverse=True)
+
+        # debug:
+        # for model in sorted_model_list:
+        #    aprint(f"Model: {model} Key: {model_key(model)}")
 
         return sorted_model_list
 
@@ -105,6 +82,34 @@ def get_openai_model_list(included: Optional[List[str]] = None,
         return []
 
 
+def _remove_dated_models(models):
+    nodate_models = []
+    for model in models:
+
+        # Remove '-preview' from name:
+        model = model.replace('-preview', '')
+
+        if '-' in model:
+            parts = model.split('-')
+
+            if len(parts) >= 4:
+
+                year = parts[-3]
+                month = parts[-2]
+                day = parts[-1]
+
+                # Check if the date is valid:
+                if len(year) == 4 and len(month) == 2 and len(day) == 2:
+                    continue
+
+            if len(parts) >= 2:
+                if parts[-1].isdigit() and len(parts[-1]) == 4:
+                    continue
+
+        nodate_models.append(model)
+    return nodate_models
+
+
 @lru_cache()
 def _get_raw_openai_model_list():
     from openai import OpenAI
@@ -115,6 +120,30 @@ def _get_raw_openai_model_list():
     # Raw model list:
     models = client.models.list().data
     return models
+
+
+# Next we sort models so the best ones are at the beginning of the list:
+def model_key(model):
+    score = 0
+
+    if 'o1' in model:
+        score += 110
+    if 'gpt-4o' in model:
+        score += 100
+    elif 'gpt-4' in model:
+        score += 90
+    elif 'gpt-3.5' in model:
+        score += 80
+    elif 'gpt-3' in model:
+        score += 70
+
+    if 'mini' in model:
+        score -= 5
+
+    if 'preview' in model:
+        score -= 2
+
+    return score
 
 
 def postprocess_openai_model_list(model_list: list) -> list:

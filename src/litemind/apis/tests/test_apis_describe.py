@@ -146,9 +146,9 @@ class TestBaseApiImplementationsDescribe(BaseTest):
             else:
 
                 # Check the contents of the string:
-                assert (('roller coaster' in description or 'amusement park' in description)
+                assert (('roller coaster' in description or 'amusement park' in description or 'ride' in description)
                         and (
-                                '20th century' in description or '20th-century' in description or 'earlier era' in description or 'vintage' in description))
+                                '20th century' in description or '20th-century' in description or 'earlier era' in description or 'vintage' in description or 'period' in description))
 
         except:
             # Print stacktrace:

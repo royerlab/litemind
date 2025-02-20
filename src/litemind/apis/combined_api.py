@@ -36,6 +36,11 @@ class CombinedApi(DefaultApi):
         if apis is None:
             apis = [OpenAIApi(), AnthropicApi(), OllamaApi(), GeminiApi()]
 
+        # Add the callbacks from this CombinedApi class to the callback manager of each individual APIs:
+        if callback_manager:
+            for api in apis:
+                api.callback_manager.add_callbacks(callback_manager)
+
         # Initialise the APIs lists and maps:
         self.apis = []
         self.model_to_api = {}

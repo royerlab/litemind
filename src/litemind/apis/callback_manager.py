@@ -1,4 +1,4 @@
-from typing import List, Any, Sequence
+from typing import List, Any, Sequence, Union
 
 from litemind.agent.message import Message
 from litemind.apis.base_callbacks import BaseCallbacks
@@ -11,6 +11,14 @@ class CallbackManager(BaseCallbacks):
     def add_callback(self, callback: BaseCallbacks) -> None:
         if callback not in self.callbacks:
             self.callbacks.append(callback)
+
+    def add_callbacks(self, callbacks_: Union[Sequence[BaseCallbacks], 'CallbackManager']) -> None:
+        if isinstance(callbacks_, CallbackManager):
+            self.callbacks.extend(callbacks_.callbacks)
+        elif isinstance(callbacks_, Sequence):
+            for callback in callbacks_:
+                if isinstance(callback, BaseCallbacks):
+                    self.callbacks.append(callback)
 
     def remove_callback(self, callback: BaseCallbacks) -> None:
         if callback in self.callbacks:
@@ -52,6 +60,10 @@ class CallbackManager(BaseCallbacks):
                            **kwargs) -> None:
         for callback in self.callbacks:
             callback.on_text_generation(messages, response, **kwargs)
+
+    def on_text_streaming(self, fragment: str, **kwargs) -> None:
+        for callback in self.callbacks:
+            callback.on_text_streaming(fragment, **kwargs)
 
     def on_audio_transcription(self,
                                transcription: str,

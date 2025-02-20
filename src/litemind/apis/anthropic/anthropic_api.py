@@ -345,7 +345,8 @@ class AnthropicApi(DefaultApi):
                 non_system_messages.append(message)
 
         # Preprocess the messages, we use non-system messages only:
-        preprocessed_messages = self._preprocess_messages(messages=non_system_messages)
+        preprocessed_messages = self._preprocess_messages(messages=non_system_messages,
+                                                          exclude_extensions=['pdf'])
 
         # Convert remaining non-system litemind Messages to Anthropic messages:
         anthropic_messages = convert_messages_for_anthropic(
@@ -363,16 +364,33 @@ class AnthropicApi(DefaultApi):
 
         try:
             # Call the Anthropic API:
-            response = self.client.messages.create(
-                model=model_name,
-                messages=anthropic_messages,
-                temperature=temperature,
-                max_tokens=max_output_tokens,
-                tools=tools_param,
-                system=system_messages,
-                # Pass system message as top-level parameter
-                **kwargs
-            )
+            with (self.client.messages.stream(
+                    model=model_name,
+                    messages=anthropic_messages,
+                    temperature=temperature,
+                    max_tokens=max_output_tokens,
+                    tools=tools_param,
+                    system=system_messages,
+                    # Pass system message as top-level parameter
+                    **kwargs)
+            as streaming_response):
+                # 1) Stream and handle partial events:
+                for event in streaming_response:
+                    if event.type == "text":
+                        # event.text => the incremental text chunk
+                        # print(event.text, end="", flush=True)
+                        self.callback_manager.on_text_streaming(event.text)
+                    # elif event.type == "content_block_stop":
+                    #     # entire text block is done; for example:
+                    #     print("\n[content_block_stop] final block:", event.content_block)
+                    # elif event.type == "message_stop":
+                    #     # entire Message object is done
+                    #     print("\n[message_stop] partial message is now complete!")
+                    #     print("Full message so far:", event.message.to_json())
+
+                # 2) Get the final response:
+                response = streaming_response.get_final_message()
+
         except Exception as e:
             raise APIError(f"Anthropic completion error: {e}")
 

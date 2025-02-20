@@ -51,6 +51,8 @@ class OpenAIApi(DefaultApi):
         # get key from environmental variables:
         if api_key is None:
             api_key = os.environ.get("OPENAI_API_KEY")
+
+        # raise error if api_key is None:
         if api_key is None:
             raise APIError(
                 "The api_key client option must be set either by passing api_key to the client or by setting the OPENAI_API_KEY environment variable"
@@ -108,7 +110,7 @@ class OpenAIApi(DefaultApi):
 
         try:
             # Base filtering of models:
-            included = ['dall-e', 'audio', 'gpt', 'text-embedding', 'whisper', 'ada-002']
+            included = ['dall-e', 'audio', 'gpt', 'o1', 'text-embedding', 'whisper', 'ada-002']
 
             # Exclude models that are not supported by the API:
             excluded = ['ada-002']
@@ -195,6 +197,10 @@ class OpenAIApi(DefaultApi):
                 if not self._has_image_gen_support(model_name):
                     return False
 
+            elif feature == ModelFeatures.Reasoning:
+                if not self._has_reasoning_support(model_name):
+                    return False
+
             elif feature == ModelFeatures.TextEmbeddings:
                 if not self._has_text_embed_support(model_name):
                     return False
@@ -250,7 +256,7 @@ class OpenAIApi(DefaultApi):
         if 'text-embedding' in model_name or 'dall-e' in model_name or 'realtime' in model_name or 'instruct' in model_name or 'audio' in model_name:
             return False
 
-        if 'gpt' in model_name:
+        if 'gpt' in model_name or 'o1' in model_name or 'o3' in model_name:
             return True
 
         return False
@@ -259,6 +265,15 @@ class OpenAIApi(DefaultApi):
         if 'dall-e' not in model_name:
             return False
         return True
+
+    def _has_reasoning_support(self, model_name: str) -> bool:
+        if 'text-embedding' in model_name or 'dall-e' in model_name or 'realtime' in model_name or 'instruct' in model_name or 'audio' in model_name:
+            return False
+
+        if 'o1' in model_name:
+            return True
+
+        return False
 
     def _has_text_embed_support(self, model_name: str) -> bool:
         if 'text-embedding' not in model_name:
@@ -272,7 +287,7 @@ class OpenAIApi(DefaultApi):
             return False
 
         # Then, we check if it is a vision model:
-        if 'vision' in model_name or 'gpt-4o' in model_name or 'gpt-o1' in model_name:
+        if 'vision' in model_name or 'gpt-4o' in model_name or 'o1' in model_name or 'o3' in model_name:
             return True
 
         # Any other model is not a vision model:
@@ -320,7 +335,7 @@ class OpenAIApi(DefaultApi):
         if not self._has_text_gen_support(model_name):
             return False
 
-        if 'dall-e' in model_name or 'text-embedding' in model_name or 'realtime' in model_name or 'instruct' in model_name or 'audio' in model_name:
+        if 'dall-e' in model_name or 'text-embedding' in model_name or 'realtime' in model_name or 'instruct' in model_name or 'audio' in model_name or 'chatgpt' in model_name or 'gpt-3.5' in model_name:
             return False
 
         if 'o1' in model_name or 'o3' in model_name or 'gpt-4o-mini' in model_name or 'gpt-4o' in model_name:
@@ -337,7 +352,7 @@ class OpenAIApi(DefaultApi):
         if not self._has_text_gen_support(model_name):
             return False
 
-        if 'gpt-3.5' in model_name or 'dall-e' in model_name or 'text-embedding' in model_name:
+        if 'gpt-3.5' in model_name or 'dall-e' in model_name or 'text-embedding' in model_name or 'realtime' in model_name or 'chatgpt' in model_name:
             return False
 
         return True
@@ -570,6 +585,10 @@ class OpenAIApi(DefaultApi):
         openai_tools = format_tools_for_openai(
             toolset) if toolset else NotGiven()
 
+        # Make sure that reponse_format is NotGiven if not set:
+        if response_format is None:
+            response_format = NotGiven()
+
         # Preprocess messages:
         preprocessed_messages = self._preprocess_messages(messages=preprocessed_messages,
                                                           deepcopy=False)  # We have already made a deepcopy
@@ -577,20 +596,8 @@ class OpenAIApi(DefaultApi):
         # Format messages for OpenAI:
         openai_formatted_messages = convert_messages_for_openai(preprocessed_messages)
 
-        # If output_format is None, we use the new OpenAI function calling format:
-        if response_format is None:
-            # Call OpenAI Chat Completions API
-            response = self.client.chat.completions.create(
-                model=model_name,
-                messages=openai_formatted_messages,
-                temperature=temperature,
-                max_completion_tokens=max_output_tokens,
-                tools=openai_tools,
-                **kwargs
-            )
-        else:
-            # Call OpenAI Chat Completions API
-            response = self.client.beta.chat.completions.parse(
+        # Call OpenAI Chat Completions API
+        with self.client.beta.chat.completions.stream(
                 model=model_name,
                 messages=openai_formatted_messages,
                 temperature=temperature,
@@ -598,10 +605,31 @@ class OpenAIApi(DefaultApi):
                 tools=openai_tools,
                 response_format=response_format,
                 **kwargs
-            )
+        ) as streaming_response:
+            # Process the stream
+            for event in streaming_response:
+                # pprint(event)
+                if event.type == "content.delta":
+                    self.callback_manager.on_text_streaming(fragment=event.delta,
+                                                            **kwargs)
+                    # if event.parsed is not None:
+                    #     # Print the parsed data as JSON
+                    #     aprint("content.delta parsed:", event.parsed)
+                # elif event.type == "content.done":
+                #     aprint("content.done")
+                # elif event.type == "error":
+                #     aprint("Error in stream:", event.error)
+
+        # Get the final completion
+        response = streaming_response.get_final_completion()
 
         # Process API response
-        response_message = process_response_from_openai(response, toolset, response_format)
+        response_message = process_response_from_openai(response=response,
+                                                        toolset=toolset,
+                                                        response_format=response_format,
+                                                        stream_callback=self.callback_manager.on_text_streaming)
+
+        # append response to messages:
         messages.append(response_message)
 
         # Add all parameters to kwargs:

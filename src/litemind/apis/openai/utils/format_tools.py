@@ -30,12 +30,14 @@ def format_tools_for_openai(toolset: ToolSet) -> List[Dict[str, Any]]:
             "function": {
                 "name": tool.name,
                 "description": tool.description,
+                "strict": True,
                 "parameters": {
                     "type": "object",
                     "properties": properties,
                     "required": required,
                     "additionalProperties": False
                 }
+
             }
         }
         tools.append(tool_schema)

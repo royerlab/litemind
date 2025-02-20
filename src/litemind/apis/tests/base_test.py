@@ -1,18 +1,13 @@
-from litemind.apis.anthropic.anthropic_api import AnthropicApi
-from litemind.apis.combined_api import CombinedApi
-from litemind.apis.default_api import DefaultApi
-from litemind.apis.google.google_api import GeminiApi
-from litemind.apis.ollama.ollama_api import OllamaApi
 from litemind.apis.openai.openai_api import OpenAIApi
 
 # Put all your implementations in this list:
 API_IMPLEMENTATIONS = [
-    DefaultApi,
+    # DefaultApi,
     OpenAIApi,
-    OllamaApi,
-    AnthropicApi,
-    GeminiApi,
-    CombinedApi,
+    # OllamaApi,
+    # AnthropicApi,
+    # GeminiApi,
+    # CombinedApi,
 ]
 
 

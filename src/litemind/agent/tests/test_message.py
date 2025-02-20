@@ -1,4 +1,5 @@
 import copy
+from pprint import pprint
 
 from pydantic import BaseModel
 
@@ -242,9 +243,47 @@ def test_message_folder():
         np.random.randint(0, 255, (100, 100, 3), dtype=np.uint8))
     image.save(os.path.join(temp_folder, 'image.png'))
 
+    # Download this PDF into the folder: https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf
+    import requests
+    pdf_url = 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf'
+    pdf_file = os.path.join(temp_folder, 'document.pdf')
+    with open(pdf_file, 'wb') as f:
+        f.write(requests.get(pdf_url).content)
+
+    # Add other different types of files to the folder:
+    os.makedirs(os.path.join(temp_folder, 'folder1', 'folder2'))
+    with open(os.path.join(temp_folder, 'folder1', 'file1.txt'), 'w') as f:
+        f.write('This is a random sentence 1.')
+    with open(os.path.join(temp_folder, 'folder1', 'file2.txt'), 'w') as f:
+        f.write('This is a random sentence 2.')
+    with open(os.path.join(temp_folder, 'folder1', 'folder2', 'file3.txt'), 'w') as f:
+        f.write('This is a random sentence 3.')
+
     user_message = Message(role='user')
     user_message.append_text('Can you describe what you see in the folder?')
     user_message.append_folder(temp_folder)
+
+    pprint(user_message)
+
+    assert user_message.role == 'user'
+
+    # Check that the message has a folder tree:
+    assert any(
+        block.content == 'Can you describe what you see in the folder?' for
+        block in user_message.blocks)
+
+    # Check that the message has a folder tree and specific files:
+    assert any(block.content == 'Can you describe what you see in the folder?' for block in user_message.blocks)
+    assert 'file.txt' in str(user_message)
+    assert 'image.png' in str(user_message)
+    assert 'document.pdf' in str(user_message)
+
+    # Check the presence of a document block and an image block:
+    assert any(block.block_type == BlockType.Document for block in user_message.blocks)
+    assert any(block.block_type == BlockType.Image for block in user_message.blocks)
+
+    # Check that sentence 'This is a random sentence.' is in the message:
+    assert 'This is a random sentence.' in str(user_message)
 
 
 def test_message_contains():

@@ -21,7 +21,10 @@ class MockCallback(BaseCallbacks):
         self.called_methods.append('on_best_model_selected')
 
     def on_text_generation(self, messages: List[str], response: str, **kwargs) -> None:
-        self.called_methods.append('on_text_completion')
+        self.called_methods.append('on_text_generation')
+
+    def on_text_streaming(self, fragment: str, **kwargs) -> None:
+        self.called_methods.append('on_text_streaming')
 
     def on_audio_transcription(self, audio_uri: str, transcription: str, **kwargs) -> None:
         self.called_methods.append('on_audio_transcription')
@@ -130,6 +133,15 @@ def test_on_text_generation(callback_manager, mock_callback):
     response = Message("assistant", "Hello you!")
 
     callback_manager.on_text_generation([message], response)
-    assert 'on_text_completion' in mock_callback.called_methods
+    assert 'on_text_generation' in mock_callback.called_methods
 
-# Add similar tests for other callback methods...
+
+def test_on_text_streaming(callback_manager, mock_callback):
+    # Add the callback:
+    callback_manager.add_callback(mock_callback)
+
+    # Call the method:
+    callback_manager.on_text_streaming("Hello, world!")
+
+    # Check that the callback was called:
+    assert 'on_text_streaming' in mock_callback.called_methods

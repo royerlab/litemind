@@ -2,8 +2,10 @@ import copy
 import os
 from abc import ABC
 from json import loads
+from pathlib import Path
 from typing import Optional, List, Union
 
+import chardet
 from pydantic import BaseModel
 
 from litemind.agent.message_block import MessageBlock
@@ -437,43 +439,80 @@ class Message(ABC):
             disregarding the depth of files in the archives (default: False).
         """
 
-        self.append_text("\n##### Contents of folder: " + folder + "\n")
+        def generate_tree_structure(folder_path, prefix=''):
+            tree_structure = ''
+            contents = list(Path(folder_path).iterdir())
+            pointers = ['├── '] * (len(contents) - 1) + ['└── ']
+            for pointer, path in zip(pointers, contents):
+                tree_structure += prefix + pointer + path.name + '\n'
+                if path.is_dir():
+                    extension = '│   ' if pointer == '├── ' else '    '
+                    tree_structure += generate_tree_structure(path, prefix + extension)
+            return tree_structure
 
-        # recursively traverse folder and enumerate all files up to specified depth:
+        def is_text_file(file_path):
+            try:
+                with open(file_path, 'rb') as f:
+                    result = chardet.detect(f.read(1024))
+                    return result['encoding'] is not None
+            except:
+                return False
+
+        def read_file_content(file_path):
+            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                return f.read()
+
+        def read_binary_file_info(file_path):
+            with open(file_path, 'rb') as f:
+                content = f.read(100)
+                return len(content), content.hex()
+
+        # Generate and append the directory tree structure
+        tree_structure = generate_tree_structure(folder)
+        self.append_text(f"Directory structure:\n{tree_structure}")
+
+        # Recursively traverse folder and enumerate all files up to specified depth
         for root, dirs, files in os.walk(folder):
-
-            # append files to the message:
+            # Append files to the message
             for file in files:
-
-                # file path within folder:
                 file_path = os.path.join(root, file)
-
-                # Make a local file URi from the file path:
                 file_uri = 'file://' + file_path
 
-                if any(file.endswith(ext) for ext in image_file_extensions):
-                    self.append_text("\n###### Image file: " + file + "\n")
+                if is_text_file(file_path):
+                    content = read_file_content(file_path)
+                    self.append_text(
+                        f"\n================================================\nText File: {file}\n================================================\n{content}\n")
+                elif any(file.endswith(ext) for ext in image_file_extensions):
+                    self.append_text(
+                        f"\n================================================\nImage File: {file}\n================================================\n")
                     self.append_image(file_uri, source=file_path)
                 elif any(file.endswith(ext) for ext in audio_file_extensions):
-                    self.append_text("\n###### Audio file: " + file + "\n")
+                    self.append_text(
+                        f"\n================================================\nAudio File: {file}\n================================================\n")
                     self.append_audio(file_uri, source=file_path)
                 elif any(file.endswith(ext) for ext in video_file_extensions):
-                    self.append_text("\n###### Video file: " + file + "\n")
+                    self.append_text(
+                        f"\n================================================\nVideo File: {file}\n================================================\n")
                     self.append_video(file_uri, source=file_path)
-                elif any(
-                        file.endswith(ext) for ext in document_file_extensions):
-                    self.append_text("\n###### Document file: " + file + "\n")
+                elif any(file.endswith(ext) for ext in document_file_extensions):
+                    self.append_text(
+                        f"\n================================================\nDocument File: {file}\n================================================\n")
                     self.append_document(file_uri, source=file_path)
                 elif any(file.endswith(ext) for ext in archive_file_extensions):
-                    self.append_text("\n###### Archive file: " + file + "\n")
+                    self.append_text(
+                        f"\n================================================\nCompressed Archive File: {file}\n================================================\n")
                     depth = None if all_archive_files or not depth else depth - 1
                     self.append_archive(file_uri, depth)
+                else:
+                    size, hex_content = read_binary_file_info(file_path)
+                    self.append_text(
+                        f"\n================================================\nBinary File: {file}\n================================================\nSize: {size} bytes\nFirst 100 bytes (hex): {hex_content}\n")
 
-            # append subfolders to the message:
-            if not depth or depth >= 1:
+            # Append subfolders to the message
+            if depth is not None and depth >= 1:
                 for d in dirs:
-                    self.append_text(f"\n###### sub-folder: {d} \n")
-                    self.append_folder(d, depth - 1)
+                    self.append_text(f"\n###### Sub-folder: {d}\n")
+                    self.append_folder(os.path.join(root, d), depth - 1)
 
     def append_archive(self,
                        archive: str,

@@ -98,7 +98,7 @@ class TestBaseApiImplementationsGenerateMultimodal(BaseTest):
         print("Image generation model name: ", image_gen_model_name)
 
         # Define the prompt:å
-        prompt = "a white siamese cat"
+        prompt = "Please draw me a white siamese cat"
 
         # Define the image dimensions:
         image_width = 1024
