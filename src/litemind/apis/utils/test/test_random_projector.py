@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from src.litemind.apis.utils.random_projector import \
+from litemind.apis.utils.random_projector import \
     DeterministicRandomProjector
 
 

@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from litemind.agent.message import Message
 from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.base_api import ModelFeatures
-from litemind.apis.callback_manager import CallbackManager
+from litemind.apis._callbacks.callback_manager import CallbackManager
 from litemind.apis.default_api import DefaultApi
 from litemind.apis.exceptions import APIError, APINotAvailableError
 from litemind.apis.openai.utils.convert_messages import convert_messages_for_openai
@@ -125,7 +125,7 @@ class OpenAIApi(DefaultApi):
             if features:
                 model_list = self._filter_models(model_list, features=features)
 
-            # Call callbacks:
+            # Call _callbacks:
             self.callback_manager.on_model_list(model_list)
 
             return model_list
@@ -596,12 +596,18 @@ class OpenAIApi(DefaultApi):
         # Format messages for OpenAI:
         openai_formatted_messages = convert_messages_for_openai(preprocessed_messages)
 
+        # Estimate the number of tokens given a conversion of approx. 0.75 words per token:
+        estimated_num_input_tokens = sum([len(str(message).split()) for message in preprocessed_messages]) * 3
+
+        # Adjust the number of completion tokens accordingly:
+        effective_max_output_tokens = min(max_output_tokens, self.max_num_input_tokens(model_name) - estimated_num_input_tokens)
+
         # Call OpenAI Chat Completions API
         with self.client.beta.chat.completions.stream(
                 model=model_name,
                 messages=openai_formatted_messages,
                 temperature=temperature,
-                max_completion_tokens=max_output_tokens,
+                max_completion_tokens=effective_max_output_tokens,
                 tools=openai_tools,
                 response_format=response_format,
                 **kwargs

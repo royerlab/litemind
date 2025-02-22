@@ -16,6 +16,11 @@ class TestBaseApiImplementationsDocuments(BaseTest):
 
     def test_text_generation_with_pdf_document(self, api_class):
 
+        # If OllamaApi we skip because opensource models are not yet strong enough:
+        if api_class.__name__ == 'OllamaApi':
+            pytest.skip(
+                f"{api_class.__name__} does not have strong enough models for this test. Skipping.")
+
         # Get an instance of the api class:
         api_instance = api_class()
 
@@ -76,6 +81,12 @@ class TestBaseApiImplementationsDocuments(BaseTest):
 
     def test_text_generation_with_webpage(self, api_class):
 
+        # If OllamaApi we skip because opensource models are not yet strong enough:
+        if api_class.__name__ == 'OllamaApi':
+            pytest.skip(
+                f"{api_class.__name__} does not have strong enough models for this test. Skipping.")
+
+        # Get an instance of the api class:
         api_instance = api_class()
 
         # Get the best model for text generation:
@@ -292,6 +303,12 @@ class TestBaseApiImplementationsDocuments(BaseTest):
 
     def test_text_generation_with_archive(self, api_class):
 
+        # If OllamaApi we skip because opensource models are not yet strong enough:
+        if api_class.__name__ == 'OllamaApi':
+            pytest.skip(
+                f"{api_class.__name__} does not have strong enough models for this test. Skipping.")
+
+        # Get an instance of the api class:
         api_instance = api_class()
 
         # Get the best model for text generation:

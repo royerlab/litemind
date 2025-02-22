@@ -11,7 +11,7 @@ from litemind.apis.anthropic.utils.convert_messages import \
 from litemind.apis.anthropic.utils.format_tools import format_tools_for_anthropic
 from litemind.apis.anthropic.utils.process_response import process_response_from_anthropic
 from litemind.apis.base_api import ModelFeatures
-from litemind.apis.callback_manager import CallbackManager
+from litemind.apis._callbacks.callback_manager import CallbackManager
 from litemind.apis.default_api import DefaultApi
 from litemind.apis.exceptions import APIError, APINotAvailableError
 
@@ -114,7 +114,7 @@ class AnthropicApi(DefaultApi):
             if features:
                 model_list = self._filter_models(model_list, features=features)
 
-            # Call callbacks:
+            # Call _callbacks:
             self.callback_manager.on_model_list(model_list)
 
             return model_list
@@ -146,7 +146,7 @@ class AnthropicApi(DefaultApi):
         else:
             model_name = None
 
-        # Call the callbacks:
+        # Call the _callbacks:
         self.callback_manager.on_best_model_selected(model_name)
 
         return model_name

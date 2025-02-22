@@ -11,11 +11,12 @@ from litemind.agent.message_block import MessageBlock
 from litemind.agent.message_block_type import BlockType
 from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.base_api import BaseApi
-from litemind.apis.callback_manager import CallbackManager
+from litemind.apis._callbacks.callback_manager import CallbackManager
 from litemind.apis.exceptions import FeatureNotAvailableError
 from litemind.apis.model_features import ModelFeatures
 from litemind.apis.utils.document_processing import is_pymupdf_available, \
-    convert_document_to_markdown, extract_images_from_document
+    convert_document_to_markdown, extract_images_from_document, extract_text_from_document_pages, \
+    create_images_of_each_document_page
 from litemind.apis.utils.fastembed_embeddings import is_fastembed_available, \
     fastembed_text
 from litemind.apis.utils.ffmpeg_utils import is_ffmpeg_available, convert_video_to_frames_and_audio
@@ -80,7 +81,7 @@ class DefaultApi(BaseApi):
         if features:
             model_list = self._filter_models(model_list, features=features)
 
-        # Call callbacks:
+        # Call _callbacks:
         self.callback_manager.on_model_list(model_list)
 
         return model_list
@@ -114,7 +115,7 @@ class DefaultApi(BaseApi):
         kwargs = {'features': features,
                   'exclusion_filters': exclusion_filters}
 
-        # Call callbacks:
+        # Call _callbacks:
         self.callback_manager.on_best_model_selected(best_model, **kwargs)
 
         return best_model
@@ -272,6 +273,26 @@ class DefaultApi(BaseApi):
     def max_num_output_tokens(self, model_name: Optional[str] = None) -> int:
         # TODO: we need to figure out what to do here:
         return 1000
+
+    def count_tokens(self, text: str, model_name: Optional[str] = None) -> int:
+        #TODO: use list of messages as input instead so we can consider multimodal tokens in count.
+
+        # use Tiktoken to count tokens by default:
+        import tiktoken
+
+        # If model is not provided, get the best model:
+        if model_name not in self.list_models(features=[ModelFeatures.TextGeneration]):
+            # We pick the best model as default, could be very wrong but we need a default!
+            model_name = self.get_best_model(features=[ModelFeatures.TextGeneration])
+
+        # Choose the appropriate encoding:
+        encoding = tiktoken.encoding_for_model(model_name)
+
+        # Encode:
+        tokens = encoding.encode(text)
+
+        # Return the token count:
+        return len(tokens)
 
     def generate_text(self,
                       messages: List[Message],
@@ -466,34 +487,54 @@ class DefaultApi(BaseApi):
                         if exclude_extensions and file_extension in exclude_extensions:
                             continue
 
-                        # Convert document to markdown:
-                        markdown = convert_document_to_markdown(block.content)
+                        # Extract text from each page of the document:
+                        pages_text = extract_text_from_document_pages(block.content)
 
-                        # Add markdown quotes around the text, and add the extension, for example: ```pdf for extension 'pdf':
-                        text = f"\nText extracted from document '{original_filename}': \n'''{file_extension}\n{markdown}\n'''\n"
+                        # Extract images of each page of the document:
+                        pages_images = create_images_of_each_document_page(block.content)
 
-                        # Create text block:
-                        text_block = MessageBlock(block_type=BlockType.Text,
-                                                  content=text)
+                        # Get the number of pages from both lists:
+                        num_pages = min(len(pages_text), len(pages_images))
 
-                        # Insert the text block after the document block:
-                        message.insert_block(text_block, block_before=block)
+                        # Last block added:
+                        last_block_added = block
 
-                        # Extract images from document:
-                        image_uris = extract_images_from_document(block.content)
+                        # Log the text and images added for the callback:
+                        text_log: str = ""
 
-                        # Iterate over the image URIs:
-                        for image_uri in image_uris:
+                        # Iterate over the pages:
+                        for page_index in range(num_pages):
+                            # Get the text of the page:
+                            page_text = pages_text[page_index]
+
+                            # Get the image of the page:
+                            page_image = pages_images[page_index]
+
+                            # Add markdown quotes around the text, and add the extension, for example: ```pdf for extension 'pdf':
+                            text = f"\nText extracted from document '{original_filename}' page {page_index + 1}: \n'''{file_extension}\n{page_text}\n'''\nImage of the page:\n"
+
+                            # Create text block:
+                            text_block = MessageBlock(block_type=BlockType.Text,
+                                                      content=text)
+
+                            # Insert the text block after the document block:
+                            message.insert_block(text_block, block_before=last_block_added)
+                            last_block_added = text_block
+
                             # Create an image block:
                             image_block = MessageBlock(block_type=BlockType.Image,
-                                                       content=image_uri)
+                                                      content=page_image)
 
                             # Insert image block right after the text block:
-                            message.insert_block(image_block, block_before=text_block)
+                            message.insert_block(image_block, block_before=last_block_added)
+                            last_block_added= image_block
+
+                            # Add the text to the log:
+                            text_log += f"Page {page_index + 1}: {page_text}\n"
 
                         # Call the callback manager:
                         self.callback_manager.on_document_conversion(document_uri=block.content,
-                                                                     markdown=text)
+                                                                     markdown=text_log)
 
                         # Remove the document block:
                         message.blocks.remove(block)

@@ -6,7 +6,7 @@ from pydantic import BaseModel
 
 from litemind.agent.message import Message
 from litemind.agent.tools.toolset import ToolSet
-from litemind.apis.callback_manager import CallbackManager
+from litemind.apis._callbacks.callback_manager import CallbackManager
 from litemind.apis.model_features import ModelFeatures
 from litemind.apis.utils.random_projector import DeterministicRandomProjector
 
@@ -155,6 +155,26 @@ class BaseApi(ABC):
         -------
         int
             The maximum number of output tokens for the model.
+
+        """
+        pass
+
+    @abstractmethod
+    def count_tokens(self, text: str, model_name: Optional[str] = None) -> int:
+        """
+        Count the number of tokens in the given text.
+
+        Parameters
+        ----------
+        text: str
+            The text to count the tokens in.
+        model_name: Optional[str]
+            The name of the model to use.
+
+        Returns
+        -------
+        int
+            The number of tokens in the text.
 
         """
         pass

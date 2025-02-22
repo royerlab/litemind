@@ -1,6 +1,7 @@
 import copy
 import os
 from abc import ABC
+from datetime import datetime
 from json import loads
 from pathlib import Path
 from typing import Optional, List, Union
@@ -9,6 +10,9 @@ import chardet
 from pydantic import BaseModel
 
 from litemind.agent.message_block import MessageBlock
+from litemind.agent.message_block_type import BlockType
+from litemind.agent.utils.folder_description import generate_tree_structure, file_info_header, is_text_file, \
+    read_file_content, read_binary_file_info
 from litemind.utils.extract_archive import extract_archive
 from litemind.utils.file_extensions import image_file_extensions, \
     audio_file_extensions, video_file_extensions, document_file_extensions, \
@@ -422,8 +426,11 @@ class Message(ABC):
 
     def append_folder(self,
                       folder: str,
-                      depth: Optional[int] = None,
-                      all_archive_files: bool = False):
+                      depth: int = None,
+                      allowed_extensions: List[str] = None,
+                      excluded_files: List[str] = None,
+                      all_archive_files: bool = False,
+                      include_hidden_files: bool = False):
         """
         Append a folder to the message.
 
@@ -434,85 +441,104 @@ class Message(ABC):
         depth : Optional[int]
             The depth to traverse the folder.
             If None then there is no depth limits (default: None).
+        allowed_extensions : List[str]
+            The list of allowed file extensions (default: None).
+        excluded_files : List[str]
+            The list of excluded files (default: None).
         all_archive_files: bool
             Whether to include all files in archives,
             disregarding the depth of files in the archives (default: False).
+        include_hidden_files: bool
+            Whether to include hidden files (starting with '.') (default: False).
         """
 
-        def generate_tree_structure(folder_path, prefix=''):
-            tree_structure = ''
-            contents = list(Path(folder_path).iterdir())
-            pointers = ['├── '] * (len(contents) - 1) + ['└── ']
-            for pointer, path in zip(pointers, contents):
-                tree_structure += prefix + pointer + path.name + '\n'
-                if path.is_dir():
-                    extension = '│   ' if pointer == '├── ' else '    '
-                    tree_structure += generate_tree_structure(path, prefix + extension)
-            return tree_structure
+        # Expand folder string into an absolute path:
+        folder = os.path.abspath(folder)
 
-        def is_text_file(file_path):
-            try:
-                with open(file_path, 'rb') as f:
-                    result = chardet.detect(f.read(1024))
-                    return result['encoding'] is not None
-            except:
-                return False
+        # 1) Generate and append the directory tree (with sizes, no timestamps).
+        tree_structure = generate_tree_structure(folder,
+                                                 allowed_extensions=allowed_extensions,
+                                                 excluded_files=excluded_files,
+                                                 include_hidden_files=include_hidden_files,)
 
-        def read_file_content(file_path):
-            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-                return f.read()
-
-        def read_binary_file_info(file_path):
-            with open(file_path, 'rb') as f:
-                content = f.read(100)
-                return len(content), content.hex()
-
-        # Generate and append the directory tree structure
-        tree_structure = generate_tree_structure(folder)
+        # Append the tree structure to the message:
         self.append_text(f"Directory structure:\n{tree_structure}")
 
-        # Recursively traverse folder and enumerate all files up to specified depth
+        # 2) Recursively traverse folder to process each file
         for root, dirs, files in os.walk(folder):
-            # Append files to the message
+
+            # Get the folder name without the path:
+            folder_name = os.path.basename(root)
+
+            # Skip hidden files if include_hidden_files is False
+            if not include_hidden_files and (folder_name.startswith('.') or folder_name.startswith('__')):
+                continue
+
             for file in files:
+
+                # Skip hidden files if include_hidden_files is False
+                if not include_hidden_files and (file.startswith('.') or file.startswith('__')):
+                    continue
+
+                # Skip files that are excluded:
+                if excluded_files and file in excluded_files:
+                    continue
+
+                # Only keep files with allowed extensions:
+                if allowed_extensions and not any(file.endswith(ext) for ext in allowed_extensions):
+                    continue
+
+                # Get the file path and URI
                 file_path = os.path.join(root, file)
                 file_uri = 'file://' + file_path
 
-                if is_text_file(file_path):
+                # if file is empty then just append 'Empty file' message:
+                if os.stat(file_path).st_size == 0:
+                    header = file_info_header(file_path, "Empty")
+                    self.append_text(header + "\n")
+                elif is_text_file(file_path):
+                    header = file_info_header(file_path, "Text")
                     content = read_file_content(file_path)
-                    self.append_text(
-                        f"\n================================================\nText File: {file}\n================================================\n{content}\n")
+                    self.append_text(header + content + "\n")
                 elif any(file.endswith(ext) for ext in image_file_extensions):
-                    self.append_text(
-                        f"\n================================================\nImage File: {file}\n================================================\n")
+                    header = file_info_header(file_path, "Image")
+                    self.append_text(header)
                     self.append_image(file_uri, source=file_path)
                 elif any(file.endswith(ext) for ext in audio_file_extensions):
-                    self.append_text(
-                        f"\n================================================\nAudio File: {file}\n================================================\n")
+                    header = file_info_header(file_path, "Audio")
+                    self.append_text(header)
                     self.append_audio(file_uri, source=file_path)
                 elif any(file.endswith(ext) for ext in video_file_extensions):
-                    self.append_text(
-                        f"\n================================================\nVideo File: {file}\n================================================\n")
+                    header = file_info_header(file_path, "Video")
+                    self.append_text(header)
                     self.append_video(file_uri, source=file_path)
                 elif any(file.endswith(ext) for ext in document_file_extensions):
-                    self.append_text(
-                        f"\n================================================\nDocument File: {file}\n================================================\n")
+                    header = file_info_header(file_path, "Document")
+                    self.append_text(header)
                     self.append_document(file_uri, source=file_path)
                 elif any(file.endswith(ext) for ext in archive_file_extensions):
-                    self.append_text(
-                        f"\n================================================\nCompressed Archive File: {file}\n================================================\n")
-                    depth = None if all_archive_files or not depth else depth - 1
-                    self.append_archive(file_uri, depth)
+                    header = file_info_header(file_path, "Compressed Archive")
+                    self.append_text(header)
+                    next_depth = None if all_archive_files or not depth else depth - 1
+                    self.append_archive(file_uri, next_depth)
                 else:
+                    header = file_info_header(file_path, "Binary")
                     size, hex_content = read_binary_file_info(file_path)
-                    self.append_text(
-                        f"\n================================================\nBinary File: {file}\n================================================\nSize: {size} bytes\nFirst 100 bytes (hex): {hex_content}\n")
+                    binary_body = (
+                        f"First 100 bytes (hex): {hex_content}\n"
+                    )
+                    self.append_text(header + binary_body)
 
-            # Append subfolders to the message
+            # If a depth limit is set, only recurse deeper if depth >= 1
             if depth is not None and depth >= 1:
                 for d in dirs:
                     self.append_text(f"\n###### Sub-folder: {d}\n")
-                    self.append_folder(os.path.join(root, d), depth - 1)
+                    self.append_folder(folder=os.path.join(root, d),
+                                       depth=depth - 1,
+                                       allowed_extensions=allowed_extensions,
+                                       excluded_files=excluded_files,
+                                       all_archive_files=all_archive_files,
+                                       include_hidden_files=include_hidden_files)
 
     def append_archive(self,
                        archive: str,
@@ -538,6 +564,63 @@ class Message(ABC):
 
         # append the extracted folder to the message:
         self.append_folder(temp_folder, depth)
+
+
+    def extract_markdown_block(self,
+                               filters: Union[str, List[str]],
+                               remove_quotes=True) -> List[MessageBlock]:
+        """
+        Extract markdown blocks from the message that contain the given filter string.
+        Parameters
+        ----------
+        filters: Union[str, List[str]]
+            The filter string to search for in the markdown blocks. Can be a singleton string for convenience.
+        remove_quotes: bool
+            Whether to remove the quotes from the markdown block content (default: True).
+
+        Returns
+        -------
+        List[MessageBlock]
+            The markdown blocks that contain the filter string.
+
+        """
+        # Extract markdown blocks from the message that contain the given filter string.
+
+        # If the filters parameter is a string, convert it to a list:
+        if isinstance(filters, str):
+            filters = [filters]
+
+        # Initialize the list of markdown blocks:
+        markdown_blocks: List[MessageBlock] = []
+
+        # Iterate over the blocks in the message:
+        for block in self.blocks:
+
+            # Check if the block is a text block and contains the filter string:
+            if block.block_type == BlockType.Text and any(f in block.content for f in filters):
+                # Parse the string to extract text strings in the form: "```... ```"
+                # and create a new markdown block for each one.
+                text = ''+block.content
+
+                # Extract markdown blocks from the text:
+                while '```' in text:
+                    start = text.find('```')
+                    end = text.find('```', start + 3)
+                    if end == -1:
+                        break
+                    if remove_quotes:
+                        # find the first '\n' after the first ``` and set start after '\n':
+                        start = text.find('\n', start + 3) + 1
+                        # add the markdown block to the list:
+                        markdown_blocks.append(MessageBlock(block_type=BlockType.Text, content=text[start:end]))
+                    else:
+                        # add the markdown block to the list:
+                        markdown_blocks.append(MessageBlock(block_type=BlockType.Text, content=text[start:end + 3]))
+
+                    # remove the markdown block from the text:
+                    text = text[end + 3:]
+
+        return markdown_blocks
 
     def __getitem__(self, index: int) -> Union[MessageBlock, None]:
         """
@@ -608,7 +691,7 @@ class Message(ABC):
         str
             The message as a string in lowercase.
         """
-        return str(self).lower()
+        return self.__str__().lower()
 
     def __repr__(self) -> str:
         """
@@ -619,3 +702,85 @@ class Message(ABC):
             The message as a string.
         """
         return str(self)
+
+    # def __iter__(self):
+    #     """
+    #     Iterate over the message blocks.
+    #     """
+    #     return iter(self.blocks)
+
+    def __hash__(self):
+        """
+        Return the hash of the message.
+        Returns
+        -------
+        int
+            The hash of the message.
+        """
+        return hash((self.role, tuple(self.blocks)))
+
+    def __eq__(self, other: 'Message') -> bool:
+        """
+        Compare two messages for equality.
+        Returns
+        -------
+        bool
+            True if the messages are equal, False otherwise.
+        """
+        if self.role != other.role:
+            return False
+        if len(self.blocks) != len(other.blocks):
+            return False
+        for block1, block2 in zip(self.blocks, other.blocks):
+            if block1 != block2:
+                return False
+        return True
+
+    def __ne__(self, other: 'Message') -> bool:
+        """
+        Compare two messages for inequality.
+        Returns
+        -------
+        bool
+            True if the messages are not equal, False otherwise.
+        """
+        return not self == other
+
+    def __add__(self, other: 'Message') -> 'Message':
+        """
+        Concatenate two messages.
+        Returns
+        -------
+        Message
+            The concatenated message.
+        """
+        new_message = self.copy()
+        new_message.blocks += other.blocks
+        return new_message
+
+    def __iadd__(self, other: 'Message') -> 'Message':
+        """
+        Concatenate another message to the current message.
+        Returns
+        -------
+        Message
+            The concatenated message.
+        """
+        self.blocks += other.blocks
+        return self
+
+    def __radd__(self, other: 'Message') -> 'Message':
+        """
+        Concatenate the current message to another message.
+        Returns
+        -------
+        Message
+            The concatenated message.
+        """
+        new_message = other.copy()
+        new_message.blocks += self.blocks
+        return new_message
+
+
+
+

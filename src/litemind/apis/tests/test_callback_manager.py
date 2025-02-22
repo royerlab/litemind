@@ -3,8 +3,8 @@ from typing import List, Any, Sequence
 import pytest
 
 from litemind.agent.message import Message
-from litemind.apis.base_callbacks import BaseCallbacks
-from litemind.apis.callback_manager import CallbackManager
+from litemind.apis._callbacks.base_callbacks import BaseCallbacks
+from litemind.apis._callbacks.callback_manager import CallbackManager
 
 
 class MockCallback(BaseCallbacks):

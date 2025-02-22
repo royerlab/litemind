@@ -4,8 +4,8 @@ import pytest
 
 from litemind.agent.message import Message
 from litemind.apis.base_api import BaseApi
-from litemind.apis.base_callbacks import BaseCallbacks
-from litemind.apis.callback_manager import CallbackManager
+from litemind.apis._callbacks.base_callbacks import BaseCallbacks
+from litemind.apis._callbacks.callback_manager import CallbackManager
 from litemind.apis.model_features import ModelFeatures
 from litemind.apis.tests.base_test import API_IMPLEMENTATIONS, BaseTest
 

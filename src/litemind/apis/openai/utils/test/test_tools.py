@@ -29,7 +29,8 @@ def test_format_tools_for_openai():
                 },
                 "required": ["order_id"],
                 "additionalProperties": False
-            }
+            },
+            'strict': True
         }
     }]
 

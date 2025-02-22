@@ -259,6 +259,20 @@ def test_message_folder():
     with open(os.path.join(temp_folder, 'folder1', 'folder2', 'file3.txt'), 'w') as f:
         f.write('This is a random sentence 3.')
 
+    # Add a hidden file (starts with '.') to the folder:
+    with open(os.path.join(temp_folder, '.hidden_file.txt'), 'w') as f:
+        f.write('This is a hidden file.')
+
+    # Adds a hidden folder (starts with '.') to the folder:
+    os.makedirs(os.path.join(temp_folder, '.hidden_folder'))
+
+    # Add an empty file to the folder:
+    with open(os.path.join(temp_folder, 'empty_file.txt'), 'w') as f:
+        pass
+    
+
+
+
     user_message = Message(role='user')
     user_message.append_text('Can you describe what you see in the folder?')
     user_message.append_folder(temp_folder)
@@ -319,3 +333,28 @@ def test_message_str():
     assert 'https://example.com/video.mp4' in str(user_message)
     assert 'https://example.com/document.pdf' in str(user_message)
     assert '0.58' in str(user_message)
+
+def test_extract_markdown_block():
+    # Create a message and add some blocks
+    user_message = Message(role='user')
+    user_message.append_text("This is a text block:\n"
+                             "```markdown\n# Header\nSome content\n```")
+    user_message.append_text('Another text block')
+    user_message.append_text('```markdown\n# Another Header\nMore content\n```')
+
+    # Extract markdown blocks containing the filter string 'Header'
+    filters = ['Header']
+    markdown_blocks = user_message.extract_markdown_block(filters, remove_quotes=False)
+
+    # Verify that the extracted blocks are correct
+    assert len(markdown_blocks) == 2
+    assert markdown_blocks[0].content == '```markdown\n# Header\nSome content\n```'
+    assert markdown_blocks[1].content == '```markdown\n# Another Header\nMore content\n```'
+
+    # We repeat but we remove the quotes:
+    markdown_blocks = user_message.extract_markdown_block(filters, remove_quotes=True)
+
+    # Verify that the extracted blocks are correct
+    assert len(markdown_blocks) == 2
+    assert markdown_blocks[0].content == '# Header\nSome content\n'
+    assert markdown_blocks[1].content == '# Another Header\nMore content\n'

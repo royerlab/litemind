@@ -33,6 +33,12 @@ def aggregate_chat_responses(chunks: Iterable[ChatResponse],
     # Attempt to get the first chunk
     try:
         first_chunk = next(iterator)
+
+        # If the first chunk has content, call the callback
+        if first_chunk.message.content:
+            fragment = first_chunk.message.content
+            callback(fragment=fragment)
+
     except StopIteration:
         # No chunks provided, return an empty ChatResponse
         message = Message(role="assistant", content="")

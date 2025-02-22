@@ -8,7 +8,7 @@ from litemind.agent.message import Message
 from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.anthropic.anthropic_api import AnthropicApi
 from litemind.apis.base_api import BaseApi
-from litemind.apis.callback_manager import CallbackManager
+from litemind.apis._callbacks.callback_manager import CallbackManager
 from litemind.apis.default_api import DefaultApi
 from litemind.apis.google.google_api import GeminiApi
 from litemind.apis.model_features import ModelFeatures
@@ -36,7 +36,7 @@ class CombinedApi(DefaultApi):
         if apis is None:
             apis = [OpenAIApi(), AnthropicApi(), OllamaApi(), GeminiApi()]
 
-        # Add the callbacks from this CombinedApi class to the callback manager of each individual APIs:
+        # Add the _callbacks from this CombinedApi class to the callback manager of each individual APIs:
         if callback_manager:
             for api in apis:
                 api.callback_manager.add_callbacks(callback_manager)
@@ -100,7 +100,7 @@ class CombinedApi(DefaultApi):
         if features:
             model_list = self._filter_models(model_list, features=features)
 
-        # Call callbacks:
+        # Call _callbacks:
         self.callback_manager.on_model_list(model_list)
 
         # return the model list:
@@ -202,6 +202,22 @@ class CombinedApi(DefaultApi):
 
         # we call the max_num_output_tokens method of the api object:
         return api.max_num_output_tokens(model_name=model_name)
+
+    def count_tokens(self, text: str, model_name: Optional[str] = None) -> int:
+
+        # if no model name is provided we return the best model as defined in the method above:
+        if model_name is None:
+            model_name = self.get_best_model()
+
+        # if the model name is not in the model_to_api dictionary we raise an error:
+        if model_name not in self.model_to_api:
+            raise ValueError(f"Model '{model_name}' not found in any API.")
+
+        # we get the api object from the model_to_api dictionary:
+        api = self.model_to_api[model_name]
+
+        # we call the count_tokens method of the api object:
+        return api.count_tokens(text, model_name)
 
     def generate_text(self,
                       messages: List[Message],

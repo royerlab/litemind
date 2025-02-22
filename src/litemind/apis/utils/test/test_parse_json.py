@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-from src.litemind.apis.utils.parse_json_output import parse_json
+from litemind.apis.utils.parse_json_output import parse_json
 
 
 class ExampleModel(BaseModel):

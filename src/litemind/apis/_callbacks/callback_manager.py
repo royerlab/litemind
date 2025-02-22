@@ -1,7 +1,7 @@
 from typing import List, Any, Sequence, Union
 
 from litemind.agent.message import Message
-from litemind.apis.base_callbacks import BaseCallbacks
+from litemind.apis._callbacks.base_callbacks import BaseCallbacks
 
 
 class CallbackManager(BaseCallbacks):

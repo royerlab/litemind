@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from litemind.agent.message import Message
 from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.base_api import ModelFeatures
-from litemind.apis.callback_manager import CallbackManager
+from litemind.apis._callbacks.callback_manager import CallbackManager
 from litemind.apis.default_api import DefaultApi
 from litemind.apis.exceptions import APIError, APINotAvailableError
 from litemind.apis.google.utils.convert_messages import convert_messages_for_gemini, \
@@ -117,7 +117,7 @@ class GeminiApi(DefaultApi):
             if features:
                 model_list = self._filter_models(model_list, features=features)
 
-            # Call callbacks:
+            # Call _callbacks:
             self.callback_manager.on_model_list(model_list)
 
             return model_list
@@ -147,7 +147,7 @@ class GeminiApi(DefaultApi):
         else:
             model_name = None
 
-        # Call the callbacks:
+        # Call the _callbacks:
         self.callback_manager.on_best_model_selected(model_name)
 
         return model_name

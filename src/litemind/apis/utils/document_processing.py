@@ -1,8 +1,11 @@
+import io
 import os
 from functools import lru_cache
 from tempfile import mkdtemp
-from typing import List
+from typing import List, Tuple
 
+import fitz  # PyMuPDF
+from PIL import Image
 from arbol import aprint
 
 from litemind.utils.normalise_uri_to_local_file_path import \
@@ -128,3 +131,161 @@ def extract_images_from_document(document_uri: str) -> List[str]:
 
     # Return the list of image file uris:
     return image_files_uris
+
+
+def create_images_of_each_document_page(document_uri, dpi=300):
+    """
+    Convert a PDF file into a list of images (one per page) using PyMuPDF.
+
+    Parameters:
+        document_uri (str): The uri to the document file.
+        dpi (int): Desired resolution for the output images in dots per inch.
+                   Default is 300. The zoom factor is computed as dpi / 72.
+
+    Returns:
+        list: A list of PIL Image objects corresponding to each page of the PDF.
+    """
+
+    # Check if package pymupdf is available:
+    if not is_pymupdf_available():
+        raise ImportError(
+            "pymupdf is not available. Please install it to use this function.")
+
+    # Convert the URI to a local file path:
+    document_path = uri_to_local_file_path(document_uri)
+
+    # We need a temporary folder obtained with tempfile and mkdtemp to store the images:
+    temp_image_directory_path = mkdtemp(prefix='extracted_page_images_')
+
+    # Calculate zoom factor (default PDF DPI is 72)
+    zoom = dpi / 72
+
+    # Create a matrix for the zoom factor
+    mat = fitz.Matrix(zoom, zoom)
+
+    # Open the document using PyMuPDF:
+    doc = fitz.open(document_path)
+
+    # List to store the image URIs:
+    image_uris = []
+
+    for page_index, page in enumerate(doc):
+
+        # Render the page to an image using the zoom matrix:
+        pix = page.get_pixmap(matrix=mat)
+
+        # Image file name:
+        image_file_name = f"image_for_page_{page_index}.png"
+
+        # Absolute path of the image file in temp directory:
+        image_file_path = os.path.join(temp_image_directory_path,
+                                       image_file_name)
+
+        # Save the image as a PNG file:
+        pix.save(image_file_path)
+
+        # Append the image file name to the list:
+        image_uris.append('file://' + image_file_path)
+
+        # Close the pixmap:
+        del pix
+
+    # Close the document:
+    doc.close()
+
+    return image_uris
+
+
+def extract_text_from_document_pages(document_uri: str) -> List[str]:
+    """
+    Extract text from each page of a document.
+
+    Parameters
+    ----------
+    document_uri : str
+        The URI of the document to extract text from.
+
+    Returns
+    -------
+    List[str]
+        A list of text strings, one for each page.
+    """
+
+    # Check if package pymupdf is available:
+    if not is_pymupdf_available():
+        raise ImportError(
+            "pymupdf is not available. Please install it to use this function.")
+
+    # Convert the URI to a local file path:
+    document_path = uri_to_local_file_path(document_uri)
+
+    # Open the document using PyMuPDF:
+    doc = fitz.open(document_path)
+
+    # List to store the text of each page:
+    pages_text = []
+
+    # Iterate over each page and extract text:
+    for page in doc:
+        page_text = page.get_text("text")  # or simply page.get_text() if "text" is default
+        pages_text.append(page_text)
+
+    # Close the document:
+    doc.close()
+
+    return pages_text
+
+def extract_text_and_image_from_document(document_uri: str, dpi: int = 300) -> List[Tuple[str, Image.Image]]:
+    """
+    Extract text and generate an image for each page in the document.
+
+    Parameters
+    ----------
+    document_uri : str
+        The URI or file path of the document to process.
+    dpi : int, optional
+        The resolution for the output images in dots per inch. Default is 300.
+
+    Returns
+    -------
+    List[Tuple[str, Image.Image]]
+        A list of tuples, each containing:
+            - The extracted text from the page (str).
+            - A PIL Image object representing the page.
+    """
+
+    # Check if package pymupdf is available:
+    if not is_pymupdf_available():
+        raise ImportError(
+            "pymupdf is not available. Please install it to use this function.")
+
+    # Convert the document URI to a local file path.
+    document_path = uri_to_local_file_path(document_uri)
+
+    try:
+        doc = fitz.open(document_path)
+    except Exception as e:
+        raise RuntimeError(f"Failed to open document '{document_path}': {e}")
+
+    pages_content = []
+    # Compute the zoom factor based on the desired DPI (PDFs default to 72 DPI)
+    zoom = dpi / 72.0
+    mat = fitz.Matrix(zoom, zoom)
+
+    for page_number in range(len(doc)):
+        try:
+            # Load the page and extract text
+            page = doc.load_page(page_number)
+            page_text = page.get_text("text")
+            # Render the page to an image using the zoom matrix
+            pix = page.get_pixmap(matrix=mat)
+            # Convert the pixmap to PNG bytes and then to a PIL Image
+            img_bytes = pix.tobytes("png")
+            image = Image.open(io.BytesIO(img_bytes))
+            pages_content.append((page_text, image))
+        except Exception as e:
+            print(f"Error processing page {page_number}: {e}")
+            continue
+
+    doc.close()
+    return pages_content

@@ -7,7 +7,7 @@ from openai import BaseModel
 from litemind.agent.message import Message
 from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.base_api import ModelFeatures
-from litemind.apis.callback_manager import CallbackManager
+from litemind.apis._callbacks.callback_manager import CallbackManager
 from litemind.apis.default_api import DefaultApi
 from litemind.apis.exceptions import APIError, APINotAvailableError
 from litemind.apis.ollama.utils.aggregate_chat_responses import aggregate_chat_responses
@@ -85,7 +85,7 @@ class OllamaApi(DefaultApi):
             if features:
                 model_list = self._filter_models(model_list, features=features)
 
-            # Call callbacks:
+            # Call _callbacks:
             self.callback_manager.on_model_list(model_list)
 
             return model_list
@@ -114,7 +114,7 @@ class OllamaApi(DefaultApi):
         else:
             model_name = None
 
-        # Call the callbacks:
+        # Call the _callbacks:
         self.callback_manager.on_best_model_selected(model_name)
 
         return model_name
@@ -331,6 +331,8 @@ class OllamaApi(DefaultApi):
         try:
             aprint(f"Sending request to Ollama with model: {model_name}")
 
+
+
             # Call the Ollama API in streaming mode:
             chunks = self.client.chat(
                 model=model_name,
@@ -338,7 +340,7 @@ class OllamaApi(DefaultApi):
                 tools=ollama_tools,
                 options={"temperature": temperature,
                          "num_predict": max_output_tokens},
-                format=response_format_schema,
+                format=response_format_schema if not ollama_tools else None,
                 stream=True,
                 **kwargs
             )
@@ -348,6 +350,31 @@ class OllamaApi(DefaultApi):
 
             # Process the response
             response_message = process_response_from_ollama(response, toolset, response_format)
+
+            # We can't use response format and tools at the same time:
+            if response_format and ollama_tools:
+                # We process the result to format it correctly:
+
+                text = '```'+str(preprocessed_messages) +'\n->\n'+str(response_message)+'```'
+
+                # We format the message to be sent to the assistant:
+                formatting_message = {
+                    "role": 'assistant',
+                    "content": f"Convert the following assistant response to JSON format:\n{text}\n"
+                }
+
+                # Call the Ollama API in non-streaming mode:
+                response_message = self.client.chat(
+                    model=model_name,
+                    messages=[formatting_message],
+                    tools=ollama_tools,
+                    options={"temperature": temperature,
+                             "num_predict": max_output_tokens},
+                    format=response_format_schema,
+                    stream=False,
+                    **kwargs
+                )
+
 
             # Add the response message to the list of messages:
             messages.append(response_message)
