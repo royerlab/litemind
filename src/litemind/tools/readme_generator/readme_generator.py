@@ -17,16 +17,9 @@ from litemind.apis.openai.openai_api import OpenAIApi
 
 def generate_readme(folder_path: str, context_text: str, api: Optional[BaseApi] = None):
 
-    # Create a print callback object:
-    print_callback = PrintCallbacks()
-
-    # Create callback manager:
-    callback_manager = CallbackManager()
-    callback_manager.add_callback(print_callback)
-
-    # Initialize the API
+     # Initialize the API
     if api is None:
-        api = CombinedApi(callback_manager=callback_manager)
+        api = CombinedApi()
 
     # get a model that supports text generation and documents:
     model = api.get_best_model(features=[ModelFeatures.TextGeneration, ModelFeatures.Document])
@@ -87,7 +80,15 @@ def generate_readme(folder_path: str, context_text: str, api: Optional[BaseApi] 
     response = agent(message)
 
     # extract the README content from the response:
-    readme_content = response[0].content
+    readme_content = response[0].content.strip()
+
+    # If it starts with '```markdown', remove it:
+    if readme_content.startswith('```markdown'):
+        readme_content = readme_content[11:]
+
+    # If it ends with '```', remove it:
+    if readme_content.endswith('```'):
+        readme_content = readme_content[:-3]
 
     print(str(readme_content))
 

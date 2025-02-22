@@ -1,6 +1,8 @@
 import inspect
 from typing import Callable, Dict, Any, Optional
 
+from arbol import asection
+
 from litemind.agent.tools.base_tool import BaseTool
 from litemind.agent.tools.utils.inspect_function import extract_docstring
 
@@ -88,4 +90,7 @@ class FunctionTool(BaseTool):
         Any
             The result of the tool function.
         """
-        return self.func(*args, **kwargs)
+        with asection(f"Executing tool '{self.name}'"):
+            result =  self.func(*args, **kwargs)
+
+        return result

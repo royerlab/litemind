@@ -61,9 +61,9 @@ class OpenAIApi(DefaultApi):
         try:
             # Create an OpenAI client:
             from openai import OpenAI
-            self.client = OpenAI(api_key=api_key,
-                                 base_url=base_url,
-                                 **kwargs)
+            self.client: OpenAI = OpenAI(api_key=api_key,
+                                         base_url=base_url,
+                                         **kwargs)
         except Exception as e:
             # Print stack trace:
             import traceback
@@ -116,7 +116,7 @@ class OpenAIApi(DefaultApi):
             excluded = ['ada-002']
 
             # Get the models from OpenAI:
-            model_list = get_openai_model_list(included=included, excluded=excluded)
+            model_list = get_openai_model_list(self.client, included=included, excluded=excluded)
 
             # Add the models from the super class:
             model_list += super().list_models()
@@ -648,7 +648,7 @@ class OpenAIApi(DefaultApi):
         })
 
         # Call the callback manager:
-        self.callback_manager.on_text_generation(response=response,
+        self.callback_manager.on_text_generation(response=response_message,
                                                  messages=messages,
                                                  **kwargs)
 

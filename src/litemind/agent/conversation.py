@@ -25,6 +25,20 @@ class Conversation:
         """
         return self.system_messages + self.standard_messages
 
+    def get_last_message(self):
+        """
+        Get the last message in the conversation.
+        Returns
+        -------
+        Message
+            The last message in the conversation.
+
+        """
+        if self.standard_messages:
+            return self.standard_messages[-1]
+        else:
+            return None
+
     def clear_all(self):
         """
         Clear all messages in the conversation.

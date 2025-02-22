@@ -31,3 +31,39 @@ class ToolSet:
     def list_tools(self) -> List[BaseTool]:
         """Return all tools as a list."""
         return self.tools
+
+    def __getitem__(self, item) -> BaseTool:
+        return self.tools[item]
+
+    def __len__(self) -> int:
+        return len(self.tools)
+
+    def __iter__(self):
+        return iter(self.tools)
+
+    def __contains__(self, item) -> bool:
+        return item in self.tools
+
+    def __delitem__(self, key):
+        del self.tools[key]
+
+    def __setitem__(self, key, value):
+        self.tools[key] = value
+
+    def __iadd__(self, other: BaseTool):
+        self.add_tool(other)
+        return self
+
+    def __add__(self, other: BaseTool):
+        self.add_tool(other)
+        return self
+
+    def __str__(self):
+        return f"ToolSet({[t.name for t in self.tools]})"
+
+    def __repr__(self):
+        # provide all information available about tools:
+        return f"ToolSet({self.tools})"
+
+
+

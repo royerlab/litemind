@@ -5,7 +5,6 @@ import tempfile
 from functools import lru_cache
 from typing import Optional, List
 
-import ffmpeg
 from arbol import aprint
 
 from litemind.agent.message_block import MessageBlock
@@ -15,6 +14,7 @@ from litemind.agent.message_block import MessageBlock
 @lru_cache(maxsize=1)
 def is_ffmpeg_available():
     try:
+        import ffmpeg
         process = subprocess.run(['ffmpeg', '-version'], capture_output=True, text=True)
         if process.returncode == 0:
             aprint("FFmpeg is available.")
@@ -132,6 +132,7 @@ def get_video_info(video_path: str):
     dict
         Dictionary containing video information.
     """
+    import ffmpeg
     probe = ffmpeg.probe(video_path)
     video_info = next(stream for stream in probe['streams'] if
                       stream['codec_type'] == 'video')
@@ -182,6 +183,10 @@ def extract_frames_and_audio(
             - list of str: Sorted list of paths to the extracted frame images.
             - str: Path to the extracted audio WAV file.
     """
+
+    # Import ffmpeg
+    import ffmpeg
+
     # Ensure the output directory exists
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)

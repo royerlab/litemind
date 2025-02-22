@@ -20,11 +20,12 @@ dependencies = [
 
 # Development dependencies:
 [project.optional-dependencies]
-test = [
+dev = [
     "pytest",
     "pytest-html",
     "pytest-cov",
-    "pytest-md-report"
+    "pytest-md-report",
+    "black"
 ]
 
 # Optional dependencies:

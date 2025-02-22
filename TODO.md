@@ -2,7 +2,7 @@ TODO:
 
 - [x] Setup a readme with a quick start guide.
 - [x] setup continuous integration and pipy deployment.
-- [ ] ReAct Agent
+- [x] ReAct Agent
 - [ ] RAG
 - [ ] Add support for adding nD images to messages.
 - [x] Improve document conversion (page per page text and video interleaving + whole page images)

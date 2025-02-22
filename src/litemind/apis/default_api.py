@@ -286,7 +286,11 @@ class DefaultApi(BaseApi):
             model_name = self.get_best_model(features=[ModelFeatures.TextGeneration])
 
         # Choose the appropriate encoding:
-        encoding = tiktoken.encoding_for_model(model_name)
+        try:
+            encoding = tiktoken.encoding_for_model(model_name)
+        except KeyError as e:
+            aprint(f"Model '{model_name}' not found. Error: {e}. Using default encoding.")
+            encoding = tiktoken.encoding_for_model('gpt-4o')
 
         # Encode:
         tokens = encoding.encode(text)

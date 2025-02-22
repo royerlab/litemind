@@ -5,7 +5,9 @@ from typing import List, Optional
 from arbol import aprint
 
 
-def get_openai_model_list(included: Optional[List[str]] = None,
+
+def get_openai_model_list(client: 'OpenAI',
+                          included: Optional[List[str]] = None,
                           excluded: Optional[List[str]] = None,
                           exclude_dated_models: bool = True,
                           verbose: bool = False) -> list[str]:
@@ -14,6 +16,8 @@ def get_openai_model_list(included: Optional[List[str]] = None,
 
     Parameters
     ----------
+    client : OpenAI
+        OpenAI client object.
     included : str
         Filter to apply to the list of models. If None, all models are returned.
         Models must contain at least one of the filters to be included in the list.
@@ -37,7 +41,7 @@ def get_openai_model_list(included: Optional[List[str]] = None,
             included = ['gpt']
 
         # Get the raw list of models:
-        models = _get_raw_openai_model_list()
+        models = _get_raw_openai_model_list(client)
 
         # Convert to list of model ids:
         models = [model.id for model in models]
@@ -111,14 +115,16 @@ def _remove_dated_models(models):
 
 
 @lru_cache()
-def _get_raw_openai_model_list():
+def _get_raw_openai_model_list(client: 'OpenAI'):
     from openai import OpenAI
 
-    # Instantiate API entry point
-    client = OpenAI()
+    # Explicit typing:
+    client: OpenAI = client
 
     # Raw model list:
     models = client.models.list().data
+
+    # Return the list of models:
     return models
 
 

@@ -1,5 +1,7 @@
 from typing import Optional
 
+from arbol import asection, aprint
+
 from litemind.agent.conversation import Conversation
 from litemind.agent.message import Message
 from litemind.agent.tools.toolset import ToolSet
@@ -41,9 +43,37 @@ class Agent:
                  *args,
                  **kwargs) -> Message:
 
+        self._prepare_call(args, kwargs)
+
+        # Get the last message in conversation:
+        last_message = self.conversation[-1]
+
+        with asection(f"Calling agent: '{self.name}'"):
+            with asection("With message"):
+                aprint(last_message)
+
+            # Call the OpenAI API:
+            response = self.api.generate_text(
+                model_name=self.model,
+                messages=self.conversation.get_all_messages(),
+                temperature=self.temperature,
+                toolset=self.toolset,
+                **kwargs
+            )
+
+            with asection("Reponse:"):
+                aprint(response)
+
+        # Append assistant message to messages:
+        self.conversation.append(response)
+
+        # Return response
+        return response
+
+    def _prepare_call(self, args, kwargs):
+
         # if a role is provided as a keyword argument, append it:
         role = kwargs['role'] if 'role' in kwargs else 'user'
-
         # if conversation is provided as a positional argument, append it:
         if args:
             conversation = args[0]
@@ -96,17 +126,3 @@ class Agent:
             else:
                 raise ValueError("text must be a string")
 
-        # Call the OpenAI API:
-        response = self.api.generate_text(
-            model_name=self.model,
-            messages=self.conversation.get_all_messages(),
-            temperature=self.temperature,
-            toolset=self.toolset,
-            **kwargs
-        )
-
-        # Append assistant message to messages:
-        self.conversation.append(response)
-
-        # Return response
-        return response

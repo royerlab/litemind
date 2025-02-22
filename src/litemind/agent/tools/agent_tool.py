@@ -1,5 +1,7 @@
 from typing import Optional, Any
 
+from arbol import asection
+
 from litemind.agent.agent import Agent
 from litemind.agent.tools.base_tool import BaseTool
 
@@ -27,16 +29,17 @@ class AgentTool(BaseTool):
 
     def execute(self, prompt: str) -> Any:
         """Execute the agent with a prompt and return a structured output."""
+        with asection(f"Executing tool agent '{self.name}'"):
 
-        # Clear the conversation if the agent does not have memory:
-        if not self.has_memory:
-            self.agent.conversation.clear_conversation()
+            # Clear the conversation if the agent does not have memory:
+            if not self.has_memory:
+                self.agent.conversation.clear_conversation()
 
-        # Call the agent with the prompt:
-        response_message = self.agent(text=prompt)
+            # Call the agent with the prompt:
+            response_message = self.agent(text=prompt)
 
-        # Return the response text:
-        response_text = response_message.text if hasattr(response_message,
-                                                         'text') else str(
-            response_message)
-        return response_text
+            # Return the response text:
+            response_text = response_message.text if hasattr(response_message,
+                                                             'text') else str(
+                response_message)
+            return response_text
