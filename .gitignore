@@ -177,3 +177,6 @@ cython_debug/
 
 # Test report folder:
 /test_reports/
+
+# System:
+.DS_Store
