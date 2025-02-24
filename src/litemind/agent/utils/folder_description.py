@@ -86,7 +86,11 @@ def generate_tree_structure(
             extension = "│   " if pointer == "├── " else "    "
 
             tree_str += generate_tree_structure(
-                path, prefix + extension, include_hidden_files
+                folder_path=path,
+                prefix=prefix + extension,
+                allowed_extensions=allowed_extensions,
+                excluded_files=excluded_files,
+                include_hidden_files=include_hidden_files
             )
         else:
             # Files: show only size in the tree

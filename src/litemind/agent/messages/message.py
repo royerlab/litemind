@@ -459,7 +459,7 @@ class Message(ABC):
         excluded_files: List[str] = None,
         all_archive_files: bool = False,
         include_hidden_files: bool = False,
-    ):
+    ) -> MessageBlock:
         """
         Append a folder to the message.
 

@@ -1,1 +1,20 @@
+# Include license, README, and TODO files in the package:
+include LICENSE
 include README.md
+include TODO.md
+
+# Include all Python source files in the package
+recursive-include src/litemind *.py
+
+# Exclude all test files and test resources
+recursive-exclude src/litemind/*/test *
+recursive-exclude src/litemind/*/tests *
+prune test_reports
+prune **/test_media
+
+# Exclude cache files and build artifacts
+global-exclude __pycache__
+global-exclude *.py[cod]
+global-exclude *.so
+global-exclude .DS_Store
+global-exclude *.egg-info

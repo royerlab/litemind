@@ -12,7 +12,10 @@ from litemind.apis.providers.ollama.ollama_api import OllamaApi
 from litemind.apis.providers.openai.openai_api import OpenAIApi
 
 
-def generate_readme(folder_path: str, context_text: str, api: Optional[BaseApi] = None):
+def generate_readme(folder_path: str,
+                    context_text: str,
+                    api: Optional[BaseApi] = None,
+                    save_repo_to_file: bool = False) -> str:
 
     # Initialize the API
     if api is None:
@@ -49,11 +52,18 @@ def generate_readme(folder_path: str, context_text: str, api: Optional[BaseApi] 
      The 'Code Health' section should include the results of unit test in file 'test_report.md'. Please also discuss which tests failed as logged in 'test_report_stdout.txt'. Please provide file names for failed tests and statistics about the number of failed tests and an analysis of what happened. Please also analyse the code coverage (see file test_coverage.json if present) and provide a summary of the coverage in this section. 
      The 'Roadmap' section can use the contents of TODO.md as a starting point, keep the checkmarks.
      The 'More Code Examples' section further expands with many multimodal examples of the agentic and wrapper APIs covering most features, uses ideas and code from the unit tests (no need to mention that).
-    
-     Please use markdown code blocks for code examples and other code snippets.
-     For code examples and snippets make sure that the code can run without errors, e.g. make sure that all required imports are included.
-     For code examples, make sure, if possible to include the expected output as comments in the code.
-     For code examples, make sure that comments are emphatically didactic.
+        
+     For code examples:
+     - Please use markdown code blocks for code examples and other code snippets.
+     - Make sure that the code examples are complete and can be run as-is.
+     - Make sure that the code can run without errors, e.g. make sure that all required imports are included.
+     - Make sure, if possible to include the expected output as comments in the code.
+     - Make sure that comments are emphatically didactic.
+     - Make sure that the code is well-formatted and follows PEP-8.
+     - Make sure to include a variety of examples that cover different use cases and edge cases.
+     - Make sure that the code examples are complete and can be run as-is.
+     - Avoid putting multiple code examples in the same code block, unless they are chained.
+     
      
      At the end of the README, include a note explaining that the README was generated with the help of AI.
      Avoid hallucinating things that are not in the repository.
@@ -83,13 +93,20 @@ def generate_readme(folder_path: str, context_text: str, api: Optional[BaseApi] 
             ".tests",
             ".html",
         ],
-        excluded_files=["README.md", "litemind.egg-info", "dist", "build"],
+        excluded_files=["README.md", "litemind.egg-info", "dist", "build", "whole_repo.txt"],
     )
     message.append_text(
         "Please generate a detailed, complete and informative README.md file for this repository without any preamble or postamble."
     )
 
-    print(str(message))
+    if save_repo_to_file:
+        # Convert the message to a string
+        message_str = str(message)
+
+        # Save string to file:
+        with open("whole_repo.txt", "w") as file:
+            file.write(message_str)
+
 
     # Use the agent to generate the README.md content
     response = agent(message)
@@ -127,6 +144,15 @@ def main():
         nargs="?",
         help="The model to use for generating the README. Default is 'combined'.",
     )
+
+    # Add a boolean argument to save the repository to a file, --save-repo-to-file or -s
+    parser.add_argument(
+        "-s",
+        "--save-repo-to-file",
+        action="store_true",
+        help="Save the entire repository to a file for debugging purposes.",
+    )
+
     args = parser.parse_args()
 
     # Initialize the API based on the chosen model
@@ -150,7 +176,7 @@ def main():
         "between the API wrapper layer versus the agentic API -- this should also"
         "be reflected in the examples."
     )
-    generate_readme(folder_path, context_text, api=api)
+    generate_readme(folder_path, context_text, api=api, save_repo_to_file=args.save_repo_to_file)
 
 
 if __name__ == "__main__":

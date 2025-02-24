@@ -1,11 +1,27 @@
 [build-system]
-requires = ["setuptools>=42", "wheel"]
+requires = ["setuptools>=45", "wheel", "build"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "litemind"  # <-- Add the project name here
-version = "2025.01.26"
+version = "2025.02.23"
+description = "A wrapper API around LLM APIs and agentic AI framework"
+authors = [{name = "Loic A. Royer"}]
+license = "BSD-3-Clause"
+readme = "README.md"
 requires-python = ">=3.6"
+keywords = ["llm", "ai", "agents", "wrapper"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: BSD License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+]
 dependencies = [
     "openai",
     "ollama",
@@ -18,7 +34,18 @@ dependencies = [
     "pydantic",
 ]
 
+[tool.setuptools]
+packages = find_namespace:
+package-dir = {"" = "src"}
 
+[tool.setuptools.packages.find]
+where = ["src"]
+exclude = [
+    "*.tests*",
+    "*.test*",
+    "tests.*",
+    "test.*",
+]
 
 # Development dependencies:
 [project.optional-dependencies]
@@ -27,7 +54,10 @@ dev = [
     "pytest-html",
     "pytest-cov",
     "pytest-md-report",
-    "black"
+    "black",
+    "flake8",
+    "mypy",
+    "isort",
 ]
 
 # Optional dependencies:
