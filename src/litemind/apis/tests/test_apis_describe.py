@@ -20,37 +20,45 @@ class TestBaseApiImplementationsDescribe(BaseTest):
 
         # Get the best model for the requested features:
         default_model_name = api_instance.get_best_model(
-            [ModelFeatures.TextGeneration, ModelFeatures.Image])
+            [ModelFeatures.TextGeneration, ModelFeatures.Image]
+        )
 
         # If no model is found, we skip the test:
         if default_model_name is None:
             pytest.skip(
-                f"{api_class.__name__} does not support images. Skipping image tests.")
+                f"{api_class.__name__} does not support images. Skipping image tests."
+            )
 
         try:
 
             # Get the path to the test image:
-            image_path = self._get_local_test_image_uri('future.jpeg')
+            image_path = self._get_local_test_image_uri("future.jpeg")
 
             # Call the describe_image method:
-            description = api_instance.describe_image(image_path,
-                                                      model_name=default_model_name)
-
-            print('\n' + description)
-
-            assert isinstance(description, str), (
-                f"{api_class.__name__}.describe_image() should return a string!"
+            description = api_instance.describe_image(
+                image_path, model_name=default_model_name
             )
-            assert len(description) > 0, (
-                f"{api_class.__name__}.describe_image() should return a non-empty string!"
-            )
+
+            print("\n" + description)
+
+            assert isinstance(
+                description, str
+            ), f"{api_class.__name__}.describe_image() should return a string!"
+            assert (
+                len(description) > 0
+            ), f"{api_class.__name__}.describe_image() should return a non-empty string!"
 
             # Check the content of the string:
-            assert 'robot' in description or 'futuristic' in description or 'sky' in description
+            assert (
+                "robot" in description
+                or "futuristic" in description
+                or "sky" in description
+            )
 
         except:
             # Print stacktrace:
             import traceback
+
             traceback.print_exc()
 
             # If exception happened then tests failed:
@@ -65,39 +73,48 @@ class TestBaseApiImplementationsDescribe(BaseTest):
 
         # Get the best model for the requested features:
         default_model_name = api_instance.get_best_model(
-            [ModelFeatures.TextGeneration, ModelFeatures.Audio])
+            [ModelFeatures.TextGeneration, ModelFeatures.Audio]
+        )
 
         # If no model is found, we skip the test:
         if default_model_name is None:
             pytest.skip(
-                f"{api_class.__name__} does not support audio. Skipping audio tests.")
+                f"{api_class.__name__} does not support audio. Skipping audio tests."
+            )
 
         try:
             # Get the path to the test audio:
-            audio_path = self._get_local_test_audio_uri('harvard.wav')
+            audio_path = self._get_local_test_audio_uri("harvard.wav")
 
             # Describe the audio:
-            description = api_instance.describe_audio(audio_path,
-                                                      model_name=default_model_name)
-
-            print('\n' + description)
-
-            assert isinstance(description, str), (
-                f"{api_class.__name__}.describe_audio() should return a string!"
+            description = api_instance.describe_audio(
+                audio_path, model_name=default_model_name
             )
-            assert len(description) > 0, (
-                f"{api_class.__name__}.describe_audio() should return a non-empty string!"
-            )
+
+            print("\n" + description)
+
+            assert isinstance(
+                description, str
+            ), f"{api_class.__name__}.describe_audio() should return a string!"
+            assert (
+                len(description) > 0
+            ), f"{api_class.__name__}.describe_audio() should return a non-empty string!"
 
             # Lower case:
             description = description.lower()
 
             # Check the contents of the string:
-            assert 'smell' in description or 'ham' in description or 'beer' in description or 'sentence' in description
+            assert (
+                "smell" in description
+                or "ham" in description
+                or "beer" in description
+                or "sentence" in description
+            )
 
         except:
             # Print stacktrace:
             import traceback
+
             traceback.print_exc()
 
             # If exception happened then tests failed:
@@ -112,47 +129,59 @@ class TestBaseApiImplementationsDescribe(BaseTest):
 
         # Get the best model for the requested features:
         default_model_name = api_instance.get_best_model(
-            [ModelFeatures.TextGeneration, ModelFeatures.Video])
+            [ModelFeatures.TextGeneration, ModelFeatures.Video]
+        )
 
         # If no model is found, we skip the test:
         if default_model_name is None:
             pytest.skip(
-                f"{api_class.__name__} does not support videos. Skipping video tests.")
+                f"{api_class.__name__} does not support videos. Skipping video tests."
+            )
 
         try:
             # Get the path to the test video:
-            video_path = self._get_local_test_video_uri('lunar_park.mov')
+            video_path = self._get_local_test_video_uri("lunar_park.mov")
 
             # Describe the video:
-            description = api_instance.describe_video(video_path,
-                                                      model_name=default_model_name)
-
-            print('\n' + description)
-
-            assert isinstance(description, str), (
-                f"{api_class.__name__}.describe_video() should return a string!"
+            description = api_instance.describe_video(
+                video_path, model_name=default_model_name
             )
-            assert len(description) > 0, (
-                f"{api_class.__name__}.describe_video() should return a non-empty string!"
-            )
+
+            print("\n" + description)
+
+            assert isinstance(
+                description, str
+            ), f"{api_class.__name__}.describe_video() should return a string!"
+            assert (
+                len(description) > 0
+            ), f"{api_class.__name__}.describe_video() should return a non-empty string!"
 
             # Lower case:
             description = description.lower()
 
             # If ApiClass.__name__ is 'OllamaApi', we relax the tests to allow for more flexibility:
-            if api_class.__name__ == 'OllamaApi':
+            if api_class.__name__ == "OllamaApi":
                 # Open source models are not yet strong enough to understand that a sequence of images is a video:
-                assert 'elephant' in description or 'people' in description
+                assert "elephant" in description or "people" in description
             else:
 
                 # Check the contents of the string:
-                assert (('roller coaster' in description or 'amusement park' in description or 'ride' in description)
-                        and (
-                                '20th century' in description or '20th-century' in description or 'earlier era' in description or 'vintage' in description or 'period' in description))
+                assert (
+                    "roller coaster" in description
+                    or "amusement park" in description
+                    or "ride" in description
+                ) and (
+                    "20th century" in description
+                    or "20th-century" in description
+                    or "earlier era" in description
+                    or "vintage" in description
+                    or "period" in description
+                )
 
         except:
             # Print stacktrace:
             import traceback
+
             traceback.print_exc()
 
             # If exception happened then tests failed:

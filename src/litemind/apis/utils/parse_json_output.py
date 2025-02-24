@@ -25,12 +25,12 @@ def extract_json_substring(json_str: str) -> str:
     end = json_str.rfind("}")
 
     # Extract the JSON substring:
-    json_substring = json_str[start:end + 1]
+    json_substring = json_str[start : end + 1]
 
     return json_substring
 
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 def parse_json(json_str: str, clazz: Type[T]) -> T:

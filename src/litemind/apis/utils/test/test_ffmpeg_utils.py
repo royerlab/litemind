@@ -18,22 +18,21 @@ def test_video(tmp_path):
     video_path = tmp_path / "test_synthetic_video.mp4"
 
     # Create synthetic video input (red color)
-    v = ffmpeg.input('color=c=red:size=320x240:rate=30:d=2', f='lavfi')
+    v = ffmpeg.input("color=c=red:size=320x240:rate=30:d=2", f="lavfi")
     # Create synthetic audio input (440Hz sine wave)
-    a = ffmpeg.input('sine=frequency=440:duration=2', f='lavfi')
+    a = ffmpeg.input("sine=frequency=440:duration=2", f="lavfi")
 
     # Combine video + audio into one MP4 file
     (
-        ffmpeg
-        .output(
+        ffmpeg.output(
             v,
             a,
             str(video_path),
-            vcodec='libx264',
-            acodec='aac',  # or 'libmp3lame' if needed
-            strict='experimental',  # may be needed for aac
-            pix_fmt='yuv420p',
-            r=30  # frames per second
+            vcodec="libx264",
+            acodec="aac",  # or 'libmp3lame' if needed
+            strict="experimental",  # may be needed for aac
+            pix_fmt="yuv420p",
+            r=30,  # frames per second
         )
         .overwrite_output()
         .run()
@@ -48,7 +47,9 @@ def test_is_ffmpeg_available():
     """
 
     # Check that the return of is_ffmpeg_available() is boolean:
-    assert isinstance(is_ffmpeg_available(), bool), "is_ffmpeg_available() should return a boolean."
+    assert isinstance(
+        is_ffmpeg_available(), bool
+    ), "is_ffmpeg_available() should return a boolean."
 
 
 def test_extract_frames_and_audio(tmp_path, test_video):
@@ -66,7 +67,7 @@ def test_extract_frames_and_audio(tmp_path, test_video):
         use_keyframes=False,
         audio_filename="audio.wav",
         audio_sample_rate=16000,
-        audio_channels=1
+        audio_channels=1,
     )
 
     # --- Check results ---
@@ -88,9 +89,12 @@ def test_extract_frames_and_audio(tmp_path, test_video):
 
     # Validate the length or sampling rate of the generated audio
     import wave
-    with wave.open(audio_file, 'r') as audio:
+
+    with wave.open(audio_file, "r") as audio:
         assert audio.getnchannels() == 1, "Audio file should have 1 channel."
-        assert audio.getframerate() == 16000, "Audio file should have a sample rate of 16000 Hz."
+        assert (
+            audio.getframerate() == 16000
+        ), "Audio file should have a sample rate of 16000 Hz."
 
     # (Optional) Print for debugging or demonstration
     print("Extracted frames:", frames)

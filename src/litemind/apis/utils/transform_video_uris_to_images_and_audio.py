@@ -1,9 +1,7 @@
-from litemind.agent.message import Message
-from litemind.agent.message_block_type import BlockType
-from litemind.apis.utils.ffmpeg_utils import \
-    convert_video_to_frames_and_audio
-from litemind.utils.normalise_uri_to_local_file_path import \
-    uri_to_local_file_path
+from litemind.agent.messages.message import Message
+from litemind.agent.messages.message_block_type import BlockType
+from litemind.apis.utils.ffmpeg_utils import convert_video_to_frames_and_audio
+from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_path
 
 
 def transform_video_uris_to_images_and_audio(message: Message) -> Message:

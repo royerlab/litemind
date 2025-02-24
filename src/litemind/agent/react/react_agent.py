@@ -1,12 +1,12 @@
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Union, Sequence
 
 from arbol import asection, aprint
 
 from litemind.agent.agent import Agent
-from litemind.agent.message import Message
+from litemind.agent.messages.message import Message
+from litemind.agent.react.prompts import react_agent_system_prompt
 from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.base_api import BaseApi, ModelFeatures
-from litemind.apis.exceptions import APIError
 
 
 class ReActAgent(Agent):
@@ -18,41 +18,63 @@ class ReActAgent(Agent):
     leveraging litemind's existing tool handling infrastructure.
     """
 
-    def __init__(self,
-                 api: BaseApi,
-                 model: Optional[str] = None,
-                 temperature: float = 0.0,
-                 toolset: Optional[ToolSet] = None,
-                 name: str = "ReActAgent",
-                 max_reasoning_steps: int = 5,
-                 **kwargs):
-        """Initialize the ReAct agent."""
-        # Find suitable model if none provided
-        if model is None:
-            model = api.get_best_model([
-                ModelFeatures.TextGeneration,
-                ModelFeatures.StructuredTextGeneration
-            ])
-            if model is None:
-                raise APIError("No suitable model found with required capabilities")
+    def __init__(
+        self,
+        api: BaseApi,
+        model: Optional[str] = None,
+        model_features: Optional[
+            Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
+        ] = None,
+        temperature: float = 0.0,
+        toolset: Optional[ToolSet] = None,
+        name: str = "ReActAgent",
+        max_reasoning_steps: int = 5,
+        **kwargs,
+    ):
+        """
+        Initialize the ReAct agent.
 
-        # Verify model capabilities
-        required_features = [
-            ModelFeatures.TextGeneration,
-            ModelFeatures.StructuredTextGeneration
-        ]
-        for feature in required_features:
-            if not api.has_model_support_for(feature, model):
-                raise APIError(f"Model {model} does not support {feature}")
+        Parameters
+        ----------
+        api: BaseApi
+            The API to use for generating responses.
+        model: Optional[str]
+            The model to use for generating responses.
+        model_features: Optional[Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
+            The features to require for a model. If features are provided, the model will be selected based on the features.
+            A ValueError will be raised if a model has also been specified as this is mutually exclusive.
+            Minimal required features are text generation and tools and are added automatically if not provided.
+        temperature: float
+            The temperature to use for response generation.
+        toolset: Optional[ToolSet]
+            The toolset to use for response generation.
+        name: str
+            The name of the agent.
+        max_reasoning_steps: int
+            The maximum number of reasoning steps to take.
+        kwargs: dict
+            Additional keyword arguments to pass to the agent.
 
-        super().__init__(api=api,
-                         model=model,
-                         temperature=temperature,
-                         toolset=toolset,
-                         name=name,
-                         **kwargs)
+        """
 
+        # Initialize the agent:
+        super().__init__(
+            api=api,
+            model=model,
+            model_features=model_features,
+            temperature=temperature,
+            toolset=toolset,
+            name=name,
+            **kwargs,
+        )
+
+        # Get the ReAct prompt:
+        self._react_prompt = react_agent_system_prompt
+
+        # Initialize ReAct parameters
         self.max_reasoning_steps = max_reasoning_steps
+
+        # Initialize internal state
         self._reset_state()
 
     def _reset_state(self):
@@ -63,27 +85,7 @@ class ReActAgent(Agent):
 
     def _get_react_prompt(self) -> str:
         """Get the core ReAct prompt instructions."""
-        return """You are a thoughtful AI assistant that carefully analyzes problems before acting.
-Always follow this reasoning process:
-
-1. THINK: Analyze the current situation, review previous steps, and plan what to do next
-2. DECIDE: Choose to either:
-   - Use an available tool to gather information
-   - Provide a final answer if you have enough information
-3. EXPLAIN: Always explain your reasoning before and after taking actions
-
-Format your responses exactly like this:
-
-THINK: [Your careful analysis of the situation]
-DECIDE: [Either USE TOOL or FINAL ANSWER]
-EXPLAIN: [Your explanation of what you learned or why you're providing this answer]
-
-Important guidelines:
-- Break down complex problems into steps
-- Refer to previous steps in your reasoning
-- Only provide a final answer when you're confident
-- Always explain your thinking
-"""
+        return self._react_prompt
 
     def _create_system_message(self) -> Message:
         """Create a fresh system message with the current reasoning chain."""
@@ -110,32 +112,38 @@ Important guidelines:
 
     def _parse_response(self, response: str) -> Dict[str, str]:
         """Parse a response into its components with error handling."""
-        components = {
-            'think': '',
-            'decide': '',
-            'explain': ''
-        }
+
+        # Initialize components
+        components = {"think": "", "decide": "", "explain": ""}
+
+        # Initialize current component
         current = None
 
         try:
-            for line in str(response).split('\n'):
+
+            # Parse response into components
+            for line in str(response).split("\n"):
+
+                # Skip empty lines
                 line = line.strip()
                 if not line:
                     continue
 
-                if line.upper().startswith('THINK:'):
-                    current = 'think'
+                # Check for component headers
+                if line.upper().startswith("THINK:"):
+                    current = "think"
                     line = line[6:]
-                elif line.upper().startswith('DECIDE:'):
-                    current = 'decide'
+                elif line.upper().startswith("DECIDE:"):
+                    current = "decide"
                     line = line[7:]
-                elif line.upper().startswith('EXPLAIN:'):
-                    current = 'explain'
+                elif line.upper().startswith("EXPLAIN:"):
+                    current = "explain"
                     line = line[8:]
                 elif current:  # Continue previous section
-                    components[current] += ' ' + line
+                    components[current] += " " + line
                     continue
 
+                # Add line to current component
                 if current and line:
                     components[current] += line
 
@@ -143,7 +151,7 @@ Important guidelines:
             components = {k: v.strip() for k, v in components.items()}
 
             # Ensure we have minimum required components
-            if not components['think'] or not components['decide']:
+            if not components["think"] or not components["decide"]:
                 raise ValueError("Missing required components")
 
             return components
@@ -155,26 +163,34 @@ Important guidelines:
 
             # Last resort: treat entire response as decision
             return {
-                'think': 'Analyzing response',
-                'decide': str(response),
-                'explain': 'Direct response'
+                "think": "Analyzing response",
+                "decide": str(response),
+                "explain": "Direct response",
             }
 
     def _should_continue_conversation(self, messages: List[Message]) -> bool:
         """Check if we can continue the conversation within token limits."""
         total_tokens = 0
         for message in messages:
-            # Rough approximation of tokens (can be replaced with exact counting)
-            total_tokens += self.api.count_tokens(str(message))  # Assuming ~4 chars per token
+            # Count tokens in message:
+            total_tokens += self.api.count_tokens(
+                str(message)
+            )  # Assuming ~4 chars per token
 
         return total_tokens < self._remaining_tokens
 
     def _is_final_answer(self, decision: str) -> bool:
         """Check if a decision string indicates a final answer."""
+
+        # Check for common final answer phrases
         decision = decision.strip().upper()
-        return (decision.startswith('FINAL ANSWER') or
-                decision.startswith('FINAL') or
-                decision.startswith('ANSWER'))
+
+        # Check for common final answer phrases
+        return (
+            decision.startswith("FINAL ANSWER")
+            or decision.startswith("FINAL")
+            or decision.startswith("ANSWER")
+        )
 
     def __call__(self, *args, **kwargs) -> Message:
         """
@@ -211,12 +227,18 @@ Important guidelines:
                     with asection(f"Reasoning Step {self._current_step + 1}"):
 
                         # Check token limit
-                        if not self._should_continue_conversation(self.conversation.get_all_messages()):
+                        if not self._should_continue_conversation(
+                            self.conversation.get_all_messages()
+                        ):
                             aprint("Reached token limit!")
                             return Message(
                                 role="assistant",
-                                text="I apologize, but I've reached the token limit. Here's what I know so far: " +
-                                     (self.reasoning_chain[-1].get('explain', '') if self.reasoning_chain else '')
+                                text="I apologize, but I've reached the token limit. Here's what I know so far: "
+                                + (
+                                    self.reasoning_chain[-1].get("explain", "")
+                                    if self.reasoning_chain
+                                    else ""
+                                ),
                             )
 
                         try:
@@ -225,7 +247,7 @@ Important guidelines:
                                 model_name=self.model,
                                 messages=self.conversation.get_all_messages(),
                                 temperature=self.temperature,
-                                toolset=self.toolset
+                                toolset=self.toolset,
                             )
 
                             # Parse the structured response
@@ -234,18 +256,27 @@ Important guidelines:
                             aprint("Step:", step)
 
                             # Update system message with new reasoning chain
-                            self.conversation.system_messages = [self._create_system_message()]
+                            self.conversation.system_messages = [
+                                self._create_system_message()
+                            ]
 
                             # Check if we've reached a final answer
-                            if self._is_final_answer(step['decide']):
-                                explanation = step['explain'].strip()
-                                decision_text = step['decide'].strip()
+                            if self._is_final_answer(step["decide"]):
+                                explanation = step["explain"].strip()
+                                decision_text = step["decide"].strip()
 
                                 # Extract actual answer from decision text
-                                answer_text = decision_text.split(':', 1)[1].strip() if ':' in decision_text else decision_text
+                                answer_text = (
+                                    decision_text.split(":", 1)[1].strip()
+                                    if ":" in decision_text
+                                    else decision_text
+                                )
 
+                                # Add reasoning chain to final answer
                                 if explanation:
-                                    final_text = f"{answer_text}\n\nReasoning: {explanation}"
+                                    final_text = (
+                                        f"{answer_text}\n\nReasoning: {explanation}"
+                                    )
                                 else:
                                     final_text = answer_text
 
@@ -263,20 +294,28 @@ Important guidelines:
                             # Handle any errors in the reasoning process
                             return Message(
                                 role="assistant",
-                                text=f"I encountered an error in my reasoning: {str(e)}. Here's what I know so far: " +
-                                     (self.reasoning_chain[-1].get('explain', '') if self.reasoning_chain else '')
+                                text=f"I encountered an error in my reasoning: {str(e)}. Here's what I know so far: "
+                                + (
+                                    self.reasoning_chain[-1].get("explain", "")
+                                    if self.reasoning_chain
+                                    else ""
+                                ),
                             )
 
                         self._current_step += 1
 
             # If we exceed max steps, provide best effort response
-            response= Message(
+            response = Message(
                 role="assistant",
                 text=(
-                        "I apologize, but I've reached the maximum number of reasoning steps. "
-                        "Here's what I've learned so far:\n\n" +
-                        (self.reasoning_chain[-1].get('explain', '') if self.reasoning_chain else str(response))
-                )
+                    "I apologize, but I've reached the maximum number of reasoning steps. "
+                    "Here's what I've learned so far:\n\n"
+                    + (
+                        self.reasoning_chain[-1].get("explain", "")
+                        if self.reasoning_chain
+                        else str(response)
+                    )
+                ),
             )
 
             with asection("Final Answer"):

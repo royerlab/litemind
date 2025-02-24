@@ -2,10 +2,11 @@ import os
 
 import pytest
 
-from litemind.agent.message import Message
-from litemind.agent.message_block_type import BlockType
-from litemind.apis.utils.transform_video_uris_to_images_and_audio import \
-    transform_video_uris_to_images_and_audio
+from litemind.agent.messages.message import Message
+from litemind.agent.messages.message_block_type import BlockType
+from litemind.apis.utils.transform_video_uris_to_images_and_audio import (
+    transform_video_uris_to_images_and_audio,
+)
 
 
 @pytest.fixture
@@ -14,7 +15,7 @@ def create_message_with_video_uri():
     current_dir = os.path.dirname(__file__)
 
     # Combine the two to get the absolute path to 'flying.mp4'
-    video_path = os.path.join(current_dir, 'media/bunny.mp4')
+    video_path = os.path.join(current_dir, "media/bunny.mp4")
 
     # Convert to URI:
     video_uri = f"file://{video_path}"
@@ -26,8 +27,7 @@ def create_message_with_video_uri():
     return message
 
 
-def test_transform_video_uris_to_images_and_audio(
-        create_message_with_video_uri):
+def test_transform_video_uris_to_images_and_audio(create_message_with_video_uri):
     message = create_message_with_video_uri
 
     # Transform the message:
@@ -36,7 +36,9 @@ def test_transform_video_uris_to_images_and_audio(
     # Check if the message has been transformed correctly
     assert transformed_message is not None
     assert len(transformed_message.blocks) > 1
-    assert any(block.block_type == BlockType.Image for block in
-               transformed_message.blocks)
-    assert any(block.block_type == BlockType.Audio for block in
-               transformed_message.blocks)
+    assert any(
+        block.block_type == BlockType.Image for block in transformed_message.blocks
+    )
+    assert any(
+        block.block_type == BlockType.Audio for block in transformed_message.blocks
+    )

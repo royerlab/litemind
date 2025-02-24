@@ -22,7 +22,7 @@ class FunctionTool(BaseTool):
 
         """
         # Initialize the base tool, description is empty for now...
-        super().__init__(name=func.__name__, description='')
+        super().__init__(name=func.__name__, description="")
 
         # Store the function
         self.func = func
@@ -31,10 +31,11 @@ class FunctionTool(BaseTool):
         if not description:
             docstring = extract_docstring(func)
             # if '***' is present, extract the substring between the first and second occurrence of '***':
-            if '***' in docstring:
+            if "***" in docstring:
                 self.description = docstring[
-                                   docstring.find('***') + 3:docstring.find(
-                                       '***', docstring.find('***') + 1)]
+                    docstring.find("***")
+                    + 3 : docstring.find("***", docstring.find("***") + 1)
+                ]
             else:
                 self.description = docstring
         else:
@@ -91,6 +92,6 @@ class FunctionTool(BaseTool):
             The result of the tool function.
         """
         with asection(f"Executing tool '{self.name}'"):
-            result =  self.func(*args, **kwargs)
+            result = self.func(*args, **kwargs)
 
         return result

@@ -13,13 +13,17 @@ class ToolSet:
 
     def add_function_tool(self, func: Callable, description: str):
         """Add a new tool by wrapping a function and its description."""
+        # Import here to avoid circular imports
         from litemind.agent.tools.function_tool import FunctionTool
+
         self.tools.append(FunctionTool(func, description))
 
     def add_agent_tool(self, agent, description: str):
         """Add a new tool by wrapping an agent and its description."""
-        from litemind.agent.tools.agent_tool import AgentTool
-        self.tools.append(AgentTool(agent, description))
+        # Import here to avoid circular imports
+        from litemind.agent.tools.tool_agent import ToolAgent
+
+        self.tools.append(ToolAgent(agent, description))
 
     def get_tool(self, name: str) -> Optional[BaseTool]:
         """Retrieve a tool by its name."""
@@ -31,6 +35,10 @@ class ToolSet:
     def list_tools(self) -> List[BaseTool]:
         """Return all tools as a list."""
         return self.tools
+
+    def tool_names(self) -> List[str]:
+        """Return all tool names as a list."""
+        return [t.name for t in self.tools]
 
     def __getitem__(self, item) -> BaseTool:
         return self.tools[item]
@@ -64,6 +72,3 @@ class ToolSet:
     def __repr__(self):
         # provide all information available about tools:
         return f"ToolSet({self.tools})"
-
-
-

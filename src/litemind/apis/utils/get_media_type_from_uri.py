@@ -19,8 +19,11 @@ def get_media_type_from_uri(uri: str) -> Optional[str]:
 
     if uri.startswith("data:"):
         return uri.split(":")[1].split(";")[0]
-    elif uri.startswith("http://") or uri.startswith(
-            "https://") or uri.startswith("file://"):
+    elif (
+        uri.startswith("http://")
+        or uri.startswith("https://")
+        or uri.startswith("file://")
+    ):
         # Look at file extension:
         if uri.endswith(".png"):
             return "image/png"

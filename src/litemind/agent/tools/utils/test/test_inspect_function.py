@@ -1,4 +1,7 @@
-from litemind.agent.tools.utils.inspect_function import extract_docstring, extract_function_info
+from litemind.agent.tools.utils.inspect_function import (
+    extract_docstring,
+    extract_function_info,
+)
 
 
 def test_extract_docstring():

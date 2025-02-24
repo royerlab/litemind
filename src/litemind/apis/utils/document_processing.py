@@ -8,17 +8,20 @@ import fitz  # PyMuPDF
 from PIL import Image
 from arbol import aprint
 
-from litemind.utils.normalise_uri_to_local_file_path import \
-    uri_to_local_file_path
+from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_path
 
 
-@lru_cache(maxsize=1)
+@lru_cache()
 def is_pymupdf_available() -> bool:
     # Check if package pymupdf s available:
     try:
-        import pymupdf
-        import pymupdf4llm
-        return True
+        import importlib.util
+
+        return (
+            importlib.util.find_spec("pymupdf4llm") is not None
+            and importlib.util.find_spec("pymupdf") is not None
+        )
+
     except ImportError:
         return False
 
@@ -26,7 +29,7 @@ def is_pymupdf_available() -> bool:
 def convert_document_to_markdown(document_uri: str) -> str:
     """
     Convert a document to a markdown string.
-    
+
     Parameters
     ----------
     document_uri: str
@@ -42,7 +45,8 @@ def convert_document_to_markdown(document_uri: str) -> str:
     # Check if package pymupdf is available:
     if not is_pymupdf_available():
         raise ImportError(
-            "pymupdf is not available. Please install it to use this function.")
+            "pymupdf is not available. Please install it to use this function."
+        )
 
     # Import the necessary modules:
     import pymupdf4llm
@@ -59,29 +63,30 @@ def convert_document_to_markdown(document_uri: str) -> str:
 def extract_images_from_document(document_uri: str) -> List[str]:
     """
     Extract images from a document.
-    
+
     Parameters
     ----------
     document_uri: str
         The URI of the document to extract images from.
-        
+
     Returns
     -------
     List[str]
         The list of image file URIs.
-        
+
     """
 
     # Check if package pymupdf is available:
     if not is_pymupdf_available():
         raise ImportError(
-            "pymupdf is not available. Please install it to use this function.")
+            "pymupdf is not available. Please install it to use this function."
+        )
 
     # Import the necessary modules:
     import pymupdf
 
     # We need a temporary folder obtained with tempfile and mkdtemp to store the images:
-    temp_image_directory_path = mkdtemp(prefix='extracted_images_')
+    temp_image_directory_path = mkdtemp(prefix="extracted_images_")
 
     # Download if needed document to temp folder:
     document_path = uri_to_local_file_path(document_uri)
@@ -102,8 +107,9 @@ def extract_images_from_document(document_uri: str) -> List[str]:
         else:
             aprint("No images found on page", page_index)
 
-        for image_index, img in enumerate(image_list,
-                                          start=1):  # enumerate the image list
+        for image_index, img in enumerate(
+            image_list, start=1
+        ):  # enumerate the image list
             xref = img[0]  # get the XREF of the image
             pix = pymupdf.Pixmap(doc, xref)  # create a Pixmap
 
@@ -114,8 +120,7 @@ def extract_images_from_document(document_uri: str) -> List[str]:
             image_file_name = f"page_{page_index}-image_{image_index}.png"
 
             # Absolute path of the image file in temp directory:
-            image_file_path = os.path.join(temp_image_directory_path,
-                                           image_file_name)
+            image_file_path = os.path.join(temp_image_directory_path, image_file_name)
 
             # Save the image as a PNG file:
             pix.save(image_file_path)
@@ -124,7 +129,7 @@ def extract_images_from_document(document_uri: str) -> List[str]:
             del pix
 
             # Append the image file name to the list:
-            image_files_uris.append('file://' + image_file_path)
+            image_files_uris.append("file://" + image_file_path)
 
     # Close the document:
     doc.close()
@@ -149,13 +154,14 @@ def create_images_of_each_document_page(document_uri, dpi=300):
     # Check if package pymupdf is available:
     if not is_pymupdf_available():
         raise ImportError(
-            "pymupdf is not available. Please install it to use this function.")
+            "pymupdf is not available. Please install it to use this function."
+        )
 
     # Convert the URI to a local file path:
     document_path = uri_to_local_file_path(document_uri)
 
     # We need a temporary folder obtained with tempfile and mkdtemp to store the images:
-    temp_image_directory_path = mkdtemp(prefix='extracted_page_images_')
+    temp_image_directory_path = mkdtemp(prefix="extracted_page_images_")
 
     # Calculate zoom factor (default PDF DPI is 72)
     zoom = dpi / 72
@@ -178,14 +184,13 @@ def create_images_of_each_document_page(document_uri, dpi=300):
         image_file_name = f"image_for_page_{page_index}.png"
 
         # Absolute path of the image file in temp directory:
-        image_file_path = os.path.join(temp_image_directory_path,
-                                       image_file_name)
+        image_file_path = os.path.join(temp_image_directory_path, image_file_name)
 
         # Save the image as a PNG file:
         pix.save(image_file_path)
 
         # Append the image file name to the list:
-        image_uris.append('file://' + image_file_path)
+        image_uris.append("file://" + image_file_path)
 
         # Close the pixmap:
         del pix
@@ -214,7 +219,8 @@ def extract_text_from_document_pages(document_uri: str) -> List[str]:
     # Check if package pymupdf is available:
     if not is_pymupdf_available():
         raise ImportError(
-            "pymupdf is not available. Please install it to use this function.")
+            "pymupdf is not available. Please install it to use this function."
+        )
 
     # Convert the URI to a local file path:
     document_path = uri_to_local_file_path(document_uri)
@@ -227,7 +233,9 @@ def extract_text_from_document_pages(document_uri: str) -> List[str]:
 
     # Iterate over each page and extract text:
     for page in doc:
-        page_text = page.get_text("text")  # or simply page.get_text() if "text" is default
+        page_text = page.get_text(
+            "text"
+        )  # or simply page.get_text() if "text" is default
         pages_text.append(page_text)
 
     # Close the document:
@@ -235,7 +243,10 @@ def extract_text_from_document_pages(document_uri: str) -> List[str]:
 
     return pages_text
 
-def extract_text_and_image_from_document(document_uri: str, dpi: int = 300) -> List[Tuple[str, Image.Image]]:
+
+def extract_text_and_image_from_document(
+    document_uri: str, dpi: int = 300
+) -> List[Tuple[str, Image.Image]]:
     """
     Extract text and generate an image for each page in the document.
 
@@ -257,7 +268,8 @@ def extract_text_and_image_from_document(document_uri: str, dpi: int = 300) -> L
     # Check if package pymupdf is available:
     if not is_pymupdf_available():
         raise ImportError(
-            "pymupdf is not available. Please install it to use this function.")
+            "pymupdf is not available. Please install it to use this function."
+        )
 
     # Convert the document URI to a local file path.
     document_path = uri_to_local_file_path(document_uri)

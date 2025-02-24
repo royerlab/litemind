@@ -2,30 +2,26 @@ import argparse
 import os
 from typing import Optional
 
-from litemind.agent.agent import Agent
-from litemind.agent.message import Message
-from litemind.apis._callbacks.callback_manager import CallbackManager
-from litemind.apis._callbacks.print_callbacks import PrintCallbacks
-from litemind.apis.anthropic.anthropic_api import AnthropicApi
+from litemind.agent.messages.message import Message
 from litemind.apis.base_api import BaseApi
 from litemind.apis.combined_api import CombinedApi
-from litemind.apis.google.google_api import GeminiApi
 from litemind.apis.model_features import ModelFeatures
-from litemind.apis.ollama.ollama_api import OllamaApi
-from litemind.apis.openai.openai_api import OpenAIApi
+from litemind.apis.providers.anthropic.anthropic_api import AnthropicApi
+from litemind.apis.providers.google.google_api import GeminiApi
+from litemind.apis.providers.ollama.ollama_api import OllamaApi
+from litemind.apis.providers.openai.openai_api import OpenAIApi
 
 
 def generate_readme(folder_path: str, context_text: str, api: Optional[BaseApi] = None):
 
-     # Initialize the API
+    # Initialize the API
     if api is None:
         api = CombinedApi()
 
-    # get a model that supports text generation and documents:
-    model = api.get_best_model(features=[ModelFeatures.TextGeneration, ModelFeatures.Document])
-
     # Initialize the agent
-    agent = Agent(api=api, model=model)
+    from litemind.agent.agent import Agent
+
+    agent = Agent(api=api, model_features=ModelFeatures.Document)
 
     # Define the prompt for generating the README.md
     prompt = f"""
@@ -38,29 +34,37 @@ def generate_readme(folder_path: str, context_text: str, api: Optional[BaseApi] 
      - Features
      - Installation
      - Usage
-     - Code Examples
+     - Concepts
+     - More Code Examples
      - Caveats and Limitations
      - Code Health
      - Roadmap
-     - Contributing and Todos
+     - Contributing
      - License
      But feel free to include additional sections as needed.
  
-     Please use markdown code blocks for code examples and other code snippets.
+     The 'Summary' section should provide an enthusiastic and complete description of the library, its purpose, and philosophy.
      The 'Usage' section should consist of rich, striking and illustrative examples of the Agentic API in use.
-     The 'Code Examples' section can use ideas and code from the unit tests.
-     The 'Code Health' section should include the results of unit test in file 'test_report.md'. 
+     The 'Concepts' section should explain the concepts behind the library, the main classes and their purpose, and how they interact.
+     The 'Code Health' section should include the results of unit test in file 'test_report.md'. Please also discuss which tests failed as logged in 'test_report_stdout.txt'. Please provide file names for failed tests and statistics about the number of failed tests and an analysis of what happened. Please also analyse the code coverage (see file test_coverage.json if present) and provide a summary of the coverage in this section. 
      The 'Roadmap' section can use the contents of TODO.md as a starting point, keep the checkmarks.
-     The 'Code Examples' section should include may examples of the agentic and wrapper APIs covering most features.
-     At the end of the README, include a note explaining that the README was generated with the help of AI.
+     The 'More Code Examples' section further expands with many multimodal examples of the agentic and wrapper APIs covering most features, uses ideas and code from the unit tests (no need to mention that).
+    
+     Please use markdown code blocks for code examples and other code snippets.
+     For code examples and snippets make sure that the code can run without errors, e.g. make sure that all required imports are included.
+     For code examples, make sure, if possible to include the expected output as comments in the code.
+     For code examples, make sure that comments are emphatically didactic.
      
+     At the end of the README, include a note explaining that the README was generated with the help of AI.
+     Avoid hallucinating things that are not in the repository.
+     Please add badges for: pipy, license, and code coverage
+     
+     Your task is to follow the instructions above and generate a README.md file for the Python repository provided below:
  
-     Generate a README.md file for the Python repository described below.
- 
-     Here is some context about the repository:
+     Here is some additional context about the repository:
      {context_text}
  
-     Here is the the entire repository structure and contents:
+     Here is the the entire repository structure and its contents:
      """
 
     # Create a message with the prompt:
@@ -68,11 +72,22 @@ def generate_readme(folder_path: str, context_text: str, api: Optional[BaseApi] 
 
     # Append the prompt and the folder contents to the message:
     message.append_text(prompt)
-    message.append_folder(folder_path,
-                          allowed_extensions=['.py', '.md', '.txt', '.toml', 'LICENSE', '.tests', '.html'],
-                          excluded_files=['README.md'])
+    message.append_folder(
+        folder_path,
+        allowed_extensions=[
+            ".py",
+            ".md",
+            ".txt",
+            ".toml",
+            "LICENSE",
+            ".tests",
+            ".html",
+        ],
+        excluded_files=["README.md", "litemind.egg-info", "dist", "build"],
+    )
     message.append_text(
-        "Please generate a detailed, complete and informative README.md file for this repository without any preamble or postamble.")
+        "Please generate a detailed, complete and informative README.md file for this repository without any preamble or postamble."
+    )
 
     print(str(message))
 
@@ -83,18 +98,18 @@ def generate_readme(folder_path: str, context_text: str, api: Optional[BaseApi] 
     readme_content = response[0].content.strip()
 
     # If it starts with '```markdown', remove it:
-    if readme_content.startswith('```markdown'):
+    if readme_content.startswith("```markdown"):
         readme_content = readme_content[11:]
 
     # If it ends with '```', remove it:
-    if readme_content.endswith('```'):
+    if readme_content.endswith("```"):
         readme_content = readme_content[:-3]
 
     print(str(readme_content))
 
     # Write the generated content to README.md:
-    readme_file_path = os.path.join(folder_path, 'README.md')
-    with open(readme_file_path, 'w') as readme_file:
+    readme_file_path = os.path.join(folder_path, "README.md")
+    with open(readme_file_path, "w") as readme_file:
         readme_file.write(readme_content)
 
     return readme_content
@@ -102,12 +117,16 @@ def generate_readme(folder_path: str, context_text: str, api: Optional[BaseApi] 
 
 def main():
     """Command-line entry point for generating the README."""
-    parser = argparse.ArgumentParser(description="Generate a README.md file for a Python repository.")
-    parser.add_argument("model",
-                        choices=["gemini", "openai", "claude", "ollama", "combined"],
-                        default="combined",
-                        nargs='?',
-                        help="The model to use for generating the README. Default is 'combined'.")
+    parser = argparse.ArgumentParser(
+        description="Generate a README.md file for a Python repository."
+    )
+    parser.add_argument(
+        "model",
+        choices=["gemini", "openai", "claude", "ollama", "combined"],
+        default="combined",
+        nargs="?",
+        help="The model to use for generating the README. Default is 'combined'.",
+    )
     args = parser.parse_args()
 
     # Initialize the API based on the chosen model
@@ -122,17 +141,17 @@ def main():
     else:
         api = CombinedApi()
 
-    folder_path = '.'
+    folder_path = "."
     context_text = (
         'This repository contains a Python project called "litemind" '
-        'that provides a wrapper API around LLM Apis as well as an elegant API '
-        'for fully multimodal agentic AI for building conversational agents '
-        'and tools built upon them. Please make sure to explain the difference '
-        'between the API wrapper layer versus the agentic API -- this should also'
-        'be reflected in the examples.'
+        "that provides a wrapper API around LLM Apis as well as an elegant API "
+        "for fully multimodal agentic AI for building conversational agents "
+        "and tools built upon them. Please make sure to explain the difference "
+        "between the API wrapper layer versus the agentic API -- this should also"
+        "be reflected in the examples."
     )
     generate_readme(folder_path, context_text, api=api)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

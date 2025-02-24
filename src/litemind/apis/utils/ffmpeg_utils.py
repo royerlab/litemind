@@ -7,15 +7,20 @@ from typing import Optional, List
 
 from arbol import aprint
 
-from litemind.agent.message_block import MessageBlock
+from litemind.agent.messages.message_block import MessageBlock
 
 
 # function that checks if ffmpeg is available and functional:
-@lru_cache(maxsize=1)
+@lru_cache()
 def is_ffmpeg_available():
     try:
-        import ffmpeg
-        process = subprocess.run(['ffmpeg', '-version'], capture_output=True, text=True)
+        import importlib.util
+
+        if importlib.util.find_spec("ffmpeg") is None:
+            aprint("FFmpeg is not available.")
+            return False
+
+        process = subprocess.run(["ffmpeg", "-version"], capture_output=True, text=True)
         if process.returncode == 0:
             aprint("FFmpeg is available.")
             aprint(process.stdout)
@@ -29,13 +34,15 @@ def is_ffmpeg_available():
         return False
 
 
-from litemind.agent.message import Message
+from litemind.agent.messages.message import Message
 
 
-def convert_video_to_frames_and_audio(video_path: str,
-                                      message: Optional[Message] = None,
-                                      frame_interval: int = 1,
-                                      key_frames: bool = False) -> List[MessageBlock]:
+def convert_video_to_frames_and_audio(
+    video_path: str,
+    message: Optional[Message] = None,
+    frame_interval: int = 1,
+    key_frames: bool = False,
+) -> List[MessageBlock]:
     """
     Converts a video into message blocks by splitting it into frames and an audio file, and appending the frames, audio, and video info.
 
@@ -64,7 +71,7 @@ def convert_video_to_frames_and_audio(video_path: str,
         input_video_path=video_path,
         output_dir=output_dir,
         fps=frame_interval,
-        use_keyframes=key_frames
+        use_keyframes=key_frames,
     )
 
     # Get video information
@@ -80,17 +87,22 @@ def convert_video_to_frames_and_audio(video_path: str,
     # Append video information to the message
     message.append_text(f"Video duration: {video_info['duration']} seconds.\n")
     message.append_text(
-        f"Video resolution: {video_info['resolution'][0]}x{video_info['resolution'][1]}.\n")
+        f"Video resolution: {video_info['resolution'][0]}x{video_info['resolution'][1]}.\n"
+    )
     message.append_text(f"Video codec: {video_info['codec']}.\n")
     message.append_text(f"Video bit rate: {video_info['bit_rate']} bps.\n")
     message.append_text(f"Video frame rate: {video_info['frame_rate']} fps.\n")
     message.append_text(
-        f"Frames sampled every {frame_interval} seconds.\n" if not key_frames else "Key frames extracted.\n")
+        f"Frames sampled every {frame_interval} seconds.\n"
+        if not key_frames
+        else "Key frames extracted.\n"
+    )
 
     # Total number of frames:
     total_frames = len(frames)
     message.append_text(
-        f"the video content is provided as a sequence of image frames.\n")
+        f"the video content is provided as a sequence of image frames.\n"
+    )
     message.append_text(f"Total frames: {total_frames}.\n")
 
     # Append frames to the message
@@ -106,14 +118,15 @@ def convert_video_to_frames_and_audio(video_path: str,
 
         # Append frame to the message
         message.append_text(f"Frame at {time_str} ({i}/ {total_frames}).\n")
-        message.append_image('file://' + frame_path)
+        message.append_image("file://" + frame_path)
 
     # Append audio to the message if it exists:
     if audio_path is not None:
         message.append_text(
-            f"The video's audio is provided as a separate audio file.\n")
+            f"The video's audio is provided as a separate audio file.\n"
+        )
         # Append audio to the message
-        message.append_audio('file://' + audio_path)
+        message.append_audio("file://" + audio_path)
 
     return message.blocks
 
@@ -133,35 +146,37 @@ def get_video_info(video_path: str):
         Dictionary containing video information.
     """
     import ffmpeg
-    probe = ffmpeg.probe(video_path)
-    video_info = next(stream for stream in probe['streams'] if
-                      stream['codec_type'] == 'video')
 
-    duration = float(video_info['duration'])
-    width = int(video_info['width'])
-    height = int(video_info['height'])
-    codec = video_info['codec_name']
-    bit_rate = int(video_info['bit_rate'])
-    frame_rate = eval(video_info['r_frame_rate'])  # Convert frame rate to float
+    probe = ffmpeg.probe(video_path)
+    video_info = next(
+        stream for stream in probe["streams"] if stream["codec_type"] == "video"
+    )
+
+    duration = float(video_info["duration"])
+    width = int(video_info["width"])
+    height = int(video_info["height"])
+    codec = video_info["codec_name"]
+    bit_rate = int(video_info["bit_rate"])
+    frame_rate = eval(video_info["r_frame_rate"])  # Convert frame rate to float
 
     return {
-        'duration': duration,
-        'resolution': (width, height),
-        'codec': codec,
-        'bit_rate': bit_rate,
-        'frame_rate': frame_rate
+        "duration": duration,
+        "resolution": (width, height),
+        "codec": codec,
+        "bit_rate": bit_rate,
+        "frame_rate": frame_rate,
     }
 
 
 def extract_frames_and_audio(
-        input_video_path: str,
-        output_dir: str,
-        image_format: str = "png",
-        fps: float = 1.0,
-        use_keyframes: bool = False,
-        audio_filename: str = "audio.wav",
-        audio_sample_rate: int = 16000,
-        audio_channels: int = 1
+    input_video_path: str,
+    output_dir: str,
+    image_format: str = "png",
+    fps: float = 1.0,
+    use_keyframes: bool = False,
+    audio_filename: str = "audio.wav",
+    audio_sample_rate: int = 16000,
+    audio_channels: int = 1,
 ):
     """
     Extract frames from a video at the specified FPS, or optionally only keyframes.
@@ -200,30 +215,28 @@ def extract_frames_and_audio(
         # In some cases, you can add `eq(pict_type,I)*eq(key,1)` or `eq(pict_type\, I)` as a filter.
         # `vsync='vfr'` helps preserve variable frame rates correctly when using 'select'.
         (
-            ffmpeg
-            .input(input_video_path)
-            .filter('select', 'eq(pict_type,I)')
-            .output(frame_pattern, vsync='vfr',
-                    qscale=2)  # qscale=2 for decent JPEG quality
-            .global_args('-loglevel', 'quiet',
-                         '-nostats')  # Suppress stderr output
+            ffmpeg.input(input_video_path)
+            .filter("select", "eq(pict_type,I)")
+            .output(
+                frame_pattern, vsync="vfr", qscale=2
+            )  # qscale=2 for decent JPEG quality
+            .global_args("-loglevel", "quiet", "-nostats")  # Suppress stderr output
             .run(quiet=True, overwrite_output=True)
         )
     else:
         (
-            ffmpeg
-            .input(input_video_path)
-            .filter('fps', fps=fps)
+            ffmpeg.input(input_video_path)
+            .filter("fps", fps=fps)
             .output(frame_pattern, qscale=2)  # qscale=2 for decent JPEG quality
-            .global_args('-loglevel', 'quiet',
-                         '-nostats')  # Suppress stderr output
+            .global_args("-loglevel", "quiet", "-nostats")  # Suppress stderr output
             .run(quiet=True, overwrite_output=True)
         )
 
     # First determine if there exists an audio stream:
     probe = ffmpeg.probe(input_video_path)
-    audio_streams = [stream for stream in probe['streams'] if
-                     stream['codec_type'] == 'audio']
+    audio_streams = [
+        stream for stream in probe["streams"] if stream["codec_type"] == "audio"
+    ]
 
     # Extract audio to WAV if an audio stream exists:
     if audio_streams:
@@ -231,17 +244,15 @@ def extract_frames_and_audio(
         # Extract audio to a WAV file
         audio_output_path = os.path.join(output_dir, audio_filename)
         (
-            ffmpeg
-            .input(input_video_path)
+            ffmpeg.input(input_video_path)
             .output(
                 audio_output_path,
-                format='wav',
-                acodec='pcm_s16le',  # 16-bit PCM
+                format="wav",
+                acodec="pcm_s16le",  # 16-bit PCM
                 ac=audio_channels,  # number of channels (mono = 1)
-                ar=audio_sample_rate  # sample rate
+                ar=audio_sample_rate,  # sample rate
             )
-            .global_args('-loglevel', 'quiet',
-                         '-nostats')  # Suppress stderr output
+            .global_args("-loglevel", "quiet", "-nostats")  # Suppress stderr output
             .run(quiet=True, overwrite_output=True)
         )
     else:

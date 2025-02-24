@@ -23,8 +23,7 @@ def convert_image_to_jpeg(file_path: str) -> str:
     # Open the image file:
     with Image.open(file_path) as img:
         # Create a temporary file to save the image:
-        with tempfile.NamedTemporaryFile(suffix=".jpg",
-                                         delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as temp_file:
             # Save the image as a JPEG file:
             img.save(temp_file.name, "JPEG")
 

@@ -2,22 +2,25 @@ import pytest
 from arbol import aprint
 
 from litemind.agent.agent import Agent
-from litemind.agent.conversation import Conversation
-from litemind.agent.message import Message
-from litemind.agent.message_block_type import BlockType
+from litemind.agent.messages.conversation import Conversation
+from litemind.agent.messages.message import Message
+from litemind.agent.messages.message_block_type import BlockType
 from litemind.apis.model_features import ModelFeatures
-from litemind.apis.openai.openai_api import OpenAIApi
-from litemind.apis.openai.utils.openai_api_key import \
-    is_openai_api_key_available
+from litemind.apis.providers.openai.openai_api import OpenAIApi
+from litemind.apis.providers.openai.utils.openai_api_key import (
+    is_openai_api_key_available,
+)
 
 
-@pytest.mark.skipif(not is_openai_api_key_available(),
-                    reason="requires OpenAI key to run")
+@pytest.mark.skipif(
+    not is_openai_api_key_available(), reason="requires OpenAI key to run"
+)
 def test_agent_text_with_openai():
     # Create messages:
-    system_message = Message(role='system',
-                             text='You are an omniscient all-knowing being called Ohmm')
-    user_message = Message(role='user', text='Who are you?')
+    system_message = Message(
+        role="system", text="You are an omniscient all-knowing being called Ohmm"
+    )
+    user_message = Message(role="user", text="Who are you?")
 
     # Create conversation:
     conversation = Conversation()
@@ -41,23 +44,27 @@ def test_agent_text_with_openai():
 
     # Check response:
     assert len(agent.conversation) == 3
-    assert 'I am Ohmm' in reply
-    assert agent.conversation[0].role == 'system'
-    assert 'You are an omniscient all-knowing being called Ohmm' in \
-           agent.conversation[0]
-    assert agent.conversation[1].role == 'user'
-    assert 'Who are you?' in agent.conversation[1]
+    assert "I am Ohmm" in reply
+    assert agent.conversation[0].role == "system"
+    assert (
+        "You are an omniscient all-knowing being called Ohmm" in agent.conversation[0]
+    )
+    assert agent.conversation[1].role == "user"
+    assert "Who are you?" in agent.conversation[1]
 
 
-@pytest.mark.skipif(not is_openai_api_key_available(),
-                    reason="requires OpenAI key to run")
+@pytest.mark.skipif(
+    not is_openai_api_key_available(), reason="requires OpenAI key to run"
+)
 def test_message_image():
     # Create messages:
-    system_message = Message(role='system',
-                             text='You are an omniscient all-knowing being called Ohmm')
-    user_message = Message(role='user', text='Can you describe what you see?')
+    system_message = Message(
+        role="system", text="You are an omniscient all-knowing being called Ohmm"
+    )
+    user_message = Message(role="user", text="Can you describe what you see?")
     user_message.append_image(
-        'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Einstein_1921_by_F_Schmutzer_-_restoration.jpg/456px-Einstein_1921_by_F_Schmutzer_-_restoration.jpg')
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Einstein_1921_by_F_Schmutzer_-_restoration.jpg/456px-Einstein_1921_by_F_Schmutzer_-_restoration.jpg"
+    )
 
     # Create conversation:
     conversation = Conversation()
@@ -68,11 +75,10 @@ def test_message_image():
 
     # Check conversation length and contents:
     assert len(conversation) == 2
-    assert conversation[0].role == 'system'
-    assert 'You are an omniscient all-knowing being called Ohmm' in \
-           conversation[0]
-    assert conversation[1].role == 'user'
-    assert 'Can you describe what you see?' in conversation[1]
+    assert conversation[0].role == "system"
+    assert "You are an omniscient all-knowing being called Ohmm" in conversation[0]
+    assert conversation[1].role == "user"
+    assert "Can you describe what you see?" in conversation[1]
     assert len(conversation[1]) == 2
     assert conversation[1][1].block_type == BlockType.Image
 
@@ -91,4 +97,4 @@ def test_message_image():
 
     # Check response:
     assert len(agent.conversation) == 3
-    assert 'sepia' in reply or 'photograph' in reply or 'chalkboard' in reply
+    assert "sepia" in reply or "photograph" in reply or "chalkboard" in reply

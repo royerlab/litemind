@@ -39,7 +39,7 @@ def uri_to_local_file_path(file_uri: str) -> str:
 
     # ---------- SCENARIO 1: If it's a local file, return its absolute path ----------
     # 1(a). file:// URI
-    if parsed.scheme == 'file':
+    if parsed.scheme == "file":
         local_path = os.path.abspath(parsed.path)
         if os.path.exists(local_path):
             return local_path
@@ -49,18 +49,17 @@ def uri_to_local_file_path(file_uri: str) -> str:
         return os.path.abspath(file_uri)
 
     # ---------- SCENARIO 2: If it's remote, download to a temp directory ----------
-    if parsed.scheme in ['http', 'https', 'ftp']:
+    if parsed.scheme in ["http", "https", "ftp"]:
         with requests.get(file_uri, headers=headers, stream=True) as r:
             r.raise_for_status()
 
             # Attempt to derive filename from the URL path
             filename = os.path.basename(parsed.path)
             # If there's no filename or no extension in the URL, we might check Content-Type
-            if not filename or '.' not in filename:
-                content_type = r.headers.get('Content-Type', '')
+            if not filename or "." not in filename:
+                content_type = r.headers.get("Content-Type", "")
                 # Attempt to guess an extension from the content-type
-                guessed_ext = mimetypes.guess_extension(
-                    content_type.split(';')[0])
+                guessed_ext = mimetypes.guess_extension(content_type.split(";")[0])
                 if guessed_ext is None:
                     guessed_ext = ".bin"
                 if not filename:
@@ -84,20 +83,20 @@ def uri_to_local_file_path(file_uri: str) -> str:
     # We try to guess a filename/extension, especially if it's data:... with a MIME type
     mime_type = None
     b64_data = file_uri
-    if file_uri.startswith('data:'):
+    if file_uri.startswith("data:"):
         # e.g., data:application/pdf;base64,JVBERi0xLjQK...
-        header, b64_data = file_uri.split(',', 1)
+        header, b64_data = file_uri.split(",", 1)
         # header might be 'data:application/pdf;base64'
         # Extract 'application/pdf'
-        if ';' in header:
+        if ";" in header:
             # e.g. 'data:application/pdf;base64'
-            mime_type = header.split(':', 1)[1].split(';', 1)[
-                0]  # 'application/pdf'
+            mime_type = header.split(":", 1)[1].split(";", 1)[0]  # 'application/pdf'
 
     # If it is none of these cases the raise exception:
     if not b64_data:
         raise ValueError(
-            f"Invalid video URI: '{file_uri}' (must start with 'data:video/', 'http://', 'https://', 'ftp://', or 'file://')")
+            f"Invalid video URI: '{file_uri}' (must start with 'data:video/', 'http://', 'https://', 'ftp://', or 'file://')"
+        )
 
     # Decode base64
     file_data = base64.b64decode(b64_data)

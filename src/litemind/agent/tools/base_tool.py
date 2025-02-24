@@ -5,11 +5,10 @@ from typing import Any
 class BaseTool(ABC):
     """Abstract base class for a tool."""
 
-    def __init__(self,
-                 name: str,
-                 description: str):
+    def __init__(self, name: str, description: str):
         self.name = name
         self.description = description
+        self.parameters = {}
 
     def __repr__(self):
         return f"{self.name}(description={self.description})"
@@ -42,5 +41,6 @@ class BaseTool(ABC):
 
         if args:
             raise ValueError(
-                "Positional arguments are not supported. Use keyword arguments instead.")
+                "Positional arguments are not supported. Use keyword arguments instead."
+            )
         return self.execute(*args, **kwargs)

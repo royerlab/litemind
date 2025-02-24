@@ -1,11 +1,11 @@
-
 from litemind.agent.utils.folder_description import (
     human_readable_size,
     generate_tree_structure,
     read_file_content,
     read_binary_file_info,
-    file_info_header
+    file_info_header,
 )
+
 
 def test_human_readable_size():
     assert human_readable_size(500) == "500 bytes"
@@ -24,9 +24,7 @@ def test_generate_tree_structure(tmp_path):
     (tmp_path / "folder" / "subfolder" / "file2.txt").write_text("content")
 
     expected_tree = (
-        "├── file.txt (7 bytes)\n"
-        "└── subfolder/\n"
-        "    └── file2.txt (7 bytes)\n"
+        "├── file.txt (7 bytes)\n" "└── subfolder/\n" "    └── file2.txt (7 bytes)\n"
     )
 
     assert generate_tree_structure(str(tmp_path / "folder")) == expected_tree
@@ -37,12 +35,14 @@ def test_read_file_content(tmp_path):
     file_path.write_text("This is a test file.")
     assert read_file_content(file_path) == "This is a test file."
 
+
 def test_read_binary_file_info(tmp_path):
     file_path = tmp_path / "file.bin"
-    file_path.write_bytes(b'\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09')
+    file_path.write_bytes(b"\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09")
     size, hex_content = read_binary_file_info(file_path)
     assert size == 10
     assert hex_content == "00010203040506070809"
+
 
 def test_file_info_header(tmp_path):
     file_path = tmp_path / "file.txt"

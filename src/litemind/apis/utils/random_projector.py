@@ -4,18 +4,16 @@ import numpy as np
 
 
 class DeterministicRandomProjector:
-    def __init__(self, original_dim: int, reduced_dim: int,
-                 random_state: int = 42):
+    def __init__(self, original_dim: int, reduced_dim: int, random_state: int = 42):
         self.original_dim = original_dim
         self.reduced_dim = reduced_dim
         if random_state is not None:
             np.random.seed(random_state)
-        self.R = np.random.randn(reduced_dim, original_dim) / np.sqrt(
-            original_dim)
+        self.R = np.random.randn(reduced_dim, original_dim) / np.sqrt(original_dim)
 
-    def transform(self,
-                  embeddings: Union[Sequence[Sequence[float]], np.ndarray]) -> \
-            List[List[float]]:
+    def transform(
+        self, embeddings: Union[Sequence[Sequence[float]], np.ndarray]
+    ) -> List[List[float]]:
         """
         Project a batch of vectors onto the reduced dimension.
 

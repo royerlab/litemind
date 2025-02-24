@@ -8,8 +8,7 @@ import threading
 
 import pytest
 
-from litemind.utils.normalise_uri_to_local_file_path import \
-    uri_to_local_file_path
+from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_path
 
 
 @pytest.fixture
@@ -46,7 +45,7 @@ def ephemeral_http_server():
         # We override do_GET to serve the content and capture the User-Agent.
         def do_GET(self):
             # Capture User-Agent
-            ContentHolder.user_agent = self.headers.get('User-Agent')
+            ContentHolder.user_agent = self.headers.get("User-Agent")
 
             self.send_response(200)
             self.send_header("Content-Type", "application/octet-stream")
@@ -180,8 +179,7 @@ def test_invalid_base64():
     with pytest.raises(Exception) as exc:
         uri_to_local_file_path(invalid_b64)
     # Typically, base64.binascii.Error or ValueError for bad padding, etc.
-    assert "decode" in str(exc.value).lower() or "padding" in str(
-        exc.value).lower()
+    assert "decode" in str(exc.value).lower() or "padding" in str(exc.value).lower()
 
 
 def test_wikimedia_download():
@@ -197,20 +195,21 @@ def test_wikimedia_download():
 
     # 2. Check that the filename ends with what we expect from the URL path
     expected_extension = ".jpg"
-    assert local_file.endswith(expected_extension), (
-        f"Downloaded file name should end with {expected_extension} but got {local_file[-len(expected_extension):]}"
-    )
+    assert local_file.endswith(
+        expected_extension
+    ), f"Downloaded file name should end with {expected_extension} but got {local_file[-len(expected_extension):]}"
 
     # 3. Check that it's not empty
-    assert os.path.getsize(
-        local_file) > 0, "File should not be empty after download."
+    assert os.path.getsize(local_file) > 0, "File should not be empty after download."
 
 
 def test_save_base64_to_temp_file():
     # Example base64 data URI
-    data_uri = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUA' \
-               'AAAFCAYAAACNbyblAAAAHElEQVQI12P4' \
-               '//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg=='
+    data_uri = (
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUA"
+        "AAAFCAYAAACNbyblAAAAHElEQVQI12P4"
+        "//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg=="
+    )
 
     # Call the function
     temp_file_path = uri_to_local_file_path(data_uri)
@@ -219,7 +218,7 @@ def test_save_base64_to_temp_file():
     assert os.path.exists(temp_file_path)
 
     # Check that the temp file contains some content
-    with open(temp_file_path, 'rb') as f:
+    with open(temp_file_path, "rb") as f:
         content = f.read()
         assert len(content) > 0
 

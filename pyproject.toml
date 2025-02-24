@@ -18,6 +18,8 @@ dependencies = [
     "pydantic",
 ]
 
+
+
 # Development dependencies:
 [project.optional-dependencies]
 dev = [
@@ -56,3 +58,7 @@ embed = [
 # Commands:
 [project.scripts]
 readmegen = "litemind.tools.readme_generator.readme_generator:main"
+
+# pytest options:
+[tool.pytest.ini_options]
+log_cli = true

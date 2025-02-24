@@ -3,7 +3,7 @@ from functools import lru_cache
 from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_path
 
 
-@lru_cache(maxsize=1)
+@lru_cache()
 def is_local_whisper_available() -> bool:
     """
     Check if Whisper is available.
@@ -12,14 +12,16 @@ def is_local_whisper_available() -> bool:
     """
 
     try:
-        import whisper
-        return True
-    except ImportError:
+        import importlib.util
+
+        return importlib.util.find_spec("whisper") is not None
+    except Exception:
         return False
 
 
-def transcribe_audio_with_local_whisper(audio_uri: str,
-                                        model_name: str = "turbo") -> str:
+def transcribe_audio_with_local_whisper(
+    audio_uri: str, model_name: str = "turbo"
+) -> str:
     """
     Transcribe audio using a local instance of Whisper.
 

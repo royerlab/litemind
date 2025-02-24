@@ -1,509 +1,529 @@
 
-# litemind: Agentic AI and LLM API Wrapper for Python
+# litemind: Multimodal Agentic AI and LLM API Wrapper
 
-[![License](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
-[![PyPI version](https://badge.fury.io/py/litemind.svg)](https://badge.fury.io/py/litemind)
-[![codecov](https://codecov.io/gh/<user>/<repo>/branch/main/graph/badge.svg?token=<token>)]()
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-[![Imports: isort](https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=%2334BF49)](https://pycqa.github.io/isort/)
-[![linting: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/charliermarsh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
-[![pytest-md-report](https://raw.githubusercontent.com/lark-parser/pytest-md-report/main/assets/pytest-md-report-badge.svg)](https://github.com/lark-parser/pytest-md-report)
+litemind is a Python library designed to empower developers to build sophisticated conversational agents and tools. It provides a flexible and elegant API for interacting with Large Language Models (LLMs) from various providers, along with a powerful agentic AI framework that supports multimodal inputs and outputs. The library emphasizes ease of use, extensibility, and the ability to create intelligent systems that can reason, act, and interact with the world in a human-like manner.
 
-## Summary
-
-**litemind** is a Python library designed to simplify the interaction with Large Language Models (LLMs) and enable the creation of sophisticated agentic AI applications. It offers two primary APIs:
-
-1.  **Wrapper API**: A unified and intuitive interface to interact with various LLM APIs (like OpenAI, Gemini, Anthropic, Ollama) for tasks such as text generation, image generation, audio transcription, embeddings, and more. This layer abstracts away the complexities of individual API implementations, providing a consistent way to work with different models.
-
-2.  **Agentic API**: A powerful and elegant framework for building multimodal agentic AI. This API allows you to create conversational agents capable of reasoning, using tools, and interacting with various data modalities (text, images, audio, video, documents, tables). It's designed for building complex conversational tools and agents that can understand and respond to rich, multimodal inputs.
-
-**Key Differentiators:**
-
-*   **Unified API Access**: Seamlessly switch between different LLM providers using a consistent Python API.
-*   **Multimodal Agentic AI**: Build advanced agents that can process and generate multimodal content, enabling richer and more interactive AI applications.
-*   **Tool Integration**: Easily integrate tools and functions into your agents, allowing them to perform actions and access external information.
-*   **Flexibility and Extensibility**: Designed to be modular and extensible, allowing you to customize and expand its capabilities.
+The core philosophy behind litemind is to provide a unified and intuitive interface for working with LLMs, abstracting away the complexities of different API providers and model capabilities. This allows developers to focus on building their applications rather than wrestling with API-specific details. Furthermore, litemind's agentic AI framework enables the creation of agents that can perform complex tasks, reason about their actions, and leverage a variety of tools to achieve their goals.
 
 ## Features
 
-**Wrapper API Layer:**
-
-*   **Unified Interface for LLMs**: Access multiple LLM APIs (OpenAI, Gemini, Anthropic, Ollama) through a single, consistent Python API.
-*   **Text Generation**: Generate text completions with various models, supporting features like streaming and structured output.
-*   **Multimodal Generation**: Generate images and audio using supported models.
-*   **Multimodal Input Handling**: Process messages with text, images, audio, video, documents, and tables as input.
-*   **Embeddings**: Generate embeddings for text, images, audio, and videos.
-*   **Description/Analysis**: Describe and analyse images, audio, and videos using multimodal models.
-*   **Audio Transcription**: Transcribe audio files using local or remote models.
-*   **Document Conversion**: Convert documents (PDF, etc.) to markdown format, extracting text and images.
-*   **Video Conversion**: Extract images and audio from video files.
-*   **Callback Management**: Implement callbacks for various API events (streaming, model selection, etc.) for logging, monitoring, and custom behaviours.
-
-**Agentic API Layer:**
-
-*   **Conversational Agents**: Build stateful conversational agents with memory and context management.
-*   **ReAct Agents**: Implement advanced ReAct agents capable of reasoning and acting in a loop, leveraging tools for complex tasks.
-*   **Tool Integration**: Easily define and integrate custom tools (functions, agents) for extending agent capabilities.
-*   **Multimodal Messages**: Create and process messages with multiple content blocks (text, images, audio, video, documents, tables).
-*   **Message Blocks**: Represent different data modalities (text, images, audio, video, documents, tables) as modular blocks within messages.
-*   **Conversation History**: Manage conversation history for stateful agents.
-*   **Flexible Message Handling**: Append folders, archives, tables, documents, and various media types to messages for rich input processing.
+*   **LLM API Wrapper:**
+    *   Unified API for multiple LLM providers (OpenAI, Anthropic, Ollama, Google Gemini).
+    *   Automatic model selection based on features (text generation, image generation, etc.).
+    *   Support for various input types (text, images, audio, video, documents, tables, etc.).
+    *   Support for structured output (JSON, Pydantic models).
+    *   Token counting and management.
+    *   Callback system for monitoring and logging API calls.
+*   **Agentic AI Framework:**
+    *   ReAct (Reasoning and Acting) agent implementation.
+    *   Tool support (function tools, agent tools).
+    *   Conversation management.
+    *   Multimodal input and output support.
+*   **Multimodal Capabilities:**
+    *   Image generation.
+    *   Audio transcription and generation.
+    *   Video processing (frame extraction, audio extraction).
+    *   Document conversion (PDF, CSV, etc.).
+    *   Text and media embeddings.
+*   **Extensibility:**
+    *   Easy integration of new LLM providers.
+    *   Custom tool creation.
+    *   Custom message block types.
+*   **Code Health:**
+    *   Comprehensive unit tests.
+    *   Integration with testing tools (pytest, pytest-html, pytest-cov, pytest-md-report).
 
 ## Installation
+
+To install litemind, use pip:
 
 ```bash
 pip install litemind
 ```
 
-**Optional Dependencies:**
+To install optional dependencies, use the following:
 
-For extended functionalities, install optional dependencies:
-
-*   **RAG (Retrieval-Augmented Generation):**
-    ```bash
-    pip install litemind[rag]
-    ```
-    (Includes `chromadb`)
-
-*   **Whisper (Local Audio Transcription):**
-    ```bash
-    pip install litemind[whisper]
-    ```
-    (Includes `openai-whisper`)
-
-*   **Documents (Document Processing):**
-    ```bash
-    pip install litemind[documents]
-    ```
-    (Includes `pymupdf`, `pymupdf4llm`)
-
-*   **Tables (Table Data Handling):**
-    ```bash
-    pip install litemind[tables]
-    ```
-    (Includes `pandas`, `numpy`, `chardet`, `tabulate`)
-
-*   **Videos (Video Processing):**
-    ```bash
-    pip install litemind[videos]
-    ```
-    (Includes `ffmpeg-python`, `imageio[ffmpeg]`)
-
-*   **Embeddings (FastEmbed Embeddings):**
-    ```bash
-    pip install litemind[embed]
-    ```
-    (Includes `fastembed`)
-
-*   **Test Dependencies:**
-    ```bash
-    pip install litemind[test]
-    ```
-    (Includes `pytest`, `pytest-html`, `pytest-cov`, `pytest-md-report`)
-
-*   **All Optional Features:**
-    ```bash
-    pip install litemind[rag,whisper,documents,tables,videos,embed,test]
-    ```
+```bash
+pip install litemind[rag,whisper,documents,tables,videos,embed]
+```
 
 ## Usage
 
-### Wrapper API Examples
+### API Wrapper Examples
 
-**1. Text Generation with OpenAI:**
-
-```python
-from litemind.apis.openai.openai_api import OpenAIApi
-from litemind.agent.message import Message
-
-api = OpenAIApi()
-messages = [
-    Message(role="user", text="Write a short poem about the moon.")
-]
-response = api.generate_text(messages=messages)
-print(response.content)
-```
-
-**2. Image Generation with Gemini:**
+#### Text Generation
 
 ```python
-from litemind.apis.google.google_api import GeminiApi
+from litemind.apis.combined_api import CombinedApi
+from litemind.agent.messages.message import Message
 
-api = GeminiApi()
-image_uri = api.generate_image(positive_prompt="A futuristic cityscape at night.")
-print(f"Image saved at: {image_uri}")
+# Initialize the API (uses OpenAI, Anthropic, Ollama, and Gemini by default)
+api = CombinedApi()
+
+# Create a message
+message = Message(role="user", text="Write a short poem about a cat.")
+
+# Generate text
+response = api.generate_text(messages=[message])
+
+# Print the response
+print(response)
+# Expected output (may vary):
+# *assistant*:
+# In shadows deep, a feline grace,
+# With eyes of emerald, time and space.
+# A velvet paw, a silent tread,
+# A purring song, softly spread.
 ```
 
-**3. Audio Transcription with Ollama (using local Whisper model):**
-
-```python
-from litemind.apis.ollama.ollama_api import OllamaApi
-from litemind.apis.default_api import DefaultApi
-
-# Use DefaultApi to access local whisper model
-api = DefaultApi()
-audio_uri = "path/to/your/audiofile.wav" # Replace with your audio file path
-transcription = api.transcribe_audio(audio_uri=audio_uri)
-print(f"Transcription: {transcription}")
-```
-
-**4. Text Embedding with Combined API (using best available model):**
+#### Image Generation
 
 ```python
 from litemind.apis.combined_api import CombinedApi
 
+# Initialize the API
 api = CombinedApi()
-texts = ["First text for embedding", "Second text for embedding"]
-embeddings = api.embed_texts(texts=texts)
-print(f"Embeddings: {embeddings}")
+
+# Generate an image
+image = api.generate_image(positive_prompt="A futuristic city at night, cyberpunk style")
+
+# Display the image (requires PIL)
+image.show()
+```
+
+#### Audio Transcription
+
+```python
+from litemind.apis.combined_api import CombinedApi
+
+# Initialize the API
+api = CombinedApi()
+
+# Transcribe audio
+transcription = api.transcribe_audio(audio_uri="file:///path/to/your/audio.wav")
+
+# Print the transcription
+print(transcription)
+```
+
+#### Multimodal Input (Text and Image)
+
+```python
+from litemind.apis.combined_api import CombinedApi
+from litemind.agent.messages.message import Message
+
+# Initialize the API
+api = CombinedApi()
+
+# Create a message with text and an image
+message = Message(role="user")
+message.append_text("Describe the image:")
+message.append_image("file:///path/to/your/image.jpg")
+
+# Generate text
+response = api.generate_text(messages=[message])
+
+# Print the response
+print(response)
 ```
 
 ### Agentic API Examples
 
-**1. Simple Conversational Agent:**
+#### Simple Agent with a Tool
 
 ```python
 from litemind.agent.agent import Agent
-from litemind.apis.openai.openai_api import OpenAIApi
-from litemind.agent.message import Message
+from litemind.agent.messages.message import Message
+from litemind.agent.tools.function_tool import FunctionTool
+from litemind.agent.tools.toolset import ToolSet
+from litemind.apis.combined_api import CombinedApi
 
-api = OpenAIApi()
-agent = Agent(api=api, name="SimpleChatAgent")
+# Define a tool function
+def get_current_date() -> str:
+    """Returns the current date."""
+    from datetime import datetime
 
-# System message to set the agent's persona
-agent += Message(role="system", text="You are a helpful and friendly chatbot.")
+    return datetime.now().strftime("%Y-%m-%d")
 
-# User query
-user_query = "Hello, how can you help me today?"
-response = agent(text=user_query)
+# Create a toolset and add the function tool
+toolset = ToolSet()
+toolset.add_function_tool(get_current_date, "Returns the current date")
 
-print(f"Agent's Response: {response.content}")
+# Initialize the API
+api = CombinedApi()
+
+# Create an agent
+agent = Agent(api=api, toolset=toolset)
+
+# Create a user message
+message = Message(role="user", text="What is the current date?")
+
+# Run the agent
+response = agent(message)
+
+# Print the response
+print(response)
+# Expected output (may vary):
+# *assistant*:
+# The current date is: 2024-02-23
 ```
 
-**2. ReAct Agent with Tool Integration (Date Calculation):**
+#### ReAct Agent with Multiple Tools
 
 ```python
 from litemind.agent.react.react_agent import ReActAgent
+from litemind.agent.messages.message import Message
+from litemind.agent.tools.function_tool import FunctionTool
 from litemind.agent.tools.toolset import ToolSet
-from litemind.apis.openai.openai_api import OpenAIApi
+from litemind.apis.combined_api import CombinedApi
 from datetime import datetime, timedelta
 
-def add_days_to_date(date_str, days):
-    """Tool function to add days to a date in YYYY-MM-DD format."""
+# Define tool functions
+def get_current_date() -> str:
+    """Returns the current date."""
+    return datetime.now().strftime("%Y-%m-%d")
+
+def add_days_to_date(date_str: str, days: int) -> str:
+    """Add a certain number of days to a given date"""
     date = datetime.strptime(date_str, "%Y-%m-%d")
     new_date = date + timedelta(days=days)
     return new_date.strftime("%Y-%m-%d")
 
-api = OpenAIApi()
+# Create a toolset and add the function tools
 toolset = ToolSet()
-toolset.add_function_tool(
-    add_days_to_date,
-    "Add a certain number of days to a given date. Input date must be in format YYYY-MM-DD."
-)
+toolset.add_function_tool(get_current_date, "Returns the current date")
+toolset.add_function_tool(add_days_to_date, "Add a certain number of days to a given date")
 
-react_agent = ReActAgent(
-    api=api,
-    toolset=toolset,
-    name="DateCalculatorAgent"
-)
+# Initialize the API
+api = CombinedApi()
 
-query = "What will be the date 10 days after 2024-03-15?"
-response = react_agent(text=query)
+# Create a ReAct agent
+agent = ReActAgent(api=api, toolset=toolset, temperature=0.0, max_reasoning_steps=5)
 
-print(f"ReAct Agent Response: {response.content}")
+# Use the agent to determine the date 15 days later
+response = agent("What date is 15 days from today?")
+
+# Print the response
+print(response)
+# Expected output (may vary):
+# 2024-03-09
 ```
 
-**3. Multimodal Agent with Image Description:**
+## Concepts
+
+*   **API Wrapper:** The API wrapper layer provides a unified interface to interact with various LLM providers. The `CombinedApi` class is the main entry point, which automatically selects the best available model based on the requested features.
+*   **Agentic AI:** The agentic AI framework enables the creation of intelligent agents that can reason, act, and interact with the world. The `Agent` class is the base class for creating agents.
+*   **Messages:** Messages are the fundamental unit of communication between the agent and the LLM. The `Message` class represents a message, which can contain text, images, audio, video, documents, and tables.
+*   **Message Blocks:** `MessageBlock` is a class that represents a block of content within a message. It can be of various types, such as text, JSON, code, image, audio, video, document, or table.
+*   **Conversations:** The `Conversation` class manages the history of messages exchanged between the agent and the user.
+*   **Tools:** Tools are functions that an agent can use to interact with the external world. The `ToolSet` class manages a collection of tools. The `FunctionTool` class allows wrapping a Python function as a tool. The `ToolAgent` class allows wrapping an agent as a tool.
+*   **ReAct Agent:** The `ReActAgent` class implements the ReAct (Reasoning and Acting) methodology, enabling agents to reason through chain-of-thought and systematic action-observation loops.
+
+## More Code Examples
+
+### Multimodal Agent with Image and Text
 
 ```python
 from litemind.agent.agent import Agent
-from litemind.apis.google.google_api import GeminiApi
-from litemind.agent.message import Message
+from litemind.agent.messages.message import Message
+from litemind.apis.combined_api import CombinedApi
 
-api = GeminiApi()
-agent = Agent(api=api, name="MultimodalAgent")
+# Initialize the API
+api = CombinedApi()
 
-image_path = "path/to/your/image.jpg" # Replace with your image path
+# Create an agent
+agent = Agent(api=api)
 
-user_message = Message(role="user")
-user_message.append_text("Describe this image in detail:")
-user_message.append_image(image_path)
+# Create a message with text and an image
+message = Message(role="user")
+message.append_text("Describe the image:")
+message.append_image("file:///path/to/your/image.jpg")  # Replace with your image path
 
-response = agent(message=user_message)
+# Run the agent
+response = agent(message)
 
-print(f"Multimodal Agent's Image Description: {response.content}")
+# Print the response
+print(response)
 ```
 
-**4. Agent with Conversation History:**
+### Agent with Audio Transcription
 
 ```python
 from litemind.agent.agent import Agent
-from litemind.apis.openai.openai_api import OpenAIApi
-from litemind.agent.message import Message
+from litemind.agent.messages.message import Message
+from litemind.apis.combined_api import CombinedApi
 
-api = OpenAIApi()
-agent = Agent(api=api, name="MemoryAgent")
+# Initialize the API
+api = CombinedApi()
 
-# First turn
-response1 = agent(text="Hello, I'm interested in ordering a pizza.")
-print(f"Agent: {response1.content}")
+# Create an agent
+agent = Agent(api=api)
 
-# Second turn, agent remembers the context
-response2 = agent(text="What are my options for toppings?")
-print(f"Agent: {response2.content}")
+# Create a message with audio
+message = Message(role="user")
+message.append_text("Transcribe the audio:")
+message.append_audio("file:///path/to/your/audio.wav")  # Replace with your audio path
 
-# Third turn, continuing the conversation
-response3 = agent(text="I'll take pepperoni and mushrooms.")
-print(f"Agent: {response3.content}")
+# Run the agent
+response = agent(message)
+
+# Print the response
+print(response)
 ```
 
-## Code Examples
-
-These examples are inspired by the unit tests and demonstrate various functionalities of `litemind`.
-
-**1. Text Embedding:**
+### Agent with Video Processing
 
 ```python
+from litemind.agent.agent import Agent
+from litemind.agent.messages.message import Message
 from litemind.apis.combined_api import CombinedApi
-api_instance = CombinedApi()
-embedding_model_name = api_instance.get_best_model(
-    ModelFeatures.TextEmbeddings)
-texts = ["Hello, world!", "Testing embeddings."]
-embeddings = api_instance.embed_texts(texts=texts,
-                                      model_name=embedding_model_name,
-                                      dimensions=512)
-print(embeddings)
+
+# Initialize the API
+api = CombinedApi()
+
+# Create an agent
+agent = Agent(api=api)
+
+# Create a message with video
+message = Message(role="user")
+message.append_text("Describe the video:")
+message.append_video("file:///path/to/your/video.mp4")  # Replace with your video path
+
+# Run the agent
+response = agent(message)
+
+# Print the response
+print(response)
 ```
 
-**2. Audio Embedding:**
+### Agent with Document Processing
 
 ```python
+from litemind.agent.agent import Agent
+from litemind.agent.messages.message import Message
 from litemind.apis.combined_api import CombinedApi
-from litemind.apis.tests.base_test import BaseTest
-api_instance = CombinedApi()
-embedding_model_name = api_instance.get_best_model(
-    ModelFeatures.AudioEmbeddings)
-audio_1_uri = BaseTest._get_local_test_audio_uri('harvard.wav')
-audio_2_uri = BaseTest._get_local_test_audio_uri('preamble.wav')
-embeddings = api_instance.embed_audios(audio_uris=[audio_1_uri, audio_2_uri],
-                                       model_name=embedding_model_name,
-                                       dimensions=512)
-print(embeddings)
+
+# Initialize the API
+api = CombinedApi()
+
+# Create an agent
+agent = Agent(api=api)
+
+# Create a message with a document
+message = Message(role="user")
+message.append_text("Summarize the document:")
+message.append_document("file:///path/to/your/document.pdf")  # Replace with your document path
+
+# Run the agent
+response = agent(message)
+
+# Print the response
+print(response)
 ```
 
-**3. Video Embedding:**
+### Agent with Table Processing
 
 ```python
+from litemind.agent.agent import Agent
+from litemind.agent.messages.message import Message
 from litemind.apis.combined_api import CombinedApi
-from litemind.apis.tests.base_test import BaseTest
-api_instance = CombinedApi()
-embedding_model_name = api_instance.get_best_model(
-    ModelFeatures.VideoEmbeddings)
-video_uri_1 = BaseTest._get_local_test_video_uri('flying.mp4')
-video_uri_2 = BaseTest._get_local_test_video_uri('lunar_park.mp4')
-embeddings = api_instance.embed_videos(video_uris=[video_uri_1, video_uri_2],
-                                       model_name=embedding_model_name,
-                                       dimensions=512)
-print(embeddings)
+from pandas import DataFrame
+
+# Initialize the API
+api = CombinedApi()
+
+# Create an agent
+agent = Agent(api=api)
+
+# Create a table
+table = DataFrame({"A": [1, 2, 3], "B": [4, 5, 6]})
+
+# Create a message with a table
+message = Message(role="user")
+message.append_text("What is the sum of column A?")
+message.append_table(table)
+
+# Run the agent
+response = agent(message)
+
+# Print the response
+print(response)
 ```
 
-**4. Text Generation with Simple Toolset:**
+### Agent with Code Execution
 
 ```python
+from litemind.agent.agent import Agent
+from litemind.agent.messages.message import Message
 from litemind.apis.combined_api import CombinedApi
-from litemind.agent.message import Message
+
+# Initialize the API
+api = CombinedApi()
+
+# Create an agent
+agent = Agent(api=api)
+
+# Create a message with code
+message = Message(role="user")
+message.append_text("Execute this Python code:")
+message.append_code("print('Hello, world!')", lang="python")
+
+# Run the agent
+response = agent(message)
+
+# Print the response
+print(response)
+```
+
+### Agent with JSON Output
+
+```python
+from litemind.agent.agent import Agent
+from litemind.agent.messages.message import Message
+from litemind.apis.combined_api import CombinedApi
+from pydantic import BaseModel
+
+# Initialize the API
+api = CombinedApi()
+
+# Create an agent
+agent = Agent(api=api)
+
+# Define a Pydantic model for the expected output
+class MyModel(BaseModel):
+    name: str
+    age: int
+
+# Create a message with a prompt and a response format
+message = Message(role="user")
+message.append_text("Give me a JSON with a name and age.")
+
+# Run the agent
+response = api.generate_text(
+    messages=[message], response_format=MyModel
+)
+
+# Print the response
+print(response)
+```
+
+### ReAct Agent with a Custom Tool
+
+```python
+from litemind.agent.react.react_agent import ReActAgent
+from litemind.agent.messages.message import Message
+from litemind.agent.tools.function_tool import FunctionTool
 from litemind.agent.tools.toolset import ToolSet
-api_instance = CombinedApi()
+from litemind.apis.combined_api import CombinedApi
 
-def get_delivery_date(order_id: str) -> str:
-    """Fetch the delivery date for a given order ID."""
-    return "2024-11-15"
+# Define a tool function
+def get_current_date() -> str:
+    """Returns the current date."""
+    from datetime import datetime
 
+    return datetime.now().strftime("%Y-%m-%d")
+
+# Create a toolset and add the function tool
 toolset = ToolSet()
-toolset.add_function_tool(
-    get_delivery_date,
-    "Fetch the delivery date for a given order ID"
-)
-default_model_name = api_instance.get_best_model(
-    [ModelFeatures.Tools, ModelFeatures.TextGeneration])
-user_message = Message(role="user",
-                       text="When will my order order_12345 be delivered?")
-messages = [user_message]
-response = api_instance.generate_text(
-    model_name=default_model_name,
-    messages=messages,
-    toolset=toolset
-)
-print(response.content)
-```
+toolset.add_function_tool(get_current_date, "Returns the current date")
 
-**5. Text Generation with Image Input:**
+# Initialize the API
+api = CombinedApi()
 
-```python
-from litemind.apis.combined_api import CombinedApi
-from litemind.agent.message import Message
-from litemind.apis.tests.base_test import BaseTest
-api_instance = CombinedApi()
-default_model_name = api_instance.get_best_model(
-    [ModelFeatures.TextGeneration, ModelFeatures.Image])
-user_message = Message(role='user')
-user_message.append_text('Can you describe what you see in the image?')
-image_path = BaseTest._get_local_test_image_uri('future.jpeg')
-user_message.append_image(image_path)
-messages = [user_message]
-response = api_instance.generate_text(messages=messages,
-                                      model_name=default_model_name)
-print(response.content)
-```
+# Create a ReAct agent
+agent = ReActAgent(api=api, toolset=toolset, temperature=0.0, max_reasoning_steps=5)
 
-**6. Text Generation with Audio Input:**
+# Use the agent to determine the date 15 days later
+response = agent("What date is today?")
 
-```python
-from litemind.apis.combined_api import CombinedApi
-from litemind.agent.message import Message
-from litemind.apis.tests.base_test import BaseTest
-api_instance = CombinedApi()
-default_model_name = api_instance.get_best_model(
-    [ModelFeatures.TextGeneration, ModelFeatures.Audio])
-user_message = Message(role='user')
-user_message.append_text(
-    'Can you describe what you heard in the audio file?')
-audio_path = BaseTest._get_local_test_audio_uri('harvard.wav')
-user_message.append_audio(audio_path)
-messages = [user_message]
-response = api_instance.generate_text(messages=messages,
-                                      model_name=default_model_name)
-print(response.content)
-```
-
-**7. Text Generation with Document Input:**
-
-```python
-from litemind.apis.combined_api import CombinedApi
-from litemind.agent.message import Message
-from litemind.apis.tests.base_test import BaseTest
-api_instance = CombinedApi()
-default_model_name = api_instance.get_best_model(
-    [ModelFeatures.TextGeneration,
-     ModelFeatures.Document,
-     ModelFeatures.Image])
-user_message = Message(role='user')
-user_message.append_text(
-    'Can you write a review for the provided paper? Please break down your comments into major and minor comments.')
-doc_path = BaseTest._get_local_test_document_uri('intracktive_preprint.pdf')
-user_message.append_document(doc_path)
-messages = [user_message]
-response = api_instance.generate_text(messages=messages,
-                                      model_name=default_model_name)
-print(response.content)
+# Print the response
+print(response)
 ```
 
 ## Caveats and Limitations
 
-*   **API Key Management**: Requires users to manage API keys for different LLM providers. Ensure API keys are securely stored and handled.
-*   **Model Compatibility**: Not all models support all features. Feature availability depends on the underlying API and model capabilities.
-*   **Error Handling**: While `litemind` provides a unified API, underlying API errors may still surface. Robust error handling should be implemented in applications using `litemind`.
-*   **Performance**: Performance may vary depending on the chosen LLM provider and model. Consider latency and throughput requirements for your application.
-*   **Local Models**: Local models (like `whisper-local`, `fastembed`, `ollama`) rely on local installations and resources. Ensure these dependencies are correctly set up.
-*   **Evolving APIs**: LLM APIs are constantly evolving. `litemind` aims to provide a stable abstraction layer, but API changes may require updates to the library.
-*   **Structured Output and Tools**: While supported, the reliability and format of structured output and tool usage can vary across different models and APIs. Careful testing and validation are recommended.
+*   **API Key Management:** The library relies on environment variables for API keys. Ensure that your API keys are securely stored and accessible.
+*   **Model Availability:** The availability of specific models and features depends on the LLM provider and your API key's permissions.
+*   **Token Limits:** Be mindful of token limits imposed by LLM providers. The library provides token counting functionality, but you should still manage your prompts and responses to avoid exceeding these limits.
+*   **Error Handling:** While the library includes error handling, it's essential to implement robust error handling in your applications to gracefully handle API errors and unexpected responses.
+*   **Cost:** Using LLM APIs can incur costs. Monitor your usage and set appropriate limits to manage expenses.
+*   **Dependencies:** The library has dependencies on external libraries (e.g., `openai`, `anthropic`, `ollama`, `google-generativeai`, `pillow`, `arbol`, `json-repair`, `tiktoken`, `pydantic`). Ensure that these dependencies are installed and compatible with your environment.
+*   **Open Source Models:** Open source models are not as strong as proprietary models, and may not be able to perform all the tasks.
 
 ## Code Health
 
-Unit tests are implemented using `pytest` and test reports are generated using `pytest-md-report`.
+The code health of the litemind project is assessed through unit tests and code quality checks.
 
-**Test Execution Summary:**
+### Unit Tests
 
-```
-============================= test session starts ==============================
-platform darwin -- Python 3.12.8, pytest-8.3.4, pluggy-1.5.0
-rootdir: /Users/loic.royer/workspace/python/litemind
-configfile: pyproject.toml
-plugins: html-4.1.1, metadata-3.1.1, anyio-4.8.0, md-report-0.6.3
-collected 459 items / 423 deselected / 36 selected
+The project includes a comprehensive suite of unit tests to ensure the correctness and reliability of the code. The test reports are located in the `test_reports` directory.
 
-src/litemind/agent/tools/test/test_agent_tool.py ...                     [  8%]
-src/litemind/agent/tools/test/test_function_tool.py .......              [ 27%]
-src/litemind/agent/tools/test/test_toolset.py .....                      [ 41%]
-src/litemind/agent/tools/utils/test/test_inspect_function.py ..          [ 47%]
-src/litemind/apis/openai/utils/test/test_tools.py .                      [ 50%]
-src/litemind/apis/tests/test_apis_text_generation.py s.....s...F.s.....  [100%]
+*   **Test Report:** `test_report.md` provides a summary of the test results.
+*   **Test Report Standard Output:** `test_report_stdout.txt` contains the standard output from the test runs, including detailed logs and error messages.
 
-=================================== FAILURES ===================================
-_ TestBaseApiImplementationsTextGeneration.test_text_generation_with_simple_toolset_and_struct_output[GeminiApi] _
-...
-E           google.api_core.exceptions.InvalidArgument: 400 Function calling with a response mime type: 'application/json' is unsupported
-...
-=============================== warnings summary ===============================
-...
-=========================== short test summary info ============================
-FAILED src/litemind/apis/tests/test_apis_text_generation.py::TestBaseApiImplementationsTextGeneration::test_text_generation_with_simple_toolset_and_struct_output[GeminiApi]
-= 1 failed, 32 passed, 3 skipped, 423 deselected, 5 warnings in 167.19s (0:02:47) =
-```
+#### Test Results Summary
 
-**Detailed Test Report:**
+The test report (`test_report.md`) provides a detailed breakdown of the test results.
 
-```
-|                           filepath                           |                                              function                                               | passed | failed | skipped | SUBTOTAL |
-| ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- | -----: | -----: | ------: | -------: |
-| src/litemind/agent/tools/test/test_agent_tool.py             | test_agent_tool_translation                                                                         |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tools/test/test_agent_tool.py             | test_agent_tool                                                                                     |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tools/test/test_agent_tool.py             | test_agent_tool_with_internal_tool                                                                  |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tools/test/test_function_tool.py          | test_tool_initialization                                                                            |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tools/test/test_function_tool.py          | test_tool_initialization_automatic_description                                                      |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tools/test/test_function_tool.py          | test_tool_with_no_parameters                                                                        |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tools/test/test_function_tool.py          | test_tool_with_default_parameter                                                                    |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tools/test/test_function_tool.py          | test_tool_execution_with_parameters                                                                 |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tools/test/test_function_tool.py          | test_tool_execution_no_parameters                                                                   |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tools/test/test_function_tool.py          | test_tool_execution_with_default_parameters                                                         |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tools/test/test_toolset.py                | test_toolset_initialization_and_add_tool                                                            |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tools/test/test_toolset.py                | test_toolset_add_function_tool                                                                      |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tools/test/test_toolset.py                | test_toolset_add_agent_tool                                                                         |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tools/test/test_toolset.py                | test_toolset_get_tool                                                                               |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tools/test/test_toolset.py                | test_toolset_list_tools                                                                             |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tools/utils/test/test_inspect_function.py | test_extract_docstring                                                                              |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tools/utils/test/test_inspect_function.py | test_extract_function_info                                                                          |      1 |      0 |       0 |        1 |
-| src/litemind/apis/openai/utils/test/test_tools.py            | test_format_tools_for_openai                                                                        |      1 |      0 |       0 |        1 |
-| src/litemind/apis/tests/test_apis_text_generation.py         | TestBaseApiImplementationsTextGeneration.test_text_generation_with_simple_toolset                   |      5 |      0 |       1 |        6 |
-| src/litemind/apis/tests/test_apis_text_generation.py         | TestBaseApiImplementationsTextGeneration.test_text_generation_with_simple_toolset_and_struct_output |      4 |      1 |       1 |        6 |
-| src/litemind/apis/tests/test_apis_text_generation.py         | TestBaseApiImplementationsTextGeneration.test_text_generation_with_complex_toolset                  |      5 |      0 |       1 |        6 |
-| TOTAL                                                        |                                                                                                     |     32 |      1 |       3 |       36 |
-```
+*   **Total Tests:** 464
+*   **Passed:** 404
+*   **Failed:** 5
+*   **Skipped:** 55
+*   **Warnings:** 78
+
+#### Failed Tests Analysis
+
+The following tests failed:
+
+*   `src/litemind/apis/tests/test_apis_generate_multimodal.py::TestBaseApiImplementationsGenerateMultimodal::test_generate_image[CombinedApi]`
+    *   **Reason:** The test failed because the description of the generated image did not contain the expected keywords ("white" or "blue"). This suggests an issue with the image generation or description capabilities of the `CombinedApi` with the current model configuration.
+*   `src/litemind/apis/tests/test_apis_text_generation.py::TestBaseApiImplementationsTextGeneration::test_text_generation_with_simple_toolset_and_struct_output[OpenAIApi]`
+    *   **Reason:** The test failed because the response was not of type `OrderInfo`. This indicates an issue with the structured output or tool usage with the `OpenAIApi`.
+*   `src/litemind/apis/tests/test_apis_text_generation.py::TestBaseApiImplementationsTextGeneration::test_text_generation_with_simple_toolset_and_struct_output[OllamaApi]`
+    *   **Reason:** The test failed because of a `KeyError: 0`. This suggests an issue with how the `OllamaApi` handles the response from the tool.
+*   `src/litemind/apis/tests/test_apis_text_generation.py::TestBaseApiImplementationsTextGeneration::test_text_generation_with_simple_toolset_and_struct_output[AnthropicApi]`
+    *   **Reason:** The test failed because the response was not of type `OrderInfo`. This indicates an issue with the structured output or tool usage with the `AnthropicApi`.
+*   `src/litemind/apis/tests/test_apis_text_generation.py::TestBaseApiImplementationsTextGeneration::test_text_generation_with_simple_toolset_and_struct_output[CombinedApi]`
+    *   **Reason:** The test failed because the response was not of type `OrderInfo`. This indicates an issue with the structured output or tool usage with the `CombinedApi`.
+
+#### Skipped Tests Analysis
+
+The tests were skipped because the models used for the tests did not support the features required for the tests.
+
+#### Warnings Analysis
+
+The test suite generated 78 warnings. These warnings are related to deprecation, and the use of `torch.load` with `weights_only=False`.
+
+### Code Quality
+
+*   The code is formatted using `black` for consistent style.
+*   The code is checked for linting errors using `flake8`.
 
 ## Roadmap
 
-TODO:
+*   \[ ] RAG (Retrieval-Augmented Generation) integration.
+*   \[ ] Add support for adding nD images to messages.
+*   \[ ] Deal with message sizes in tokens sent to models.
+*   \[ ] Improve and uniformize exception handling.
+*   \[ ] Improve logging with arbol, with option to turn off.
+*   \[ ] Implement 'brainstorming' mode for text generation, possibly with API fusion.
+*   \[ ] Improve folder/archive conversion: add ascii folder tree.
 
-- [x] Setup a readme with a quick start guide.
-- [x] setup continuous integration and pipy deployment.
-- [x] ReAct Agent
-- [ ] RAG
-- [ ] Add support for adding nD images to messages.
-- [x] Improve document conversion (page per page text and video interleaving + whole page images)
-- [ ] Deal with message sizes in tokens sent to models
-- [ ] Improve and uniformize exception handling
-- [ ] Improve logging with arbol, with option to turn off.
-- [ ] Implement 'brainstorming' mode for text generation, possibly with API fusion.
-- [x] Implement streaming callbacks
-- [x] Improve folder/archive conversion: add ascii folder tree
+## Contributing
 
-## Contributing and Todos
+Contributions to litemind are welcome! If you'd like to contribute, please follow these steps:
 
-Contributions are welcome! Feel free to fork the repository and submit pull requests.
-
-**Current Todos (from Roadmap):**
-
-- [ ] RAG (Retrieval-Augmented Generation) implementation.
-- [ ] Add support for n-dimensional (nD) images to messages.
-- [ ] Improve handling of message sizes in tokens sent to models to optimize API usage and prevent errors.
-- [ ] Enhance and standardize exception handling across the library for better error reporting and resilience.
-- [ ] Improve logging using `arbol`, with options to configure verbosity and turn off logging for production environments.
-- [ ] Implement a 'brainstorming' mode for text generation, potentially leveraging API fusion for enhanced creativity and diversity in responses.
+1.  **Fork the repository.**
+2.  **Create a new branch** for your feature or bug fix.
+3.  **Make your changes** and commit them with clear, concise messages.
+4.  **Write unit tests** for your changes.
+5.  **Submit a pull request.**
 
 ## License
 
-This project is licensed under the terms of the BSD 3-Clause License. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the [BSD 3-Clause License](LICENSE).
+```
 
----
+## Note
 
-*This README.md file was generated with the help of an AI assistant.*
+This README.md file was generated with the help of AI.

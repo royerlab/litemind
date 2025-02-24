@@ -7,30 +7,30 @@ class ModelFeatures(Enum):
     Enum class to define the features supported by the models.
     """
 
-    TextGeneration = 'TextGeneration'
-    StructuredTextGeneration = 'StructuredTextGeneration'
-    ImageGeneration = 'ImageGeneration'
-    AudioGeneration = 'AudioGeneration'
-    VideoGeneration = 'VideoGeneration'
-    Reasoning = 'Reasoning',
-    TextEmbeddings = 'TextEmbeddings'
-    ImageEmbeddings = 'ImageEmbeddings'
-    AudioEmbeddings = 'AudioEmbeddings'
-    VideoEmbeddings = 'VideoEmbeddings'
-    Image = 'Image'
-    Audio = 'Audio'
-    Video = 'Video'
-    Document = 'Documents'
-    Tools = 'Tools'
-    AudioTranscription = 'AudioTranscription'
-    VideoConversion = 'VideoConversion'
-    DocumentConversion = 'DocumentConversion'
+    TextGeneration = "TextGeneration"
+    StructuredTextGeneration = "StructuredTextGeneration"
+    ImageGeneration = "ImageGeneration"
+    AudioGeneration = "AudioGeneration"
+    VideoGeneration = "VideoGeneration"
+    Reasoning = ("Reasoning",)
+    TextEmbeddings = "TextEmbeddings"
+    ImageEmbeddings = "ImageEmbeddings"
+    AudioEmbeddings = "AudioEmbeddings"
+    VideoEmbeddings = "VideoEmbeddings"
+    Image = "Image"
+    Audio = "Audio"
+    Video = "Video"
+    Document = "Documents"
+    Tools = "Tools"
+    AudioTranscription = "AudioTranscription"
+    VideoConversion = "VideoConversion"
+    DocumentConversion = "DocumentConversion"
 
     # Method that takes a single strings, a list of strings, a single ModelFeatures enum or a list of ModelFeatures and normalises to a list of enums of this class, finds the right enums independently of case:
     @staticmethod
-    def normalise(features: Union[
-        str, List[str], 'ModelFeatures', List['ModelFeatures']]) -> Optional[List[
-        'ModelFeatures']]:
+    def normalise(
+        features: Union[str, List[str], "ModelFeatures", List["ModelFeatures"]],
+    ) -> Optional[List["ModelFeatures"]]:
         """
         Normalise the input features to a list of ModelFeatures enums.
 

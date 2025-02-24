@@ -4,9 +4,9 @@ from typing import List, Optional, Sequence, Union
 from PIL.Image import Image
 from pydantic import BaseModel
 
-from litemind.agent.message import Message
+from litemind.agent.messages.message import Message
 from litemind.agent.tools.toolset import ToolSet
-from litemind.apis._callbacks.callback_manager import CallbackManager
+from litemind.apis.callbacks.callback_manager import CallbackManager
 from litemind.apis.model_features import ModelFeatures
 from litemind.apis.utils.random_projector import DeterministicRandomProjector
 
@@ -22,8 +22,9 @@ class BaseApi(ABC):
             self.callback_manager = CallbackManager()
 
     @abstractmethod
-    def check_availability_and_credentials(self,
-                                           api_key: Optional[str] = None) -> Optional[bool]:
+    def check_availability_and_credentials(
+        self, api_key: Optional[str] = None
+    ) -> Optional[bool]:
         """
         Check if this API is available and whether credentials are valid.
         If no API key is provided, checks if the API key available in the environment is valid.
@@ -43,8 +44,9 @@ class BaseApi(ABC):
         pass
 
     @abstractmethod
-    def list_models(self, features: Optional[Sequence[ModelFeatures]] = None) -> \
-            List[str]:
+    def list_models(
+        self, features: Optional[Sequence[ModelFeatures]] = None
+    ) -> List[str]:
         """
         Get the list of models available that satisfy a given set of features.
 
@@ -57,12 +59,13 @@ class BaseApi(ABC):
         pass
 
     @abstractmethod
-    def get_best_model(self,
-                       features: Optional[Union[
-                           str, List[str], ModelFeatures, Sequence[
-                               ModelFeatures]]] = None,
-                       exclusion_filters: Optional[List[str]] = None
-                       ) -> Optional[str]:
+    def get_best_model(
+        self,
+        features: Optional[
+            Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
+        ] = None,
+        exclusion_filters: Optional[List[str]] = None,
+    ) -> Optional[str]:
         """
         Get the name of the best possible model that satisfies a set of capability requirements.
 
@@ -84,9 +87,11 @@ class BaseApi(ABC):
         pass
 
     @abstractmethod
-    def has_model_support_for(self, features: Union[
-        str, List[str], ModelFeatures, Sequence[ModelFeatures]],
-                              model_name: Optional[str] = None) -> bool:
+    def has_model_support_for(
+        self,
+        features: Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]],
+        model_name: Optional[str] = None,
+    ) -> bool:
         """
         Check if the given model supports the given features.
         If no model is provided the default, and ideally, best model, is used.
@@ -180,14 +185,16 @@ class BaseApi(ABC):
         pass
 
     @abstractmethod
-    def generate_text(self,
-                      messages: List[Message],
-                      model_name: Optional[str] = None,
-                      temperature: float = 0.0,
-                      max_output_tokens: Optional[int] = None,
-                      toolset: Optional[ToolSet] = None,
-                      response_format: Optional[BaseModel] = None,
-                      **kwargs) -> Message:
+    def generate_text(
+        self,
+        messages: List[Message],
+        model_name: Optional[str] = None,
+        temperature: float = 0.0,
+        max_output_tokens: Optional[int] = None,
+        toolset: Optional[ToolSet] = None,
+        response_format: Optional[BaseModel] = None,
+        **kwargs,
+    ) -> Message:
         """
         Generate a text completion using the given model for a given list of messages and parameters.
 
@@ -218,10 +225,9 @@ class BaseApi(ABC):
         pass
 
     @abstractmethod
-    def transcribe_audio(self,
-                         audio_uri: str,
-                         model_name: Optional[str] = None,
-                         **kwargs) -> str:
+    def transcribe_audio(
+        self, audio_uri: str, model_name: Optional[str] = None, **kwargs
+    ) -> str:
         """
         Transcribe an audio file using the model.
 
@@ -243,8 +249,7 @@ class BaseApi(ABC):
         pass
 
     @abstractmethod
-    def convert_audio_in_messages(self,
-                                  messages: List[Message]) -> List[Message]:
+    def convert_audio_in_messages(self, messages: List[Message]) -> List[Message]:
         """
         Convert audio in messages into text.
 
@@ -261,11 +266,12 @@ class BaseApi(ABC):
         """
 
     @abstractmethod
-    def convert_documents_to_markdown_in_messages(self,
-                                                  messages: List[Message],
-                                                  exclude_extensions: Optional[List[str]] = None,
-                                                  model_name: Optional[str] = None) -> \
-            List[Message]:
+    def convert_documents_to_markdown_in_messages(
+        self,
+        messages: List[Message],
+        exclude_extensions: Optional[List[str]] = None,
+        model_name: Optional[str] = None,
+    ) -> List[Message]:
         """
         Convert documents in messages into text in Markdown format.
 
@@ -288,9 +294,9 @@ class BaseApi(ABC):
     pass
 
     @abstractmethod
-    def convert_videos_to_images_and_audio_in_messages(self,
-                                                       message: Sequence[Message]) -> List[Message]:
-
+    def convert_videos_to_images_and_audio_in_messages(
+        self, message: Sequence[Message]
+    ) -> List[Message]:
         """
         Convert videos in the message to images and audio blocks.
 
@@ -307,12 +313,14 @@ class BaseApi(ABC):
         pass
 
     @abstractmethod
-    def generate_audio(self,
-                       text: str,
-                       voice: Optional[str] = None,
-                       audio_format: Optional[str] = None,
-                       model_name: Optional[str] = None,
-                       **kwargs) -> str:
+    def generate_audio(
+        self,
+        text: str,
+        voice: Optional[str] = None,
+        audio_format: Optional[str] = None,
+        model_name: Optional[str] = None,
+        **kwargs,
+    ) -> str:
         """
         Generate an audio file using the model.
 
@@ -338,16 +346,17 @@ class BaseApi(ABC):
         pass
 
     @abstractmethod
-    def generate_image(self,
-                       positive_prompt: str,
-                       negative_prompt: Optional[str] = None,
-                       model_name: str = None,
-                       image_width: int = 512,
-                       image_height: int = 512,
-                       preserve_aspect_ratio: bool = True,
-                       allow_resizing: bool = True,
-                       **kwargs
-                       ) -> Image:
+    def generate_image(
+        self,
+        positive_prompt: str,
+        negative_prompt: Optional[str] = None,
+        model_name: str = None,
+        image_width: int = 512,
+        image_height: int = 512,
+        preserve_aspect_ratio: bool = True,
+        allow_resizing: bool = True,
+        **kwargs,
+    ) -> Image:
         """
         Generate an image using the default or given model.
 
@@ -380,10 +389,9 @@ class BaseApi(ABC):
         pass
 
     @abstractmethod
-    def generate_video(self,
-                       description: str,
-                       model_name: Optional[str] = None,
-                       **kwargs) -> str:
+    def generate_video(
+        self, description: str, model_name: Optional[str] = None, **kwargs
+    ) -> str:
         """
         Generate a video using the model.
 
@@ -405,11 +413,13 @@ class BaseApi(ABC):
 
         pass
 
-    def embed_texts(self,
-                    texts: List[str],
-                    model_name: Optional[str] = None,
-                    dimensions: int = 512,
-                    **kwargs) -> Sequence[Sequence[float]]:
+    def embed_texts(
+        self,
+        texts: List[str],
+        model_name: Optional[str] = None,
+        dimensions: int = 512,
+        **kwargs,
+    ) -> Sequence[Sequence[float]]:
         """
         Embed text using the model.
 
@@ -433,24 +443,26 @@ class BaseApi(ABC):
 
         pass
 
-    def _reduce_embeddings_dimension(self,
-                                     embeddings: Sequence[Sequence[float]],
-                                     reduced_dim: int) -> Sequence[
-        Sequence[float]]:
+    def _reduce_embeddings_dimension(
+        self, embeddings: Sequence[Sequence[float]], reduced_dim: int
+    ) -> Sequence[Sequence[float]]:
 
         # Create a DeterministicRandomProjector object:
-        drp = DeterministicRandomProjector(original_dim=len(embeddings[0]),
-                                           reduced_dim=reduced_dim)
+        drp = DeterministicRandomProjector(
+            original_dim=len(embeddings[0]), reduced_dim=reduced_dim
+        )
 
         # Project the embeddings:
         return drp.transform(embeddings)
 
     @abstractmethod
-    def embed_images(self,
-                     image_uris: List[str],
-                     model_name: Optional[str] = None,
-                     dimensions: int = 512,
-                     **kwargs) -> Sequence[Sequence[float]]:
+    def embed_images(
+        self,
+        image_uris: List[str],
+        model_name: Optional[str] = None,
+        dimensions: int = 512,
+        **kwargs,
+    ) -> Sequence[Sequence[float]]:
         """
         Embed images using the model.
 
@@ -473,11 +485,13 @@ class BaseApi(ABC):
         """
 
     @abstractmethod
-    def embed_audios(self,
-                     audio_uris: List[str],
-                     model_name: Optional[str] = None,
-                     dimensions: int = 512,
-                     **kwargs) -> Sequence[Sequence[float]]:
+    def embed_audios(
+        self,
+        audio_uris: List[str],
+        model_name: Optional[str] = None,
+        dimensions: int = 512,
+        **kwargs,
+    ) -> Sequence[Sequence[float]]:
         """
         Embed audios using the model.
 
@@ -502,11 +516,13 @@ class BaseApi(ABC):
         pass
 
     @abstractmethod
-    def embed_videos(self,
-                     video_uris: List[str],
-                     model_name: Optional[str] = None,
-                     dimensions: int = 512,
-                     **kwargs) -> Sequence[Sequence[float]]:
+    def embed_videos(
+        self,
+        video_uris: List[str],
+        model_name: Optional[str] = None,
+        dimensions: int = 512,
+        **kwargs,
+    ) -> Sequence[Sequence[float]]:
         """
         Embed videos using the model.
 
@@ -531,15 +547,16 @@ class BaseApi(ABC):
         pass
 
     @abstractmethod
-    def describe_image(self,
-                       image_uri: str,
-                       system: str = 'You are a helpful AI assistant that can describe and analyse images.',
-                       query: str = 'Here is an image, please carefully describe it completely and in detail.',
-                       model_name: Optional[str] = None,
-                       temperature: float = 0,
-                       max_output_tokens: Optional[int] = None,
-                       number_of_tries: int = 4,
-                       ) -> str:
+    def describe_image(
+        self,
+        image_uri: str,
+        system: str = "You are a helpful AI assistant that can describe and analyse images.",
+        query: str = "Here is an image, please carefully describe it completely and in detail.",
+        model_name: Optional[str] = None,
+        temperature: float = 0,
+        max_output_tokens: Optional[int] = None,
+        number_of_tries: int = 4,
+    ) -> str:
         """
         Describe an image using the model.
 
@@ -570,16 +587,16 @@ class BaseApi(ABC):
         pass
 
     @abstractmethod
-    def describe_audio(self,
-                       audio_uri: str,
-                       system: str = 'You are a helpful AI assistant that can describe and analyse audio.',
-                       query: str = 'Here is an audio file, please carefully describe its contents in detail. If it is speech, please transcribe completely and accurately.',
-                       model_name: Optional[str] = None,
-                       temperature: float = 0,
-                       max_output_tokens: Optional[int] = None,
-                       number_of_tries: int = 4,
-                       ) -> str | None:
-
+    def describe_audio(
+        self,
+        audio_uri: str,
+        system: str = "You are a helpful AI assistant that can describe and analyse audio.",
+        query: str = "Here is an audio file, please carefully describe its contents in detail. If it is speech, please transcribe completely and accurately.",
+        model_name: Optional[str] = None,
+        temperature: float = 0,
+        max_output_tokens: Optional[int] = None,
+        number_of_tries: int = 4,
+    ) -> str | None:
         """
         Describe an audio file using the model.
 
@@ -608,15 +625,16 @@ class BaseApi(ABC):
         """
 
     @abstractmethod
-    def describe_video(self,
-                       video_uri: str,
-                       system: str = 'You are a helpful AI assistant that can describe/analyse videos.',
-                       query: str = 'Here is a video file, please carefully and completely describe it in detail.',
-                       model_name: Optional[str] = None,
-                       temperature: float = 0,
-                       max_output_tokens: Optional[int] = None,
-                       number_of_tries: int = 4,
-                       ) -> str | None:
+    def describe_video(
+        self,
+        video_uri: str,
+        system: str = "You are a helpful AI assistant that can describe/analyse videos.",
+        query: str = "Here is a video file, please carefully and completely describe it in detail.",
+        model_name: Optional[str] = None,
+        temperature: float = 0,
+        max_output_tokens: Optional[int] = None,
+        number_of_tries: int = 4,
+    ) -> str | None:
         """
         Describe a video file using the model.
 
