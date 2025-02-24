@@ -35,7 +35,6 @@ dependencies = [
 ]
 
 [tool.setuptools]
-packages = find_namespace:
 package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]

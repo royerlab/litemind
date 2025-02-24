@@ -6,8 +6,8 @@ from litemind.agent.messages.message import Message
 from litemind.agent.messages.message_block_type import BlockType
 from litemind.apis.utils.get_media_type_from_uri import get_media_type_from_uri
 from litemind.apis.utils.read_file_and_convert_to_base64 import (
-    read_file_and_convert_to_base64,
     base64_to_data_uri,
+    read_file_and_convert_to_base64,
 )
 from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_path
 

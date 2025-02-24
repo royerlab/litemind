@@ -1,5 +1,5 @@
 from pprint import pformat
-from typing import List, Any, Sequence
+from typing import Any, List, Sequence
 
 from arbol import aprint
 

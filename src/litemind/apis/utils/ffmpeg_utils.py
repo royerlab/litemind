@@ -4,7 +4,7 @@ import os
 import subprocess
 import tempfile
 from functools import lru_cache
-from typing import Optional, List
+from typing import List, Optional
 
 from arbol import aprint
 

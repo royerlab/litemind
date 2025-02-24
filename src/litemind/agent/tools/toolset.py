@@ -1,4 +1,4 @@
-from typing import List, Optional, Callable
+from typing import Callable, List, Optional
 
 from litemind.agent.tools.base_tool import BaseTool
 

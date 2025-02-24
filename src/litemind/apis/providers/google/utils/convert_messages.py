@@ -2,8 +2,8 @@ import pathlib
 import time
 from typing import List, Union
 
-from PIL import Image
 from arbol import aprint
+from PIL import Image
 
 from litemind.agent.messages.message import Message
 from litemind.agent.messages.message_block_type import BlockType

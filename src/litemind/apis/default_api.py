@@ -1,9 +1,9 @@
 import copy
 from typing import List, Optional, Sequence, Union
 
-from PIL.Image import Image
-from arbol import asection, aprint
+from arbol import aprint, asection
 from pandas import DataFrame
+from PIL.Image import Image
 from pydantic import BaseModel
 
 from litemind.agent.messages.message import Message
@@ -15,17 +15,17 @@ from litemind.apis.callbacks.callback_manager import CallbackManager
 from litemind.apis.exceptions import FeatureNotAvailableError
 from litemind.apis.model_features import ModelFeatures
 from litemind.apis.utils.document_processing import (
-    is_pymupdf_available,
-    extract_text_from_document_pages,
     create_images_of_each_document_page,
+    extract_text_from_document_pages,
+    is_pymupdf_available,
 )
 from litemind.apis.utils.fastembed_embeddings import (
-    is_fastembed_available,
     fastembed_text,
+    is_fastembed_available,
 )
 from litemind.apis.utils.ffmpeg_utils import (
-    is_ffmpeg_available,
     convert_video_to_frames_and_audio,
+    is_ffmpeg_available,
 )
 from litemind.apis.utils.random_projector import DeterministicRandomProjector
 from litemind.apis.utils.whisper_transcribe_audio import (
@@ -307,28 +307,32 @@ class DefaultApi(BaseApi):
     def count_tokens(self, text: str, model_name: Optional[str] = None) -> int:
         # TODO: use list of messages as input instead so we can consider multimodal tokens in count.
 
-        # use Tiktoken to count tokens by default:
-        import tiktoken
+        # Use the following conversion from word to token: 1 word to 1.33 tokens
+        # (based on GPT-3.5 model, but should be similar for other models):
+        return int(len(text.split()) * 1.33)
 
-        # If model is not provided, get the best model:
-        if model_name not in self.list_models(features=[ModelFeatures.TextGeneration]):
-            # We pick the best model as default, could be very wrong but we need a default!
-            model_name = self.get_best_model(features=[ModelFeatures.TextGeneration])
-
-        # Choose the appropriate encoding:
-        try:
-            encoding = tiktoken.encoding_for_model(model_name)
-        except KeyError as e:
-            aprint(
-                f"Model '{model_name}' not found. Error: {e}. Using default encoding."
-            )
-            encoding = tiktoken.encoding_for_model("gpt-4o")
-
-        # Encode:
-        tokens = encoding.encode(text)
-
-        # Return the token count:
-        return len(tokens)
+        # # use Tiktoken to count tokens by default:
+        # import tiktoken
+        #
+        # # If model is not provided, get the best model:
+        # if model_name not in self.list_models(features=[ModelFeatures.TextGeneration]):
+        #     # We pick the best model as default, could be very wrong but we need a default!
+        #     model_name = self.get_best_model(features=[ModelFeatures.TextGeneration])
+        #
+        # # Choose the appropriate encoding:
+        # try:
+        #     encoding = tiktoken.encoding_for_model(model_name)
+        # except KeyError as e:
+        #     aprint(
+        #         f"Model '{model_name}' not found. Error: {e}. Using default encoding."
+        #     )
+        #     encoding = tiktoken.encoding_for_model("gpt-4o")
+        #
+        # # Encode:
+        # tokens = encoding.encode(text)
+        #
+        # # Return the token count:
+        # return len(tokens)
 
     def generate_text(
         self,

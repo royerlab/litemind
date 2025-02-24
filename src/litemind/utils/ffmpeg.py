@@ -1,5 +1,6 @@
 def _set_ffmpeg_binary():
     import os
+
     import imageio_ffmpeg
 
     # Get the path of the ffmpeg executable provided by imageio-ffmpeg

@@ -5,7 +5,7 @@ from litemind.agent.messages.message import Message
 from litemind.agent.messages.message_block_type import BlockType
 from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.base_api import ModelFeatures
-from litemind.apis.tests.base_test import BaseTest, API_IMPLEMENTATIONS
+from litemind.apis.tests.base_test import API_IMPLEMENTATIONS, BaseTest
 
 
 @pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)

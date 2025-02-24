@@ -1,5 +1,5 @@
 import json
-from typing import Optional, Iterator
+from typing import Iterator, Optional
 
 from google.generativeai.types.discuss_types import ChatResponse
 from pydantic import BaseModel

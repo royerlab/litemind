@@ -5,8 +5,8 @@ from tempfile import mkdtemp
 from typing import List, Tuple
 
 import fitz  # PyMuPDF
-from PIL import Image
 from arbol import aprint
+from PIL import Image
 
 from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_path
 

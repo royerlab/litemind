@@ -44,11 +44,12 @@ We use several tools to maintain code quality:
 
 Run the following before committing:
 ```bash
-black .
 isort .
+black .
 flake8 .
 mypy src/litemind
 ```
+And fix any issues that arise in the files you've modified.
 
 Better yet, set up pre-commit hooks:
 ```bash
@@ -58,41 +59,45 @@ pre-commit install
 ## Testing
 
 - Write tests for new features using pytest
-- Ensure all tests pass: `pytest`
+- Ensure all tests pass: `run_tests.sh`
 - Maintain or improve code coverage
-- Integration tests should be placed in `tests/integration/`
-- Unit tests go in `tests/unit/`
 
 ## Documentation
 
-- Use Google-style docstrings
+- Use Numpy-style docstrings
 - Update documentation when adding/modifying features
-- Include doctest examples where appropriate
 - Keep the README.md up to date
 
 Example docstring:
 ```python
 def function_name(param1: str, param2: int) -> bool:
-    """Short description of function.
+    """
+    Short description of function.
 
     Longer description if needed.
 
-    Args:
-        param1: Description of param1
-        param2: Description of param2
+    Parameters
+    ----------
+    param1 : str
+        Description of param1
+    param2 : int
+        Description of param2
 
-    Returns:
+    Returns
+    -------
+    bool
         Description of return value
 
-    Raises:
-        ValueError: Description of when this error occurs
+    Raises
+    ------
+    ValueError
+        Description of when this error occurs
     """
 ```
 
 ## Pull Request Process
 
 1. Update documentation if needed
-2. Update CHANGELOG.md following Keep a Changelog format
 3. Add tests for new features
 4. Ensure CI pipeline passes
 5. Get review from at least one maintainer
@@ -142,7 +147,7 @@ Please read our Code of Conduct. We expect all contributors to adhere to it.
 ## License
 
 By contributing, you agree that your contributions will be licensed under the BSD-3-Clause License.
-```
+
 
 This CONTRIBUTING.md:
 - Sets clear expectations

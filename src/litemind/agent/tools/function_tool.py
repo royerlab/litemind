@@ -1,5 +1,5 @@
 import inspect
-from typing import Callable, Dict, Any, Optional
+from typing import Any, Callable, Dict, Optional
 
 from arbol import asection
 

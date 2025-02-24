@@ -1,4 +1,4 @@
-from typing import Any, List, Dict
+from typing import Any, Dict, List
 
 from litemind.agent.tools.toolset import ToolSet
 

@@ -1,4 +1,4 @@
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
 from litemind.agent.messages.message import Message
 from litemind.agent.messages.message_block_type import BlockType

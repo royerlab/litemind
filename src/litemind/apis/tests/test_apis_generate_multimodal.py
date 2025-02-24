@@ -5,7 +5,7 @@ import pytest
 from PIL import Image
 
 from litemind.apis.base_api import ModelFeatures
-from litemind.apis.tests.base_test import BaseTest, API_IMPLEMENTATIONS
+from litemind.apis.tests.base_test import API_IMPLEMENTATIONS, BaseTest
 from litemind.apis.tests.utils.levenshtein import levenshtein_distance
 from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_path
 

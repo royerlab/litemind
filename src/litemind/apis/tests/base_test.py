@@ -15,6 +15,12 @@ API_IMPLEMENTATIONS = [
     CombinedApi,
 ]
 
+# Check availability of each API and remove it from the list if it is not available:
+for api_class in API_IMPLEMENTATIONS:
+    api_instance = api_class()
+    if not api_instance.check_availability_and_credentials():
+        API_IMPLEMENTATIONS.remove(api_class)
+
 
 class BaseTest:
 

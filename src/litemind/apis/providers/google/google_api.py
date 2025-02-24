@@ -1,5 +1,5 @@
 import os
-from typing import Optional, Sequence, Union, List
+from typing import List, Optional, Sequence, Union
 
 from PIL import Image
 from pydantic import BaseModel
@@ -17,8 +17,8 @@ from litemind.apis.providers.google.utils.convert_messages import (
 from litemind.apis.providers.google.utils.format_tools import format_tools_for_gemini
 from litemind.apis.providers.google.utils.list_models import _get_gemini_models_list
 from litemind.apis.providers.google.utils.text_generation_helpers import (
-    _stream_chat_with_tools,
     _stream_chat_no_tools,
+    _stream_chat_with_tools,
 )
 from litemind.apis.tests.test_callback_manager import callback_manager
 

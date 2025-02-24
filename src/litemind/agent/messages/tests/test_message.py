@@ -244,8 +244,8 @@ def test_message_table():
 
 def test_message_folder():
     # Create an empty temp folder with tempfile:
-    import tempfile
     import os
+    import tempfile
 
     temp_folder = tempfile.mkdtemp()
 

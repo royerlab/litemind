@@ -4,8 +4,10 @@ import os
 import ffmpeg
 import pytest
 
-from litemind.apis.utils.ffmpeg_utils import extract_frames_and_audio
-from litemind.apis.utils.ffmpeg_utils import is_ffmpeg_available
+from litemind.apis.utils.ffmpeg_utils import (
+    extract_frames_and_audio,
+    is_ffmpeg_available,
+)
 
 
 @pytest.fixture

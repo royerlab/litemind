@@ -90,7 +90,7 @@ def generate_tree_structure(
                 prefix=prefix + extension,
                 allowed_extensions=allowed_extensions,
                 excluded_files=excluded_files,
-                include_hidden_files=include_hidden_files
+                include_hidden_files=include_hidden_files,
             )
         else:
             # Files: show only size in the tree

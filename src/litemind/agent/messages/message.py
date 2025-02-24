@@ -2,27 +2,27 @@ import copy
 import os
 from abc import ABC
 from json import loads
-from typing import Optional, List, Union
+from typing import List, Optional, Union
 
 from pydantic import BaseModel
 
 from litemind.agent.messages.message_block import MessageBlock
 from litemind.agent.messages.message_block_type import BlockType
 from litemind.agent.utils.folder_description import (
-    generate_tree_structure,
     file_info_header,
+    generate_tree_structure,
     is_text_file,
-    read_file_content,
     read_binary_file_info,
+    read_file_content,
 )
 from litemind.utils.extract_archive import extract_archive
 from litemind.utils.file_extensions import (
-    image_file_extensions,
-    audio_file_extensions,
-    video_file_extensions,
-    document_file_extensions,
     archive_file_extensions,
+    audio_file_extensions,
+    document_file_extensions,
+    image_file_extensions,
     table_file_extensions,
+    video_file_extensions,
 )
 from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_path
 

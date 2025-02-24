@@ -1,9 +1,11 @@
 from datetime import datetime, timedelta
 
+import pytest
+
 from litemind.agent.react.react_agent import ReActAgent
 from litemind.agent.tools.toolset import ToolSet
-from litemind.apis.combined_api import CombinedApi
 from litemind.apis.model_features import ModelFeatures
+from litemind.apis.tests.base_test import API_IMPLEMENTATIONS
 
 
 def get_current_date():
@@ -20,9 +22,16 @@ def add_days_to_date(date_str, days):
     return new_date.strftime("%Y-%m-%d")
 
 
-def test_react_agent_construction_methods():
+@pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
+def test_react_agent_construction_methods(api_class):
     # Initialize API
-    api = CombinedApi()
+    api = api_class()
+
+    # If no model supports text generation and tools, skip the test
+    if not api.has_model_support_for(
+        features=[ModelFeatures.TextGeneration, ModelFeatures.Tools]
+    ):
+        pytest.skip("No model supports text generation and tools. Skipping test.")
 
     # Initialize ToolSet
     toolset = ToolSet()
@@ -31,25 +40,31 @@ def test_react_agent_construction_methods():
     toolset.add_function_tool(get_current_date, "Returns the current date")
 
     # Method 1: Specify model features explicitly
-    features = ModelFeatures.Audio
+    features = ModelFeatures.TextGeneration, ModelFeatures.Tools
     agent1 = ReActAgent(api=api, toolset=toolset, model_features=features)
     assert api.has_model_support_for(model_name=agent1.model, features=features)
 
     # Method 2: Provide a model that is explicitly constructed with the right features
-    features = [ModelFeatures.TextGeneration, ModelFeatures.Tools, ModelFeatures.Image]
     model = api.get_best_model(features=features)
     agent2 = ReActAgent(api=api, toolset=toolset, model=model)
     assert api.has_model_support_for(model_name=agent2.model, features=features)
 
     # Method 3: Without specifying features or model, relying on the default
     agent3 = ReActAgent(api=api, toolset=toolset)
-    assert api.has_model_support_for(model_name=agent1.model, features=features)
+    assert api.has_model_support_for(model_name=agent3.model, features=features)
 
 
-def test_react_agent_single_tool():
+@pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
+def test_react_agent_single_tool(api_class):
 
     # Initialize API
-    api = CombinedApi()
+    api = api_class()
+
+    # If no model supports text generation and tools, skip the test
+    if not api.has_model_support_for(
+        features=[ModelFeatures.TextGeneration, ModelFeatures.Tools]
+    ):
+        pytest.skip("No model supports text generation and tools. Skipping test.")
 
     # Initialize ToolSet
     toolset = ToolSet()
@@ -81,10 +96,17 @@ def test_react_agent_single_tool():
     )
 
 
-def test_react_agent_multiple_tools():
+@pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
+def test_react_agent_multiple_tools(api_class):
 
     # Initialize API
-    api = CombinedApi()
+    api = api_class()
+
+    # If no model supports text generation and tools, skip the test
+    if not api.has_model_support_for(
+        features=[ModelFeatures.TextGeneration, ModelFeatures.Tools]
+    ):
+        pytest.skip("No model supports text generation and tools. Skipping test.")
 
     # Initialize ToolSet
     toolset = ToolSet()
@@ -115,10 +137,17 @@ def test_react_agent_multiple_tools():
     assert "42" in response
 
 
-def test_react_agent_chained_tools():
+@pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
+def test_react_agent_chained_tools(api_class):
 
     # Initialize API
-    api = CombinedApi()
+    api = api_class()
+
+    # If no model supports text generation and tools, skip the test
+    if not api.has_model_support_for(
+        features=[ModelFeatures.TextGeneration, ModelFeatures.Tools]
+    ):
+        pytest.skip("No model supports text generation and tools. Skipping test.")
 
     # Initialize ToolSet
     toolset = ToolSet()
@@ -145,10 +174,17 @@ def test_react_agent_chained_tools():
     )
 
 
-def test_react_agent_longer_dialog():
+@pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
+def test_react_agent_longer_dialog(api_class):
 
     # Initialize API
-    api = CombinedApi()
+    api = api_class()
+
+    # If no model supports text generation and tools, skip the test
+    if not api.has_model_support_for(
+        features=[ModelFeatures.TextGeneration, ModelFeatures.Tools]
+    ):
+        pytest.skip("No model supports text generation and tools. Skipping test.")
 
     # Initialize ToolSet
     toolset = ToolSet()

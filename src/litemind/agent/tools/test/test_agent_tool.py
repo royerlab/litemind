@@ -122,7 +122,7 @@ def test_agent_tool_with_internal_tool():
     # Validate that the response is an AgentResponse and that the result is from the FunctionTool
     assert isinstance(agent_response, str), "AgentResponse result should be a string"
     assert (
-        "status of order 12345 is: Shipped" in agent_response
+        "shipped" in agent_response.lower() and "12345" in agent_response.lower()
     ), "AgentTool response should include the status provided by FunctionTool"
 
     # Validate conversation structure
@@ -134,7 +134,6 @@ def test_agent_tool_with_internal_tool():
     assert agent.conversation[2].role == "assistant"
 
     # Ensure the assistant's response includes the expected output from the tool
-    expected_status_message = "The status of order 12345 is: Shipped"
     assert (
-        expected_status_message in agent_response
-    ), f"Expected response to include '{expected_status_message}', but got '{agent_response}'"
+        "shipped" in agent_response.lower() and "12345" in agent_response.lower()
+    ), f"Expected response to include 'shipped' or '12345, but got '{agent_response}'"

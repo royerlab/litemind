@@ -6,9 +6,9 @@ from io import BytesIO
 from typing import List, Optional, Sequence, Union
 
 import requests
+from arbol import aprint
 from PIL import Image
 from PIL.Image import Resampling
-from arbol import aprint
 from pydantic import BaseModel
 
 from litemind.agent.messages.message import Message
@@ -22,8 +22,8 @@ from litemind.apis.providers.openai.utils.convert_messages import (
 )
 from litemind.apis.providers.openai.utils.format_tools import format_tools_for_openai
 from litemind.apis.providers.openai.utils.list_models import (
-    get_openai_model_list,
     _get_raw_openai_model_list,
+    get_openai_model_list,
 )
 from litemind.apis.providers.openai.utils.process_response import (
     process_response_from_openai,
@@ -697,15 +697,15 @@ class OpenAIApi(DefaultApi):
             # Get the final completion
             response = streaming_response.get_final_completion()
 
-            # Toolcalls:
-            toolcalls = response.choices[0].message.tool_calls
+            # Tool calls:
+            tool_calls = response.choices[0].message.tool_calls
 
-            if toolset and len(toolcalls) > 0:
+            if toolset and tool_calls and len(tool_calls) > 0:
                 # Append the response to the messages:
                 openai_formatted_messages.append(response.choices[0].message)
 
                 # Iterate through tool calls:
-                for tool_call in toolcalls:
+                for tool_call in tool_calls:
 
                     # Get the tool name and arguments:
                     function_name = tool_call.function.name
@@ -786,6 +786,11 @@ class OpenAIApi(DefaultApi):
             )
 
         except Exception as e:
+            # print stack trace:
+            import traceback
+
+            traceback.print_exc()
+
             raise APIError(f"OpenAI generate text error: {e}")
 
         return response_message

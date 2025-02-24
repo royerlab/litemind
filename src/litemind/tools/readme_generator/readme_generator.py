@@ -12,10 +12,12 @@ from litemind.apis.providers.ollama.ollama_api import OllamaApi
 from litemind.apis.providers.openai.openai_api import OpenAIApi
 
 
-def generate_readme(folder_path: str,
-                    context_text: str,
-                    api: Optional[BaseApi] = None,
-                    save_repo_to_file: bool = False) -> str:
+def generate_readme(
+    folder_path: str,
+    context_text: str,
+    api: Optional[BaseApi] = None,
+    save_repo_to_file: bool = False,
+) -> str:
 
     # Initialize the API
     if api is None:
@@ -93,7 +95,13 @@ def generate_readme(folder_path: str,
             ".tests",
             ".html",
         ],
-        excluded_files=["README.md", "litemind.egg-info", "dist", "build", "whole_repo.txt"],
+        excluded_files=[
+            "README.md",
+            "litemind.egg-info",
+            "dist",
+            "build",
+            "whole_repo.txt",
+        ],
     )
     message.append_text(
         "Please generate a detailed, complete and informative README.md file for this repository without any preamble or postamble."
@@ -106,7 +114,6 @@ def generate_readme(folder_path: str,
         # Save string to file:
         with open("whole_repo.txt", "w") as file:
             file.write(message_str)
-
 
     # Use the agent to generate the README.md content
     response = agent(message)
@@ -176,7 +183,9 @@ def main():
         "between the API wrapper layer versus the agentic API -- this should also"
         "be reflected in the examples."
     )
-    generate_readme(folder_path, context_text, api=api, save_repo_to_file=args.save_repo_to_file)
+    generate_readme(
+        folder_path, context_text, api=api, save_repo_to_file=args.save_repo_to_file
+    )
 
 
 if __name__ == "__main__":

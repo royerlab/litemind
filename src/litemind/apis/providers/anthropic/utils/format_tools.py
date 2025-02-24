@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import List, Optional
 
 from litemind.agent.tools.toolset import ToolSet
 

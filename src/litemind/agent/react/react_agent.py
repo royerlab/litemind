@@ -1,6 +1,6 @@
-from typing import List, Optional, Dict, Union, Sequence
+from typing import Dict, List, Optional, Sequence, Union
 
-from arbol import asection, aprint
+from arbol import aprint, asection
 
 from litemind.agent.agent import Agent
 from litemind.agent.messages.message import Message

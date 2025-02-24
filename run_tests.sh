@@ -1,4 +1,7 @@
 
+# Sort imports with isort:
+isort .
+
 # Format code with black:
 black .
 

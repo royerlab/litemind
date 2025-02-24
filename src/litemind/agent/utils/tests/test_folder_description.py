@@ -1,9 +1,9 @@
 from litemind.agent.utils.folder_description import (
-    human_readable_size,
-    generate_tree_structure,
-    read_file_content,
-    read_binary_file_info,
     file_info_header,
+    generate_tree_structure,
+    human_readable_size,
+    read_binary_file_info,
+    read_file_content,
 )
 
 

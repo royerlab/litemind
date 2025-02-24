@@ -1,5 +1,5 @@
 from functools import lru_cache
-from typing import List, Dict, Optional, Sequence, Union
+from typing import Dict, List, Optional, Sequence, Union
 
 from arbol import aprint
 from ollama import ResponseError
