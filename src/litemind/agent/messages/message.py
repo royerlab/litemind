@@ -2,12 +2,14 @@ import copy
 import os
 from abc import ABC
 from json import loads
-from typing import List, Optional, Union
+from typing import Any, List, Optional, Sequence, Union
 
 from pydantic import BaseModel
 
 from litemind.agent.messages.message_block import MessageBlock
 from litemind.agent.messages.message_block_type import BlockType
+from litemind.agent.messages.tool_call import ToolCall
+from litemind.agent.messages.tool_use import ToolUse
 from litemind.agent.utils.folder_description import (
     file_info_header,
     generate_tree_structure,
@@ -30,7 +32,6 @@ from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_pa
 class Message(ABC):
     def __init__(
         self,
-        role: str,
         text: Optional[str] = None,
         json: Optional[str] = None,
         obj: Optional[BaseModel] = None,
@@ -39,6 +40,7 @@ class Message(ABC):
         video: Optional[str] = None,
         document: Optional[str] = None,
         table: Optional[str] = None,
+        role: str = "user",
     ):
         """
         Create a new message.
@@ -46,8 +48,18 @@ class Message(ABC):
         Parameters
         ----------
         role: str
-            The role of the message (e.g., 'user' or 'agent').
+            The role of the message (e.g., 'system', 'user', 'assistant').
         """
+
+        # Check that the role is a string that is either: 'system', 'user', or 'assistant':
+        if not isinstance(role, str):
+            raise ValueError(f"Role must be a string, not {type(role)}")
+        if role not in ["system", "user", "assistant", "tool"]:
+            raise ValueError(
+                f"Role must be 'system', 'user', or 'assistant', not {role}"
+            )
+
+        # Set the role of the message:
         self.role = role
         self.blocks: List[MessageBlock] = []
 
@@ -107,6 +119,23 @@ class Message(ABC):
         """
         self.blocks.append(block)
         return block
+
+    def append_blocks(self, blocks: Union["Message", Sequence[MessageBlock]]):
+        """
+        Append a list of message blocks to the message.
+
+        Parameters
+        ----------
+        blocks : Sequence[MessageBlock]
+            The message blocks to append.
+        """
+
+        # If the blocks are from another message, extract the blocks:
+        if isinstance(blocks, Message):
+            blocks = blocks.blocks
+
+        # Append the blocks to the message:
+        self.blocks.extend(blocks)
 
     def insert_block(
         self, block: MessageBlock, block_before: MessageBlock
@@ -607,6 +636,56 @@ class Message(ABC):
         # append the extracted folder to the message:
         self.append_folder(temp_folder, depth)
 
+    def append_tool_call(
+        self, tool_name: str, arguments: dict, id: str
+    ) -> MessageBlock:
+        """
+        Add a tool call to the message. This is typically part of an assistant's response.
+
+        Parameters
+        ----------
+        tool_name: str
+            The name of the tool.
+        arguments: dict
+            The arguments used with the tool.
+        id: str
+            The id of the tool use message.
+        """
+
+        # Create a new tool use message block:
+        block = MessageBlock(
+            block_type=BlockType.Tool, content=ToolCall(tool_name, arguments, id)
+        )
+
+        # Append the tool use block to the message:
+        return self.append_block(block)
+
+    def append_tool_use(
+        self, tool_name: str, arguments: dict, result: Any, id: str
+    ) -> MessageBlock:
+        """
+        Add a tool use to the message. This is typically part of a user's input in reply of an assistant's tool call.
+
+        Parameters
+        ----------
+        tool_name: str
+            The name of the tool.
+        arguments: dict
+            The arguments used with the tool.
+        result: Any
+            The result of the tool use.
+        id: str
+            The id of the tool use message.
+        """
+
+        # Create a new tool use message block:
+        block = MessageBlock(
+            block_type=BlockType.Tool, content=ToolUse(tool_name, arguments, result, id)
+        )
+
+        # Append the tool use block to the message:
+        return self.append_block(block)
+
     def extract_markdown_block(
         self, filters: Union[str, List[str]], remove_quotes=True
     ) -> List[MessageBlock]:
@@ -687,9 +766,7 @@ class Message(ABC):
         MessageBlock or None
             The message block at the given index, or None if the index is out of range.
         """
-        if 0 <= index < len(self.blocks):
-            return self.blocks[index]
-        return None
+        return self.blocks[index]
 
     def __len__(self) -> int:
         """
@@ -721,6 +798,25 @@ class Message(ABC):
                 return True
         return False
 
+    def has(self, block_type: BlockType):
+        """
+        Check if the given block type is in the message blocks.
+
+        Parameters
+        ----------
+        block_type : BlockType
+            The block type to check for.
+
+        Returns
+        -------
+        bool
+            True if the block type is found, False otherwise.
+        """
+        for block in self.blocks:
+            if block.block_type == block_type:
+                return True
+        return False
+
     def __str__(self) -> str:
         """
         Return the message as a string.
@@ -744,6 +840,22 @@ class Message(ABC):
         """
         return self.__str__().lower()
 
+    def to_plain_text(self) -> str:
+        """
+        Return the message as plain text.
+
+        Returns
+        -------
+        str
+            The message as plain text.
+
+        """
+        plain_text = ""
+        for block in self.blocks:
+            if block.block_type == BlockType.Text:
+                plain_text += block.content + "\n"
+        return plain_text
+
     def __repr__(self) -> str:
         """
         Return the message as a string.
@@ -754,11 +866,11 @@ class Message(ABC):
         """
         return str(self)
 
-    # def __iter__(self):
-    #     """
-    #     Iterate over the message blocks.
-    #     """
-    #     return iter(self.blocks)
+    def __iter__(self):
+        """
+        Iterate over the message blocks.
+        """
+        return iter(self.blocks)
 
     def __hash__(self):
         """

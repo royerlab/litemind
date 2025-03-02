@@ -1,11 +1,12 @@
+import json
 from functools import lru_cache
 from typing import Dict, List, Optional, Sequence, Union
 
 from arbol import aprint
-from ollama import ResponseError
-from openai import BaseModel
 
 from litemind.agent.messages.message import Message
+from litemind.agent.messages.message_block_type import BlockType
+from litemind.agent.messages.tool_call import ToolCall
 from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.base_api import ModelFeatures
 from litemind.apis.callbacks.callback_manager import CallbackManager
@@ -270,6 +271,7 @@ class OllamaApi(DefaultApi):
 
     @lru_cache
     def max_num_input_tokens(self, model_name: Optional[str] = None) -> int:
+        from ollama import ResponseError
 
         if model_name is None:
             model_name = self.get_best_model(ModelFeatures.TextGeneration)
@@ -293,6 +295,7 @@ class OllamaApi(DefaultApi):
 
     @lru_cache
     def max_num_output_tokens(self, model_name: Optional[str] = None) -> int:
+        from ollama import ResponseError
 
         if model_name is None:
             model_name = self.get_best_model(ModelFeatures.TextGeneration)
@@ -319,131 +322,158 @@ class OllamaApi(DefaultApi):
         messages: List[Message],
         model_name: Optional[str] = None,
         temperature: Optional[float] = 0.0,
-        max_output_tokens: Optional[int] = None,
+        max_num_output_tokens: Optional[int] = None,
         toolset: Optional[ToolSet] = None,
-        response_format: Optional[BaseModel] = None,
+        response_format: Optional["BaseModel"] = None,
         **kwargs,
-    ) -> Message:
+    ) -> List[Message]:
+
+        # Ollama imports:
+        from ollama import ResponseError
 
         # Set default model if not provided
         if model_name is None:
-            model_name = self.get_best_model()
+            # We Require the minimum features for text generation:
+            features = [ModelFeatures.TextGeneration]
+            # If tools are provided, we also require tools:
+            if toolset:
+                features.append(ModelFeatures.Tools)
+            # If the messages contain media, we require the appropriate features:
+            # TODO: implement
+            model_name = self.get_best_model(features=features)
 
-        # Get max num of output tokens for model if not provided:
-        if max_output_tokens is None:
-            max_output_tokens = self.max_num_output_tokens(model_name)
+            if model_name is None:
+                raise APIError(f"No suitable model with features: {features}")
 
         # Preprocess the messages:
         preprocessed_messages = self._preprocess_messages(messages=messages)
 
-        # Convert user messages into Ollama's format
-        ollama_formatted_messages = convert_messages_for_ollama(preprocessed_messages)
+        # Get max num of output tokens for model if not provided:
+        if max_num_output_tokens is None:
+            max_num_output_tokens = self.max_num_output_tokens(model_name)
 
         # Convert toolset (if any) to Ollama's tools schema
         ollama_tools = format_tools_for_ollama(toolset) if toolset else None
 
-        # Normalise response format to JSON schema string:
+        # Ollama specific: normalise response format to JSON schema string:
         response_format_schema = (
             response_format.model_json_schema() if response_format else response_format
         )
 
-        # Make the request to Ollama
-        from ollama import ResponseError
+        # List of new messages part of the response:
+        new_messages = []
 
         try:
-            aprint(f"Sending request to Ollama with model: {model_name}")
+            last_response_has_tool_call = False
 
-            # Call the Ollama API in streaming mode:
-            chunks = self.client.chat(
-                model=model_name,
-                messages=ollama_formatted_messages,
-                tools=ollama_tools,
-                options={"temperature": temperature, "num_predict": max_output_tokens},
-                format=response_format_schema if not ollama_tools else None,
-                stream=True,
-                **kwargs,
-            )
+            # Loop until we get a response that doesn't require tool use:
+            while True:
 
-            # Aggregate the streamed response:
-            response = aggregate_chat_responses(
-                chunks, callback=self.callback_manager.on_text_streaming
-            )
+                # Convert user messages into Ollama's format
+                ollama_formatted_messages = convert_messages_for_ollama(
+                    preprocessed_messages, response_format=response_format
+                )
 
-            # Toolcalls:
-            toolcalls = response.message.tool_calls
+                # Call the Ollama API in streaming mode:
+                chunks = self.client.chat(
+                    model=model_name,
+                    messages=ollama_formatted_messages,
+                    tools=ollama_tools,
+                    options={
+                        "temperature": temperature,
+                        "num_predict": max_num_output_tokens,
+                    },
+                    format=(
+                        response_format_schema
+                        if last_response_has_tool_call or not ollama_tools
+                        else None
+                    ),
+                    stream=True,
+                    **kwargs,
+                )
 
-            if toolset and len(toolcalls) > 0:
-                # Append the response to the messages:
-                ollama_formatted_messages.append(response.message)
+                # Aggregate the streamed response:
+                ollama_response = aggregate_chat_responses(
+                    chunks, callback=self.callback_manager.on_text_streaming
+                )
+
+                # Process the response
+                response = process_response_from_ollama(
+                    ollama_response, toolset, response_format
+                )
+
+                # Append response message to original, preprocessed, and new messages:
+                messages.append(response)
+                preprocessed_messages.append(response)
+                new_messages.append(response)
+
+                # If the model wants to use a tool, parse out the tool calls:
+                if not response.has(BlockType.Tool):
+                    # Break out of the loop if no tool use is required anymore:
+                    break
+
+                # Prepare message that will hold the tool uses and adds it to the original, preprocessed, and new messages:
+                tool_use_message = Message()
+                messages.append(tool_use_message)
+                preprocessed_messages.append(tool_use_message)
+                new_messages.append(tool_use_message)
+
+                # Get the tool calls:
+                tool_calls = [
+                    b.content for b in response if b.block_type == BlockType.Tool
+                ]
 
                 # Iterate through tool calls:
-                for tool_call in toolcalls:
+                for tool_call in tool_calls:
 
-                    # Get the tool name and arguments:
-                    function_name = tool_call.function.name
+                    # If we have a tool call, we set the flag to True:
+                    last_response_has_tool_call = True
 
-                    # Get arguments:
-                    arguments = tool_call.function.arguments
+                    if isinstance(tool_call, ToolCall):
+                        # Get tool function name:
+                        tool_name = tool_call.tool_name
 
-                    # Look up the tool using its name
-                    tool = toolset.get_tool(function_name)
-                    if tool:
-                        try:
-                            # Execute the tool
-                            result = tool.execute(**arguments)
+                        # Get the corresponding tool in toolset:
+                        tool = toolset.get_tool(tool_name) if toolset else None
 
-                            # Append the result to the messages
-                            ollama_formatted_messages.append(
-                                {
-                                    "role": "tool",
-                                    "name": function_name,
-                                    "content": result,
-                                }
+                        # Get the input arguments:
+                        tool_arguments = tool_call.arguments
+
+                        if tool:
+                            try:
+                                # Execute the tool
+                                result = tool.execute(**tool_arguments)
+
+                                # If not a string, convert from JSON:
+                                if not isinstance(result, str):
+                                    result = json.dumps(result, default=str)
+
+                            except Exception as e:
+                                result = f"Function '{tool_name}' error: {e}"
+
+                            # Append the tool call result to the messages:
+                            tool_use_message.append_tool_use(
+                                tool_name=tool_name,
+                                arguments=tool_arguments,
+                                result=result,
+                                id=tool_call.id,
                             )
-                        except Exception as e:
-                            # If the tool raises an exception, return an error message
-                            ollama_formatted_messages.append(
-                                {
-                                    "role": "tool",
-                                    "name": function_name,
-                                    "content": f"Error: {str(e)}",
-                                }
+
+                        else:
+                            # Append the tool call result to the messages:
+                            tool_use_error_message = f"(Tool '{tool_name}' use requested, but tool not found.)"
+                            tool_use_message.append_tool_use(
+                                tool_name=tool_name,
+                                arguments=tool_arguments,
+                                result=tool_use_error_message,
+                                id=tool_call.id,
                             )
-                    else:
-                        # If the tool is not found, return an error message
-                        ollama_formatted_messages.append(
-                            {
-                                "role": "tool",
-                                "name": function_name,
-                                "content": f"Error: Tool '{function_name}' not found among: '{','.join(toolset.tool_names())}'.",
-                            }
-                        )
-
-                    # Follow up with a final completion that incorporates the tool call results:
-                    response = self.client.chat(
-                        model=model_name,
-                        messages=ollama_formatted_messages,
-                        options={
-                            "temperature": temperature,
-                            "num_predict": max_output_tokens,
-                        },
-                        format=response_format_schema,
-                        **kwargs,
-                    )
-
-            # Process the response
-            response_message = process_response_from_ollama(
-                response, toolset, response_format
-            )
-
-            # Add the response message to the list of messages:
-            messages.append(response_message)
 
             # Add all parameters to kwargs:
             kwargs.update(
                 {
                     "temperature": temperature,
-                    "max_output_tokens": max_output_tokens,
+                    "max_output_tokens": max_num_output_tokens,
                     "toolset": toolset,
                     "response_format": response_format,
                 }
@@ -451,15 +481,15 @@ class OllamaApi(DefaultApi):
 
             # Call the callback manager:
             self.callback_manager.on_text_generation(
-                response=response, messages=messages, **kwargs
+                response=ollama_response, messages=messages, **kwargs
             )
-
-            return response_message
 
         except ResponseError as e:
             raise APIError(
                 f"Ollama generate text error: {e.error} (status code: {e.status_code})"
             )
+
+        return new_messages
 
     def embed_texts(
         self,

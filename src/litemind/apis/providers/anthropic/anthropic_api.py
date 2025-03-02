@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 from litemind.agent.messages.message import Message
 from litemind.agent.messages.message_block_type import BlockType
+from litemind.agent.messages.tool_call import ToolCall
 from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.base_api import ModelFeatures
 from litemind.apis.callbacks.callback_manager import CallbackManager
@@ -229,7 +230,12 @@ class AnthropicApi(DefaultApi):
     def _has_image_support(self, model_name: str) -> bool:
         if "claude-2.0" in model_name or "haiku" in model_name:
             return False
-        if "3-5" in model_name or "sonnet" in model_name or "vision" in model_name:
+        if (
+            "3-5" in model_name
+            or "3-7" in model_name
+            or "sonnet" in model_name
+            or "vision" in model_name
+        ):
             return True
         return False
 
@@ -245,7 +251,7 @@ class AnthropicApi(DefaultApi):
 
     def _has_tool_support(self, model_name: str) -> bool:
 
-        return "claude-3-5" in model_name
+        return "claude-3-5" in model_name or "claude-3-7" in model_name
 
     def _has_structured_output_support(self, model_name: Optional[str] = None) -> bool:
 
@@ -267,6 +273,10 @@ class AnthropicApi(DefaultApi):
             model_name = self.get_best_model()
 
         name = model_name.lower()
+
+        # Claude 3.7 Sonnet => 200k
+        if "claude-3-7-sonnet" in name:
+            return 200_000
 
         # Claude 3.5 Sonnet/Haiku => 200k
         if "claude-3-5-sonnet" in name or "claude-3-5-haiku" in name:
@@ -306,6 +316,10 @@ class AnthropicApi(DefaultApi):
 
         name = model_name.lower()
 
+        # Claude 3.7 Sonnet => 8192
+        if "claude-3-7-sonnet" in name:
+            return 8192
+
         # Claude 3.5 Sonnet/Haiku => 8192
         if "claude-3-5-sonnet" in name or "claude-3-5-haiku" in name:
             return 8192
@@ -338,22 +352,37 @@ class AnthropicApi(DefaultApi):
         messages: List[Message],
         model_name: Optional[str] = None,
         temperature: float = 0.0,
-        max_output_tokens: Optional[int] = None,
+        max_num_output_tokens: Optional[int] = None,
         toolset: Optional[ToolSet] = None,
         response_format: Optional[BaseModel] = None,
         **kwargs,
-    ) -> Message:
+    ) -> List[Message]:
 
+        # Anthropic imports:
         from anthropic import NotGiven
 
-        # Extract system message if present
+        # Set default model if not provided
+        if model_name is None:
+            # We Require the minimum features for text generation:
+            features = [ModelFeatures.TextGeneration]
+            # If tools are provided, we also require tools:
+            if toolset:
+                features.append(ModelFeatures.Tools)
+            # If the messages contain media, we require the appropriate features:
+            # TODO: implement
+            model_name = self.get_best_model(features=features)
+
+            if model_name is None:
+                raise APIError(f"No suitable model with features: {features}")
+
+        # Specific to Anthropic: extract system message if present
         system_messages = ""
         non_system_messages = []
         for message in messages:
             if message.role == "system":
-                for block in message.blocks:
-                    if block.block_type == BlockType.Text:
-                        system_messages += block.content
+                for anthropic_block in message.blocks:
+                    if anthropic_block.block_type == BlockType.Text:
+                        system_messages += anthropic_block.content
                     else:
                         raise ValueError(
                             "System message should only contain text blocks."
@@ -366,137 +395,123 @@ class AnthropicApi(DefaultApi):
             messages=non_system_messages, exclude_extensions=["pdf"]
         )
 
-        # Convert remaining non-system litemind Messages to Anthropic messages:
-        anthropic_formatted_messages = convert_messages_for_anthropic(
-            preprocessed_messages,
-            response_format=response_format,
-            cache_support=self._has_cache_support(model_name),
-        )
+        # Get max num of output tokens for model if not provided:
+        if max_num_output_tokens is None:
+            max_num_output_tokens = self.max_num_output_tokens(model_name)
 
         # Convert a ToolSet to Anthropic "tools" param if any
-        tools_param = format_tools_for_anthropic(toolset) if toolset else NotGiven()
+        anthropic_tools = format_tools_for_anthropic(toolset) if toolset else NotGiven()
 
-        # Get max num of output tokens for model if not provided:
-        if max_output_tokens is None:
-            max_output_tokens = self.max_num_output_tokens(model_name)
+        # List of new messages part of the response:
+        new_messages = []
 
         try:
-            # Call the Anthropic API:
-            with self.client.messages.stream(
-                model=model_name,
-                messages=anthropic_formatted_messages,
-                temperature=temperature,
-                max_tokens=max_output_tokens,
-                tools=tools_param,
-                system=system_messages,
-                # Pass system message as top-level parameter
-                **kwargs,
-            ) as streaming_response:
-                # 1) Stream and handle partial events:
-                for event in streaming_response:
-                    if event.type == "text":
-                        # Call the callback manager for text streaming events:
-                        self.callback_manager.on_text_streaming(event.text)
+            # Loop until we get a response that doesn't require tool use:
+            while True:
 
-                # 2) Get the final response:
-                response = streaming_response.get_final_message()
-
-            # If the model wants to use a tool, parse out the tool call:
-            if response.stop_reason == "tool_use":
-
-                # Append the response to the messages:
-                anthropic_formatted_messages.append(
-                    {"role": response.role, "content": response.content},
+                # Convert remaining non-system litemind Messages to Anthropic messages:
+                anthropic_formatted_messages = convert_messages_for_anthropic(
+                    preprocessed_messages,
+                    response_format=response_format,
+                    cache_support=self._has_cache_support(model_name),
                 )
 
+                # Call the Anthropic API:
+                with self.client.messages.stream(
+                    model=model_name,
+                    messages=anthropic_formatted_messages,
+                    temperature=temperature,
+                    max_tokens=max_num_output_tokens,
+                    tools=anthropic_tools,
+                    system=system_messages,
+                    # Pass system message as top-level parameter
+                    **kwargs,
+                ) as streaming_response:
+                    # 1) Stream and handle partial events:
+                    for event in streaming_response:
+                        if event.type == "text":
+                            # Call the callback manager for text streaming events:
+                            self.callback_manager.on_text_streaming(event.text)
+
+                    # 2) Get the final response:
+                    anthropic_response = streaming_response.get_final_message()
+
+                # Process the response from Anthropic:
+                response = process_response_from_anthropic(
+                    anthropic_response=anthropic_response,
+                    response_format=response_format,
+                )
+
+                # Append response message to original, preprocessed, and new messages:
+                messages.append(response)
+                preprocessed_messages.append(response)
+                new_messages.append(response)
+
+                # If the model wants to use a tool, parse out the tool calls:
+                if not response.has(BlockType.Tool):
+                    # Break out of the loop if no tool use is required anymore:
+                    break
+
+                # Prepare message that will hold the tool uses and adds it to the original, preprocessed, and new messages:
+                tool_use_message = Message()
+                messages.append(tool_use_message)
+                preprocessed_messages.append(tool_use_message)
+                new_messages.append(tool_use_message)
+
                 # Get the tool calls:
-                tool_calls = response.content
+                tool_calls = [
+                    b.content for b in response if b.block_type == BlockType.Tool
+                ]
 
                 # Iterate through tool calls:
                 for tool_call in tool_calls:
-                    if tool_call.type == "tool_use":
+                    if isinstance(tool_call, ToolCall):
 
                         # Get tool function name:
-                        function_name = tool_call.name
+                        tool_name = tool_call.tool_name
 
                         # Get the corresponding tool in toolset:
-                        tool = toolset.get_tool(function_name) if toolset else None
+                        tool = toolset.get_tool(tool_name) if toolset else None
 
                         # Get the input arguments:
-                        tool_arguments = tool_call.input
+                        tool_arguments = tool_call.arguments
 
                         if tool:
                             try:
+                                # Execute the tool
                                 result = tool.execute(**tool_arguments)
-                                response_content = json.dumps(result, default=str)
-                            except Exception as e:
-                                response_content = (
-                                    f"Function '{function_name}' error: {e}"
-                                )
 
-                            anthropic_formatted_messages.append(
-                                {
-                                    "role": "user",
-                                    "content": [
-                                        {
-                                            "type": "tool_result",
-                                            "tool_use_id": tool_call.id,
-                                            "content": [
-                                                {
-                                                    "type": "text",
-                                                    "text": response_content,
-                                                }
-                                            ],
-                                        }
-                                    ],
-                                }
+                                # If not a string, convert from JSON:
+                                if not isinstance(result, str):
+                                    result = json.dumps(result, default=str)
+
+                            except Exception as e:
+                                result = f"Function '{tool_name}' error: {e}"
+
+                            # Append the tool call result to the messages:
+                            tool_use_message.append_tool_use(
+                                tool_name=tool_name,
+                                arguments=tool_arguments,
+                                result=result,
+                                id=tool_call.id,
                             )
 
                         else:
-                            anthropic_formatted_messages.append(
-                                {
-                                    "role": "user",
-                                    "content": [
-                                        {
-                                            "type": "tool_result",
-                                            "tool_use_id": tool_call.id,
-                                            "content": [
-                                                {
-                                                    "type": "text",
-                                                    "text": f"(Tool '{function_name}' use requested, but tool not found.)",
-                                                }
-                                            ],
-                                        }
-                                    ],
-                                }
+                            # Append the tool call result to the messages:
+                            tool_use_error_message = f"(Tool '{tool_name}' use requested, but tool not found.)"
+                            tool_use_message.append_tool_use(
+                                tool_name=tool_name,
+                                arguments=tool_arguments,
+                                result=tool_use_error_message,
+                                id=tool_call.id,
                             )
-
-                        # Follow up with a final completion that incorporates the tool call results:
-                        response = self.client.messages.create(
-                            model=model_name,
-                            messages=anthropic_formatted_messages,
-                            temperature=temperature,
-                            max_tokens=max_output_tokens,
-                            tools=tools_param,
-                            system=system_messages,
-                            # Pass system message as top-level parameter
-                            **kwargs,
-                        )
-
-            # Process the response:
-            response_message = process_response_from_anthropic(
-                response=response, toolset=toolset, response_format=response_format
-            )
-
-            # Append response message to messages:
-            messages.append(response_message)
 
             # Add all parameters to kwargs:
             kwargs.update(
                 {
                     "model_name": model_name,
                     "temperature": temperature,
-                    "max_output_tokens": max_output_tokens,
+                    "max_output_tokens": max_num_output_tokens,
                     "toolset": toolset,
                     "response_format": response_format,
                 }
@@ -510,4 +525,4 @@ class AnthropicApi(DefaultApi):
         except Exception as e:
             raise APIError(f"Anthropic generate text error: {e}")
 
-        return response_message
+        return new_messages

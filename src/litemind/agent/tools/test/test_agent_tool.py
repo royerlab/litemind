@@ -1,21 +1,24 @@
 import pytest
 
+from litemind import API_IMPLEMENTATIONS
 from litemind.agent.agent import Agent
 from litemind.agent.messages.message import Message
 from litemind.agent.tools.tool_agent import ToolAgent
 from litemind.agent.tools.toolset import ToolSet
-from litemind.apis.combined_api import CombinedApi
-from litemind.apis.providers.openai.utils.openai_api_key import (
-    is_openai_api_key_available,
-)
+from litemind.apis.model_features import ModelFeatures
 
 
-@pytest.mark.skipif(
-    not is_openai_api_key_available(), reason="requires OpenAI API key to run"
-)
-def test_agent_tool_translation():
+@pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
+def test_agent_tool_translation(api_class):
     # Initialize the OpenAIApi and Agent
-    api = CombinedApi()  # Assumes API key is available in the environment
+    api = api_class()  # Assumes API key is available in the environment
+
+    # Make sure that the API supports text generation, or skip test:
+    if not api.has_model_support_for(ModelFeatures.TextGeneration):
+        # skip pytest:
+        pytest.skip(
+            f"Skipping test for {api_class.__name__} as no text model is available."
+        )
 
     # Create a system message that defines the assistant's role as a translator
     system_message = Message(
@@ -58,13 +61,20 @@ def test_agent_tool_translation():
 
 
 # Test for AgentTool functionality, using an actual OpenAI API call
-@pytest.mark.skipif(
-    not is_openai_api_key_available(), reason="requires OpenAI API key to run"
-)
-def test_agent_tool():
+@pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
+def test_agent_tool(api_class):
     # Initialize the OpenAIApi and Agent for the AgentTool
-    api = CombinedApi()  # Assumes API key is available in the environment
-    agent = Agent(api=api)
+    api = api_class()  # Assumes API key is available in the environment
+
+    # Make sure that the API supports text generation, or skip test:
+    if not api.has_model_support_for(ModelFeatures.TextGeneration):
+        # skip pytest:
+        pytest.skip(
+            f"Skipping test for {api_class.__name__} as no text model is available."
+        )
+
+    # Initialize the Agent
+    agent = Agent(api=api, name="Order Assistant Agent")
 
     # Initialize the AgentTool with the Agent instance
     agent_tool = ToolAgent(agent, "Assistant agent that processes prompts")
@@ -84,10 +94,22 @@ def test_agent_tool():
     ), "AgentTool response should address the order status"
 
 
-@pytest.mark.skipif(
-    not is_openai_api_key_available(), reason="requires OpenAI API key to run"
-)
-def test_agent_tool_with_internal_tool():
+@pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
+def test_agent_tool_with_internal_tool(api_class):
+
+    # Initialize the OpenAIApi and Agent
+    api = api_class()  # Assumes API key is available in the environment
+
+    # Make sure that the API supports text generation, or skip test:
+    if not api.has_model_support_for(ModelFeatures.TextGeneration):
+        # skip pytest:
+        pytest.skip(
+            f"Skipping test for {api_class.__name__} as no text model is available."
+        )
+
+    # Initialize the Agent with the API
+    agent = Agent(api=api)
+
     # Define a simple function that will act as a tool within the Agent
     def check_order_status(order_id: str) -> str:
         """Mock function to check the status of an order."""
@@ -96,10 +118,6 @@ def test_agent_tool_with_internal_tool():
     # Initialize ToolSet and add the FunctionTool
     toolset = ToolSet()
     toolset.add_function_tool(check_order_status, "Check the status of an order by ID")
-
-    # Initialize the OpenAIApi and Agent
-    api = CombinedApi()  # Assumes API key is available in the environment
-    agent = Agent(api=api)
     agent.toolset = toolset  # Assign the toolset to the agent
 
     # Create and add a system message to set the agent's role as an assistant handling orders
@@ -127,11 +145,13 @@ def test_agent_tool_with_internal_tool():
 
     # Validate conversation structure
     assert (
-        len(agent.conversation) == 3
+        len(agent.conversation) == 5
     ), "Agent's conversation should have 3 messages: system, user and assistant's response"
     assert agent.conversation[0].role == "system"
     assert agent.conversation[1].role == "user"
     assert agent.conversation[2].role == "assistant"
+    assert agent.conversation[3].role == "user"
+    assert agent.conversation[4].role == "assistant"
 
     # Ensure the assistant's response includes the expected output from the tool
     assert (

@@ -339,11 +339,11 @@ class DefaultApi(BaseApi):
         messages: List[Message],
         model_name: Optional[str] = None,
         temperature: float = 0.0,
-        max_output_tokens: Optional[int] = None,
+        max_num_output_tokens: Optional[int] = None,
         toolset: Optional[ToolSet] = None,
         response_format: Optional[BaseModel] = None,
         **kwargs,
-    ) -> Message:
+    ) -> List[Message]:
 
         raise NotImplementedError("Text generation is not supported by this API.")
 
@@ -1140,7 +1140,7 @@ class DefaultApi(BaseApi):
                         messages=messages,
                         model_name=image_model_name,
                         temperature=temperature,
-                        max_output_tokens=max_output_tokens,
+                        max_num_output_tokens=max_output_tokens,
                     )
 
                     # Normalise response:
@@ -1214,7 +1214,7 @@ class DefaultApi(BaseApi):
         temperature: float = 0,
         max_output_tokens: Optional[int] = None,
         number_of_tries: int = 4,
-    ) -> str | None:
+    ) -> Optional[str]:
 
         with asection(
             f"Asking model {model_name} to describe a given audio: '{audio_uri}':"
@@ -1273,7 +1273,7 @@ class DefaultApi(BaseApi):
                         messages=messages,
                         model_name=audio_model_name,
                         temperature=temperature,
-                        max_output_tokens=max_output_tokens,
+                        max_num_output_tokens=max_output_tokens,
                     )
 
                     # Normalise response:
@@ -1327,7 +1327,7 @@ class DefaultApi(BaseApi):
         temperature: float = 0,
         max_output_tokens: Optional[int] = None,
         number_of_tries: int = 4,
-    ) -> str | None:
+    ) -> Optional[str]:
 
         with asection(
             f"Asking model {model_name} to describe a given video: '{video_uri}':"
@@ -1386,7 +1386,7 @@ class DefaultApi(BaseApi):
                         messages=messages,
                         model_name=video_model_name,
                         temperature=temperature,
-                        max_output_tokens=max_output_tokens,
+                        max_num_output_tokens=max_output_tokens,
                     )
 
                     # Normalize response:

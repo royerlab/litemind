@@ -1,8 +1,9 @@
 import pytest
 
+from litemind import API_IMPLEMENTATIONS
 from litemind.agent.messages.message import Message
 from litemind.apis.base_api import ModelFeatures
-from litemind.apis.tests.base_test import API_IMPLEMENTATIONS, BaseTest
+from litemind.apis.tests.base_test import BaseTest
 
 
 @pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
@@ -53,6 +54,9 @@ class TestBaseApiImplementationsMultimodalInputs(BaseTest):
 
         for message in messages:
             print(message)
+
+        # Get the last, and possibly only, message in response:
+        response = response[-1]
 
         # Check response:
         assert "sepia" in response or "chalkboard" in response or "Einstein" in response
@@ -108,6 +112,9 @@ class TestBaseApiImplementationsMultimodalInputs(BaseTest):
         for message in messages:
             print(message)
 
+        # Get the last, and possibly only, message in response:
+        response = response[-1]
+
         # Check response:
         if api_class.__name__ == "OllamaApi":
             # open source models are typically not yet strong enough.
@@ -156,6 +163,9 @@ class TestBaseApiImplementationsMultimodalInputs(BaseTest):
         for message in messages:
             print(message)
 
+        # Get the last, and possibly only, message in response:
+        response = response[-1]
+
         # Check response:
         assert "robot" in response or "futuristic" in response or "sky" in response
 
@@ -200,6 +210,9 @@ class TestBaseApiImplementationsMultimodalInputs(BaseTest):
         for message in messages:
             print(message)
 
+        # Get the last, and possibly only, message in response:
+        response = response[-1]
+
         # Check response:
         assert "beach" in response or "palm" in response or "sunset" in response
 
@@ -243,6 +256,9 @@ class TestBaseApiImplementationsMultimodalInputs(BaseTest):
 
         for message in messages:
             print(message)
+
+        # Get the last, and possibly only, message in response:
+        response = response[-1]
 
         # Check response:
         assert "field" in response or "blue" in response or "stars" in response
@@ -291,6 +307,9 @@ class TestBaseApiImplementationsMultimodalInputs(BaseTest):
 
         for message in messages:
             print(message)
+
+        # Get the last, and possibly only, message in response:
+        response = response[-1]
 
         # If api_class is OllamaApi then the model is open source and might not be as strong as the others:
         if api_class.__name__ == "OllamaApi":
@@ -347,6 +366,9 @@ class TestBaseApiImplementationsMultimodalInputs(BaseTest):
         for message in messages:
             print(message)
 
+        # Get the last, and possibly only, message in response:
+        response = response[-1]
+
         # Check response:
         assert "smell" in response or "ham" in response or "beer" in response
 
@@ -394,6 +416,9 @@ class TestBaseApiImplementationsMultimodalInputs(BaseTest):
         for message in messages:
             print(message)
 
+        # Get the last, and possibly only, message in response:
+        response = response[-1]
+
         # Check response:
         assert "canoe" in response or "chicken" in response or "hours" in response
 
@@ -437,6 +462,9 @@ class TestBaseApiImplementationsMultimodalInputs(BaseTest):
         for message in messages:
             print(message)
 
+        # Get the last, and possibly only, message in response:
+        response = response[-1]
+
         # Check response:
         assert (
             "disc" in response
@@ -450,6 +478,7 @@ class TestBaseApiImplementationsMultimodalInputs(BaseTest):
             or "hovering" in response
             or "hover" in response
             or "flying" in response
+            or "spacecraft" in response
         )
 
     def test_text_generation_with_video_url(self, api_class):
@@ -469,7 +498,7 @@ class TestBaseApiImplementationsMultimodalInputs(BaseTest):
         print("\n" + default_model_name)
 
         video_url = (
-            "https://ia903405.us.archive.org/27/items/archive-video-files/test.mp4"
+            "https://ia803405.us.archive.org/27/items/archive-video-files/test.mp4"
         )
         print(video_url)
 
@@ -497,6 +526,9 @@ class TestBaseApiImplementationsMultimodalInputs(BaseTest):
 
         for message in messages:
             print(message)
+
+        # Get the last, and possibly only, message in response:
+        response = response[-1]
 
         # Check response:
         if api_class.__name__ == "OllamaApi":

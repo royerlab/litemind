@@ -1,12 +1,10 @@
 import pytest
 
+from litemind import API_IMPLEMENTATIONS
 from litemind.agent.tools.function_tool import FunctionTool
 from litemind.agent.tools.tool_agent import ToolAgent
 from litemind.agent.tools.toolset import ToolSet
-from litemind.apis.providers.openai.openai_api import OpenAIApi
-from litemind.apis.providers.openai.utils.openai_api_key import (
-    is_openai_api_key_available,
-)
+from litemind.apis.model_features import ModelFeatures
 
 
 # Sample function to tests adding a FunctionTool
@@ -55,14 +53,21 @@ def test_toolset_add_function_tool():
 
 
 # Test for adding an AgentTool through add_agent_tool
-@pytest.mark.skipif(
-    not is_openai_api_key_available(), reason="requires OpenAI API key to run"
-)
-def test_toolset_add_agent_tool():
+@pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
+def test_toolset_add_agent_tool(api_class):
     from litemind.agent.agent import Agent
 
     # Initialize OpenAIApi and Agent for the AgentTool
-    api = OpenAIApi()  # Assumes API key is available in the environment
+    api = api_class()  # Assumes API key is available in the environment
+
+    # Make sure that the API supports text generation, or skip test:
+    if not api.has_model_support_for(ModelFeatures.TextGeneration):
+        # skip pytest:
+        pytest.skip(
+            f"Skipping test for {api_class.__name__} as no text model is available."
+        )
+
+    # Initialize Agent
     agent = Agent(api=api, name="agent_tool")
 
     # Initialize ToolSet and add an AgentTool

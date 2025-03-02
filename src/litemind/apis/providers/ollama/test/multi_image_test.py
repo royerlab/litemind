@@ -55,8 +55,12 @@ def test_compare_images_with_separate_messages():
         messages=messages, model_name=default_model_name
     )
 
+    # Print messages:
     for message in messages:
         print(message)
+
+    # Get the last response message:
+    response = messages[-1].lower()
 
     # Check response:
     assert (

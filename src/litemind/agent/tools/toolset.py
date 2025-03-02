@@ -8,36 +8,128 @@ class ToolSet:
         self.tools: List[BaseTool] = tools if tools else []
 
     def add_tool(self, tool: BaseTool):
-        """Add a new tool."""
+        """
+        Add a new tool.
+
+        Parameters
+        ----------
+        tool : BaseTool
+            The tool to add.
+
+        """
         self.tools.append(tool)
 
-    def add_function_tool(self, func: Callable, description: str):
-        """Add a new tool by wrapping a function and its description."""
+    def add_function_tool(
+        self, func: Callable, description: Optional[str] = None
+    ) -> "FunctionTool":
+        """
+        Add a new tool by wrapping a function and its description.
+
+        Parameters
+        ----------
+        func : Callable
+            The function to wrap.
+        description : str
+            A description of the tool. If no description is provided, the docstring of the function is used instead.
+            You can specify which part of the docstring will be used as description by surrounding the description with '***' (e.g. '***This is the description***').
+
+        Returns
+        -------
+        FunctionTool
+            The function tool.
+
+        """
         # Import here to avoid circular imports
         from litemind.agent.tools.function_tool import FunctionTool
 
-        self.tools.append(FunctionTool(func, description))
+        # Create the function tool:
+        function_tool = FunctionTool(func, description)
 
-    def add_agent_tool(self, agent, description: str):
-        """Add a new tool by wrapping an agent and its description."""
+        # Add the tool to the tool set:
+        self.tools.append(function_tool)
+
+        # Return the function tool:
+        return function_tool
+
+    def add_agent_tool(self, agent, description: str) -> "ToolAgent":
+        """
+        Add a new tool by wrapping an agent and its description.
+
+        Parameters
+        ----------
+        agent : Agent
+            The agent to wrap.
+        description : str
+            The description of the tool.
+
+        Returns
+        -------
+        ToolAgent
+            The tool agent.
+
+        """
         # Import here to avoid circular imports
         from litemind.agent.tools.tool_agent import ToolAgent
 
-        self.tools.append(ToolAgent(agent, description))
+        # Create the tool agent:
+        tool_agent = ToolAgent(agent, description)
+
+        # Add the tool to the tool set:
+        self.tools.append(tool_agent)
+
+        # Return the tool agent:
+        return tool_agent
 
     def get_tool(self, name: str) -> Optional[BaseTool]:
-        """Retrieve a tool by its name."""
+        """
+        Retrieve a tool by its name.
+
+        Parameters
+        ----------
+
+        name : str
+            The name of the tool to retrieve.
+
+        Returns
+        -------
+        Optional[BaseTool]
+            The tool, if found, or None.
+        """
+
+        # Iterate over tools and return the one with the matching name:
         for tool in self.tools:
+            # If the tool name matches, return the tool:
             if tool.name == name:
+                # Return the tool:
                 return tool
+
+        # If no tool is found, return None:
         return None
 
     def list_tools(self) -> List[BaseTool]:
-        """Return all tools as a list."""
+        """
+        Return all tools as a list.
+
+        Returns
+        -------
+        List[BaseTool]
+            All tools.
+        """
+
+        # Return all tools:
         return self.tools
 
     def tool_names(self) -> List[str]:
-        """Return all tool names as a list."""
+        """
+        Return all tool names as a list.
+
+        Returns
+        -------
+        List[str]
+            All tool names.
+        """
+
+        # Return all tool names:
         return [t.name for t in self.tools]
 
     def __getitem__(self, item) -> BaseTool:

@@ -1,16 +1,14 @@
 import pytest
 from arbol import aprint
 
+from litemind import API_IMPLEMENTATIONS
 from litemind.agent.agent import Agent
-from litemind.agent.messages.conversation import Conversation
 from litemind.agent.messages.message import Message
-from litemind.agent.messages.message_block_type import BlockType
 from litemind.apis.model_features import ModelFeatures
-from litemind.apis.tests.base_test import API_IMPLEMENTATIONS
 
 
 @pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
-def test_agent_text_with_openai(api_class):
+def test_agent_with_just_text(api_class):
 
     # Create OpenAI API object:
     api = api_class()
@@ -25,27 +23,18 @@ def test_agent_text_with_openai(api_class):
     # Create agent:
     agent = Agent(api=api)
 
-    # Create messages:
-    system_message = Message(
-        role="system", text="You are an omniscient all-knowing being called Ohmm"
-    )
-    user_message = Message(role="user", text="Who are you?")
+    # Add system message:
+    agent.append_system_message("You are an omniscient all-knowing being called Ohmm")
 
-    # Create conversation:
-    conversation = Conversation()
+    # Run agent, yu can pass a string directly to the agent:
+    response = agent("Who are you?")
 
-    # Append messages:
-    conversation += system_message
-    conversation += user_message
+    # Print conversation
+    aprint(agent.conversation)
 
-    # Run agent:
-    reply = agent(conversation)
-
-    aprint(conversation)
-
-    # Check response:
+    # Check that there is three messages in conversation:
     assert len(agent.conversation) == 3
-    assert "I am Ohmm" in reply
+
     assert agent.conversation[0].role == "system"
     assert (
         "You are an omniscient all-knowing being called Ohmm" in agent.conversation[0]
@@ -53,9 +42,18 @@ def test_agent_text_with_openai(api_class):
     assert agent.conversation[1].role == "user"
     assert "Who are you?" in agent.conversation[1]
 
+    # Check that there is one message in the response:
+    assert len(response) == 1
+
+    # Extract last message from response:
+    response = response[-1]
+
+    # Check that response contains the system message:
+    assert "Ohmm" in response
+
 
 @pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
-def test_message_image(api_class):
+def test_agent_message_with_image(api_class):
 
     # Create OpenAI API object:
     api = api_class()
@@ -78,40 +76,37 @@ def test_message_image(api_class):
         ]
     )
 
+    # Check that image model is available:
+    if not image_model_name:
+        aprint(
+            f"Skipping test for {api_class.__name__} as no textgen + image + tools model is available."
+        )
+        return
+
     # Print image model:
     aprint(f"Image model: {image_model_name}")
 
     # Create agent:
-    agent = Agent(api=api, model=image_model_name)
+    agent = Agent(api=api, model_name=image_model_name)
 
-    # Create messages:
-    system_message = Message(
-        role="system", text="You are an omniscient all-knowing being called Ohmm"
-    )
+    agent.append_system_message("You are an omniscient all-knowing being called Ohmm")
+
     user_message = Message(role="user", text="Can you describe what you see?")
     user_message.append_image(
         "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Einstein_1921_by_F_Schmutzer_-_restoration.jpg/456px-Einstein_1921_by_F_Schmutzer_-_restoration.jpg"
     )
 
-    # Create conversation:
-    conversation = Conversation()
+    # Run agent on message, you can pass a message object, or a list, directly to the agent:
+    response = agent(user_message)
 
-    # Append messages:
-    conversation += system_message
-    conversation += user_message
-
-    # Check conversation length and contents:
-    assert len(conversation) == 2
-    assert conversation[0].role == "system"
-    assert "You are an omniscient all-knowing being called Ohmm" in conversation[0]
-    assert conversation[1].role == "user"
-    assert "Can you describe what you see?" in conversation[1]
-    assert len(conversation[1]) == 2
-    assert conversation[1][1].block_type == BlockType.Image
-
-    # Run agent:
-    reply = agent(conversation)
-
-    # Check response:
+    # Check that agent conversation has three messages:
     assert len(agent.conversation) == 3
-    assert "sepia" in reply or "photograph" in reply or "chalkboard" in reply
+
+    # Check that there is one more message in the response:
+    assert len(response) == 1
+
+    # Extract the last message from the response:
+    response = response[-1]
+
+    # Check that the response contains the image description:
+    assert "sepia" in response or "photograph" in response or "chalkboard" in response

@@ -2,9 +2,10 @@ from typing import Dict
 
 import pytest
 
+from litemind import API_IMPLEMENTATIONS
 from litemind.agent.messages.message import Message
 from litemind.apis.base_api import ModelFeatures
-from litemind.apis.tests.base_test import API_IMPLEMENTATIONS, BaseTest
+from litemind.apis.tests.base_test import BaseTest
 
 
 @pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
@@ -70,6 +71,9 @@ class TestBaseApiImplementationsDocuments(BaseTest):
         )
 
         print("\n" + str(response))
+
+        # Get the last, and possibly only, message in response:
+        response = response[-1]
 
         # Make sure that the answer is not empty:
         assert (
@@ -147,6 +151,9 @@ class TestBaseApiImplementationsDocuments(BaseTest):
 
         print("\n" + str(response))
 
+        # Get the last, and possibly only, message in response:
+        response = response[-1]
+
         # Make sure that the answer is not empty:
         assert (
             len(response) > 0
@@ -206,6 +213,9 @@ class TestBaseApiImplementationsDocuments(BaseTest):
         )
 
         print("\n" + str(response))
+
+        # Get the last, and possibly only, message in response:
+        response = response[-1]
 
         # Make sure that the answer is not empty:
         assert (
@@ -273,6 +283,9 @@ class TestBaseApiImplementationsDocuments(BaseTest):
 
         print("\n" + str(response))
 
+        # Get the last, and possibly only, message in response:
+        response = response[-1]
+
         # Make sure that the answer is not empty:
         assert (
             len(response) > 0
@@ -320,6 +333,9 @@ class TestBaseApiImplementationsDocuments(BaseTest):
         )
 
         print("\n" + str(response))
+
+        # Get the last, and possibly only, message in response:
+        response = response[-1]
 
         # Make sure that the answer is not empty:
         assert (
@@ -380,6 +396,9 @@ class TestBaseApiImplementationsDocuments(BaseTest):
 
         print("\n" + str(response))
 
+        # Get the last, and possibly only, message in response:
+        response = response[-1]
+
         # Make sure that the answer is not empty:
         assert (
             len(response) > 0
@@ -431,6 +450,9 @@ class TestBaseApiImplementationsDocuments(BaseTest):
         )
 
         print("\n" + str(response))
+
+        # Get the last, and possibly only, message in response:
+        response = response[-1]
 
         # Make sure that the answer is not empty:
         assert (

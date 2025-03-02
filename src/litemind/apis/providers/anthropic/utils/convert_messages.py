@@ -4,6 +4,8 @@ from pydantic import BaseModel
 
 from litemind.agent.messages.message import Message
 from litemind.agent.messages.message_block_type import BlockType
+from litemind.agent.messages.tool_call import ToolCall
+from litemind.agent.messages.tool_use import ToolUse
 from litemind.apis.utils.get_media_type_from_uri import get_media_type_from_uri
 from litemind.apis.utils.read_file_and_convert_to_base64 import (
     base64_to_data_uri,
@@ -38,11 +40,13 @@ def convert_messages_for_anthropic(
                 text: str = block.content
 
                 if message.role == "assistant":
-                    # remove trailing whitespace as it is not allowed!
+                    # remove trailing whitespace as it is not allowed by Anthropic!
                     text = text.rstrip()
 
                 content.append({"type": "text", "text": text})
             elif block.block_type == BlockType.Image:
+
+                # Get the image URI and convert file to base64:
                 image_uri = block.content
                 media_type = get_media_type_from_uri(image_uri)
                 if image_uri.startswith("file://"):
@@ -59,6 +63,7 @@ def convert_messages_for_anthropic(
                 else:
                     raise ValueError(f"Unsupported image URI: {image_uri}")
 
+                # Add the image to the content:
                 content.append(
                     {
                         "type": "image",
@@ -74,12 +79,16 @@ def convert_messages_for_anthropic(
                     }
                 )
             elif block.block_type == BlockType.Audio:
+
+                # Get the audio URI and convert file to base64:
                 audio_uri = block.content
                 media_type = get_media_type_from_uri(audio_uri)
                 if audio_uri.startswith("file://"):
                     local_path = audio_uri.replace("file://", "")
                     base64_data = read_file_and_convert_to_base64(local_path)
                     audio_uri = base64_to_data_uri(base64_data, media_type)
+
+                # Add the audio to the content:
                 content.append(
                     {
                         "type": "audio",
@@ -97,6 +106,7 @@ def convert_messages_for_anthropic(
             elif block.block_type == BlockType.Document and block.content.endswith(
                 ".pdf"
             ):
+                # Convert PDF to base64:
                 pdf_uri = block.content
                 media_type = "application/pdf"
                 if pdf_uri.startswith("file://"):
@@ -111,6 +121,7 @@ def convert_messages_for_anthropic(
                 else:
                     raise ValueError(f"Unsupported PDF URI: {pdf_uri}")
 
+                # Add the document to the content:
                 content.append(
                     {
                         "type": "document",
@@ -125,7 +136,45 @@ def convert_messages_for_anthropic(
                         },
                     }
                 )
-            # Add more block types as needed
+            elif block.block_type == BlockType.Tool:
+
+                # if contents is a ToolUse object do the following:
+                if isinstance(block.content, ToolUse):
+
+                    # Get the tool use object:
+                    tool_use: ToolUse = block.content
+
+                    # Add tool use to the content:
+                    content.append(
+                        {
+                            "type": "tool_result",
+                            "tool_use_id": tool_use.id,
+                            "content": [
+                                {
+                                    "type": "text",
+                                    "text": tool_use.result,
+                                }
+                            ],
+                        }
+                    )
+
+                elif isinstance(block.content, ToolCall):
+
+                    # Get the tool use object:
+                    tool_call: ToolUse = block.content
+
+                    # Add the tool to the content:
+                    content.append(
+                        {
+                            "id": tool_call.id,
+                            "type": "tool_use",
+                            "name": tool_call.tool_name,
+                            "input": tool_call.arguments,
+                        }
+                    )
+
+            else:
+                raise ValueError(f"Unsupported block type: {block.block_type}")
 
         anthropic_messages.append(
             {

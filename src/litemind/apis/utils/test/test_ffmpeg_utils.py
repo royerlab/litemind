@@ -1,7 +1,5 @@
 import os
 
-# _set_ffmpeg_binary()
-import ffmpeg
 import pytest
 
 from litemind.apis.utils.ffmpeg_utils import (
@@ -16,6 +14,9 @@ def test_video(tmp_path):
     Generate a short 2-second synthetic tests video (with audio)
     and return the path to the created file.
     """
+
+    import ffmpeg
+
     # Paths for the generated video and final tests file
     video_path = tmp_path / "test_synthetic_video.mp4"
 

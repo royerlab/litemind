@@ -23,7 +23,7 @@ def get_openai_model_list(
     excluded: Optional[List[str]] = None,
     exclude_dated_models: bool = True,
     verbose: bool = False,
-) -> list[str]:
+) -> List[str]:
     """
     Get the list of all OpenAI ChatGPT models.
 
@@ -57,6 +57,7 @@ def get_openai_model_list(
                 "audio",
                 "gpt",
                 "o1",
+                "o3",
                 "text-embedding",
                 "whisper",
                 "ada-002",
@@ -145,9 +146,11 @@ def _remove_dated_models(models):
 def model_key(model):
     score = 0
 
-    if "o1" in model:
+    if "o3" in model:
+        score += 120
+    elif "o1" in model:
         score += 110
-    if "gpt-4o" in model:
+    elif "gpt-4o" in model:
         score += 100
     elif "gpt-4" in model:
         score += 90

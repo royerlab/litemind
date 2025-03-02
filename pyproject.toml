@@ -1,15 +1,15 @@
 [build-system]
-requires = ["setuptools>=45", "wheel", "build"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "litemind"  # <-- Add the project name here
-version = "2025.02.23"
+dynamic = ["version"]
 description = "A wrapper API around LLM APIs and agentic AI framework"
 authors = [{name = "Loic A. Royer"}]
 license = "BSD-3-Clause"
 readme = "README.md"
-requires-python = ">=3.6"
+requires-python = ">=3.8"
 keywords = ["llm", "ai", "agents", "wrapper"]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -29,26 +29,40 @@ dependencies = [
     "google-generativeai",
     "pillow",
     "arbol",
+    "ansicolors",
     "json-repair",
     "tiktoken",
     "pydantic",
+    "pandas",
+    "numpy",
+    "chardet",
 ]
 
-[tool.setuptools]
-package-dir = {"" = "src"}
-
-[tool.setuptools.packages.find]
-where = ["src"]
+[tool.hatch.build.targets.sdist]
+ignore-vcs = true
+packages = ["src/litemind"]
+include = [
+  "**",
+  "README.md",
+  "LICENSE",
+]
 exclude = [
-    "*.tests*",
-    "*.test*",
-    "tests.*",
-    "test.*",
+    "**/tests/**",
+    "**/.DS_Store",
+    "*.egg-info"
 ]
+
+[tool.hatch.version]
+path = "src/litemind/__init__.py"
+
+[project.urls]
+Homepage = "https://github.com/royerlab/litemind"
+Issues = "https://github.com/royerlab/litemind/issues"
 
 # Development dependencies:
 [project.optional-dependencies]
 dev = [
+    "hatch",
     "pytest",
     "pytest-html",
     "pytest-cov",
@@ -61,6 +75,7 @@ dev = [
 
 # Optional dependencies:
 rag = [
+    "fastembed",
     "chromadb"
 ]
 whisper = [
@@ -71,23 +86,35 @@ documents = [
     "pymupdf4llm",
 ]
 tables = [
-    "pandas",
-    "numpy",
-    "chardet",
     "tabulate"
 ]
 videos = [
     "ffmpeg-python",
     "imageio[ffmpeg]",
 ]
-embed = [
-    "fastembed",
-]
+
 
 # Commands:
 [project.scripts]
 readmegen = "litemind.tools.readme_generator.readme_generator:main"
 
-# pytest options:
-[tool.pytest.ini_options]
-log_cli = true
+[tool.hatch.envs.hatch-test]
+default-args = ["src/"]
+extra-dependencies = [
+    "chromadb",
+    "openai-whisper",
+    "pymupdf",
+    "pymupdf4llm",
+    "pandas",
+    "numpy",
+    "chardet",
+    "tabulate",
+    "fastembed",
+    "ffmpeg-python",
+    "imageio[ffmpeg]",
+    "pytest-html",
+    "pytest-cov",
+    "pytest-md-report",
+]
+
+

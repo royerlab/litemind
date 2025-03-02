@@ -1,24 +1,23 @@
-import json
-from typing import Iterator, Optional
+from typing import Iterator, Optional, Union
 
-from google.generativeai.types.discuss_types import ChatResponse
 from pydantic import BaseModel
 
 from litemind.agent.messages.message import Message
 from litemind.agent.tools.toolset import ToolSet
+from litemind.apis.utils.json_to_object import json_to_object
 
 
 def process_response_from_ollama(
-    response: ChatResponse | Iterator[ChatResponse],
+    ollama_response: Union["ChatResponse", Iterator["ChatResponse"]],
     toolset: Optional[ToolSet],
-    response_format: Optional[BaseModel | str] = None,
+    response_format: Optional[Union[BaseModel, str]] = None,
 ) -> Message:
     """
     Process Ollama's response, checking for tool calls and executing them if needed.
 
     Parameters
     ----------
-    response : dict
+    ollama_response : dict
         The response from Ollama's `chat` call, e.g.:
         {
           'done': True,
@@ -42,58 +41,48 @@ def process_response_from_ollama(
     Message
         The final response message (either direct text or the tool's result).
     """
+
+    # Initialize the processed response:
+    processed_reponse = Message(role="assistant")
+
+    # Text content:
+    text_content = ""
+
+    # Variable to hold whether the response is a tool use:
+    is_tool_use = False
+
     # The top-level content from Ollama
-    message_data = response["message"]
-    text_content = message_data.get("content") or ""
+    ollama_message = ollama_response["message"]
 
-    # 1) Check for tool calls
-    tool_calls = message_data.get("tool_calls", [])
+    # Get text message:
+    text_message = ollama_message.get("content", "")
+
+    # Append the text message to the processed response:
+    processed_reponse.append_text(text_message)
+
+    # Append the text message to the text content:
+    text_content += text_message
+
+    # Get the tool calls from the Ollama message:
+    tool_calls = ollama_message.get("tool_calls", [])
+
     if tool_calls and toolset:
-        # For simplicity, just handle the first tool call
-        tool_call = tool_calls[0]
-        func_info = tool_call.get("function", {})
-        function_name = func_info.get("name", "")
-        arguments = func_info.get("arguments", {})
+        is_tool_use = True
+        for tool_call in tool_calls:
 
-        # If arguments is a JSON-encoded string, parse it
-        if isinstance(arguments, str):
-            try:
-                arguments = json.loads(arguments)
-            except json.JSONDecodeError:
-                # fallback if it's not valid JSON
-                pass
+            func_info = tool_call.get("function", {})
+            function_name = func_info.get("name", "")
+            arguments = func_info.get("arguments", {})
 
-        # 2) Execute the corresponding tool
-        tool = toolset.get_tool(function_name) if function_name else None
-        if tool:
-            try:
-                result = tool.execute(**arguments)
-                # Return the tool’s result as JSON
-                response_content = json.dumps(result, default=str)
-                return Message(role="assistant", text=response_content)
-            except Exception as e:
-                err_msg = f"Function '{function_name}' error: {e}"
-                return Message(role="assistant", text=err_msg)
+            processed_reponse.append_tool_call(
+                tool_name=function_name, arguments=arguments, id=""
+            )
 
-    # 4) If response_format is provided, try to parse the text content
-    if response_format:
+    # If response_format is provided, try to parse the text content
+    if response_format and not is_tool_use:
+        processed_reponse = json_to_object(
+            processed_reponse, response_format, text_content
+        )
 
-        # Attempt to repair the JSON string
-        from json_repair import repair_json
-
-        repaired_json = repair_json(text_content)
-
-        # If the repaired string is empty, return the original text content
-        if len(repaired_json.strip()) == 0 and len(text_content.strip()) > 0:
-            return Message(role="assistant", text=text_content)
-
-        # Parse the JSON string into the specified format
-        try:
-            parsed_obj = response_format.model_validate_json(repaired_json)
-            return Message(role="assistant", obj=parsed_obj)
-        except Exception as e:
-            # If parsing fails, return the original text content
-            return Message(role="assistant", text=text_content)
-
-    # 3) If no tool calls or no toolset, just return the text content
-    return Message(role="assistant", text=text_content)
+    # If no tool calls or no toolset, just return the text content
+    return processed_reponse

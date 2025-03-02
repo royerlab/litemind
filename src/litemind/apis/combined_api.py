@@ -256,11 +256,11 @@ class CombinedApi(DefaultApi):
         messages: List[Message],
         model_name: Optional[str] = None,
         temperature: float = 0.0,
-        max_output_tokens: Optional[int] = None,
+        max_num_output_tokens: Optional[int] = None,
         toolset: Optional[ToolSet] = None,
         response_format: Optional[BaseModel] = None,
         **kwargs,
-    ) -> Message:
+    ) -> List[Message]:
 
         # if no model name is provided we return the best model as defined in the method above:
         if model_name is None:
@@ -278,7 +278,7 @@ class CombinedApi(DefaultApi):
             messages=messages,
             model_name=model_name,
             temperature=temperature,
-            max_output_tokens=max_output_tokens,
+            max_num_output_tokens=max_num_output_tokens,
             toolset=toolset,
             response_format=response_format,
         )
@@ -409,7 +409,7 @@ class CombinedApi(DefaultApi):
 
     def embed_images(
         self,
-        image_uris: list[str],
+        image_uris: List[str],
         model_name: Optional[str] = None,
         dimensions: int = 512,
         **kwargs,

@@ -18,7 +18,7 @@ First off, thank you for considering contributing to LiteMind!
 
 1. Clone your fork:
 ```bash
-git clone https://github.com/yourusername/litemind.git
+git clone https://github.com/royerlab/litemind.git
 cd litemind
 ```
 

@@ -3,8 +3,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import List
 
-import chardet
-
 
 def human_readable_size(size_in_bytes: int) -> str:
     """
@@ -106,6 +104,8 @@ def is_text_file(file_path, blocksize=1024):
             # If the chunk contains null bytes, it's likely binary.
             if b"\0" in chunk:
                 return False
+            import chardet
+
             result = chardet.detect(chunk)
             # Check that an encoding was found and that the confidence is reasonably high.
             if not result["encoding"] or result["confidence"] < 0.5:

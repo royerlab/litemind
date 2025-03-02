@@ -63,3 +63,9 @@ class ModelFeatures(Enum):
 
         # If it is a list of strings, convert to a list of enums , ignoring case:
         return [ModelFeatures(feature) for feature in features]
+
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return self.name

@@ -2,6 +2,8 @@ import argparse
 import os
 from typing import Optional
 
+from arbol import asection
+
 from litemind.agent.messages.message import Message
 from litemind.apis.base_api import BaseApi
 from litemind.apis.combined_api import CombinedApi
@@ -18,125 +20,144 @@ def generate_readme(
     api: Optional[BaseApi] = None,
     save_repo_to_file: bool = False,
 ) -> str:
+    """
+    Generate a README.md file for a Python repository.
 
-    # Initialize the API
-    if api is None:
-        api = CombinedApi()
+    Parameters
+    ----------
+    folder_path: str
+        The path to the folder containing the Python repository.
+    context_text: str
+        The context text to provide to the AI model.
+    api: Optional[BaseApi]
+        The API to use for generating the README. If None, the CombinedApi is used.
+    save_repo_to_file: bool
+        Whether to save the entire repository to a file for debugging purposes.
 
-    # Initialize the agent
-    from litemind.agent.agent import Agent
+    Returns
+    -------
+    str
+        The generated README content.
 
-    agent = Agent(api=api, model_features=ModelFeatures.Document)
+    """
+    with asection("Generating README.md"):
 
-    # Define the prompt for generating the README.md
-    prompt = f"""
-     You are a helpful assistant with deep expertise in Software Engineering and best practices for Open Source projects.
-     You know how to write complete, compeling and informative README files for Python repositories.
-     Your task is to help a user generate a README.md file for a Python repository.
- 
-     The README.md should _at least_ include the following sections:
-     - Summary
-     - Features
-     - Installation
-     - Usage
-     - Concepts
-     - More Code Examples
-     - Caveats and Limitations
-     - Code Health
-     - Roadmap
-     - Contributing
-     - License
-     But feel free to include additional sections as needed.
- 
-     The 'Summary' section should provide an enthusiastic and complete description of the library, its purpose, and philosophy.
-     The 'Usage' section should consist of rich, striking and illustrative examples of the Agentic API in use.
-     The 'Concepts' section should explain the concepts behind the library, the main classes and their purpose, and how they interact.
-     The 'Code Health' section should include the results of unit test in file 'test_report.md'. Please also discuss which tests failed as logged in 'test_report_stdout.txt'. Please provide file names for failed tests and statistics about the number of failed tests and an analysis of what happened. Please also analyse the code coverage (see file test_coverage.json if present) and provide a summary of the coverage in this section. 
-     The 'Roadmap' section can use the contents of TODO.md as a starting point, keep the checkmarks.
-     The 'More Code Examples' section further expands with many multimodal examples of the agentic and wrapper APIs covering most features, uses ideas and code from the unit tests (no need to mention that).
-        
-     For code examples:
-     - Please use markdown code blocks for code examples and other code snippets.
-     - Make sure that the code examples are complete and can be run as-is.
-     - Make sure that the code can run without errors, e.g. make sure that all required imports are included.
-     - Make sure, if possible to include the expected output as comments in the code.
-     - Make sure that comments are emphatically didactic.
-     - Make sure that the code is well-formatted and follows PEP-8.
-     - Make sure to include a variety of examples that cover different use cases and edge cases.
-     - Make sure that the code examples are complete and can be run as-is.
-     - Avoid putting multiple code examples in the same code block, unless they are chained.
+        # Initialize the API
+        if api is None:
+            api = CombinedApi()
+
+        # Initialize the agent
+        from litemind.agent.agent import Agent
+
+        agent = Agent(api=api, model_features=ModelFeatures.Document)
+
+        # Define the prompt for generating the README.md
+        prompt = f"""
+         You are a helpful assistant with deep expertise in Software Engineering and best practices for Open Source projects.
+         You know how to write complete, compeling and informative README files for Python repositories.
+         Your task is to help a user generate a README.md file for a Python repository.
      
+         The README.md should _at least_ include the following sections:
+         - Summary
+         - Features
+         - Installation
+         - Usage
+         - Concepts
+         - More Code Examples
+         - Caveats and Limitations
+         - Code Health
+         - Roadmap
+         - Contributing
+         - License
+         But feel free to include additional sections as needed.
      
-     At the end of the README, include a note explaining that the README was generated with the help of AI.
-     Avoid hallucinating things that are not in the repository.
-     Please add badges for: pipy, license, and code coverage
+         The 'Summary' section should provide an enthusiastic and complete description of the library, its purpose, and philosophy.
+         The 'Usage' section should consist of rich, striking and illustrative examples of the Agentic API in use with multimodal inputs.
+         The 'Concepts' section should explain the concepts behind the library, the main classes and their purpose, and how they interact.
+         The 'Code Health' section should include the results of unit test in file 'test_report.md'. Please also discuss which tests failed as logged in 'test_report_stdout.txt'. Please provide file names for failed tests and statistics about the number of failed tests and an analysis of what happened. 
+         The 'Roadmap' section can use the contents of TODO.md as a starting point, keep the checkmarks.
+         The 'More Code Examples' section further expands with many more also covering the wrapper API, uses ideas and code from the unit tests (no need to mention that).
+            
+         For code examples:
+         - Please use markdown code blocks for code examples and other code snippets.
+         - Make sure that the code examples are complete and can be run as-is.
+         - Make sure that the code can run without errors, e.g. make sure that all required imports are included.
+         - Make sure, if possible to include the expected output as comments in the code.
+         - Make sure that comments are emphatically didactic.
+         - Make sure that the code is well-formatted and follows PEP-8.
+         - Make sure to include a variety of examples that cover different use cases and edge cases.
+         - Make sure that the code examples are complete and can be run as-is.
+         - Avoid putting multiple code examples in the same code block, unless they are chained.
+         
+         
+         At the end of the README, include a note explaining that the README was generated with the help of AI.
+         Avoid hallucinating things that are not in the repository.
+         Please add badges for: pipy, license, and code coverage
+         
+         Your task is to follow the instructions above and generate a README.md file for the Python repository provided below:
      
-     Your task is to follow the instructions above and generate a README.md file for the Python repository provided below:
- 
-     Here is some additional context about the repository:
-     {context_text}
- 
-     Here is the the entire repository structure and its contents:
-     """
+         Here is some additional context about the repository:
+         {context_text}
+     
+         Here is the the entire repository structure and its contents:
+         """
 
-    # Create a message with the prompt:
-    message = Message(role="user")
+        # Create a message with the prompt:
+        message = Message(role="user")
 
-    # Append the prompt and the folder contents to the message:
-    message.append_text(prompt)
-    message.append_folder(
-        folder_path,
-        allowed_extensions=[
-            ".py",
-            ".md",
-            ".txt",
-            ".toml",
-            "LICENSE",
-            ".tests",
-            ".html",
-        ],
-        excluded_files=[
-            "README.md",
-            "litemind.egg-info",
-            "dist",
-            "build",
-            "whole_repo.txt",
-        ],
-    )
-    message.append_text(
-        "Please generate a detailed, complete and informative README.md file for this repository without any preamble or postamble."
-    )
+        # Append the prompt and the folder contents to the message:
+        message.append_text(prompt)
+        message.append_folder(
+            folder_path,
+            allowed_extensions=[
+                ".py",
+                ".md",
+                ".txt",
+                ".toml",
+                "LICENSE",
+                ".tests",
+                ".html",
+            ],
+            excluded_files=[
+                "README.md",
+                "litemind.egg-info",
+                "dist",
+                "build",
+                "whole_repo.txt",
+            ],
+        )
+        message.append_text(
+            "Please generate a detailed, complete and informative README.md file for this repository without any preamble or postamble."
+        )
 
-    if save_repo_to_file:
-        # Convert the message to a string
-        message_str = str(message)
+        if save_repo_to_file:
+            # Convert the message to a string
+            message_str = str(message)
 
-        # Save string to file:
-        with open("whole_repo.txt", "w") as file:
-            file.write(message_str)
+            # Save string to file:
+            with open("whole_repo.txt", "w") as file:
+                file.write(message_str)
 
-    # Use the agent to generate the README.md content
-    response = agent(message)
+        # Use the agent to generate the README.md content
+        response = agent(message)
 
-    # extract the README content from the response:
-    readme_content = response[0].content.strip()
+        # extract the README content from the response:
+        readme_content = response[-1][0].content.strip()
 
-    # If it starts with '```markdown', remove it:
-    if readme_content.startswith("```markdown"):
-        readme_content = readme_content[11:]
+        # If it starts with '```markdown', remove it:
+        if readme_content.startswith("```markdown"):
+            readme_content = readme_content[11:]
 
-    # If it ends with '```', remove it:
-    if readme_content.endswith("```"):
-        readme_content = readme_content[:-3]
+        # If it ends with '```', remove it:
+        if readme_content.endswith("```"):
+            readme_content = readme_content[:-3]
 
-    print(str(readme_content))
+        # Write the generated content to README.md:
+        readme_file_path = os.path.join(folder_path, "README.md")
+        with open(readme_file_path, "w") as readme_file:
+            readme_file.write(readme_content)
 
-    # Write the generated content to README.md:
-    readme_file_path = os.path.join(folder_path, "README.md")
-    with open(readme_file_path, "w") as readme_file:
-        readme_file.write(readme_content)
-
-    return readme_content
+        return readme_content
 
 
 def main():

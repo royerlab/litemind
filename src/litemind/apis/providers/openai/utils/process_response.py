@@ -1,12 +1,13 @@
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 from pydantic import BaseModel
 
 from litemind.agent.messages.message import Message
+from litemind.apis.utils.json_to_object import json_to_object
 
 
 def process_response_from_openai(
-    response: Any, response_format: Optional[BaseModel | str]
+    openai_response: Any, response_format: Optional[Union[BaseModel, str]]
 ) -> Message:
     """
     Process OpenAI response, checking for function calls and executing them if needed.
@@ -25,28 +26,27 @@ def process_response_from_openai(
 
     """
 
-    # Extract the response content:
-    response = response.choices[0].message.content
+    processed_response = Message(role="assistant")
 
-    # If a response_format is provided, try to process the content as JSON
-    if response_format is not None:
+    openai_message = openai_response.choices[0].message
 
-        # Try to parse the response
-        json_string = response
-        from json_repair import repair_json
-
-        repaired_json_string = repair_json(json_string)
-
-        # If the repaired JSON is empty, return the original response
-        if len(repaired_json_string.strip()) == 0 and len(json_string.strip()) > 0:
-            return Message(role="assistant", text=response)
-
-        # Try to validate the repaired JSON
-        try:
-            obj = response_format.model_validate_json(repaired_json_string)
-            return Message(role="assistant", obj=obj)
-        except Exception as e:
-            return Message(role="assistant", text=response)
+    if openai_message.content is not None:
+        processed_response.append_text(openai_message.content)
+        text_content = openai_message.content
     else:
-        # If no tool calls and no special format, return the plain message content
-        return Message(role="assistant", text=response)
+        text_content = None
+
+    if openai_message.tool_calls:
+        for tool_call in openai_message.tool_calls:
+            processed_response.append_tool_call(
+                tool_name=tool_call.function.name,
+                arguments=tool_call.function.parsed_arguments,
+                id=tool_call.id,
+            )
+
+    if response_format and text_content is not None:
+        processed_response = json_to_object(
+            processed_response, response_format, text_content
+        )
+
+    return processed_response

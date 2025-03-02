@@ -4,7 +4,6 @@ from functools import lru_cache
 from tempfile import mkdtemp
 from typing import List, Tuple
 
-import fitz  # PyMuPDF
 from arbol import aprint
 from PIL import Image
 
@@ -151,6 +150,8 @@ def create_images_of_each_document_page(document_uri, dpi=300):
         list: A list of PIL Image objects corresponding to each page of the PDF.
     """
 
+    import fitz  # PyMuPDF
+
     # Check if package pymupdf is available:
     if not is_pymupdf_available():
         raise ImportError(
@@ -216,6 +217,8 @@ def extract_text_from_document_pages(document_uri: str) -> List[str]:
         A list of text strings, one for each page.
     """
 
+    import fitz  # PyMuPDF
+
     # Check if package pymupdf is available:
     if not is_pymupdf_available():
         raise ImportError(
@@ -264,6 +267,8 @@ def extract_text_and_image_from_document(
             - The extracted text from the page (str).
             - A PIL Image object representing the page.
     """
+
+    import fitz  # PyMuPDF
 
     # Check if package pymupdf is available:
     if not is_pymupdf_available():

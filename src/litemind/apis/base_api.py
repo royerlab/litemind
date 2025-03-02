@@ -190,11 +190,11 @@ class BaseApi(ABC):
         messages: List[Message],
         model_name: Optional[str] = None,
         temperature: float = 0.0,
-        max_output_tokens: Optional[int] = None,
+        max_num_output_tokens: Optional[int] = None,
         toolset: Optional[ToolSet] = None,
         response_format: Optional[BaseModel] = None,
         **kwargs,
-    ) -> Message:
+    ) -> List[Message]:
         """
         Generate a text completion using the given model for a given list of messages and parameters.
 
@@ -206,7 +206,7 @@ class BaseApi(ABC):
             The list of messages to send to the model.
         temperature: float
             The temperature to use.
-        max_output_tokens: Optional[int]
+        max_num_output_tokens: Optional[int]
             The maximum number of tokens to use.
         toolset: Optional[ToolSet]
             The toolset to use.
@@ -218,8 +218,11 @@ class BaseApi(ABC):
 
         Returns
         -------
-        Message
-            The response from the model.
+        List[Message]
+            The response from the model. A response is a list of messages.
+            For simple requests this is usually a single Message,
+            but when using tools there is typically multiple messages,
+            including user messages for the tool responses.
 
         """
         pass
@@ -596,7 +599,7 @@ class BaseApi(ABC):
         temperature: float = 0,
         max_output_tokens: Optional[int] = None,
         number_of_tries: int = 4,
-    ) -> str | None:
+    ) -> Optional[str]:
         """
         Describe an audio file using the model.
 
@@ -634,7 +637,7 @@ class BaseApi(ABC):
         temperature: float = 0,
         max_output_tokens: Optional[int] = None,
         number_of_tries: int = 4,
-    ) -> str | None:
+    ) -> Optional[str]:
         """
         Describe a video file using the model.
 

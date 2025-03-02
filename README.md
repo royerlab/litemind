@@ -1,136 +1,134 @@
 
-# litemind: Multimodal Agentic AI
+# LiteMind: Multimodal Agentic AI Framework
 
 [![PyPI](https://img.shields.io/pypi/v/litemind.svg)](https://pypi.org/project/litemind/)
-[![License](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](LICENSE)
-[![Coverage](https://codecov.io/gh/Loic-Royer/litemind/branch/main/graph/badge.svg)](https://codecov.io/gh/Loic-Royer/litemind)
+[![License](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
+[![Coverage](https://codecov.io/gh/royerlab/litemind/branch/main/graph/badge.svg)](https://codecov.io/gh/royerlab/litemind)
 
 ## Summary
 
-litemind is a Python library designed to provide an elegant and powerful API for building conversational agents and tools that leverage the capabilities of Large Language Models (LLMs). It offers two primary layers of abstraction:
+LiteMind is a cutting-edge Python library designed to provide a streamlined and elegant API for building sophisticated conversational agents and tools powered by Large Language Models (LLMs). It offers a dual approach: a flexible wrapper API around various LLM providers (OpenAI, Anthropic, Google, Ollama) and a powerful agentic AI framework for creating fully multimodal applications.
 
-1.  **API Wrapper Layer:** This layer simplifies interaction with various LLM APIs (OpenAI, Anthropic, Google, Ollama) by providing a unified interface. This allows developers to switch between different LLM providers with minimal code changes, promoting flexibility and reducing vendor lock-in.
-2.  **Agentic API:** This is where litemind truly shines. It provides a high-level, intuitive API for creating fully multimodal agentic AI systems. This includes support for text, images, audio, video, documents, and tables, enabling the creation of sophisticated conversational agents and tools that can understand and respond to a wide range of inputs. The agentic API is built upon the API wrapper layer, abstracting away the complexities of interacting with individual LLM providers.
+The library's philosophy centers on ease of use, modularity, and extensibility. It aims to abstract away the complexities of interacting with different LLM APIs, allowing developers to focus on the core logic of their agentic applications. LiteMind supports multimodal inputs, including text, images, audio, and video, enabling the creation of rich, interactive experiences.
 
-The philosophy behind litemind is to empower developers to build intelligent applications with ease. It aims to abstract away the complexities of interacting with LLMs, providing a clean and intuitive API that allows developers to focus on the core logic of their applications. It emphasizes multimodal input and output, enabling the creation of rich and engaging user experiences.
+Whether you're building a simple chatbot, a complex task automation system, or a multimodal conversational agent, LiteMind provides the necessary building blocks to bring your ideas to life.
 
 ## Features
 
-*   **Unified API Wrapper:**
-    *   Supports multiple LLM providers (OpenAI, Anthropic, Google, Ollama).
-    *   Easy switching between providers.
-    *   Handles API key management and authentication.
-    *   Provides a consistent interface for text generation, embeddings, and more.
-*   **Agentic API:**
-    *   Multimodal input support (text, images, audio, video, documents, tables).
-    *   Multimodal output support (text, images, audio, video).
-    *   ReAct (Reasoning and Acting) agent implementation for complex tasks.
-    *   Tool integration (function calling) for extending agent capabilities.
-    *   Conversation management.
-*   **Advanced Features:**
-    *   Streaming callbacks for real-time interaction.
-    *   Document conversion (PDF, etc.) to text.
-    *   Video to image and audio conversion.
-    *   Embedding generation (text, images, audio, video).
-    *   Structured output with tool usage.
-    *   Exception handling and logging.
+*   **API Wrapper Layer:**
+    *   Unified API for multiple LLM providers (OpenAI, Anthropic, Google, Ollama).
+    *   Automatic model selection based on feature support (text generation, image generation, tools, etc.).
+    *   Simplified access to model capabilities (token counting, maximum token limits).
+    *   Support for structured output with Pydantic models.
+    *   Callback system for monitoring and logging API calls.
+*   **Agentic AI Framework:**
+    *   ReAct (Reasoning and Acting) agent for chain-of-thought reasoning and tool use.
+    *   Toolsets for defining and managing tools.
+    *   Multimodal message handling (text, images, audio, video, documents, tables).
+    *   Conversation management with system and user messages.
+    *   Flexible tool integration with function tools and agent tools.
+    *   Support for streaming responses.
+*   **Multimodal Input Support:**
+    *   Text, images (URLs, local paths, base64), audio (URLs, local paths), video (URLs, local paths), documents (PDF, CSV, etc.), and tables (Pandas DataFrames).
+    *   Automatic conversion of media files to formats suitable for LLMs.
+*   **Code Health:**
+    *   Comprehensive unit tests using pytest.
+    *   Code coverage reports.
+    *   Adherence to PEP-8 style guidelines.
+    *   Integration with code quality tools (Black, isort, flake8, mypy).
 
 ## Installation
+
+To install LiteMind, use pip:
 
 ```bash
 pip install litemind
 ```
 
-To install optional dependencies (e.g., for RAG, audio transcription, document processing, tables, videos, or embeddings), use the following:
+To install with optional dependencies (e.g., for RAG, whisper, documents, tables, or videos), use:
 
 ```bash
-pip install litemind[rag]
-pip install litemind[whisper]
-pip install litemind[documents]
-pip install litemind[tables]
-pip install litemind[videos]
-pip install litemind[embed]
+pip install litemind[rag,whisper,documents,tables,videos]
 ```
 
 ## Usage
 
-### API Wrapper Layer
+This section provides illustrative examples of the Agentic API in use with multimodal inputs.
 
-This section demonstrates how to use the API wrapper layer to interact with different LLM providers.
+### API Wrapper Example
+
+This example demonstrates how to use the API wrapper to generate text using the OpenAI API.
 
 ```python
-from litemind.apis.combined_api import CombinedApi
-from litemind.apis.model_features import ModelFeatures
-
-# Initialize the API (uses OpenAI by default if API key is set)
-api = CombinedApi()
-
-# Check if the API is available
-if api.check_availability_and_credentials():
-    print("API is available and credentials are valid.")
-else:
-    print("API is not available or credentials are not valid.")
-    exit()
-
-# List available models
-models = api.list_models(features=[ModelFeatures.TextGeneration])
-print(f"Available models: {models}")
-
-# Get the best model for text generation
-best_model = api.get_best_model(features=[ModelFeatures.TextGeneration])
-print(f"Best model for text generation: {best_model}")
-
-# Generate text
+from litemind.apis.providers.openai.openai_api import OpenAIApi
 from litemind.agent.messages.message import Message
 
-messages = [
-    Message(role="system", text="You are a helpful assistant."),
-    Message(role="user", text="What is the capital of France?"),
-]
-response = api.generate_text(messages=messages, model_name=best_model)
-print(f"Response: {response}")
+# Initialize the OpenAI API
+api = OpenAIApi()
+
+# Create a message
+message = Message(role="user")
+message.append_text("Write a short poem about a cat.")
+
+# Generate text
+response = api.generate_text(messages=[message], model_name="gpt-3.5-turbo")
+
+# Print the response
+print(response[0].content)
 # Expected output:
-# Response: *assistant*:
-# The capital of France is Paris.
-
-# Generate image
-from PIL import Image
-
-try:
-    image = api.generate_image(
-        positive_prompt="A cute fluffy cat", image_width=256, image_height=256
-    )
-    assert isinstance(image, Image.Image)
-    print("Image generated successfully.")
-except Exception as e:
-    print(f"Image generation failed: {e}")
-
-# Embed text
-texts = ["This is a tests sentence.", "Another tests sentence."]
-embeddings = api.embed_texts(texts=texts, model_name=best_model)
-print(f"Embeddings: {embeddings}")
-# Expected output:
-# Embeddings: [[0.01, 0.02, ...], [0.03, 0.04, ...]]
+# The cat sits, a furry friend,
+# With eyes of green, until the end.
+# A purring sound, a gentle touch,
+# A loving friend, we love so much.
 ```
 
-### Agentic API
+### Agentic API Example with Text and Image
 
-This section demonstrates how to use the agentic API to create a ReAct agent.
+This example shows how to create a ReAct agent that can describe an image.
 
 ```python
-from datetime import datetime, timedelta
+from litemind.agent.react.react_agent import ReActAgent
+from litemind.apis.providers.openai.openai_api import OpenAIApi
+from litemind.agent.messages.message import Message
+
+# Initialize the OpenAI API
+api = OpenAIApi()
+
+# Create the ReAct agent
+agent = ReActAgent(api=api)
+
+# Create a message with text and an image
+message = Message(role="user")
+message.append_text("Describe the image:")
+message.append_image("https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Einstein_1921_by_F_Schmutzer_-_restoration.jpg/456px-Einstein_1921_by_F_Schmutzer_-_restoration.jpg")
+
+# Run the agent
+response = agent(message)
+
+# Print the response
+print(response)
+# Expected output:
+# *assistant*:
+# The image shows a black and white photograph of Albert Einstein. He is looking at the camera with a serious expression. He has a mustache and his hair is unkempt. He is wearing a suit and tie.
+```
+
+### Agentic API Example with Tool Use
+
+This example demonstrates how to create a ReAct agent that can use a tool to get the current date.
+
+```python
+from datetime import datetime
 
 from litemind.agent.react.react_agent import ReActAgent
 from litemind.agent.tools.toolset import ToolSet
-from litemind.apis.combined_api import CombinedApi
-from litemind.apis.model_features import ModelFeatures
+from litemind.apis.providers.openai.openai_api import OpenAIApi
 
-# Define a tool to get the current date
-def get_current_date():
+# Define a function to get the current date
+def get_current_date() -> str:
     return datetime.now().strftime("%Y-%m-%d")
 
-# Initialize API
-api = CombinedApi()
+# Initialize the OpenAI API
+api = OpenAIApi()
 
 # Initialize ToolSet
 toolset = ToolSet()
@@ -141,411 +139,211 @@ toolset.add_function_tool(get_current_date, "Returns the current date")
 # Create the ReAct agent
 agent = ReActAgent(api=api, toolset=toolset, temperature=0.0, max_reasoning_steps=5)
 
-# Use the agent to determine the date 15 days later
-response = agent("What date is 15 days from today?")
-print(f"Response: {response}")
-# Expected output:
-# Response: 2025-03-10
+# Use the agent to determine the date
+response = agent("What date is today?")
 
-# Example with multiple tools
-def multiply_by_two(x):
-    return x * 2
+# Print the response
+print(response)
+# Expected output:
+# *assistant*:
+# The current date is 2024-03-01.
+```
+
+## Concepts
+
+*   **BaseApi:** The abstract base class for all API implementations. It defines the interface for interacting with LLM providers.
+*   **CombinedApi:** A class that combines multiple API implementations, allowing the agent to use the first available API that supports the required features.
+*   **ModelFeatures:** An enumeration that defines the features supported by the models (e.g., text generation, image generation, tools).
+*   **Message:** Represents a single message in a conversation, including the role (e.g., "system", "user", "assistant") and content (text, image, audio, video, document, table, tool).
+*   **MessageBlock:** Represents a block of content within a message.
+*   **Conversation:** Manages a sequence of messages.
+*   **ToolSet:** Manages a collection of tools.
+*   **FunctionTool:** A tool that wraps a Python function.
+*   **ToolAgent:** A tool that wraps an agent.
+*   **Agent:** The core class for creating agentic AI applications. It manages the conversation, selects the appropriate model, and interacts with the API.
+*   **ReActAgent:** An agent that implements the ReAct (Reasoning and Acting) methodology.
+
+## More Code Examples
+
+### API Wrapper: Audio Transcription
+
+```python
+from litemind.apis.providers.openai.openai_api import OpenAIApi
+
+# Initialize the OpenAI API
+api = OpenAIApi()
+
+# Transcribe audio
+transcription = api.transcribe_audio(
+    audio_uri="file:///path/to/audio.mp3", model_name="whisper-1"
+)
+
+# Print the transcription
+print(transcription)
+# Expected output:
+# This is a test of the audio transcription.
+```
+
+### API Wrapper: Image Generation
+
+```python
+from litemind.apis.providers.openai.openai_api import OpenAIApi
+from PIL import Image
+
+# Initialize the OpenAI API
+api = OpenAIApi()
+
+# Generate an image
+image: Image = api.generate_image(
+    positive_prompt="A cat wearing a hat", image_width=512, image_height=512
+)
+
+# Save the image
+image.save("cat_with_hat.png")
+```
+
+### Agentic API: Chained Tool Use
+
+```python
+from datetime import datetime, timedelta
+
+from litemind.agent.react.react_agent import ReActAgent
+from litemind.agent.tools.toolset import ToolSet
+from litemind.apis.providers.openai.openai_api import OpenAIApi
+
+# Define tools
+def get_current_date() -> str:
+    return datetime.now().strftime("%Y-%m-%d")
+
+def add_days_to_date(date_str: str, days: int) -> str:
+    date = datetime.strptime(date_str, "%Y-%m-%d")
+    new_date = date + timedelta(days=int(days))
+    return new_date.strftime("%Y-%m-%d")
+
+# Initialize the OpenAI API
+api = OpenAIApi()
+
+# Initialize ToolSet
+toolset = ToolSet()
 
 # Add tools
 toolset.add_function_tool(get_current_date, "Returns the current date")
-toolset.add_function_tool(multiply_by_two, "Multiply a number by 2")
+toolset.add_function_tool(
+    add_days_to_date, "Add a certain number of days to a given date"
+)
+
+# Create the ReAct agent
+agent = ReActAgent(api=api, toolset=toolset, temperature=0.0, max_reasoning_steps=5)
+
+# Use the agent to determine the date 15 days from today using chained tools
+response = agent("What date is 15 days from today?")
+
+# Print the response
+print(response)
+# Expected output:
+# *assistant*:
+# The date 15 days from today is 2024-03-16.
+```
+
+### Agentic API: Structured Output
+
+```python
+from litemind.agent.react.react_agent import ReActAgent
+from litemind.agent.tools.toolset import ToolSet
+from litemind.apis.providers.openai.openai_api import OpenAIApi
+from pydantic import BaseModel
+
+# Define a Pydantic model for the structured output
+class OrderInfo(BaseModel):
+    order_id: str
+    delivery_date: str
+
+# Initialize the OpenAI API
+api = OpenAIApi()
+
+# Initialize ToolSet (empty in this case, as we're not using tools)
+toolset = ToolSet()
 
 # Create the ReAct agent
 agent = ReActAgent(api=api, toolset=toolset, temperature=0.0, max_reasoning_steps=5)
 
 # Use the agent to determine the date 15 days later
-response = agent("What date is 15 days from today?")
-print(f"Response: {response}")
-# Expected output:
-# Response: 2025-03-10
-
-# Use the agent to multiply a number by 2
-response = agent("What is 21 multiplied by 2?")
-print(f"Response: {response}")
-# Expected output:
-# Response: 42
-```
-
-### Multimodal Examples
-
-```python
-from litemind.agent.messages.message import Message
-from litemind.apis.combined_api import CombinedApi
-
-# Initialize API
-api = CombinedApi()
-
-# Text and Image
-message = Message(role="user")
-message.append_text("Can you describe what you see in this image?")
-message.append_image(
-    "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Einstein_1921_by_F_Schmutzer_-_restoration.jpg/456px-Einstein_1921_by_F_Schmutzer_-_restoration.jpg"
-)
-response = api.generate_text(messages=[message])
-print(f"Text and Image Response: {response}")
-
-# Text, Image, and Audio
-message = Message(role="user")
-message.append_text("Can you describe what you see and hear?")
-message.append_image(
-    "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Einstein_1921_by_F_Schmutzer_-_restoration.jpg/456px-Einstein_1921_by_F_Schmutzer_-_restoration.jpg"
-)
-message.append_audio(
-    "https://salford.figshare.com/ndownloader/files/14630270"
-)  # Example audio URL
-response = api.generate_text(messages=[message])
-print(f"Text, Image, and Audio Response: {response}")
-
-# Text and Video
-message = Message(role="user")
-message.append_text("Can you describe what you see in the video?")
-message.append_video(
-    "https://ia903405.us.archive.org/27/items/archive-video-files/test.mp4"
-)
-response = api.generate_text(messages=[message])
-print(f"Text and Video Response: {response}")
-
-# Text and Document
-message = Message(role="user")
-message.append_text("Can you summarize this document?")
-message.append_document("https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf")
-response = api.generate_text(messages=[message])
-print(f"Text and Document Response: {response}")
-
-# Text and Table
-from pandas import DataFrame
-
-table = DataFrame({"A": [1, 2, 3], "B": [4, 5, 6]})
-message = Message(role="user")
-message.append_text("Can you describe what you see in the table?")
-message.append_table(table)
-response = api.generate_text(messages=[message])
-print(f"Text and Table Response: {response}")
-```
-
-## Concepts
-
-*   **BaseApi:** An abstract base class that defines the interface for interacting with LLM APIs. It provides methods for text generation, embedding, and other common tasks.
-*   **CombinedApi:** A concrete implementation of the BaseApi that combines multiple API implementations. It allows developers to use multiple LLM providers and switch between them easily.
-*   **Message:** Represents a single message in a conversation. It can contain text, images, audio, video, documents, and tables.
-*   **MessageBlock:** Represents a block of content within a message. It can be of various types (text, image, audio, video, document, table, etc.).
-*   **Conversation:** Represents a conversation between an agent and a user. It stores a list of messages.
-*   **Agent:** The core class for creating conversational agents. It takes an API, a model, and a toolset as input. It handles the conversation flow and interacts with the API to generate responses.
-*   **ToolSet:** A collection of tools that an agent can use to perform tasks.
-*   **FunctionTool:** A tool that wraps a Python function.
-*   **ReActAgent:** An agent that uses the ReAct (Reasoning and Acting) methodology to solve complex tasks.
-
-## More Code Examples
-
-### ReAct Agent with a Custom Tool
-
-```python
-from datetime import datetime
-
-from litemind.agent.react.react_agent import ReActAgent
-from litemind.agent.tools.toolset import ToolSet
-from litemind.apis.combined_api import CombinedApi
-
-# Define a custom tool
-def get_current_time():
-    return datetime.now().strftime("%H:%M:%S")
-
-# Initialize API
-api = CombinedApi()
-
-# Initialize ToolSet
-toolset = ToolSet()
-
-# Add the custom tool
-toolset.add_function_tool(get_current_time, "Get the current time")
-
-# Create the ReAct agent
-agent = ReActAgent(api=api, toolset=toolset, temperature=0.0, max_reasoning_steps=3)
-
-# Ask the agent a question that requires the tool
-response = agent("What time is it now?")
-print(f"Response: {response}")
-# Expected output:
-# Response: 14:30:00
-```
-
-### Using a Pydantic Model for Structured Output
-
-```python
-from pydantic import BaseModel
-
-from litemind.agent.messages.message import Message
-from litemind.apis.combined_api import CombinedApi
-
-# Define a Pydantic model for the structured output
-class ProductReview(BaseModel):
-    product_name: str
-    rating: int
-    comments: str
-
-# Initialize API
-api = CombinedApi()
-
-# Create a system message to guide the agent
-system_message = Message(
-    role="system",
-    text="You are a helpful assistant that provides product reviews in a structured JSON format.",
-)
-
-# Create a user message with the product description
-user_message = Message(
-    role="user",
-    text="Please provide a review for the following product: A very good product, I give it 5 stars.",
-)
-
-# Combine the messages
-messages = [system_message, user_message]
-
-# Generate text with the structured output
-response = api.generate_text(
-    messages=messages, temperature=0.0, response_format=ProductReview
+response = agent(
+    "What is the delivery date for order 12345?", response_format=OrderInfo
 )
 
 # Print the response
-print(f"Response: {response}")
+print(response)
 # Expected output:
-# Response: ProductReview(product_name='product', rating=5, comments='A very good product')
-```
-
-### Combining Text and Image Input
-
-```python
-from litemind.agent.messages.message import Message
-from litemind.apis.combined_api import CombinedApi
-
-# Initialize API
-api = CombinedApi()
-
-# Create a message with text and an image
-message = Message(role="user")
-message.append_text("Describe the image:")
-message.append_image(
-    "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Einstein_1921_by_F_Schmutzer_-_restoration.jpg/456px-Einstein_1921_by_F_Schmutzer_-_restoration.jpg"
-)
-
-# Generate text
-response = api.generate_text(messages=[message])
-print(f"Response: {response}")
-# Expected output:
-# Response: *assistant*:
-# The image is a black and white photograph of Albert Einstein. He is looking at the camera.
-```
-
-### Using Audio Input
-
-```python
-from litemind.agent.messages.message import Message
-from litemind.apis.combined_api import CombinedApi
-
-# Initialize API
-api = CombinedApi()
-
-# Create a message with audio
-message = Message(role="user")
-message.append_text("What is said in the audio?")
-message.append_audio(
-    "https://salford.figshare.com/ndownloader/files/14630270"
-)  # Example audio URL
-
-# Generate text
-response = api.generate_text(messages=[message])
-print(f"Response: {response}")
-# Expected output:
-# Response: *assistant*:
-# The audio says: "The quick brown fox jumps over the lazy dog."
-```
-
-### Working with Documents
-
-```python
-from litemind.agent.messages.message import Message
-from litemind.apis.combined_api import CombinedApi
-
-# Initialize API
-api = CombinedApi()
-
-# Create a message with a document
-message = Message(role="user")
-message.append_text("Summarize the following document:")
-message.append_document(
-    "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
-)
-
-# Generate text
-response = api.generate_text(messages=[message])
-print(f"Response: {response}")
-# Expected output:
-# Response: *assistant*:
-# The document is a dummy PDF file.
-```
-
-### Working with Tables
-
-```python
-from pandas import DataFrame
-
-from litemind.agent.messages.message import Message
-from litemind.apis.combined_api import CombinedApi
-
-# Initialize API
-api = CombinedApi()
-
-# Create a table
-table = DataFrame({"A": [1, 2, 3], "B": [4, 5, 6]})
-
-# Create a message with the table
-message = Message(role="user")
-message.append_text("What is the sum of column A and B?")
-message.append_table(table)
-
-# Generate text
-response = api.generate_text(messages=[message])
-print(f"Response: {response}")
-# Expected output:
-# Response: *assistant*:
-# The sum of column A is 6 and the sum of column B is 15.
-```
-
-### Working with Folders
-
-```python
-import os
-import tempfile
-
-from litemind.agent.messages.message import Message
-from litemind.apis.combined_api import CombinedApi
-
-# Initialize API
-api = CombinedApi()
-
-# Create a temporary folder
-temp_folder = tempfile.mkdtemp()
-
-# Create a text file in the temporary folder
-with open(os.path.join(temp_folder, "file.txt"), "w") as f:
-    f.write("This is a tests file.")
-
-# Create a message with the folder
-message = Message(role="user")
-message.append_text("Summarize the contents of this folder:")
-message.append_folder(temp_folder)
-
-# Generate text
-response = api.generate_text(messages=[message])
-print(f"Response: {response}")
-# Expected output:
-# Response: *assistant*:
-# The folder contains a file named 'file.txt'. The file contains the text 'This is a tests file.'
+# *assistant*:
+# OrderInfo(order_id='12345', delivery_date='2024-03-16')
 ```
 
 ## Caveats and Limitations
 
-*   **API Key Management:** The library relies on environment variables for API keys. Securely managing API keys in production environments is the responsibility of the developer.
-*   **Model Availability:** The availability of specific models and features depends on the LLM provider and the user's API key.
-*   **Token Limits:** LLMs have token limits for both input and output. Developers need to be aware of these limits and design their applications accordingly.
-*   **Cost:** Using LLM APIs can incur costs. Developers should monitor their usage and manage their budgets.
-*   **Error Handling:** While the library provides basic error handling, developers should implement robust error handling in their applications to handle API errors and other exceptions.
-*   **Multimodal Support:** Multimodal support is dependent on the capabilities of the underlying LLM APIs. Not all models support all modalities.
-*   **Open Source Models:** Open source models are not always as strong as proprietary models.
+*   **API Key Management:** The library assumes that API keys are available in the environment variables.
+*   **Model Availability:** The availability of models and their features depends on the LLM provider and the user's API key.
+*   **Error Handling:** While the library includes basic error handling, more robust error handling and retry mechanisms may be needed for production environments.
+*   **Token Limits:** The library does not automatically handle token limits. Developers need to be aware of the token limits of the models they are using and handle long inputs accordingly.
+*   **Cost:** Using LLM APIs can incur costs. Be mindful of the pricing of the LLM providers.
+*   **Open Source Models:** Open source models are typically not as strong as the proprietary models.
+
+## Roadmap
+
+*   \[ ] Deal with message sizes in tokens sent to models
+*   \[ ] RAG
+*   \[ ] Improve vendor api robustness features such as retry call when server errors, etc...
+*   \[ ] Reorganise media files used for testing into a single media folder
+*   \[ ] Improve and uniformize exception handling
+*   \[ ] Add support for adding nD images to messages.
+*   \[ ] Improve logging with arbol, with option to turn off.
+*   \[ ] Implement 'brainstorming' mode for text generation, possibly with API fusion.
+
+## Contributing
+
+We welcome contributions! Please read our [CONTRIBUTING.md](CONTRIBUTING.md) file for details on how to contribute to this project.
+
+## License
+
+This project is licensed under the BSD-3-Clause License - see the [LICENSE](LICENSE) file for details.
 
 ## Code Health
 
-The code health section is automatically generated from the test reports.
+The code health is assessed based on the unit tests and code coverage reports.
 
-### Test Results
+### Test Report
 
-The test results are summarized in the following table:
+The test report is available in `test_reports/test_report.md`.
 
-|                                   filepath                                    |                                              function                                               | passed | failed | skipped | SUBTOTAL |
-| ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | -----: | -----: | ------: | -------: |
-| src/litemind/agent/react/tests/test_react_agent.py                            | test_react_agent_construction_methods                                                               |      1 |      0 |       0 |        1 |
-| src/litemind/agent/react/tests/test_react_agent.py                            | test_react_agent_chained_tools                                                                      |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tests/test_agent.py                                        | test_agent_text_with_openai                                                                         |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tests/test_agent.py                                        | test_message_image                                                                                  |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tests/test_conversation.py                                 | test_conversation                                                                                   |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tests/test_message.py                                      | test_message_deepcopy                                                                               |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tests/test_message.py                                      | test_insert_block                                                                                   |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tests/test_message.py                                      | test_insert_message                                                                                 |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tests/test_message.py                                      | test_message_text                                                                                   |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tests/test_message.py                                      | test_message_object                                                                                 |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tests/test_message.py                                      | test_message_json                                                                                   |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tests/test_message.py                                      | test_message_image                                                                                  |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tests/test_message.py                                      | test_message_audio                                                                                  |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tests/test_message.py                                      | test_message_video                                                                                  |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tests/test_message.py                                      | test_message_document                                                                               |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tests/test_message.py                                      | test_message_folder                                                                                 |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tests/test_message.py                                      | test_message_str                                                                                    |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tests/test_message.py                                      | test_extract_markdown_block                                                                         |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tests/test_message_block.py                                | test_message_block_deepcopy                                                                         |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tests/test_message_block.py                                | test_message_block_text                                                                             |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tests/test_message_block.py                                | test_message_block_json                                                                             |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tests/test_message_block.py                                | test_message_block_image                                                                            |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tests/test_message_block.py                                | test_message_block_audio                                                                            |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tests/test_message_block.py                                | test_message_block_video                                                                            |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tests/test_message_block.py                                | test_message_block_document                                                                         |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tests/test_message_block.py                                | test_message_block_table                                                                            |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tools/test/test_agent_tool.py                              | test_agent_tool_translation                                                                         |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tools/test/test_agent_tool.py                              | test_agent_tool                                                                                     |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tools/test/test_function_tool.py                           | test_tool_initialization                                                                            |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tools/test/test_function_tool.py                           | test_tool_initialization_automatic_description                                                      |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tools/test/test_function_tool.py                           | test_tool_with_no_parameters                                                                        |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tools/test/test_function_tool.py                           | test_tool_with_default_parameter                                                                    |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tools/test/test_function_tool.py                           | test_tool_execution_with_parameters                                                                 |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tools/test/test_function_tool.py                           | test_tool_execution_no_parameters                                                                   |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tools/test/test_function_tool.py                           | test_tool_execution_with_default_parameters                                                         |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tools/test/test_toolset.py                                 | test_toolset_initialization_and_add_tool                                                            |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tools/test/test_toolset.py                                 | test_toolset_add_function_tool                                                                      |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tools/test/test_toolset.py                                 | test_toolset_add_agent_tool                                                                         |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tools/test/test_toolset.py                                 | test_toolset_get_tool                                                                               |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tools/test/test_toolset.py                                 | test_toolset_list_tools                                                                             |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tools/utils/test/test_inspect_function.py                  | test_extract_docstring                                                                              |      1 |      0 |       0 |        1 |
-| src/litemind/agent/tools/utils/test/test_inspect_function.py                  | test_extract_function_info                                                                          |      1 |      0 |       0 |        1 |
-| src/litemind/agent/utils/tests/test_folder_description.py                     | test_human_readable_size                                                                            |      1 |      0 |       0 |        1 |
-| src/litemind/agent/utils/tests/test_folder_description.py                     | test_generate_tree_structure                                                                        |      1 |      0 |       0 |        1 |
-| src/litemind/agent/utils/tests/test_folder_description.py                     | test_read_file_content                                                                              |      1 |      0 |       0 |        1 |
-| src/litemind/agent/utils/tests/test_folder_description.py                     | test_read_binary_file_info                                                                          |      1 |      0 |       0 |        1 |
-| src/litemind/agent/utils/tests/test_folder_description.py                     | test_file_info_header                                                                               |      1 |      0 |       0 |        1 |
-| src/litemind/apis/callbacks/test/test_print_callbacks.py                      | test_on_availability_check                                                                          |      1 |      0 |       0 |        1 |
-| src/litemind/apis/callbacks/test/test_print_callbacks.py                      | test_on_model_list                                                                                  |      1 |      0 |       0 |        1 |
-| src/litemind/apis/callbacks/test/test_print_callbacks.py                      | test_on_best_model_selected                                                                         |      1 |      0 |       0 |        1 |
-| src/litemind/apis/callbacks/test/test_print_callbacks.py                      | test_on_text_generation                                                                             |      1 |      0 |       0 |        1 |
-| src/litemind/apis/callbacks/test/test_print_callbacks.py                      | test_on_text_streaming                                                                              |      1 |      0 |       0 |        1 |
-| src/litemind/apis/callbacks/test/test_print_callbacks.py                      | test_on_audio_transcription                                                                         |      1 |      0 |       0 |        1 |
-| src/litemind/apis/callbacks/test/test_print_callbacks.py                      | test_on_document_conversion                                                                         |      1 |      0 |       0 |        1 |
-| src/litemind/apis/callbacks/test/test_print_callbacks.py                      | test_on_video_conversion                                                                            |      1 |      0 |       0 |        1 |
-| src/litemind/apis/callbacks/test/test_print_callbacks.py                      | test_on_audio_generation                                                                            |      1 |      0 |       0 |        1 |
-| src/litemind/apis/callbacks/test/test_print_callbacks.py                      | test_on_image_generation                                                                            |      1 |      0 |       0 |        1 |
-| src/litemind/apis/callbacks/test/test_print_callbacks.py                      | test_on_text_embedding                                                                              |      1 |      0 |       0 |        1 |
-| src/litemind/apis/callbacks/test/test_print_callbacks.py                      | test_on_image_embedding                                                                             |      1 |      0 |       0 |        1 |
-| src/litemind/apis/callbacks/test/test_print_callbacks.py                      | test_on_audio_embedding                                                                             |      1 |      0 |       0 |        1 |
-| src/litemind/apis/callbacks/test/test_print_callbacks.py                      | test_on_video_embedding                                                                             |      1 |      0 |       0 |        1 |
-| src/litemind/apis/callbacks/test/test_print_callbacks.py                      | test_on_image_description                                                                           |      1 |      0 |       0 |        1 |
-| src/litemind/apis/callbacks/test/test_print_callbacks.py                      | test_on_audio_description                                                                           |      1 |      0 |       0 |        1 |
-| src/litemind/apis/callbacks/test/test_print_callbacks.py                      | test_on_video_description                                                                           |      1 |      0 |       0 |        1 |
-| src/litemind/apis/providers/ollama/test/multi_image_test.py                   | test_compare_images_with_separate_messages                                                          |      1 |      0 |       0 |        1 |
-| src/litemind/apis/providers/openai/utils/test/test_messages.py                | test_convert_text_only_message                                                                      |      1 |      0 |       0 |        1 |
-| src/litemind/apis/providers/openai/utils/test/test_messages.py                | test_convert_image_only_message                                                                     |      1 |      0 |       0 |        1 |
-| src/litemind/apis/providers/openai/utils/test/test_messages.py                | test_convert_text_and_image_message                                                                 |      1 |      0 |       0 |        1 |
-| src/litemind/apis/providers/openai/utils/test/test_messages.py                | test_convert_multiple_images_message                                                                |      1 |      0 |       0 |        1 |
-| src/litemind/apis/providers/openai/utils/test/test_messages.py                | test_convert_empty_message                                                                          |      1 |      0 |       0 |        1 |
-| src/litemind/apis/providers/openai/utils/test/test_messages.py                | test_convert_multiple_messages                                                                      |      1 |      0 |       0 |        1 |
-| src/litemind/apis/providers/openai/utils/test/test_messages_with_api.py       | test_openai_api_text_only_message                                                                   |      1 |      0 |       0 |        1 |
-| src/litemind/apis/providers/openai/utils/test/test_messages_with_api.py       | test_openai_api_text_and_image_message                                                              |      1 |      0 |       0 |        1 |
-| src/litemind/apis/providers/openai/utils/test/test_messages_with_api.py       | test_openai_api_multiple_images                                                                     |      1 |      0 |       0 |        1 |
-| src/litemind/apis/providers/openai/utils/test/test_messages_with_api.py       | test_openai_api_multiple_messages                                                                   |      1 |      0 |       0 |        1 |
-| src/litemind/apis/providers/openai/utils/test/test_tools.py                   | test_format_tools_for_openai                                                                        |      1 |      0 |       0 |        1 |
-| src/litemind/apis/providers/openai/utils/test/test_vision.py                  | test_vision_capable_models                                                                          |      9 |      0 |       0 |        9 |
-| src/litemind/apis/providers/openai/utils/test/test_vision.py                  | test_non_vision_models                                                                              |      8 |      0 |       0 |        8 |
-| src/litemind/apis/providers/openai/utils/test/test_vision.py                  | test_invalid_model_name                                                                             |      1 |      0 |       0 |        1 |
-| src/litemind/apis/tests/test_apis_basics.py                                   | TestBaseApiImplementationsBasics.test_availability_and_credentials                                  |      6 |      0 |       0 |        6 |
-| src/litemind/apis/tests/test_apis_basics.py                                   | TestBaseApiImplementationsBasics.test_model_list                                                    |
+### Test Report Standard Output
+
+The test report standard output is available in `test_reports/test_report_stdout.txt`.
+
+### Analysis of Failed Tests
+
+Based on the `test_report_stdout.txt` and `test_reports/test_report.md` files, the following tests failed:
+
+*   `src/litemind/agent/react/tests/test_react_agent.py::test_react_agent_single_tool[GeminiApi]`
+*   `src/litemind/agent/react/tests/test_react_agent.py::test_react_agent_multiple_tools[OllamaApi]`
+*   `src/litemind/agent/react/tests/test_react_agent.py::test_react_agent_multiple_tools[GeminiApi]`
+*   `src/litemind/agent/react/tests/test_react_agent.py::test_react_agent_chained_tools[OpenAIApi]`
+*   `src/litemind/agent/react/tests/test_react_agent.py::test_react_agent_chained_tools[GeminiApi]`
+*   `src/litemind/agent/react/tests/test_react_agent.py::test_react_agent_longer_dialog[OllamaApi]`
+*   `src/litemind/agent/react/tests/test_react_agent.py::test_react_agent_longer_dialog[GeminiApi]`
+*   `src/litemind/agent/tools/test/test_agent_tool.py::test_agent_tool_translation[DefaultApi]`
+*   `src/litemind/agent/tools/test/test_agent_tool.py::test_agent_tool[DefaultApi]`
+*   `src/litemind/agent/tools/test/test_agent_tool.py::test_agent_tool_with_internal_tool[DefaultApi]`
+*   `src/litemind/agent/tools/test/test_toolset.py::test_toolset_add_agent_tool[DefaultApi]`
+*   `src/litemind/apis/tests/test_apis_documents.py::TestBaseApiImplementationsDocuments::test_text_generation_with_folder[OllamaApi]`
+
+The failures in `test_react_agent.py` seem to be related to the ReAct agent's ability to correctly use tools and reason about the results. The failures in `test_agent_tool.py` and `test_toolset.py` indicate issues with the AgentTool and ToolSet implementations. The failure in `test_apis_documents.py` suggests a problem with the OllamaApi's ability to handle documents.
+
+The test suite has 525 tests, with 12 failures, 452 passed, 61 skipped, and 78 warnings.
+
+## License
+
+This project is licensed under the BSD-3-Clause License.
+
+---
+
+This README was generated with the help of AI.

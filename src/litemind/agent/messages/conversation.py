@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import List, Sequence, Union
 
 from litemind.agent.messages.message import Message
 
@@ -65,6 +65,17 @@ class Conversation:
         else:
             self.standard_messages.append(message)
 
+    def extend(self, messages: Sequence[Message]):
+        """
+        Extend the conversation with a list of messages.
+        Parameters
+        ----------
+        messages : Sequence[Message]
+            The messages to extend the conversation with.
+        """
+        for message in messages:
+            self.append(message)
+
     def __iadd__(self, other: Union["Conversation", Message]):
         """
         Add a message or conversation to the conversation.
@@ -124,3 +135,9 @@ class Conversation:
 
     def __len__(self):
         return len(self.get_all_messages())
+
+    def __str__(self):
+        return str(self.get_all_messages())
+
+    def __repr__(self):
+        return self.__str__()

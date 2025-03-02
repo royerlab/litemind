@@ -2,12 +2,13 @@ from typing import Any, List, Sequence
 
 import pytest
 
+from litemind import API_IMPLEMENTATIONS
 from litemind.agent.messages.message import Message
 from litemind.apis.base_api import BaseApi
 from litemind.apis.callbacks.base_callbacks import BaseCallbacks
 from litemind.apis.callbacks.callback_manager import CallbackManager
 from litemind.apis.model_features import ModelFeatures
-from litemind.apis.tests.base_test import API_IMPLEMENTATIONS, BaseTest
+from litemind.apis.tests.base_test import BaseTest
 
 
 class MockCallback(BaseCallbacks):

@@ -7,6 +7,7 @@ from PIL import Image
 
 from litemind.agent.messages.message import Message
 from litemind.agent.messages.message_block_type import BlockType
+from litemind.agent.messages.tool_use import ToolUse
 from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_path
 
 
@@ -16,6 +17,8 @@ def convert_messages_for_gemini(
     """
     Convert messages into a format suitable for Gemini, supporting both text and image inputs.
     """
+    # Upload the video file to Gemini:
+    import google.generativeai as genai
 
     # Initialize the list of messages:
     gemini_messages = []
@@ -60,9 +63,6 @@ def convert_messages_for_gemini(
                     # Convert the video URI to a local file path:
                     local_path = uri_to_local_file_path(video_uri)
 
-                    # Upload the video file to Gemini:
-                    import google.generativeai as genai
-
                     genai_video_file = genai.upload_file(local_path)
 
                     # Wait for the file to finish processing:
@@ -74,6 +74,28 @@ def convert_messages_for_gemini(
                     gemini_messages.append(genai_video_file)
                 except Exception as e:
                     raise ValueError(f"Could not process video '{video_uri}': {e}")
+
+            elif block.block_type == BlockType.Tool:
+
+                # if contents is a ToolUse object do the following:
+                if isinstance(block.content, ToolUse):
+
+                    # Get the tool use object:
+                    tool_use: ToolUse = block.content
+
+                    # Build a functionResponse part
+                    func_response = genai.protos.Part(
+                        function_response=genai.protos.FunctionResponse(
+                            name=tool_use.tool_name,
+                            response={"result": tool_use.result},
+                        )
+                    )
+
+                    # Add tool use to the content:
+                    gemini_messages.append(func_response)
+
+            else:
+                raise ValueError(f"Unsupported block type: {block.block_type}")
 
     return gemini_messages
 

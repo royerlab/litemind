@@ -4,7 +4,10 @@ from arbol import aprint, asection
 
 from litemind.agent.agent import Agent
 from litemind.agent.messages.message import Message
-from litemind.agent.react.prompts import react_agent_system_prompt
+from litemind.agent.react.prompts import (
+    react_agent_postamble_prompt,
+    react_agent_system_prompt,
+)
 from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.base_api import BaseApi, ModelFeatures
 
@@ -21,7 +24,7 @@ class ReActAgent(Agent):
     def __init__(
         self,
         api: BaseApi,
-        model: Optional[str] = None,
+        model_name: Optional[str] = None,
         model_features: Optional[
             Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
         ] = None,
@@ -38,7 +41,7 @@ class ReActAgent(Agent):
         ----------
         api: BaseApi
             The API to use for generating responses.
-        model: Optional[str]
+        model_name: Optional[str]
             The model to use for generating responses.
         model_features: Optional[Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
             The features to require for a model. If features are provided, the model will be selected based on the features.
@@ -60,7 +63,7 @@ class ReActAgent(Agent):
         # Initialize the agent:
         super().__init__(
             api=api,
-            model=model,
+            model_name=model_name,
             model_features=model_features,
             temperature=temperature,
             toolset=toolset,
@@ -89,7 +92,7 @@ class ReActAgent(Agent):
 
     def _create_system_message(self) -> Message:
         """Create a fresh system message with the current reasoning chain."""
-        prompt = self._get_react_prompt()
+        prompt = self._get_react_prompt().strip()
         chain = self._format_reasoning_chain()
 
         if chain != "No previous steps.":
@@ -110,8 +113,23 @@ class ReActAgent(Agent):
                     formatted.append(f"{key.upper()}: {value}")
         return "\n".join(formatted)
 
-    def _parse_response(self, response: str) -> Dict[str, str]:
+    def _get_input_messages(self) -> List[Message]:
+        """Get the input messages for the current reasoning step."""
+
+        input_messages = self.conversation.get_all_messages()
+
+        # Add post-amble message:
+        input_messages.append(
+            Message(role="user", text=react_agent_postamble_prompt.strip())
+        )
+
+        return input_messages
+
+    def _parse_response(self, response: List[Message]) -> Dict[str, str]:
         """Parse a response into its components with error handling."""
+
+        # Let's extract the text content from the last block of the response:
+        response_text = response[-1].to_plain_text()
 
         # Initialize components
         components = {"think": "", "decide": "", "explain": ""}
@@ -122,7 +140,7 @@ class ReActAgent(Agent):
         try:
 
             # Parse response into components
-            for line in str(response).split("\n"):
+            for line in response_text.split("\n"):
 
                 # Skip empty lines
                 line = line.strip()
@@ -152,6 +170,16 @@ class ReActAgent(Agent):
 
             # Ensure we have minimum required components
             if not components["think"] or not components["decide"]:
+                # Print stacktrace:
+                with asection("Response parsing failed:"):
+                    with asection("Model response:"):
+                        for m in response:
+                            aprint(m)
+                    aprint(components)
+
+                import traceback
+
+                traceback.print_exc()
                 raise ValueError("Missing required components")
 
             return components
@@ -187,9 +215,10 @@ class ReActAgent(Agent):
 
         # Check for common final answer phrases
         return (
-            decision.startswith("FINAL ANSWER")
-            or decision.startswith("FINAL")
-            or decision.startswith("ANSWER")
+            "FINAL_ANSWER" in decision
+            or "FINAL ANSWER" in decision
+            or "FINAL" in decision
+            or "ANSWER" in decision
         )
 
     def __call__(self, *args, **kwargs) -> Message:
@@ -201,13 +230,23 @@ class ReActAgent(Agent):
         """
 
         # Prepare call by extracting conversation, message, and text:
-        self._prepare_call(args, kwargs)
+        self._prepare_call(*args, **kwargs)
 
         # Get last message in conversation
         last_message = self.conversation.get_last_message()
 
         with asection("Calling ReAct Agent"):
-            with asection("With Message"):
+
+            with asection("API and model:"):
+                aprint(f"API: {self.api.__class__.__name__}")
+                aprint(f"Model: {self.model}")
+
+            with asection("Available tools"):
+                if self.toolset:
+                    for tool in self.toolset:
+                        aprint(tool.pretty_string())
+
+            with asection("Last message in conversation:"):
                 aprint(last_message)
 
             # Reset state for new query
@@ -216,9 +255,6 @@ class ReActAgent(Agent):
             # Create initial system message
             system_message = self._create_system_message()
             self.conversation.system_messages = [system_message]  # Replace any existing
-
-            # Handle input using parent class (adds user message to conversation)
-            super().__call__(*args, **kwargs)
 
             with asection("ReAct Reasoning Loop"):
                 # Begin ReAct loop
@@ -242,18 +278,26 @@ class ReActAgent(Agent):
                             )
 
                         try:
-                            # Get model's next step
-                            response = self.api.generate_text(
-                                model_name=self.model,
-                                messages=self.conversation.get_all_messages(),
-                                temperature=self.temperature,
-                                toolset=self.toolset,
-                            )
+                            with asection("Calling model"):
+                                # Get model's next step
+                                response = self.api.generate_text(
+                                    model_name=self.model,
+                                    messages=self._get_input_messages(),
+                                    temperature=self.temperature,
+                                    toolset=self.toolset,
+                                )
 
                             # Parse the structured response
-                            step = self._parse_response(str(response))
+                            step = self._parse_response(response)
+
+                            # Add step to reasoning chain
                             self.reasoning_chain.append(step)
-                            aprint("Step:", step)
+
+                            # Print parsed response
+                            with asection("Parsed response:"):
+                                aprint(f"THINK: {step.get('think', '/missing/')}")
+                                aprint(f"DECIDE: {step.get('decide', '/missing/')}")
+                                aprint(f"EXPLAIN: {step.get('explain', '/missing/')}")
 
                             # Update system message with new reasoning chain
                             self.conversation.system_messages = [
@@ -283,14 +327,21 @@ class ReActAgent(Agent):
                                 with asection("Final Answer"):
                                     aprint(final_text)
 
-                                return Message(role="assistant", text=final_text)
+                                final_response = Message(
+                                    role="assistant", text=final_text
+                                )
+                                self.conversation.append(final_response)
+                                return final_response
+                            else:
 
-                            # Add response to conversation for tool handling
-                            self.conversation.append(response)
+                                # Add response to conversation for tool handling
+                                self.conversation.extend(response)
 
                         except Exception as e:
-
                             aprint(f"Error in reasoning: {str(e)}")
+                            import traceback
+
+                            traceback.print_exc()
                             # Handle any errors in the reasoning process
                             return Message(
                                 role="assistant",

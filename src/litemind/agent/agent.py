@@ -14,7 +14,7 @@ class Agent:
     def __init__(
         self,
         api: BaseApi,
-        model: Optional[str] = None,
+        model_name: Optional[str] = None,
         model_features: Optional[
             Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
         ] = None,
@@ -30,7 +30,7 @@ class Agent:
         ----------
         api: BaseApi
             The API to use.
-        model: str
+        model_name: str
             The model to use from the provided API. Model must support at least text generation and tools.
         model_features: Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
             The features to require for a model. If features are provided, the model will be selected based on the features.
@@ -57,7 +57,7 @@ class Agent:
         if model_features is not None:
 
             # Make sure that model is not also provided:
-            if model:
+            if model_name:
                 raise ValueError("You cannot provide both model and model_features")
 
             # Make sure that text generation and tools are included in the model features:
@@ -70,7 +70,7 @@ class Agent:
             self.model = api.get_best_model(features=model_features)
         else:
             # Use the provided model or get the best model based on text generation and tools:
-            self.model = model or api.get_best_model(
+            self.model = model_name or api.get_best_model(
                 features=[ModelFeatures.TextGeneration, ModelFeatures.Tools]
             )
 
@@ -97,6 +97,24 @@ class Agent:
         # Initialise conversation:
         self.conversation = Conversation()
 
+    def append_system_message(self, message: Union[str, Message]):
+        """
+        Set a system message for the agent.
+
+        Parameters
+        ----------
+        message: Union[str,Message]
+            The system message to set.
+
+        """
+
+        # If a string is provided, convert it to a message:
+        if isinstance(message, str):
+            message = Message(role="system", text=message)
+
+        # Append the message to the conversation:
+        self.conversation.system_messages.append(message)
+
     def __getitem__(self, item) -> Message:
         return self.conversation[item]
 
@@ -107,15 +125,26 @@ class Agent:
         self.conversation.append(other)
         return self
 
-    def __call__(self, *args, **kwargs) -> Message:
+    def __call__(self, *args, **kwargs) -> List[Message]:
 
-        self._prepare_call(args, kwargs)
+        # Prepare the call by normalising parameters:
+        messages = self._prepare_call(*args, **kwargs)
 
-        # Get the last message in conversation:
-        last_message = self.conversation[-1]
+        # Get last message in conversation
+        last_message = self.conversation.get_last_message()
 
         with asection(f"Calling agent: '{self.name}'"):
-            with asection("With message:"):
+
+            with asection("API and model:"):
+                aprint(f"API: {self.api.__class__.__name__}")
+                aprint(f"Model: {self.model}")
+
+            with asection("Available tools"):
+                if self.toolset:
+                    for tool in self.toolset:
+                        aprint(tool.pretty_string())
+
+            with asection("Last message in conversation:"):
                 aprint(last_message)
 
             # Call the OpenAI API:
@@ -128,15 +157,18 @@ class Agent:
             )
 
             with asection("Reponse:"):
-                aprint(response)
+                for message in response:
+                    aprint(message)
 
-        # Append assistant message to messages:
-        self.conversation.append(response)
+        # Append response messages to conversation:
+        self.conversation.extend(response)
 
         # Return response
         return response
 
-    def _prepare_call(self, args, kwargs):
+    def _prepare_call(self, *args, **kwargs) -> List[Message]:
+
+        messages: List[Message] = []
 
         # if a role is provided as a keyword argument, append it:
         role = kwargs["role"] if "role" in kwargs else "user"
@@ -145,6 +177,7 @@ class Agent:
             conversation = args[0]
             if isinstance(conversation, Conversation):
                 self.conversation += conversation
+                messages.extend(conversation.get_all_messages())
 
         # if conversation is provided as a keyword argument, append it:
         if "conversation" in kwargs:
@@ -153,14 +186,16 @@ class Agent:
             del kwargs["conversation"]
             if isinstance(conversation, Conversation):
                 self.conversation += conversation
+                messages.extend(conversation.get_all_messages())
             else:
                 raise ValueError("conversation must be a Conversation object")
 
         # if a message is provided as a positional argument, append it:
         if args:
-            message = args[0]
-            if isinstance(message, Message):
-                self.conversation.append(message)
+            for message in args:
+                if isinstance(message, Message):
+                    self.conversation.append(message)
+                    messages.append(message)
 
         # if a message is provided as a keyword argument, append it:
         if "message" in kwargs:
@@ -169,16 +204,18 @@ class Agent:
             del kwargs["message"]
             if isinstance(message, Message):
                 self.conversation.append(message)
+                messages.append(message)
             else:
                 raise ValueError("message must be a Message object")
 
         # if text is provided as a positional argument, append it:
         if args:
-            text = args[0]
-            if isinstance(text, str):
-                message = Message(role=role)
-                message.append_text(text)
-                self.conversation.append(message)
+            for text in args:
+                if isinstance(text, str):
+                    message = Message(role=role)
+                    message.append_text(text)
+                    self.conversation.append(message)
+                    messages.append(message)
 
         # if text is provided as a keyword argument, append it:
         if "text" in kwargs:
@@ -187,7 +224,9 @@ class Agent:
             del kwargs["text"]
             if isinstance(text, str):
                 message = Message(role=role, text=text)
-
                 self.conversation.append(message)
+                messages.append(message)
             else:
                 raise ValueError("text must be a string")
+
+        return messages

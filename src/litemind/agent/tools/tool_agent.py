@@ -59,12 +59,31 @@ class ToolAgent(BaseTool):
                 self.agent.conversation.clear_conversation()
 
             # Call the agent with the prompt:
-            response_message = self.agent(text=prompt)
+            response = self.agent(prompt)
+
+            # Get the last message of the response:
+            last_response_message = response[-1]
 
             # Return the response text:
-            response_text = (
-                response_message.text
-                if hasattr(response_message, "text")
-                else str(response_message)
-            )
+            response_text = last_response_message.to_plain_text()
             return response_text
+
+    def pretty_string(self):
+        """
+        Return a pretty string representation of the tool agent.
+
+        Returns
+        -------
+        str
+            A pretty string representation of the tool agent.
+        """
+
+        # Shorten description to the first period _after_ 80 characters:
+        if len(self.description) > 80:
+            description = (
+                self.description[: self.description.find(".", 80) + 1] + "[...]"
+            )
+        else:
+            description = self.description
+
+        return f"{self.agent.name}(prompt: str) -> str  % {description}"

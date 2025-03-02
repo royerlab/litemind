@@ -22,8 +22,8 @@ def format_tools_for_openai(toolset: ToolSet) -> List[Dict[str, Any]]:
     tools = []
     for tool in toolset.list_tools():
         # Extract the properties and required fields from the JSON schema
-        properties = tool.parameters.get("properties", {})
-        required = tool.parameters.get("required", [])
+        properties = tool.arguments_schema.get("properties", {})
+        required = tool.arguments_schema.get("required", [])
 
         tool_schema = {
             "type": "function",

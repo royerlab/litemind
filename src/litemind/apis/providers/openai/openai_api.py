@@ -1,4 +1,3 @@
-import copy
 import json
 import os
 import tempfile
@@ -12,6 +11,7 @@ from PIL.Image import Resampling
 from pydantic import BaseModel
 
 from litemind.agent.messages.message import Message
+from litemind.agent.messages.message_block_type import BlockType
 from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.base_api import ModelFeatures
 from litemind.apis.callbacks.callback_manager import CallbackManager
@@ -24,6 +24,10 @@ from litemind.apis.providers.openai.utils.format_tools import format_tools_for_o
 from litemind.apis.providers.openai.utils.list_models import (
     _get_raw_openai_model_list,
     get_openai_model_list,
+)
+from litemind.apis.providers.openai.utils.num_tokens import estimate_num_input_tokens
+from litemind.apis.providers.openai.utils.preprocess_messages import (
+    openai_preprocess_messages,
 )
 from litemind.apis.providers.openai.utils.process_response import (
     process_response_from_openai,
@@ -318,16 +322,13 @@ class OpenAIApi(DefaultApi):
             or "audio" in model_name
             or "gpt-3.5" in model_name
             or "realtime" in model_name
+            or "o3-mini" in model_name
+            or "o3-preview" in model_name
         ):
             return False
 
         # Then, we check if it is a vision model:
-        if (
-            "vision" in model_name
-            or "gpt-4o" in model_name
-            or "o1" in model_name
-            or "o3" in model_name
-        ):
+        if "vision" in model_name or "gpt-4o" in model_name or "o1" in model_name:
             return True
 
         # Any other model is not a vision model:
@@ -341,6 +342,8 @@ class OpenAIApi(DefaultApi):
             or "gpt-3.5" in model_name
             or "gpt-4" in model_name
             or "realtime" in model_name
+            or "o3-mini" in model_name
+            or "o3-preview" in model_name
         ):
             return False
 
@@ -408,7 +411,7 @@ class OpenAIApi(DefaultApi):
 
     def _has_tools_support(self, model_name: str) -> bool:
 
-        # Check if the model supports tools:
+        # Check if the model supports text gen which is a pre-requisite:
         if not self._has_text_gen_support(model_name):
             return False
 
@@ -418,6 +421,7 @@ class OpenAIApi(DefaultApi):
             or "text-embedding" in model_name
             or "realtime" in model_name
             or "chatgpt" in model_name
+            or "o1" in model_name
         ):
             return False
 
@@ -449,7 +453,7 @@ class OpenAIApi(DefaultApi):
         if "o1-preview" in name:
             return 128000
 
-        if "o1" in name:
+        if "o1" in name or "o3" in name:
             # e.g. "o1-2024-12-17"
             return 200000
 
@@ -556,7 +560,7 @@ class OpenAIApi(DefaultApi):
             return 65536
         if "o1-preview" in name:
             return 32768
-        if "o1" in name:
+        if "o1" in name or "o3" in name:
             return 100000
 
         # -----------------------------------
@@ -620,34 +624,56 @@ class OpenAIApi(DefaultApi):
         messages: List[Message],
         model_name: Optional[str] = None,
         temperature: Optional[float] = 0.0,
-        max_output_tokens: Optional[int] = None,
+        max_num_output_tokens: Optional[int] = None,
         toolset: Optional[ToolSet] = None,
         response_format: Optional[BaseModel] = None,
         **kwargs,
-    ) -> Message:
+    ) -> List[Message]:
 
         from openai import NotGiven
 
         # Set default model if not provided
         if model_name is None:
-            model_name = self.get_best_model()
+            # We Require the minimum features for text generation:
+            features = [ModelFeatures.TextGeneration]
+            # If tools are provided, we also require tools:
+            if toolset:
+                features.append(ModelFeatures.Tools)
+            # If the messages contain media, we require the appropriate features:
+            # TODO: implement
+            model_name = self.get_best_model(features=features)
 
-        # We will use _messages to process the messages:
-        preprocessed_messages = copy.deepcopy(messages)
+            if model_name is None:
+                raise APIError(f"No suitable model with features: {features}")
 
-        # o1 models have special needs:
         if "o1" in model_name or "o3" in model_name:
             # ox models do not support any temperature except the default 1:
             temperature = 1.0
 
-            # ox models do not support system messages, make a copy of messages and recast system messages as user messages:
-            for message in preprocessed_messages:
-                if message.role == "system":
-                    message.role = "user"
+        # OpenAI specific preprocessing:
+        preprocessed_messages = openai_preprocess_messages(
+            model_name=model_name, messages=messages
+        )
+
+        # Preprocess messages:
+        preprocessed_messages = self._preprocess_messages(
+            messages=preprocessed_messages,
+            deepcopy=False,  # We have already made a deepcopy
+        )
 
         # Get max num of output tokens for model if not provided:
-        if max_output_tokens is None:
-            max_output_tokens = self.max_num_output_tokens(model_name)
+        if max_num_output_tokens is None:
+            max_num_output_tokens = self.max_num_output_tokens(model_name)
+
+        # Get max num of input tokens for model if not provided:
+        max_num_input_tokens = self.max_num_input_tokens(model_name)
+
+        # Estimate the number of tokens given a conversion of approx. 0.75 words per token:
+        effective_max_output_tokens = estimate_num_input_tokens(
+            max_num_input_tokens=max_num_input_tokens,
+            max_num_output_tokens=max_num_output_tokens,
+            preprocessed_messages=preprocessed_messages,
+        )
 
         # Convert ToolSet to OpenAI-compatible JSON schema if toolset is provided
         openai_tools = format_tools_for_openai(toolset) if toolset else NotGiven()
@@ -656,125 +682,116 @@ class OpenAIApi(DefaultApi):
         if response_format is None:
             response_format = NotGiven()
 
-        # Preprocess messages:
-        preprocessed_messages = self._preprocess_messages(
-            messages=preprocessed_messages, deepcopy=False
-        )  # We have already made a deepcopy
-
-        # Format messages for OpenAI:
-        openai_formatted_messages = convert_messages_for_openai(preprocessed_messages)
-
-        # Estimate the number of tokens given a conversion of approx. 0.75 words per token:
-        estimated_num_input_tokens = (
-            sum([len(str(message).split()) for message in preprocessed_messages]) * 3
-        )
-
-        # Adjust the number of completion tokens accordingly:
-        effective_max_output_tokens = min(
-            max_output_tokens,
-            self.max_num_input_tokens(model_name) - estimated_num_input_tokens,
-        )
+        # List of tool_use blocks to append to the response message:
+        new_messages = []
 
         try:
-            # Call OpenAI Chat Completions API
-            with self.client.beta.chat.completions.stream(
-                model=model_name,
-                messages=openai_formatted_messages,
-                temperature=temperature,
-                max_completion_tokens=effective_max_output_tokens,
-                tools=openai_tools,
-                response_format=NotGiven() if toolset else response_format,
-                **kwargs,
-            ) as streaming_response:
-                # Process the stream
-                for event in streaming_response:
-                    # pprint(event)
-                    if event.type == "content.delta":
-                        self.callback_manager.on_text_streaming(
-                            fragment=event.delta, **kwargs
-                        )
+            # Loop until we get a response that doesn't require tool use:
+            while True:
 
-            # Get the final completion
-            response = streaming_response.get_final_completion()
+                # Format messages for OpenAI:
+                openai_formatted_messages = convert_messages_for_openai(
+                    preprocessed_messages
+                )
 
-            # Tool calls:
-            tool_calls = response.choices[0].message.tool_calls
+                # Call OpenAI Chat Completions API
+                with self.client.beta.chat.completions.stream(
+                    model=model_name,
+                    messages=openai_formatted_messages,
+                    temperature=temperature,
+                    max_completion_tokens=effective_max_output_tokens,
+                    tools=openai_tools,
+                    response_format=response_format,
+                    **kwargs,
+                ) as streaming_response:
+                    # Process the stream
+                    for event in streaming_response:
+                        # pprint(event)
+                        if event.type == "content.delta":
+                            self.callback_manager.on_text_streaming(
+                                fragment=event.delta, **kwargs
+                            )
 
-            if toolset and tool_calls and len(tool_calls) > 0:
-                # Append the response to the messages:
-                openai_formatted_messages.append(response.choices[0].message)
+                    # Get the final completion
+                    openai_response = streaming_response.get_final_completion()
+
+                # Process the response from OpenAI:
+                response = process_response_from_openai(
+                    openai_response=openai_response, response_format=response_format
+                )
+
+                # Append response message to original, preprocessed, and new messages:
+                messages.append(response)
+                preprocessed_messages.append(response)
+                new_messages.append(response)
+
+                # If the model wants to use a tool, parse out the tool calls:
+                if not response.has(BlockType.Tool):
+                    # Break out of the loop if no tool use is required anymore:
+                    break
+
+                # Prepare message that will hold the tool uses and adds it to the original, preprocessed, and new messages:
+                tool_use_message = Message()
+                messages.append(tool_use_message)
+                preprocessed_messages.append(tool_use_message)
+                new_messages.append(tool_use_message)
+
+                # Get the tool calls:
+                tool_calls = [
+                    b.content for b in response if b.block_type == BlockType.Tool
+                ]
 
                 # Iterate through tool calls:
                 for tool_call in tool_calls:
 
                     # Get the tool name and arguments:
-                    function_name = tool_call.function.name
+                    tool_name = tool_call.tool_name
 
-                    # Parse the arguments:
-                    try:
-                        arguments = json.loads(tool_call.function.arguments)
-                    except json.JSONDecodeError as e:
-                        arguments = {}
+                    # Get the corresponding tool in toolset:
+                    tool = toolset.get_tool(tool_name) if toolset else None
 
-                    # Look up the tool using its name
-                    tool = toolset.get_tool(function_name)
+                    # Get the input arguments:
+                    tool_arguments = tool_call.arguments
+
                     if tool:
                         try:
                             # Execute the tool
-                            result = tool.execute(**arguments)
+                            result = tool.execute(**tool_arguments)
 
-                            # Append the result to the messages
-                            openai_formatted_messages.append(
-                                {
-                                    "role": "tool",
-                                    "tool_call_id": tool_call.id,
-                                    "content": result,
-                                }
-                            )
+                            # If not a string, convert from JSON:
+                            if not isinstance(result, str):
+                                result = json.dumps(result, default=str)
+
                         except Exception as e:
                             # If the tool raises an exception, return an error message
-                            openai_formatted_messages.append(
-                                {
-                                    "role": "tool",
-                                    "tool_call_id": tool_call.id,
-                                    "content": f"Error: {str(e)}",
-                                }
-                            )
-                    else:
-                        # If the tool is not found, return an error message
-                        openai_formatted_messages.append(
-                            {
-                                "role": "tool",
-                                "tool_call_id": tool_call.id,
-                                "content": f"Error: Tool '{function_name}' not found among: '{','.join(toolset.tool_names())}'.",
-                            }
+                            result = f"Function '{tool_name}' error: {e}"
+
+                        # Append the tool call result to the messages:
+                        tool_use_message.append_tool_use(
+                            tool_name=tool_name,
+                            arguments=tool_arguments,
+                            result=result,
+                            id=tool_call.id,
                         )
 
-                    # Follow up with a final completion that incorporates the tool call results:
-                    response = self.client.beta.chat.completions.parse(
-                        model=model_name,
-                        tools=openai_tools,
-                        messages=openai_formatted_messages,
-                        temperature=temperature,
-                        max_completion_tokens=effective_max_output_tokens,
-                        response_format=response_format,
-                        **kwargs,
-                    )
-
-            # Process API response
-            response_message = process_response_from_openai(
-                response=response, response_format=response_format
-            )
-
-            # append response to messages:
-            messages.append(response_message)
+                    else:
+                        # Append the tool call result to the messages:
+                        tool_use_error_message = (
+                            f"(Tool '{tool_name}' use requested, but tool not found.)"
+                        )
+                        tool_use_message.append_tool_use(
+                            tool_name=tool_name,
+                            arguments=tool_arguments,
+                            result=tool_use_error_message,
+                            id=tool_call.id,
+                        )
 
             # Add all parameters to kwargs:
             kwargs.update(
                 {
                     "model_name": model_name,
                     "temperature": temperature,
-                    "max_output_tokens": max_output_tokens,
+                    "max_output_tokens": max_num_output_tokens,
                     "toolset": toolset,
                     "response_format": response_format,
                 }
@@ -782,7 +799,7 @@ class OpenAIApi(DefaultApi):
 
             # Call the callback manager:
             self.callback_manager.on_text_generation(
-                response=response_message, messages=messages, **kwargs
+                messages=messages, response=response, **kwargs
             )
 
         except Exception as e:
@@ -790,10 +807,9 @@ class OpenAIApi(DefaultApi):
             import traceback
 
             traceback.print_exc()
-
             raise APIError(f"OpenAI generate text error: {e}")
 
-        return response_message
+        return new_messages
 
     def transcribe_audio(
         self, audio_uri: str, model_name: Optional[str] = None, **kwargs

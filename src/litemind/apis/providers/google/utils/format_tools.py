@@ -1,4 +1,7 @@
-def format_tools_for_gemini(toolset) -> list["Tool"]:
+from typing import List
+
+
+def format_tools_for_gemini(toolset) -> List["Tool"]:
     """
     Convert your custom tool objects into genai.protos.Tool
     for fine-grained control of parameter schemas and descriptions.
@@ -11,14 +14,31 @@ def format_tools_for_gemini(toolset) -> list["Tool"]:
 
     from google.generativeai import protos
 
+    # Check if the toolset is None, if yes return None:
+    if not toolset:
+        return None
+
+    # Initialize an empty list of tools:
     tools = []
+
+    # Iterate over the tools in the toolset:
     for tool in toolset.list_tools():
-        # Build a FunctionDeclaration for each tool
-        func_decl = protos.FunctionDeclaration(
-            name=tool.name,
-            description=tool.description or "No description",
-            parameters=_create_protos_schema(tool.parameters),
-        )
+
+        # Check if they are any parameters:
+        if tool.arguments_schema["properties"]:
+            # Create a FunctionDeclaration for each tool:
+            func_decl = protos.FunctionDeclaration(
+                name=tool.name,
+                description=tool.description or "No description",
+                parameters=_create_protos_schema(tool.arguments_schema),
+            )
+        else:
+            # Create a FunctionDeclaration for each tool:
+            func_decl = protos.FunctionDeclaration(
+                name=tool.name,
+                description=tool.description or "No description",
+            )
+
         # Wrap it in a Tool
         tool_proto = protos.Tool(function_declarations=[func_decl])
         tools.append(tool_proto)
@@ -44,7 +64,8 @@ def _create_protos_schema(json_schema: dict) -> "Schema":
     }
 
     # Root-level type
-    root_type_str = json_schema.get("type", "object")
+    root_type_str = json_schema.get("type", None)
+
     root_type = type_map.get(root_type_str, protos.Type.STRING)
 
     schema = protos.Schema(type_=root_type)

@@ -1,11 +1,14 @@
+from datetime import datetime
+
 import pytest
 from pydantic import BaseModel
 
+from litemind import API_IMPLEMENTATIONS
 from litemind.agent.messages.message import Message
 from litemind.agent.messages.message_block_type import BlockType
 from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.base_api import ModelFeatures
-from litemind.apis.tests.base_test import API_IMPLEMENTATIONS, BaseTest
+from litemind.apis.tests.base_test import BaseTest
 
 
 @pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
@@ -39,6 +42,7 @@ class TestBaseApiImplementationsTextGeneration(BaseTest):
                 role="system",
                 text="You are an omniscient all-knowing being called Ohmm",
             ),
+            Message(role="user", text="I am 'The User'."),
             Message(role="user", text="Who are you?"),
         ]
 
@@ -46,6 +50,12 @@ class TestBaseApiImplementationsTextGeneration(BaseTest):
         response = api_instance.generate_text(
             model_name=default_model_name, messages=messages, temperature=0.7
         )
+
+        # There should be only one message in the response:
+        assert len(response) == 1, f"Expected only one message in the response."
+
+        # Extract the message from the list:
+        response = response[0]
 
         # Print the response:
         print("\n" + str(response))
@@ -90,8 +100,16 @@ class TestBaseApiImplementationsTextGeneration(BaseTest):
             model_name=default_model_name, messages=messages, temperature=0.0
         )
 
-        # Print the response:
-        print("\n" + str(response))
+        # Print all messages:
+        print("\n")
+        for message in messages:
+            print(message)
+
+        # Check that there is only one message in the response:
+        assert len(response) == 1, f"Expected only one message in the response."
+
+        # Extract the message from the list:
+        response = response[0]
 
         # Check the response:
         assert (
@@ -163,34 +181,109 @@ class TestBaseApiImplementationsTextGeneration(BaseTest):
             response_format=Order,
         )
 
-        # Print the response:
-        print("\n" + str(response))
+        # Print all messages:
+        print("\n")
+        for message in messages:
+            print(message)
+
+        # There should be only one message in the response:
+        assert len(response) == 1, f"Expected only one message in the response."
+
+        # Extract the message from the list:
+        response = response[0]
 
         # assert that result should be of role "assistant":
         assert (
             response.role == "assistant"
         ), f"{api_class.__name__} completion should return an 'assistant' role."
 
+        # The last block contains the object:
+        object_block = response[-1]
+
         # assert that result should be a message of type object:
         assert (
-            response[0].block_type == BlockType.Object
+            object_block.block_type == BlockType.Object
         ), f"{api_class.__name__} completion should return an object."
 
         # assert that result should be a message containing an object of type Order:
         assert isinstance(
-            response[0].content, Order
+            object_block.content, Order
         ), f"{api_class.__name__} completion should return an object of type Order."
+
+    def test_text_generation_with_simple_parameterless_tool(self, api_class):
+        """
+        Test that the completion method can interact with a simple toolset.
+        """
+
+        # Create an instance of the API class:
+        api_instance = api_class()
+
+        def get_current_date() -> str:
+            return datetime.now().strftime("%Y-%m-%d")
+
+        # Create a toolset and add the function tool:
+        toolset = ToolSet()
+        toolset.add_function_tool(get_current_date, "Fetch the current date")
+
+        # Get the best model for text generation with tools:
+        default_model_name = api_instance.get_best_model(
+            [ModelFeatures.Tools, ModelFeatures.TextGeneration]
+        )
+
+        # If the model does not support text generation, skip the test:
+        if default_model_name is None:
+            pytest.skip(
+                f"{api_class.__name__} does not support text generation and tools. Skipping tests."
+            )
+
+        # Print the model name:
+        print("\n" + default_model_name)
+
+        # A simple message:
+        user_message = Message(
+            role="user", text="What is the current date? (Reply in %Y-%m-%d format)"
+        )
+        messages = [user_message]
+
+        # Get the completion:
+        response = api_instance.generate_text(
+            model_name=default_model_name,  # or a specific model name if needed
+            messages=messages,
+            toolset=toolset,
+        )
+
+        # Print all messages:
+        print("\n")
+        for message in messages:
+            print(message)
+
+        # There should be only one message in the response:
+        assert len(response) == 3, f"Expected three message in the response."
+
+        # Check that the second last message in response is a tool use message:
+        assert response[-2][0].block_type == BlockType.Tool
+
+        # Extract the last message from the list which contains the actual final response:
+        response = response[-1]
+
+        # Check that we have 2 messages in the list:
+        assert (
+            get_current_date() in response
+        ), f"The response of {api_class.__name__} should contain the delivery date."
 
     def test_text_generation_with_simple_toolset(self, api_class):
         """
         Test that the completion method can interact with a simple toolset.
         """
 
+        # Create an instance of the API class:
         api_instance = api_class()
 
         # If you have a function-based tool usage pattern:
         def get_delivery_date(order_id: str) -> str:
             """Fetch the delivery date for a given order ID."""
+
+            # Return 10 days past get_current_date():
             return "2024-11-15"
 
         # Create a toolset and add the function tool:
@@ -226,10 +319,19 @@ class TestBaseApiImplementationsTextGeneration(BaseTest):
             toolset=toolset,
         )
 
-        # Print the response:
+        # Print all messages:
         print("\n")
         for message in messages:
             print(message)
+
+        # There should be only one message in the response:
+        assert len(response) == 3, f"Expected three message in the response."
+
+        # Check that the second last message in reponse is a tool use message:
+        assert response[-2][0].block_type == BlockType.Tool
+
+        # Extract the last message from the list which contains the actual final response:
+        response = response[-1]
 
         # Check that we have 2 messages in the list:
         assert (
@@ -288,19 +390,34 @@ class TestBaseApiImplementationsTextGeneration(BaseTest):
             response_format=OrderInfo,
         )
 
-        # Print the response:
+        # Print all messages:
         print("\n")
         for message in messages:
             print(message)
 
+        # There should be only one message in the response:
+        assert len(response) >= 3, f"Expected three message in the response."
+
+        # Check that the second last message in response is a tool use message:
+        assert response[-2][0].block_type == BlockType.Tool
+
+        # Extract the last message from the list which contains the actual final response:
+        response = response[-1]
+
+        # Convert the response to a string:
+        response_str = str(response)
+
         # Check that the date is in the response:
-        assert "2024-11-15" in str(
-            response
+        assert (
+            "2024-11-15" in response_str
         ), f"The response of {api_class.__name__} should contain the delivery date."
+
+        # The object is in the last block:
+        object_block = response[-1]
 
         # Check that the response is of type OrderInfo:
         assert isinstance(
-            response[0].content, OrderInfo
+            object_block.content, OrderInfo
         ), f"The response of {api_class.__name__} should be of type OrderInfo."
 
     def test_text_generation_with_complex_toolset(self, api_class):
@@ -369,10 +486,13 @@ class TestBaseApiImplementationsTextGeneration(BaseTest):
             toolset=toolset,
         )
 
-        # Check that we have 2 messages in the list:
+        # Check that we have 4 messages in the list:
         assert (
-            len(messages) == 2
-        ), "We should have two messages in the list. The user message and the response message."
+            len(messages) == 4
+        ), "We should have four messages in the list. The user message and the response message."
+
+        # Convert all messages in response to one string:
+        response = str(response)
 
         assert (
             "2024-11-15" in response
@@ -391,6 +511,12 @@ class TestBaseApiImplementationsTextGeneration(BaseTest):
             toolset=toolset,
         )
 
+        # Check that there is three messages in the response:
+        assert len(messages) == 8, "We should have eight messages in the response."
+
+        # Extract the last message from the response:
+        response = response[-1]
+
         # Check that we get the correct product name:
         assert (
             "Olea Table" in response
@@ -408,6 +534,12 @@ class TestBaseApiImplementationsTextGeneration(BaseTest):
             messages=messages,
             toolset=toolset,
         )
+
+        # Check that the response is of length 3:
+        assert len(response) == 3, "The response should contain 3 messages."
+
+        # Extract the last message from the response:
+        response = response[-1]
 
         # Check that we get the correct number of available tables:
         assert (

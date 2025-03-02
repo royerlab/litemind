@@ -6,13 +6,15 @@ from pandas import DataFrame
 from pydantic import BaseModel
 
 from litemind.agent.messages.message_block_type import BlockType
+from litemind.agent.messages.tool_call import ToolCall
+from litemind.agent.messages.tool_use import ToolUse
 
 
 class MessageBlock:
     def __init__(
         self,
         block_type: Union[str, BlockType],
-        content: Union[str, BaseModel, ndarray, DataFrame],
+        content: Union[str, BaseModel, ndarray, DataFrame, ToolCall, ToolUse],
         **attributes,
     ):
         """
@@ -21,14 +23,16 @@ class MessageBlock:
         Parameters
         ----------
         block_type: Union[str, BlockType]
-            The type of the block (e.g., 'text', 'json', 'image', 'audio', 'video', 'document', table, ).
+            The type of the block (e.g., 'text', 'json', 'image', 'audio', 'video', 'document', table, tool ).
         content: Union[str, BaseModel, ndarray, ]
             The content of the block. Can be a free string, a JSON string, a URI, a numpy array, a panda frame, or a Pydantic model.
         """
         if isinstance(block_type, str):
             block_type = BlockType.from_str(block_type)
         self.block_type: BlockType = block_type
-        self.content: Union[str, BaseModel, ndarray, DataFrame] = content
+        self.content: Union[str, BaseModel, ndarray, DataFrame, ToolCall, ToolUse] = (
+            content
+        )
         self.attributes = attributes
 
     def copy(self) -> "MessageBlock":
@@ -87,7 +91,7 @@ class MessageBlock:
         if self.block_type == BlockType.Text:
             return self.content
         else:
-            return f"{self.block_type.value}: {self.content}"
+            return f"{self.block_type.value.upper()}: {self.content}"
 
     def __repr__(self):
         """
@@ -117,5 +121,7 @@ class MessageBlock:
         elif isinstance(self.content, DataFrame):
             content: DataFrame = self.content
             return content.size
+        elif isinstance(self.content, ToolUse):
+            return len(str(self.content.result))
         else:
-            return 0
+            return len(str(self.content))

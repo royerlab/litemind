@@ -33,7 +33,7 @@ def format_tools_for_anthropic(
             "name": tool.name,
             "description": tool.description,
             # If your tool has a JSON schema, attach it:
-            "input_schema": tool.parameters,
+            "input_schema": tool.arguments_schema,
         }
         tools.append(tool_def)
     return tools

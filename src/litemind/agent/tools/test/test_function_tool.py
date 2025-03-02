@@ -33,7 +33,7 @@ def test_tool_initialization():
 
     # Assert that the tool parameters match the expected JSON schema format
     assert (
-        tool.parameters == expected_parameters
+        tool.arguments_schema == expected_parameters
     ), "Tool parameters schema does not match the expected format"
 
 
@@ -64,7 +64,7 @@ def test_tool_with_no_parameters():
 
     # Assert that the parameters schema is empty as expected
     assert (
-        tool.parameters == expected_parameters
+        tool.arguments_schema == expected_parameters
     ), "Expected empty parameters for function with no parameters"
 
 
@@ -85,7 +85,7 @@ def test_tool_with_default_parameter():
 
     # Assert that the tool parameters match the expected format with default values handled correctly
     assert (
-        tool.parameters == expected_parameters
+        tool.arguments_schema == expected_parameters
     ), "Expected param2 to be optional due to default value"
 
 

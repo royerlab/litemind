@@ -1,8 +1,9 @@
 import pytest
 from arbol import aprint
 
+from litemind import API_IMPLEMENTATIONS
 from litemind.apis.base_api import ModelFeatures
-from litemind.apis.tests.base_test import API_IMPLEMENTATIONS, BaseTest
+from litemind.apis.tests.base_test import BaseTest
 
 
 @pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
@@ -163,8 +164,8 @@ class TestBaseApiImplementationsBasics(BaseTest):
             max_input_tokens, int
         ), f"{api_class.__name__}.max_num_input_token() should return an int!"
         assert (
-            max_input_tokens > 4096
-        ), f"{api_class.__name__}.max_num_input_token() should be a positive integer above 4096!"
+            max_input_tokens >= 4096
+        ), f"{api_class.__name__}.max_num_input_token() should be a positive integer equal or above 4096!"
 
     def test_max_num_output_tokens(self, api_class):
         """

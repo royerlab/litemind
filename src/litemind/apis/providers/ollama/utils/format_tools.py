@@ -20,7 +20,7 @@ def format_tools_for_ollama(toolset: ToolSet) -> List[Dict]:
                 "function": {
                     "name": tool.name,
                     "description": tool.description,
-                    "parameters": tool.parameters,  # Must be a valid JSON schema
+                    "parameters": tool.arguments_schema,  # Must be a valid JSON schema
                 },
             }
         )

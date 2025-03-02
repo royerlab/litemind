@@ -1,3 +1,4 @@
+import json
 import os
 from typing import List, Optional, Sequence, Union
 
@@ -5,22 +6,27 @@ from PIL import Image
 from pydantic import BaseModel
 
 from litemind.agent.messages.message import Message
+from litemind.agent.messages.message_block_type import BlockType
+from litemind.agent.messages.tool_call import ToolCall
 from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.base_api import ModelFeatures
 from litemind.apis.callbacks.callback_manager import CallbackManager
 from litemind.apis.default_api import DefaultApi
 from litemind.apis.exceptions import APIError, APINotAvailableError
+from litemind.apis.providers.google.utils.aggegate_chat_response import (
+    aggregate_chat_response,
+)
 from litemind.apis.providers.google.utils.convert_messages import (
     convert_messages_for_gemini,
-    list_and_delete_uploaded_files,
 )
 from litemind.apis.providers.google.utils.format_tools import format_tools_for_gemini
 from litemind.apis.providers.google.utils.list_models import _get_gemini_models_list
-from litemind.apis.providers.google.utils.text_generation_helpers import (
-    _stream_chat_no_tools,
-    _stream_chat_with_tools,
+from litemind.apis.providers.google.utils.process_response import (
+    process_response_from_gemini,
 )
+from litemind.apis.providers.google.utils.response_to_object import response_to_object
 from litemind.apis.tests.test_callback_manager import callback_manager
+from litemind.apis.utils.json_to_object import json_to_object
 
 
 class GeminiApi(DefaultApi):
@@ -368,145 +374,201 @@ class GeminiApi(DefaultApi):
         messages: List[Message],
         model_name: Optional[str] = None,
         temperature: float = 0.0,
-        max_output_tokens: Optional[int] = None,
+        max_num_output_tokens: Optional[int] = None,
         toolset: Optional[ToolSet] = None,
         response_format: Optional[BaseModel] = None,
         **kwargs,
-    ) -> Message:
-        """
-        Always uses streaming behind the scenes, so partial text is available
-        (via self.callback_manager.on_llm_partial_response).
-        If a toolset is provided and the model supports function-calling,
-        we handle multiple calls in a loop.
-        Returns the final text as one assistant Message.
-        """
+    ) -> List[Message]:
 
         import google.generativeai as genai
         from google.generativeai import types
 
+        # Set default model if not provided
         if model_name is None:
-            model_name = self.get_best_model()
-        if max_output_tokens is None:
-            max_output_tokens = self.max_num_output_tokens(model_name)
+            # We Require the minimum features for text generation:
+            features = [ModelFeatures.TextGeneration]
+            # If tools are provided, we also require tools:
+            if toolset:
+                features.append(ModelFeatures.Tools)
+            # If the messages contain media, we require the appropriate features:
+            # TODO: implement
+            model_name = self.get_best_model(features=features)
+
+            if model_name is None:
+                raise APIError(f"No suitable model with features: {features}")
 
         # Convert user messages -> gemini format
         preprocessed_messages = self._preprocess_messages(
             messages=messages, convert_videos=False
         )
-        gemini_messages = convert_messages_for_gemini(preprocessed_messages)
 
-        # Decide if we have Tools
-        has_tools = (toolset is not None) and self.has_model_support_for(
-            model_name=model_name, features=ModelFeatures.Tools
-        )
+        # Get max num of output tokens for model if not provided:
+        if max_num_output_tokens is None:
+            max_num_output_tokens = self.max_num_output_tokens(model_name)
 
         # Build GenerationConfig
-        if response_format is None or has_tools:
+        if response_format is None or toolset is not None:
             generation_cfg = types.GenerationConfig(
-                temperature=temperature, max_output_tokens=max_output_tokens
+                temperature=temperature, max_output_tokens=max_num_output_tokens
             )
         else:
             generation_cfg = types.GenerationConfig(
                 temperature=temperature,
-                max_output_tokens=max_output_tokens,
+                max_output_tokens=max_num_output_tokens,
                 response_mime_type="application/json",
                 response_schema=response_format,
             )
 
-        final_text_output = ""
-        if has_tools:
-            # Format tools for Gemini:
-            proto_tools = format_tools_for_gemini(toolset)
+        # Format tools for Gemini:
+        gemini_tools = format_tools_for_gemini(toolset)
+
+        # List of new messages part of the response:
+        new_messages = []
+
+        try:
 
             # Get model by name and set tools and config:
             model = genai.GenerativeModel(
                 model_name=model_name,
-                tools=proto_tools,
+                tools=gemini_tools,
                 generation_config=generation_cfg,
             )
 
-            # Start chat with tools:
+            # Start chat
             chat = model.start_chat()
 
-            # Get the final text output:
-            final_text_output = _stream_chat_with_tools(
-                chat_obj=chat,
-                initial_message_parts=gemini_messages,
-                toolset=toolset,
-                model_name=model_name,
-                temperature=temperature,
-                max_output_tokens=max_output_tokens,
-                response_format=response_format,
-                on_text_streaming=self.callback_manager.on_text_streaming,
-                **kwargs,
+            # Loop until we get a response that doesn't require tool use:
+            while True:
+
+                # Convert messages to gemini format:
+                gemini_messages = convert_messages_for_gemini(preprocessed_messages)
+
+                # Send messages to Gemini:
+                streaming_response = chat.send_message(gemini_messages, stream=True)
+
+                # Aggregate the response:
+                gemini_response = aggregate_chat_response(
+                    streaming_response, self.callback_manager.on_text_streaming
+                )
+
+                # Process the response:
+                response = process_response_from_gemini(
+                    gemini_response,
+                    model_name=model_name,
+                    max_num_output_tokens=max_num_output_tokens,
+                    response_format=response_format,
+                )
+
+                # Append response message to original, preprocessed, and new messages:
+                messages.append(response)
+                # preprocessed_messages.append(response)
+                new_messages.append(response)
+
+                # If the model wants to use a tool, parse out the tool calls:
+                if not response.has(BlockType.Tool):
+                    # Break out of the loop if no tool use is required anymore:
+                    break
+
+                # Prepare message that will hold the tool uses and adds it to the original, preprocessed, and new messages:
+                tool_use_message = Message()
+                messages.append(tool_use_message)
+                # preprocessed_messages.append(tool_use_message)
+                preprocessed_messages = [tool_use_message]
+                new_messages.append(tool_use_message)
+
+                # Get the tool calls:
+                tool_calls = [
+                    b.content for b in response if b.block_type == BlockType.Tool
+                ]
+
+                # Iterate through tool calls:
+                for tool_call in tool_calls:
+                    if isinstance(tool_call, ToolCall):
+
+                        # Get tool function name:
+                        tool_name = tool_call.tool_name
+
+                        # Get the corresponding tool in toolset:
+                        tool = toolset.get_tool(tool_name) if toolset else None
+
+                        # Get the input arguments:
+                        tool_arguments = tool_call.arguments
+
+                        if tool:
+                            try:
+                                # Execute the tool
+                                result = tool.execute(**tool_arguments)
+
+                                # If not a string, convert from JSON:
+                                if not isinstance(result, str):
+                                    result = json.dumps(result, default=str)
+
+                            except Exception as e:
+                                result = f"Function '{tool_name}' error: {e}"
+
+                            # Append the tool call result to the messages:
+                            tool_use_message.append_tool_use(
+                                tool_name=tool_name,
+                                arguments=tool_arguments,
+                                result=result,
+                                id=tool_call.id,
+                            )
+
+                        else:
+                            # Append the tool call result to the messages:
+                            tool_use_error_message = f"(Tool '{tool_name}' use requested, but tool not found.)"
+                            tool_use_message.append_tool_use(
+                                tool_name=tool_name,
+                                arguments=tool_arguments,
+                                result=tool_use_error_message,
+                                id=tool_call.id,
+                            )
+
+            if response_format:
+
+                # Prepare the messages for formatting:
+                formatting_messages = messages.copy()
+
+                # Add a message to the user to convert the response to JSON:
+                message = Message(
+                    role="user",
+                    text="Convert the answer above to JSON adhering to the following schema:\n{response_format.model_json_schema()}\n",
+                )
+                formatting_messages.append(message)
+
+                # Generate the prompt for the user:
+                structured_message = response_to_object(
+                    messages=formatting_messages,
+                    model_name=model_name,
+                    max_num_output_tokens=max_num_output_tokens,
+                    response_format=response_format,
+                )
+                # If the message is not None or empty, set the processed response to the structured message:
+                if structured_message:
+                    json_to_object(
+                        response, response_format, structured_message[0].content
+                    )
+
+            # Fire final callback:
+            kwargs.update(
+                {
+                    "model_name": model_name,
+                    "temperature": temperature,
+                    "max_output_tokens": max_num_output_tokens,
+                    "toolset": toolset,
+                    "response_format": response_format,
+                }
             )
-        else:
-            # Get model by name and set generation config:
-            model = genai.GenerativeModel(
-                model_name=model_name, generation_config=generation_cfg
+
+            # Call the callback manager:
+            self.callback_manager.on_text_generation(
+                response=response, messages=messages, **kwargs
             )
 
-            # Get the final text output:
-            final_text_output = _stream_chat_no_tools(
-                model_obj=model,
-                gemini_messages=gemini_messages,
-                model_name=model_name,
-                temperature=temperature,
-                max_output_tokens=max_output_tokens,
-                on_text_streaming=self.callback_manager.on_text_streaming,
-                **kwargs,
-            )
+        except Exception as e:
+            raise APIError(f"Gemini generate text error: {e}")
 
-        # Clean up temporary uploads:
-        list_and_delete_uploaded_files()
-
-        # Possibly parse JSON if response_format is given
-        if response_format:
-            from json_repair import repair_json
-
-            # Strip final_text_output
-            final_text_output = final_text_output.strip()
-
-            # Remove ```json and ``` from the final text output
-            if final_text_output.startswith("```json") and final_text_output.endswith(
-                "```"
-            ):
-                final_text_output = final_text_output[7:-3]
-
-            repaired_json = repair_json(final_text_output)
-            if len(repaired_json.strip()) == 0 and len(final_text_output.strip()) > 0:
-                response_message = Message(role="assistant", text=final_text_output)
-            else:
-                try:
-                    parsed_obj = response_format.model_validate_json(repaired_json)
-                    response_message = Message(role="assistant", obj=parsed_obj)
-                except Exception as e:
-                    import traceback
-
-                    traceback.print_exc()
-                    response_message = Message(role="assistant", text=final_text_output)
-        else:
-            response_message = Message(role="assistant", text=final_text_output)
-
-        # Add to conversation
-        messages.append(response_message)
-
-        # Fire final callback:
-        kwargs.update(
-            {
-                "model_name": model_name,
-                "temperature": temperature,
-                "max_output_tokens": max_output_tokens,
-                "toolset": toolset,
-                "response_format": response_format,
-            }
-        )
-
-        # Call the callback manager:
-        self.callback_manager.on_text_generation(
-            response=response_message, messages=messages, **kwargs
-        )
-        return response_message
+        return new_messages
 
     def generate_image(
         self,

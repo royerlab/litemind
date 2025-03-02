@@ -8,13 +8,25 @@ class BaseTool(ABC):
     def __init__(self, name: str, description: str):
         self.name = name
         self.description = description
-        self.parameters = {}
+        self.arguments_schema = {}
 
     def __repr__(self):
         return f"{self.name}(description={self.description})"
 
     def __str__(self):
         return self.__repr__()
+
+    @abstractmethod
+    def pretty_string(self):
+        """
+        Return a pretty string representation of the tool.
+
+        Returns
+        -------
+        str
+            A pretty string representation of the tool.
+        """
+        pass
 
     @abstractmethod
     def execute(self, *args, **kwargs) -> Any:

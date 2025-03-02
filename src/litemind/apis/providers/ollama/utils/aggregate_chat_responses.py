@@ -1,11 +1,9 @@
 from typing import Callable, Iterable
 
-from ollama import ChatResponse, Message
-
 
 def aggregate_chat_responses(
-    chunks: Iterable[ChatResponse], callback: Callable
-) -> ChatResponse:
+    chunks: Iterable["ChatResponse"], callback: Callable
+) -> "ChatResponse":
     """
     Aggregate an iterable of ChatResponse objects into a single ChatResponse.
 
@@ -27,6 +25,8 @@ def aggregate_chat_responses(
     Returns:
         A single ChatResponse with merged fields.
     """
+
+    from ollama import ChatResponse, Message
 
     # Create an iterator from the chunks
     iterator = iter(chunks)
@@ -57,6 +57,7 @@ def aggregate_chat_responses(
 
     # Merge subsequent chunks
     for chunk in iterator:
+
         # -- message.content: accumulate text
         if chunk.message.content:
             fragment = chunk.message.content

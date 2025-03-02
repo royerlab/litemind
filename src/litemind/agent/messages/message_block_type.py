@@ -11,6 +11,7 @@ class BlockType(Enum):
     Video = "video"
     Document = "document"
     Table = "table"
+    Tool = "tool"
 
     @staticmethod
     def from_str(label: str):
@@ -23,3 +24,9 @@ class BlockType(Enum):
 
         # Raise an error if the label is not in the enum:
         raise ValueError(f"Unknown block type: {label}")
+
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return self.name

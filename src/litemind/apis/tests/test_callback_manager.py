@@ -141,10 +141,10 @@ def test_on_text_generation(callback_manager, mock_callback):
     callback_manager.add_callback(mock_callback)
 
     # Make a simple message:
-    message = Message("user", "Hello, world!")
+    message = Message(role="user", text="Hello, world!")
 
     # Make a simple response:
-    response = Message("assistant", "Hello you!")
+    response = Message(role="assistant", text="Hello you!")
 
     callback_manager.on_text_generation([message], response)
     assert "on_text_generation" in mock_callback.called_methods

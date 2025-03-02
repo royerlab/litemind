@@ -80,7 +80,7 @@ def convert_video_to_frames_and_audio(
 
     # if the message is not provided, initialise an empty message:
     if message is None:
-        message = Message(role="_")
+        message = Message()
 
     # Append video filename:
     message.append_text(f"Video: {os.path.basename(video_path)}\n")

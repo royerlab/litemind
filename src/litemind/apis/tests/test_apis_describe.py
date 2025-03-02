@@ -1,7 +1,8 @@
 import pytest
 
+from litemind import API_IMPLEMENTATIONS
 from litemind.apis.base_api import ModelFeatures
-from litemind.apis.tests.base_test import API_IMPLEMENTATIONS, BaseTest
+from litemind.apis.tests.base_test import BaseTest
 
 
 @pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
