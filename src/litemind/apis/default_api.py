@@ -38,6 +38,7 @@ from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_pa
 class DefaultApi(BaseApi):
     """
     This is the default API that provides default local models (whisper-local) and features (Video2Image, DocumentConversion, ...).
+    This class is _not_ meant to be used directly, but rather as a base class for other APIs.
 
     """
 

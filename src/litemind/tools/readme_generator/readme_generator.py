@@ -74,7 +74,7 @@ def generate_readme(
          The 'Summary' section should provide an enthusiastic and complete description of the library, its purpose, and philosophy.
          The 'Usage' section should consist of rich, striking and illustrative examples of the Agentic API in use with multimodal inputs.
          The 'Concepts' section should explain the concepts behind the library, the main classes and their purpose, and how they interact.
-         The 'Code Health' section should include the results of unit test in file 'test_report.md'. Please also discuss which tests failed as logged in 'test_report_stdout.txt'. Please provide file names for failed tests and statistics about the number of failed tests and an analysis of what happened. 
+         The 'Code Health' section should include the results of unit test in file 'test_report.md'. Please provide file names for failed tests and statistics about the number of failed tests and an analysis of what happened. 
          The 'Roadmap' section can use the contents of TODO.md as a starting point, keep the checkmarks.
          The 'More Code Examples' section further expands with many more also covering the wrapper API, uses ideas and code from the unit tests (no need to mention that).
             
@@ -88,6 +88,7 @@ def generate_readme(
          - Make sure to include a variety of examples that cover different use cases and edge cases.
          - Make sure that the code examples are complete and can be run as-is.
          - Avoid putting multiple code examples in the same code block, unless they are chained.
+         - Avoid giving examples of features that have poor code health, i.e. for which tests are failing.
          
          
          At the end of the README, include a note explaining that the README was generated with the help of AI.
