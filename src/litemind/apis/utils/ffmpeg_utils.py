@@ -24,11 +24,11 @@ def is_ffmpeg_available():
         process = subprocess.run(["ffmpeg", "-version"], capture_output=True, text=True)
         if process.returncode == 0:
             aprint("FFmpeg is available.")
-            aprint(process.stdout)
+            # aprint(process.stdout)
             return True
         else:
             aprint("FFmpeg is not available.")
-            aprint(process.stderr)
+            # aprint(process.stderr)
             return False
     except FileNotFoundError:
         aprint("FFmpeg is not found in the system's PATH.")

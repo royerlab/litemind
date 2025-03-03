@@ -36,6 +36,7 @@ dependencies = [
     "pandas",
     "numpy",
     "chardet",
+    "pyyaml"
 ]
 
 [tool.hatch.build.targets.sdist]
@@ -96,7 +97,7 @@ videos = [
 
 # Commands:
 [project.scripts]
-readmegen = "litemind.tools.readme_generator.readme_generator:main"
+litemind = "litemind.tools.litemind_tools:main"
 
 [tool.hatch.envs.hatch-test]
 default-args = ["src/"]
