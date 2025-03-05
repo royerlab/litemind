@@ -3,21 +3,22 @@
 
 [![PyPI version](https://badge.fury.io/py/litemind.svg)](https://badge.fury.io/py/litemind)
 [![License](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
-[![Code Coverage](https://img.shields.io/badge/coverage-86%25-brightgreen.svg)](https://github.com/royerlab/litemind)
+[![PyPI - Downloads](https://static.pepy.tech/badge/litemind)](https://pepy.tech/project/litemind)
+[![GitHub stars](https://img.shields.io/github/stars/royerlab/litemind?style=social)](https://github.com/royerlab/litemind)
 
 ## Summary
 
-LiteMind is a Python library designed to streamline the development of agentic AI applications. It provides a unified and elegant API for interacting with various Large Language Models (LLMs) and offers a powerful framework for building conversational agents and tools. The library is structured around two key layers:
+LiteMind is a Python library designed to provide a streamlined and elegant API for building agentic AI applications. It offers a flexible wrapper layer around various Large Language Models (LLMs) and a powerful agentic API for creating conversational agents and tools. The library's core philosophy is to simplify the complexities of LLM interactions, enabling developers to focus on building innovative AI solutions.
+
+The library is structured around two main components:
 
 1.  **API Wrapper Layer**: This layer abstracts the complexities of interacting with different LLM providers (OpenAI, Anthropic, Google, Ollama), allowing developers to switch between them with minimal code changes. It provides a consistent interface for common operations like text generation, image generation, audio transcription, and embeddings.
 
 2.  **Agentic API**: This high-level framework provides the building blocks for creating sophisticated conversational agents and tools. It supports multimodal inputs (text, images, audio, video, documents), tool usage, and reasoning capabilities, enabling the creation of agents that can understand and respond to complex queries, use external tools, and maintain context across conversations.
 
-LiteMind's core philosophy is to provide a developer-friendly experience by handling the intricacies of LLM interactions while empowering developers to build advanced AI applications with ease. The library is designed to be extensible, allowing for the addition of new LLM providers and customization of various components.
-
 ## Features
 
-*   **Unified API Wrapper**:
+*   **API Wrapper Layer**:
     *   Supports multiple LLM providers:
         *   OpenAI (GPT models)
         *   Anthropic (Claude models)
@@ -28,7 +29,7 @@ LiteMind's core philosophy is to provide a developer-friendly experience by hand
     *   Image, audio, and video inputs
     *   Document processing (PDFs, webpages, etc.)
     *   Table handling
-*   **Agentic Framework**:
+*   **Agentic API**:
     *   Conversational agents with memory
     *   Tool usage and function calling
     *   ReAct agents with reasoning capabilities
@@ -374,9 +375,12 @@ from litemind.agent.messages.message import Message
 api = OpenAIApi()
 messages = [Message(role="user", text="Hello, world!")]
 response = api.generate_text(messages=messages, model_name="gpt-4o")
+
 print(response[0])
 # Expected output: "Hello there!"
+```
 
+```python
 # Using Anthropic API
 from litemind.apis.providers.anthropic.anthropic_api import AnthropicApi
 from litemind.agent.messages.message import Message
@@ -384,9 +388,12 @@ from litemind.agent.messages.message import Message
 api = AnthropicApi()
 messages = [Message(role="user", text="Hello, world!")]
 response = api.generate_text(messages=messages, model_name="claude-3-opus-20240229")
+
 print(response[0])
 # Expected output: "Hello there!"
+```
 
+```python
 # Using Google Gemini API
 from litemind.apis.providers.google.google_api import GeminiApi
 from litemind.agent.messages.message import Message
@@ -394,9 +401,12 @@ from litemind.agent.messages.message import Message
 api = GeminiApi()
 messages = [Message(role="user", text="Hello, world!")]
 response = api.generate_text(messages=messages, model_name="models/gemini-1.5-pro")
+
 print(response[0])
 # Expected output: "Hello there!"
+```
 
+```python
 # Using Ollama API (local models)
 from litemind.apis.providers.ollama.ollama_api import OllamaApi
 from litemind.agent.messages.message import Message
@@ -404,6 +414,7 @@ from litemind.agent.messages.message import Message
 api = OllamaApi()
 messages = [Message(role="user", text="Hello, world!")]
 response = api.generate_text(messages=messages, model_name="llama3")
+
 print(response[0])
 # Expected output: "Hello there!"
 ```
@@ -652,18 +663,11 @@ This will export the current directory (.), including all `.py` and `.md` files,
 
 ## Code Health
 
-The test suite for LiteMind shows good overall health with 452 passing tests out of 525 total tests (86% pass rate). There are 12 failing tests and 61 skipped tests.
+The test suite for LiteMind shows good overall health with 34 passing tests and 1 failing test. There are 3 skipped tests.
 
 The failing tests are primarily in the ReAct agent implementation:
-*   `test_react_agent_single_tool` (1 failure)
-*   `test_react_agent_multiple_tools` (2 failures)
-*   `test_react_agent_chained_tools` (2 failures)
-*   `test_react_agent_longer_dialog` (2 failures)
-*   `test_agent_tool` (1 failure)
-*   `test_agent_tool_translation` (1 failure)
-*   `test_agent_tool_with_internal_tool` (1 failure)
-*   `test_toolset_add_agent_tool` (1 failure)
-*   `test_text_generation_with_folder` (1 failure)
+*   `src/litemind/agent/react/tests/test_react_agent.py`
+    *   `test_react_agent_single_tool` (1 failure)
 
 These failures indicate that the ReAct agent and tool agent implementations need further refinement to ensure consistent behavior across different LLM providers.
 

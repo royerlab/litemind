@@ -31,7 +31,12 @@ def convert_messages_for_ollama(
             message_dict = {"role": message.role, "content": ""}
 
             if block.block_type == BlockType.Text:
-                message_dict["content"] += block.content + "\n"
+                if block.content.strip():
+                    # Append the text content to the message dictionary:
+                    message_dict["content"] += block.content + "\n"
+
+                    # Append the message to the list of messages:
+                    ollama_messages.append(message_dict)
 
             elif block.block_type == BlockType.Image:
                 # Get the image URI:
@@ -46,6 +51,9 @@ def convert_messages_for_ollama(
                 # Append the local image paths to the message dictionary:
                 if local_image_path:
                     message_dict["images"] = [local_image_path]
+
+                # Append the message to the list of messages:
+                ollama_messages.append(message_dict)
 
             elif block.block_type == BlockType.Tool:
 
@@ -83,10 +91,21 @@ def convert_messages_for_ollama(
                     # Set the tool calls in the message dictionary:
                     message_dict["tool_calls"] = tool_calls
 
+                # Append the message to the list of messages:
+                ollama_messages.append(message_dict)
+
             else:
                 raise ValueError(f"Block type {block.block_type} not supported")
 
-            # Append the message to the list of messages:
-            ollama_messages.append(message_dict)
+    if response_format:
+
+        # Create a message dictionary for the response format:
+        message_dict = {
+            "role": "user",
+            "content": f"Provide the answer in JSON adhering to the following schema:\n{response_format.model_json_schema()}\n",
+        }
+
+        # Appends the message to the list of messages:
+        ollama_messages.append(message_dict)
 
     return ollama_messages

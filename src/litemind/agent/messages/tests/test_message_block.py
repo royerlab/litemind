@@ -47,7 +47,7 @@ def test_message_block_json():
     assert block.content == model
     assert len(block) == len(model.model_dump())
     assert block.contains("example")
-    assert str(block) == f"JSON: {model}"
+    assert str(block) == f"ExampleModel: {model}"
 
 
 def test_message_block_image():
@@ -56,7 +56,7 @@ def test_message_block_image():
     assert block.content == "https://example.com/image.jpg"
     assert len(block) == len("https://example.com/image.jpg")
     assert block.contains("example")
-    assert str(block) == "IMAGE: https://example.com/image.jpg"
+    assert str(block) == "Image: https://example.com/image.jpg"
 
 
 def test_message_block_audio():
@@ -65,7 +65,7 @@ def test_message_block_audio():
     assert block.content == "https://example.com/audio.mp3"
     assert len(block) == len("https://example.com/audio.mp3")
     assert block.contains("example")
-    assert str(block) == "AUDIO: https://example.com/audio.mp3"
+    assert str(block) == "Audio: https://example.com/audio.mp3"
 
 
 def test_message_block_video():
@@ -74,7 +74,7 @@ def test_message_block_video():
     assert block.content == "https://example.com/video.mp4"
     assert len(block) == len("https://example.com/video.mp4")
     assert block.contains("example")
-    assert str(block) == "VIDEO: https://example.com/video.mp4"
+    assert str(block) == "Video: https://example.com/video.mp4"
 
 
 def test_message_block_document():
@@ -85,7 +85,7 @@ def test_message_block_document():
     assert block.content == "https://example.com/document.pdf"
     assert len(block) == len("https://example.com/document.pdf")
     assert block.contains("example")
-    assert str(block) == "DOCUMENT: https://example.com/document.pdf"
+    assert str(block) == "Document: https://example.com/document.pdf"
 
 
 def test_message_block_table():
@@ -95,4 +95,4 @@ def test_message_block_table():
     assert block.content.equals(table)
     assert len(block.content) == 3
 
-    assert "TABLE:" in str(block)
+    assert "DataFrame:" in str(block)

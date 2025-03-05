@@ -90,8 +90,10 @@ class MessageBlock:
         """
         if self.block_type == BlockType.Text:
             return self.content
+        elif type(self.content) == str:
+            return f"{self.block_type}: {self.content}"
         else:
-            return f"{self.block_type.value.upper()}: {self.content}"
+            return f"{type(self.content).__name__}: {self.content}"
 
     def __repr__(self):
         """

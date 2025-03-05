@@ -1,4 +1,3 @@
-import json
 import os
 import tempfile
 from io import BytesIO
@@ -626,6 +625,7 @@ class OpenAIApi(DefaultApi):
         temperature: Optional[float] = 0.0,
         max_num_output_tokens: Optional[int] = None,
         toolset: Optional[ToolSet] = None,
+        use_tools: bool = True,
         response_format: Optional[BaseModel] = None,
         **kwargs,
     ) -> List[Message]:
@@ -730,61 +730,14 @@ class OpenAIApi(DefaultApi):
                     # Break out of the loop if no tool use is required anymore:
                     break
 
-                # Prepare message that will hold the tool uses and adds it to the original, preprocessed, and new messages:
-                tool_use_message = Message()
-                messages.append(tool_use_message)
-                preprocessed_messages.append(tool_use_message)
-                new_messages.append(tool_use_message)
+                if not use_tools:
+                    # Break out of the loop if we're not using tools:
+                    break
 
-                # Get the tool calls:
-                tool_calls = [
-                    b.content for b in response if b.block_type == BlockType.Tool
-                ]
-
-                # Iterate through tool calls:
-                for tool_call in tool_calls:
-
-                    # Get the tool name and arguments:
-                    tool_name = tool_call.tool_name
-
-                    # Get the corresponding tool in toolset:
-                    tool = toolset.get_tool(tool_name) if toolset else None
-
-                    # Get the input arguments:
-                    tool_arguments = tool_call.arguments
-
-                    if tool:
-                        try:
-                            # Execute the tool
-                            result = tool.execute(**tool_arguments)
-
-                            # If not a string, convert from JSON:
-                            if not isinstance(result, str):
-                                result = json.dumps(result, default=str)
-
-                        except Exception as e:
-                            # If the tool raises an exception, return an error message
-                            result = f"Function '{tool_name}' error: {e}"
-
-                        # Append the tool call result to the messages:
-                        tool_use_message.append_tool_use(
-                            tool_name=tool_name,
-                            arguments=tool_arguments,
-                            result=result,
-                            id=tool_call.id,
-                        )
-
-                    else:
-                        # Append the tool call result to the messages:
-                        tool_use_error_message = (
-                            f"(Tool '{tool_name}' use requested, but tool not found.)"
-                        )
-                        tool_use_message.append_tool_use(
-                            tool_name=tool_name,
-                            arguments=tool_arguments,
-                            result=tool_use_error_message,
-                            id=tool_call.id,
-                        )
+                # Process tool calls:
+                self._process_tool_calls(
+                    response, messages, new_messages, preprocessed_messages, toolset
+                )
 
             # Add all parameters to kwargs:
             kwargs.update(

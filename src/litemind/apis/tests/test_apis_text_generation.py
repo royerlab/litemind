@@ -450,14 +450,14 @@ class TestBaseApiImplementationsTextGeneration(BaseTest):
         # Create a toolset and add the function tools:
         toolset = ToolSet()
         toolset.add_function_tool(
-            get_delivery_date, "Fetch the delivery date for a given order ID"
+            get_delivery_date, "Fetch the delivery date given the order ID"
         )
         toolset.add_function_tool(
-            get_product_name_from_id, "Fetch the product name for a given product ID"
+            get_product_name_from_id, "Fetch the product name given the product ID"
         )
         toolset.add_function_tool(
             get_product_supply_per_store,
-            "Fetch the number of items available of a given product id at a given store.",
+            "Fetch the number of items available given a product ID and store ID.",
         )
 
         # Get the best model for text generation with tools:

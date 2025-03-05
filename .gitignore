@@ -182,3 +182,5 @@ cython_debug/
 # System:
 .DS_Store
 /whole_repo.txt
+/exported.txt
+/src/litemind/sandbox/

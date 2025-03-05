@@ -74,14 +74,19 @@ def generate(
 
     """
 
-    allowed_extensions, excluded_files = default_folder_scanning_parameters(
-        allowed_extensions, excluded_files
-    )
-
     # Get just the filename from the output_file:
     output_file_name = os.path.basename(output_file)
 
     with asection(f"Generating file: {output_file_name}"):
+
+        # Get the default folder scanning parameters:
+        allowed_extensions, excluded_files = default_folder_scanning_parameters(
+            allowed_extensions, excluded_files
+        )
+
+        # Print the parameters:
+        aprint(f"Excluded files: {', '.join(excluded_files)}")
+        aprint(f"Allowed extensions: {', '.join(allowed_extensions)}")
 
         # Initialize the API
         if api is None:

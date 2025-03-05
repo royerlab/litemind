@@ -1,4 +1,5 @@
 import copy
+import json
 from typing import List, Optional, Sequence, Union
 
 from arbol import aprint, asection
@@ -9,6 +10,7 @@ from pydantic import BaseModel
 from litemind.agent.messages.message import Message
 from litemind.agent.messages.message_block import MessageBlock
 from litemind.agent.messages.message_block_type import BlockType
+from litemind.agent.messages.tool_call import ToolCall
 from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.base_api import BaseApi
 from litemind.apis.callbacks.callback_manager import CallbackManager
@@ -342,6 +344,7 @@ class DefaultApi(BaseApi):
         temperature: float = 0.0,
         max_num_output_tokens: Optional[int] = None,
         toolset: Optional[ToolSet] = None,
+        use_tools: bool = True,
         response_format: Optional[BaseModel] = None,
         **kwargs,
     ) -> List[Message]:
@@ -405,6 +408,102 @@ class DefaultApi(BaseApi):
             )
 
         return messages
+
+    def _process_tool_calls(
+        self,
+        response: Message,
+        messages: List[Message],
+        new_messages: List[Message],
+        preprocessed_messages: List[Message],
+        toolset: ToolSet,
+        set_preprocessed: bool = False,
+    ):
+        """
+        This function executes the tools in the toolset on the response and adds the results to the messages.
+
+        Parameters
+        ----------
+        response: Message
+
+        messages: List[Message]
+            These are the messages passed to the text generation method.
+
+        new_messages: List[Message]
+            This list accumulates the new messages that are created during the processing.
+
+        preprocessed_messages: List[Message]
+            Preprocessed messages to add the tool uses to.
+
+        toolset: ToolSet
+            Toolset to use for the tools. Must be the same one that was used to create the response.
+
+        set_preprocessed: bool
+            If True, the preprocessed messages are set to teh new tool use message instead of being appended to.
+
+        Returns
+        -------
+
+        """
+
+        # Prepare message that will hold the tool uses and adds it to the original, preprocessed, and new messages:
+        tool_use_message = Message()
+        messages.append(tool_use_message)
+
+        if set_preprocessed:
+            # remove all items in the preprocessed_messages list:
+            preprocessed_messages.clear()
+            preprocessed_messages.append(tool_use_message)
+        else:
+            preprocessed_messages.append(tool_use_message)
+        new_messages.append(tool_use_message)
+
+        # Get the tool calls:
+        tool_calls = [b.content for b in response if b.block_type == BlockType.Tool]
+
+        # Iterate through tool calls:
+        for tool_call in tool_calls:
+            if isinstance(tool_call, ToolCall):
+
+                # Get tool function name:
+                tool_name = tool_call.tool_name
+
+                # Get the corresponding tool in toolset:
+                tool = toolset.get_tool(tool_name) if toolset else None
+
+                # Get the input arguments:
+                tool_arguments = tool_call.arguments
+
+                if tool:
+                    try:
+                        # Execute the tool
+                        result = tool.execute(**tool_arguments)
+
+                        # If not a string, convert from JSON:
+                        if not isinstance(result, str):
+                            result = json.dumps(result, default=str)
+
+                    except Exception as e:
+                        result = f"Function '{tool_name}' error: {e}"
+
+                    # Append the tool call result to the messages:
+                    tool_use_message.append_tool_use(
+                        tool_name=tool_name,
+                        arguments=tool_arguments,
+                        result=result,
+                        id=tool_call.id,
+                    )
+
+                else:
+                    # Append the tool call result to the messages:
+                    tool_use_error_message = (
+                        f"(Tool '{tool_name}' use requested, but tool not found.)"
+                    )
+                    tool_use_message.append_tool_use(
+                        tool_name=tool_name,
+                        arguments=tool_arguments,
+                        result=tool_use_error_message,
+                        id=tool_call.id,
+                    )
 
     def transcribe_audio(
         self, audio_uri: str, model_name: Optional[str] = None, **kwargs

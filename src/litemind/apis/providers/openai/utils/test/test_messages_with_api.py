@@ -10,9 +10,6 @@ from litemind.apis.providers.openai.utils.convert_messages import (
 __url1 = "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Einstein_1921_by_F_Schmutzer_-_restoration.jpg/456px-Einstein_1921_by_F_Schmutzer_-_restoration.jpg"
 __url2 = "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/2560px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg"
 
-# Initialize the OpenAI API client
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
 
 def test_openai_api_text_only_message():
     # Create a text-only message
@@ -21,6 +18,9 @@ def test_openai_api_text_only_message():
 
     # Convert to OpenAI format
     openai_messages = convert_messages_for_openai([message])
+
+    # Initialize the OpenAI API client
+    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
     # Call the OpenAI API
     response = client.chat.completions.create(
@@ -44,6 +44,9 @@ def test_openai_api_text_and_image_message():
     # Convert to OpenAI format
     openai_messages = convert_messages_for_openai([message])
 
+    # Initialize the OpenAI API client
+    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
     # Call the OpenAI API
     response = client.chat.completions.create(
         model="gpt-4o-mini", messages=openai_messages, max_tokens=10
@@ -64,6 +67,9 @@ def test_openai_api_multiple_images():
 
     # Convert to OpenAI format
     openai_messages = convert_messages_for_openai([message])
+
+    # Initialize the OpenAI API client
+    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
     # Call the OpenAI API
     response = client.chat.completions.create(
@@ -87,6 +93,9 @@ def test_openai_api_multiple_messages():
 
     # Convert to OpenAI format
     openai_messages = convert_messages_for_openai([message1, message2])
+
+    # Initialize the OpenAI API client
+    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
     # Call the OpenAI API
     response = client.chat.completions.create(

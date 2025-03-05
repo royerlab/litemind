@@ -39,24 +39,29 @@ def main():
         "export", help="Export the entire repository to a single file."
     )
     export_parser.add_argument(
-        "folder_path",
+        "-f",
+        "--folder-path",
         help="The path to the folder containing the repository to export.",
+        default=".",
     )
     export_parser.add_argument(
         "-o",
         "--output-file",
-        required=True,
+        default="exported.txt",
+        #        required=True,
         help="The path to the file to save the entire repository to.",
     )
     export_parser.add_argument(
         "-e",
         "--extensions",
+        default=None,
         nargs="*",
         help="The list of allowed extensions for files to include in the export.",
     )
     export_parser.add_argument(
         "-x",
         "--exclude",
+        default=None,
         nargs="*",
         help="The list of files to exclude from the export.",
     )

@@ -192,6 +192,7 @@ class BaseApi(ABC):
         temperature: float = 0.0,
         max_num_output_tokens: Optional[int] = None,
         toolset: Optional[ToolSet] = None,
+        use_tools: bool = True,
         response_format: Optional[BaseModel] = None,
         **kwargs,
     ) -> List[Message]:
@@ -210,6 +211,10 @@ class BaseApi(ABC):
             The maximum number of tokens to use.
         toolset: Optional[ToolSet]
             The toolset to use.
+        use_tools: bool
+            Whether to use tools. If True, the toolset must be provided.
+            In that case this method will run use the tools that the model deems necessary until reaching a final answer.
+            If False, when the text generation model requests tool use, the tools are not used and the response contains a message with a ToolCall block.
         response_format: Optional[BaseModel | str]
             The response format to use. Provide a pydantic object to use as the output format or json schema.
         kwargs: dict

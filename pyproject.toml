@@ -36,7 +36,8 @@ dependencies = [
     "pandas",
     "numpy",
     "chardet",
-    "pyyaml"
+    "pyyaml",
+    "absl-py"
 ]
 
 [tool.hatch.build.targets.sdist]
@@ -50,7 +51,8 @@ include = [
 exclude = [
     "**/tests/**",
     "**/.DS_Store",
-    "*.egg-info"
+    "*.egg-info",
+    "**sandbox/**"
 ]
 
 [tool.hatch.version]

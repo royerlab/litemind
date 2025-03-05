@@ -1,9 +1,9 @@
+import os
 from typing import Optional
 
-from arbol import asection
+from arbol import aprint, asection
 
 from litemind.agent.messages.message import Message
-from litemind.apis.base_api import BaseApi
 from litemind.tools.commands.utils import default_folder_scanning_parameters
 
 
@@ -33,11 +33,24 @@ def export_repo(
         The whole repo as a string
 
     """
-    with asection(f"Exporting entire repository in {folder_path} to single file"):
+    with asection(
+        f"Exporting entire repository in {folder_path} to single file: {output_file}"
+    ):
 
+        # Get output_file's base name:
+        output_file_name = os.path.basename(output_file)
+
+        # Get the default folder scanning parameters:
         allowed_extensions, excluded_files = default_folder_scanning_parameters(
             allowed_extensions, excluded_files
         )
+
+        # Add output_file_name to excluded_files:
+        excluded_files.append(output_file_name)
+
+        # Print the parameters:
+        aprint(f"Excluded files: {', '.join(excluded_files)}")
+        aprint(f"Allowed extensions: {', '.join(allowed_extensions)}")
 
         # Create a message with the prompt:
         message = Message(role="user")

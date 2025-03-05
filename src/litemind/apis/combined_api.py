@@ -258,6 +258,7 @@ class CombinedApi(DefaultApi):
         temperature: float = 0.0,
         max_num_output_tokens: Optional[int] = None,
         toolset: Optional[ToolSet] = None,
+        use_tools: bool = True,
         response_format: Optional[BaseModel] = None,
         **kwargs,
     ) -> List[Message]:
@@ -280,6 +281,7 @@ class CombinedApi(DefaultApi):
             temperature=temperature,
             max_num_output_tokens=max_num_output_tokens,
             toolset=toolset,
+            use_tools=use_tools,
             response_format=response_format,
         )
 

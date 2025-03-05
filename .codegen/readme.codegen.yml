@@ -28,6 +28,7 @@ prompt: |
   - Installation
   - Usage
   - Concepts
+  - Model Features
   - More Code Examples
   - Tools
   - Caveats and Limitations
@@ -40,6 +41,7 @@ prompt: |
   The 'Summary' section should provide an enthusiastic and complete description of the library, its purpose, and philosophy.
   The 'Usage' section should consist of rich, striking and illustrative examples of the Agentic API in use with multimodal inputs.
   The 'Concepts' section should explain the concepts behind the library, the main classes and their purpose, and how they interact.
+  The 'Model Features' section should explain what model features are, why they are needed, and how to request features when using litemind's API. 
   The 'Code Health' section should include the results of unit test in file 'test_report.md'. Please provide file names for failed tests and statistics about the number of failed tests and an analysis of what happened.
   The 'Roadmap' section can use the contents of TODO.md as a starting point, keep the checkmarks.
   The 'More Code Examples' section further expands with many more also covering the wrapper API, uses ideas and code from the unit tests (no need to mention that).
@@ -56,10 +58,13 @@ prompt: |
   - Make sure that the code examples are complete and can be run as-is.
   - Avoid putting multiple code examples in the same code block, unless they are chained.
   - Avoid giving examples of features that have poor code health, i.e. for which tests are failing.
+  - Examples that use specific model features must have code to request these features.
+  - In the examples, make sure to use real URLs of files that really exist, for example those used in the tests.
 
   At the end of the README, include a note explaining that the README was generated with the help of AI.
   Avoid hallucinating things that are not in the repository.
-  Please add badges for: pipy, license, and code coverage
+  Please add badges for: pipy, license, pepy.tech pipy stats, and GitHub star:
+  Pepy badge image path: https://static.pepy.tech/badge/litemind)]
 
   Your task is to follow the instructions above and generate a README.md file for the Python repository provided below:
 

@@ -58,7 +58,8 @@ def process_response_from_ollama(
     text_message = ollama_message.get("content", "")
 
     # Append the text message to the processed response:
-    processed_reponse.append_text(text_message)
+    if text_message.strip():
+        processed_reponse.append_text(text_message)
 
     # Append the text message to the text content:
     text_content += text_message
