@@ -13,6 +13,9 @@ from litemind.apis.exceptions import APIError, APINotAvailableError
 from litemind.apis.providers.ollama.utils.aggregate_chat_responses import (
     aggregate_chat_responses,
 )
+from litemind.apis.providers.ollama.utils.check_availability import (
+    check_ollama_api_availability,
+)
 from litemind.apis.providers.ollama.utils.convert_messages import (
     convert_messages_for_ollama,
 )
@@ -68,14 +71,14 @@ class OllamaApi(DefaultApi):
 
     def check_availability_and_credentials(self, api_key: Optional[str] = None) -> bool:
 
-        try:
-            self.client.list()
-            self.callback_manager.on_availability_check(True)
-            return True
-        except Exception:
-            # If we get an error, we assume it's because Ollama is not running:
-            self.callback_manager.on_availability_check(False)
-            return False
+        # Check if the Ollama API is available:
+        result = check_ollama_api_availability(self.client)
+
+        # Call the callback manager:
+        self.callback_manager.on_availability_check(result)
+
+        # Return the result:
+        return result
 
     def list_models(
         self, features: Optional[Sequence[ModelFeatures]] = None

@@ -185,6 +185,17 @@ class ReActAgent(Agent):
             return components
 
         except Exception as e:
+            # Print stack trace:
+            import traceback
+
+            traceback.print_exc()
+
+            with asection("Response parsing failed:"):
+                with asection("Model response:"):
+                    for m in response:
+                        aprint(m)
+                aprint(components)
+
             # If parsing fails, try to salvage what we can
             if any(components.values()):
                 return components
@@ -245,6 +256,8 @@ class ReActAgent(Agent):
                 if self.toolset:
                     for tool in self.toolset:
                         aprint(tool.pretty_string())
+                else:
+                    aprint("No tools available")
 
             with asection("Last message in conversation:"):
                 aprint(last_message)

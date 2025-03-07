@@ -8,8 +8,6 @@ from litemind.apis.utils.json_to_object import json_to_object
 
 def process_response_from_gemini(
     gemini_response: Any,
-    model_name: str,
-    max_num_output_tokens: int,
     response_format: Optional[Union[BaseModel, str]] = None,
 ) -> Message:
 

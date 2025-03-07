@@ -1,4 +1,4 @@
-__version__ = "2025.3.4"
+__version__ = "2025.3.7"
 
 from arbol import aprint
 
@@ -20,6 +20,7 @@ API_IMPLEMENTATIONS = [
 ]
 
 # Check availability of each API and remove it from the list if it is not available:
+
 for api_class in API_IMPLEMENTATIONS:
     try:
         # Trying to instantiate the API class:

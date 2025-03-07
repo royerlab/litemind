@@ -17,6 +17,8 @@ folder:
     - .git
     - .github
     - .codegen
+    - sandbox
+    - exported.txt
 prompt: |
   You are a helpful assistant with deep expertise in Software Engineering and best practices for Open Source projects.
   You know how to write complete, compelling and informative README files for Python repositories.
@@ -42,7 +44,7 @@ prompt: |
   The 'Usage' section should consist of rich, striking and illustrative examples of the Agentic API in use with multimodal inputs.
   The 'Concepts' section should explain the concepts behind the library, the main classes and their purpose, and how they interact.
   The 'Model Features' section should explain what model features are, why they are needed, and how to request features when using litemind's API. 
-  The 'Code Health' section should include the results of unit test in file 'test_report.md'. Please provide file names for failed tests and statistics about the number of failed tests and an analysis of what happened.
+  The 'Code Health' section should include the results of unit test in file 'test_report.md'. Please provide file names for failed tests and statistics about the number of failed tests and an analysis of what happened. You can also consult the ANALYSIS.md file for more information if it exists.
   The 'Roadmap' section can use the contents of TODO.md as a starting point, keep the checkmarks.
   The 'More Code Examples' section further expands with many more also covering the wrapper API, uses ideas and code from the unit tests (no need to mention that).
   The 'Tools' section should explain litemind command line tools and how to use them, with example command lines (check tools package and its contents for details). Please also explain the format of the *.codegen.yml files and give a template. Explain that you need a .codegen folder in the root of the repository and you can apply that to your own repositories.
@@ -61,17 +63,20 @@ prompt: |
   - Examples that use specific model features must have code to request these features.
   - In the examples, make sure to use real URLs of files that really exist, for example those used in the tests.
 
+  Please make sure to explain the difference between the API wrapper layer versus the agentic API -- this should also
+  be reflected in the examples.
+  Explain that logging is done with Arbol (http://github.com/royerlab/arbol) and it can be deactivated by setting Arbol.passthrough to True.
   At the end of the README, include a note explaining that the README was generated with the help of AI.
   Avoid hallucinating things that are not in the repository.
   Please add badges for: pipy, license, pepy.tech pipy stats, and GitHub star:
-  Pepy badge image path: https://static.pepy.tech/badge/litemind)]
+  Pepy.tech badge image path: https://static.pepy.tech/badge/litemind)
 
   Your task is to follow the instructions above and generate a README.md file for the Python repository provided below:
 
   Here is some additional context about the repository:
+  ```
   This repository contains a Python project called "litemind"
   that provides a wrapper API around LLM Apis as well as an elegant API
   for fully multimodal agentic AI for building conversational agents
-  and tools built upon them. Please make sure to explain the difference
-  between the API wrapper layer versus the agentic API -- this should also
-  be reflected in the examples.
+  and tools built upon them. 
+  ```

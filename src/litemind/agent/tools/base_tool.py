@@ -6,8 +6,16 @@ class BaseTool(ABC):
     """Abstract base class for a tool."""
 
     def __init__(self, name: str, description: str):
-        self.name = name
-        self.description = description
+
+        # Store the name, make sure to strip any leading or trailing whitespace and any spaces in between:
+        self.name = "".join(name.strip().split())
+
+        # Make sure that the description finishes with a period:
+        self.description = description.strip()
+        if not self.description.endswith("."):
+            self.description += "."
+
+        # Initialize the arguments schema
         self.arguments_schema = {}
 
     def __repr__(self):

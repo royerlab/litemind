@@ -6,13 +6,13 @@ from PIL import Image
 
 from litemind import API_IMPLEMENTATIONS
 from litemind.apis.base_api import ModelFeatures
-from litemind.apis.tests.base_test import BaseTest
 from litemind.apis.tests.utils.levenshtein import levenshtein_distance
+from litemind.media.media_resources import MediaResources
 from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_path
 
 
 @pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
-class TestBaseApiImplementationsGenerateMultimodal(BaseTest):
+class TestBaseApiImplementationsGenerateMultimodal(MediaResources):
     """
     A tests suite that runs the same tests on each ApiClass
     implementing the abstract BaseApi interface.

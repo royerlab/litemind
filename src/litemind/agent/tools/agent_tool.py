@@ -6,7 +6,7 @@ from litemind.agent.agent import Agent
 from litemind.agent.tools.base_tool import BaseTool
 
 
-class ToolAgent(BaseTool):
+class AgentTool(BaseTool):
     """Tool that wraps an agent, calling it with a prompt and returning structured output."""
 
     def __init__(
@@ -43,7 +43,7 @@ class ToolAgent(BaseTool):
         self.has_memory = has_memory
 
         # Set the parameters to correspond to a function that takes a prompt (string) and returns a string:
-        self.parameters = {
+        self.arguments_schema = {
             "type": "object",
             "properties": {"prompt": {"type": "string"}},
             "required": ["prompt"],

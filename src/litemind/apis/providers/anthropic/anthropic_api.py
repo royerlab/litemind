@@ -9,7 +9,14 @@ from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.base_api import ModelFeatures
 from litemind.apis.callbacks.callback_manager import CallbackManager
 from litemind.apis.default_api import DefaultApi
-from litemind.apis.exceptions import APIError, APINotAvailableError
+from litemind.apis.exceptions import (
+    APIError,
+    APINotAvailableError,
+    FeatureNotAvailableError,
+)
+from litemind.apis.providers.anthropic.utils.check_availability import (
+    check_anthropic_api_availability,
+)
 from litemind.apis.providers.anthropic.utils.convert_messages import (
     convert_messages_for_anthropic,
 )
@@ -33,6 +40,7 @@ class AnthropicApi(DefaultApi):
     def __init__(
         self,
         api_key: Optional[str] = None,
+        base_url: Optional[str] = None,
         callback_manager: Optional[CallbackManager] = None,
         **kwargs,
     ):
@@ -49,20 +57,32 @@ class AnthropicApi(DefaultApi):
 
         super().__init__(callback_manager=callback_manager)
 
+        # Get the API key from the environment if not provided:
         if api_key is None:
             api_key = os.environ.get("ANTHROPIC_API_KEY")
+
+        # If no API key is provided, raise an error:
         if not api_key:
             raise APIError(
                 "An Anthropic API key is required. "
                 "Set ANTHROPIC_API_KEY or pass `api_key=...` explicitly."
             )
 
+        # Save the API key:
+        self.api_key = api_key
+
+        # Save base URL:
+        self.base_url = base_url
+
+        # Save additional kwargs:
+        self.kwargs = kwargs
+
         try:
             # Create the Anthropic client
             from anthropic import Anthropic
 
             self.client = Anthropic(
-                api_key=api_key, **kwargs  # e.g. timeout=30.0, max_retries=2, etc.
+                api_key=self.api_key, base_url=self.base_url, **kwargs
             )
 
             # Fetch the raw model list:
@@ -77,34 +97,24 @@ class AnthropicApi(DefaultApi):
 
     def check_availability_and_credentials(self, api_key: Optional[str] = None) -> bool:
 
-        # Use the provided key if any, else the one from the client
-        candidate_key = api_key or os.environ.get("ANTHROPIC_API_KEY")
-        if not candidate_key:
-            self.callback_manager.on_availability_check(False)
-            return False
+        # Check if the API key is provided:
+        if api_key is not None:
+            from anthropic import Anthropic
 
-        # We'll attempt a trivial request
-        try:
-            test_message = {
-                "role": "user",
-                "content": "Hello, is this key valid?",
-            }
-            resp = self.client.messages.create(
-                model=self.get_best_model(features=ModelFeatures.TextGeneration),
-                max_tokens=16,
-                messages=[test_message],
-            )
-            # If no exception: assume it's valid enough
-            _ = resp.content  # Accessing content to ensure it exists
-            self.callback_manager.on_availability_check(True)
-            return True
-        except Exception:
-            # printout stacktrace:
-            import traceback
+            client = Anthropic(api_key=api_key, base_url=self.base_url, **self.kwargs)
+        else:
+            client = self.client
 
-            traceback.print_exc()
-            self.callback_manager.on_availability_check(False)
-            return False
+        # Get one model name:
+        model_name = self._model_list[0]
+
+        result = check_anthropic_api_availability(client, model_name)
+
+        # Call the callback manager:
+        self.callback_manager.on_availability_check(result)
+
+        # Return the result:
+        return result
 
     def list_models(
         self, features: Optional[Sequence[ModelFeatures]] = None
@@ -372,7 +382,9 @@ class AnthropicApi(DefaultApi):
             model_name = self.get_best_model(features=features)
 
             if model_name is None:
-                raise APIError(f"No suitable model with features: {features}")
+                raise FeatureNotAvailableError(
+                    f"No suitable model with features: {features}"
+                )
 
         # Specific to Anthropic: extract system message if present
         system_messages = ""

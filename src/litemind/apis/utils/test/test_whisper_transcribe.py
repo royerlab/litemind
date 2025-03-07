@@ -3,6 +3,7 @@ import os
 from litemind.apis.utils.whisper_transcribe_audio import (
     transcribe_audio_with_local_whisper,
 )
+from litemind.media.media_resources import MediaResources
 
 
 def test_transcribe_audio():
@@ -10,7 +11,7 @@ def test_transcribe_audio():
     current_dir = os.path.dirname(__file__)
 
     # Combine the two to get the absolute path to 'harvard.wav'
-    audio_path = os.path.join(current_dir, "media/harvard.wav")
+    audio_path = MediaResources._get_local_test_audio_uri("harvard.wav")
 
     # Transcribe the audio:
     result = transcribe_audio_with_local_whisper(audio_path)

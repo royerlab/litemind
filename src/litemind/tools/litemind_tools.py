@@ -34,6 +34,14 @@ def main():
         help="The model to use for generating the README. Default is 'combined'.",
     )
 
+    # Add the new argument to the codegen subcommand
+    codegen_parser.add_argument(
+        "-f",
+        "--file",
+        help="The specific file to generate. If not provided, all files will be generated.",
+        default=None,
+    )
+
     # Export subcommand
     export_parser = subparsers.add_parser(
         "export", help="Export the entire repository to a single file."
@@ -85,7 +93,7 @@ def main():
         folder_path = os.getcwd()
 
         # Generate the files:
-        codegen(folder_path, api=api)
+        codegen(folder_path, api=api, file_selection=args.file)
 
     elif args.command == "export":
         export_repo(

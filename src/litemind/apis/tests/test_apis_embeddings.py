@@ -4,11 +4,11 @@ import pytest
 
 from litemind import API_IMPLEMENTATIONS
 from litemind.apis.base_api import ModelFeatures
-from litemind.apis.tests.base_test import BaseTest
+from litemind.media.media_resources import MediaResources
 
 
 @pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
-class TestBaseApiImplementationsEmbeddings(BaseTest):
+class TestBaseApiImplementationsEmbeddings(MediaResources):
     """
     A tests suite that runs the same tests on each ApiClass
     implementing the abstract BaseApi interface.
@@ -87,8 +87,8 @@ class TestBaseApiImplementationsEmbeddings(BaseTest):
             )
 
         # Get the audio URIs:
-        audio_1_uri = BaseTest._get_local_test_audio_uri("harvard.wav")
-        audio_2_uri = BaseTest._get_local_test_audio_uri("preamble.wav")
+        audio_1_uri = MediaResources._get_local_test_audio_uri("harvard.wav")
+        audio_2_uri = MediaResources._get_local_test_audio_uri("preamble.wav")
 
         # Get the embeddings:
         embeddings = api_instance.embed_audios(

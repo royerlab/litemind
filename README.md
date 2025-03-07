@@ -1,582 +1,354 @@
 
-# LiteMind
-
-[![PyPI version](https://badge.fury.io/py/litemind.svg)](https://badge.fury.io/py/litemind)
-[![License](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
+[![PyPI](https://img.shields.io/pypi/v/litemind)](https://pypi.org/project/litemind)
+[![License](https://img.shields.io/badge/license-BSD--3--Clause-blue)](https://opensource.org/licenses/BSD-3-Clause)
 [![PyPI - Downloads](https://static.pepy.tech/badge/litemind)](https://pepy.tech/project/litemind)
 [![GitHub stars](https://img.shields.io/github/stars/royerlab/litemind?style=social)](https://github.com/royerlab/litemind)
 
+# LiteMind: Multimodal Agentic AI Framework
+
 ## Summary
 
-LiteMind is a Python library designed to provide a streamlined and elegant API for building agentic AI applications. It offers a flexible wrapper layer around various Large Language Models (LLMs) and a powerful agentic API for creating conversational agents and tools. The library's core philosophy is to simplify the complexities of LLM interactions, enabling developers to focus on building innovative AI solutions.
-
-The library is structured around two main components:
-
-1.  **API Wrapper Layer**: This layer abstracts the complexities of interacting with different LLM providers (OpenAI, Anthropic, Google, Ollama), allowing developers to switch between them with minimal code changes. It provides a consistent interface for common operations like text generation, image generation, audio transcription, and embeddings.
-
-2.  **Agentic API**: This high-level framework provides the building blocks for creating sophisticated conversational agents and tools. It supports multimodal inputs (text, images, audio, video, documents), tool usage, and reasoning capabilities, enabling the creation of agents that can understand and respond to complex queries, use external tools, and maintain context across conversations.
+LiteMind is a Python library and framework designed to simplify the development of multimodal agentic AI applications. It provides a unified and elegant API for interacting with various Large Language Model (LLM) providers, including OpenAI, Anthropic, Google Gemini, and Ollama. The library's core philosophy centers around enabling developers to build sophisticated conversational agents and tools that can seamlessly handle multimodal inputs (text, images, audio, video, documents, and tables). LiteMind abstracts away the complexities of interacting with different LLM APIs, allowing developers to focus on the core logic and functionality of their agentic applications.
 
 ## Features
 
-*   **API Wrapper Layer**:
-    *   Supports multiple LLM providers:
-        *   OpenAI (GPT models)
-        *   Anthropic (Claude models)
-        *   Google (Gemini models)
-        *   Ollama (local open-source models)
-*   **Multimodal Support**:
-    *   Text generation and structured output
-    *   Image, audio, and video inputs
-    *   Document processing (PDFs, webpages, etc.)
-    *   Table handling
-*   **Agentic API**:
-    *   Conversational agents with memory
-    *   Tool usage and function calling
-    *   ReAct agents with reasoning capabilities
-    *   Agent-to-agent communication
-*   **Tooling**:
-    *   Function tools that wrap Python functions
-    *   Agent tools that delegate to other agents
-    *   Tool composition and chaining
-*   **Extensible Architecture**:
-    *   Easy to add new LLM providers
-    *   Customizable callbacks for monitoring and logging
-    *   Flexible message handling
+*   **Unified API:** A `CombinedApi` class that provides a single point of access to multiple LLM providers, simplifying model selection and usage.
+*   **Multimodal Input Support:** Comprehensive support for various input modalities, including text, images, audio, video, documents, and tables.
+*   **Agentic Framework:** The `Agent` and `ReActAgent` classes provide a robust foundation for building agentic AI applications, including tool integration and conversation management.
+*   **Tool Integration:** Seamless integration of tools, enabling agents to perform actions and interact with the external world.
+*   **Flexible Model Selection:** Easy selection of models based on features and capabilities.
+*   **Command-Line Tools:** Command-line tools for code generation (`litemind codegen`) and repository export (`litemind export`).
+*   **Extensible Architecture:** Designed for extensibility, allowing for easy addition of new LLM providers and tool integrations.
+*   **Logging:** Logging is done with Arbol (http://github.com/royerlab/arbol) and it can be deactivated by setting `Arbol.passthrough` to `True`.
 
 ## Installation
 
-Install LiteMind using pip:
+To install LiteMind, you can use pip:
 
 ```bash
 pip install litemind
 ```
 
-To install optional dependencies, use the following:
+To install with optional dependencies (e.g., for RAG, whisper, documents, tables, or videos):
 
 ```bash
-# For RAG (Retrieval Augmented Generation) support
-pip install "litemind[rag]"
-
-# For audio transcription with Whisper
-pip install "litemind[whisper]"
-
-# For document processing
-pip install "litemind[documents]"
-
-# For table handling
-pip install "litemind[tables]"
-
-# For video processing
-pip install "litemind[videos]"
-
-# For all optional dependencies
-pip install "litemind[rag,whisper,documents,tables,videos]"
+pip install litemind[rag,whisper,documents,tables,videos]
 ```
 
 ## Usage
 
-### API Wrapper Examples
+LiteMind offers two main APIs: the wrapper API and the agentic API. The wrapper API provides a simplified interface to interact with various LLM providers, while the agentic API provides a framework for building conversational agents and tools.
 
-#### Text Generation
+### Wrapper API Examples
 
-```python
-from litemind.apis.combined_api import CombinedApi
-from litemind.agent.messages.message import Message
-
-# Create an API instance
-api = CombinedApi()
-
-# Create messages
-system_message = Message(role="system", text="You are a helpful assistant.")
-user_message = Message(role="user", text="What is the capital of France?")
-
-# Generate a response
-response = api.generate_text(messages=[system_message, user_message])
-
-# Print the response
-print(response[0])
-# Expected output: "The capital of France is Paris."
-```
-
-#### Multimodal Input (Image)
+This section demonstrates the use of the wrapper API to generate text, images, audio, and embeddings.
 
 ```python
-from litemind.apis.combined_api import CombinedApi
+from litemind import OpenAIApi, GeminiApi, AnthropicApi, OllamaApi, CombinedApi
 from litemind.agent.messages.message import Message
 from litemind.apis.model_features import ModelFeatures
 
-# Create an API instance
-api = CombinedApi()
+# Example 1: Text Generation with OpenAI
+api = OpenAIApi()
+messages = [
+    Message(role="system", text="You are a helpful assistant."),
+    Message(role="user", text="Write a short poem about the ocean."),
+]
+response = api.generate_text(messages=messages, model_name="gpt-4o")
+print("OpenAI Text Generation:", response)
+# Expected output:
+# OpenAI Text Generation: [Message(role='assistant', content='The ocean vast, a canvas blue,\nWhere waves like brushstrokes gently accrue.\nSunlight dances, a shimmering gleam,\nWhispering secrets in a watery dream.')]
 
-# Get a model that supports images
-model_name = api.get_best_model([ModelFeatures.TextGeneration, ModelFeatures.Image])
-
-# Create a message with text and an image
-message = Message(role="user")
-message.append_text("What's in this image?")
-message.append_image("https://upload.wikimedia.org/wikipedia/commons/4/4f/Eiffel_Tower_from_Champ_de_Mars%2C_Paris%2C_France.jpg")
-
-# Generate a response
-response = api.generate_text(messages=[message], model_name=model_name)
-
-# Print the response
-print(response[0])
-# Expected output: A description of the Eiffel Tower
-```
-
-#### Multimodal Input (Audio)
-
-```python
-from litemind.apis.combined_api import CombinedApi
-from litemind.agent.messages.message import Message
-from litemind.apis.model_features import ModelFeatures
-
-# Create an API instance
-api = CombinedApi()
-
-# Get a model that supports audio
-model_name = api.get_best_model([ModelFeatures.TextGeneration, ModelFeatures.Audio])
-
-# Create a message with text and an audio
-message = Message(role="user")
-message.append_text("What is said in this audio?")
-message.append_audio("file:///path/to/audio.mp3")  # Replace with your audio file path
-
-# Generate a response
-response = api.generate_text(messages=[message], model_name=model_name)
-
-# Print the response
-print(response[0])
-# Expected output: Transcription of the audio
-```
-
-#### Multimodal Input (Video)
-
-```python
-from litemind.apis.combined_api import CombinedApi
-from litemind.agent.messages.message import Message
-from litemind.apis.model_features import ModelFeatures
-
-# Create an API instance
-api = CombinedApi()
-
-# Get a model that supports video
-model_name = api.get_best_model([ModelFeatures.TextGeneration, ModelFeatures.Video])
-
-# Create a message with text and a video
-message = Message(role="user")
-message.append_text("What is happening in this video?")
-message.append_video("file:///path/to/video.mp4")  # Replace with your video file path
-
-# Generate a response
-response = api.generate_text(messages=[message], model_name=model_name)
-
-# Print the response
-print(response[0])
-# Expected output: Description of the video content
-```
-
-#### Structured Output
-
-```python
-from litemind.apis.combined_api import CombinedApi
-from litemind.agent.messages.message import Message
-from pydantic import BaseModel
-from typing import List
-
-# Define a structured output model
-class MovieRecommendation(BaseModel):
-    title: str
-    year: int
-    genre: str
-    director: str
-    rating: float
-    description: str
-
-class MovieRecommendations(BaseModel):
-    recommendations: List[MovieRecommendation]
-
-# Create an API instance
-api = CombinedApi()
-
-# Create messages
-system_message = Message(role="system", text="You are a movie recommendation assistant.")
-user_message = Message(role="user", text="Recommend 3 sci-fi movies from the 1980s.")
-
-# Generate a structured response
-response = api.generate_text(
-    messages=[system_message, user_message],
-    response_format=MovieRecommendations
+# Example 2: Image Generation with Gemini
+api = GeminiApi()
+image = api.generate_image(
+    positive_prompt="A futuristic cityscape at night, neon lights, cyberpunk style",
+    image_width=512,
+    image_height=512,
 )
+print("Gemini Image Generation:", image)
+# Expected output:
+# Gemini Image Generation: <PIL.Image.Image image mode=RGB size=512x512 at 0x...>
 
-# Access the structured data
-recommendations = response[0][-1].content.recommendations
-for movie in recommendations:
-    print(f"{movie.title} ({movie.year}) - {movie.rating}/10 - {movie.genre}")
-    print(f"Directed by: {movie.director}")
-    print(f"Description: {movie.description}")
+# Example 3: Audio Generation with Anthropic
+api = AnthropicApi()
+audio_uri = api.generate_audio(text="Hello, how are you?", voice="alloy")
+print("Anthropic Audio Generation:", audio_uri)
+# Expected output:
+# Anthropic Audio Generation: file:///var/folders/..../T/tmp...mp3
+
+# Example 4: Text Embeddings with Ollama
+api = OllamaApi()
+embeddings = api.embed_texts(
+    texts=["This is the first text.", "This is the second text."],
+    model_name="all-MiniLM-L6-v2",
+    dimensions=384,
+)
+print("Ollama Text Embeddings:", embeddings)
+# Expected output:
+# Ollama Text Embeddings: [[0.01, 0.02, ...], [0.03, 0.04, ...]]
+
+# Example 5: Combined API
+api = CombinedApi()
+messages = [
+    Message(role="user", text="What is the capital of France?"),
+]
+response = api.generate_text(messages=messages)
+print("Combined API Text Generation:", response)
+# Expected output:
+# Combined API Text Generation: [Message(role='assistant', content='The capital of France is Paris.')]
 ```
 
 ### Agentic API Examples
 
-#### Basic Agent with Tool
+This section demonstrates the use of the agentic API to build conversational agents and tools.
 
 ```python
+from litemind import OpenAIApi, GeminiApi, AnthropicApi, OllamaApi, CombinedApi
 from litemind.agent.agent import Agent
-from litemind.apis.combined_api import CombinedApi
+from litemind.agent.messages.message import Message
 from litemind.agent.tools.toolset import ToolSet
+from litemind.agent.tools.function_tool import FunctionTool
+from litemind.apis.model_features import ModelFeatures
 
-# Define a tool function
-def get_weather(city: str) -> str:
-    """Get the weather for a city."""
-    # In a real application, this would call a weather API
-    return f"The weather in {city} is sunny and 75°F."
+# Example 1: Simple Agent with Text Generation
+api = OpenAIApi()
+agent = Agent(api=api)
+agent.append_system_message("You are a helpful assistant.")
+response = agent("What is the capital of France?")
+print("Simple Agent Response:", response)
+# Expected output:
+# Simple Agent Response: [Message(role='assistant', content='The capital of France is Paris.')]
 
-# Create a toolset and add the function tool
-toolset = ToolSet()
-toolset.add_function_tool(get_weather)
-
-# Create an agent with the toolset
-api = CombinedApi()
-agent = Agent(api=api, toolset=toolset)
-
-# Add a system message to define the agent's behavior
-agent.append_system_message("You are a helpful weather assistant.")
-
-# Run the agent with a user query
-response = agent("What's the weather like in Paris?")
-
-# Print the response
-print(response[-1])
-# Expected output: Information about the weather in Paris
-```
-
-#### ReAct Agent
-
-```python
-from litemind.agent.react.react_agent import ReActAgent
-from litemind.apis.combined_api import CombinedApi
-from litemind.agent.tools.toolset import ToolSet
-from datetime import datetime
-
-# Define tool functions
+# Example 2: Agent with a Tool
 def get_current_date() -> str:
-    """Get the current date."""
+    from datetime import datetime
+
     return datetime.now().strftime("%Y-%m-%d")
 
-def calculate_days_between(start_date: str, end_date: str) -> int:
-    """Calculate the number of days between two dates."""
-    from datetime import datetime
-    start = datetime.strptime(start_date, "%Y-%m-%d")
-    end = datetime.strptime(end_date, "%Y-%m-%d")
-    return abs((end - start).days)
-
-# Create a toolset and add the function tools
+# Create a toolset and add the function tool:
 toolset = ToolSet()
-toolset.add_function_tool(get_current_date)
-toolset.add_function_tool(calculate_days_between)
+toolset.add_function_tool(get_current_date, "Fetch the current date")
 
-# Create a ReAct agent with the toolset
-api = CombinedApi()
-agent = ReActAgent(api=api, toolset=toolset)
+# Create the agent:
+agent = Agent(api=api, toolset=toolset)
 
-# Run the agent with a complex query
-response = agent("How many days are there between today and Christmas this year?")
+# Add a system message:
+agent.append_system_message("You are a helpful assistant.")
 
-# Print the response
-print(response)
-# Expected output: A reasoned response calculating the days until Christmas
-```
+# Run the agent:
+response = agent("What is the current date?")
+print("Agent with Tool Response:", response)
+# Expected output:
+# Agent with Tool Response: [Message(role='assistant', content='The current date is 2024-03-08.')]
 
-#### Agent-to-Agent Communication
+# Example 3: Agent with Multimodal Input (Image)
+api = GeminiApi()
+agent = Agent(api=api, model_features=[ModelFeatures.TextGeneration, ModelFeatures.Image])
+agent.append_system_message("You are an image description expert.")
+image_url = "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Einstein_1921_by_F_Schmutzer_-_restoration.jpg/456px-Einstein_1921_by_F_Schmutzer_-_restoration.jpg"
+message = Message(role="user")
+message.append_text("Describe the image:")
+message.append_image(image_url)
+response = agent(message)
+print("Agent with Image Response:", response)
+# Expected output:
+# Agent with Image Response: [Message(role='assistant', content='The image is a black and white photograph of Albert Einstein.')]
 
-```python
-from litemind.agent.agent import Agent
-from litemind.agent.tools.tool_agent import ToolAgent
-from litemind.apis.combined_api import CombinedApi
-from litemind.agent.tools.toolset import ToolSet
+# Example 4: ReAct Agent
+from litemind.agent.react.react_agent import ReActAgent
 
-# Create a translation agent
-api = CombinedApi()
-translation_agent = Agent(api=api)
-translation_agent.append_system_message("You are a translator that translates English to French.")
+# Initialize API
+api = OpenAIApi()
 
-# Create a tool agent that wraps the translation agent
-translation_tool = ToolAgent(
-    agent=translation_agent,
-    description="Translates English text to French."
+# Create the ReAct agent
+react_agent = ReActAgent(api=api, temperature=0.0, max_reasoning_steps=3)
+
+# Add a system message
+react_agent.append_system_message(
+    "You are a helpful assistant that can answer questions and use tools."
 )
 
-# Create a main agent that uses the translation tool
-toolset = ToolSet()
-toolset.add_tool(translation_tool)
-
-main_agent = Agent(api=api, toolset=toolset)
-main_agent.append_system_message("You are a helpful assistant that can translate text when needed.")
-
-# Run the main agent
-response = main_agent("Can you translate 'Hello, how are you?' to French?")
+# Ask a question
+response = react_agent("What is the current date?")
 
 # Print the response
-print(response[-1])
-# Expected output: "Bonjour, comment allez-vous?"
+print("ReAct Agent Response:", response)
+# Expected output:
+# ReAct Agent Response: [Message(role='assistant', content='The current date is 2024-03-08.')]
 ```
 
 ## Concepts
 
-### API Wrapper Layer
+*   **API Abstraction:** The `BaseApi` class defines an abstract interface for interacting with LLM providers. Concrete implementations (e.g., `OpenAIApi`, `GeminiApi`) inherit from `BaseApi` and provide provider-specific implementations for common operations like text generation, image generation, and embeddings. The `CombinedApi` class allows you to use multiple APIs at once.
+*   **Message Handling:** The `Message` class represents a single message in a conversation. It can contain text, images, audio, video, documents, tables, and tool calls. The `Conversation` class manages a sequence of `Message` objects, representing the history of a conversation.
+*   **Agentic AI:** The `Agent` class provides a framework for building conversational agents. It takes an API instance, a model name, and a toolset. The agent can then be used to generate responses to user queries. The `ReActAgent` class extends the `Agent` class to implement the ReAct (Reasoning and Acting) methodology, enabling agents to reason and act in a structured manner.
+*   **Tool Integration:** The `ToolSet` class manages a collection of tools. The `FunctionTool` class allows you to wrap Python functions as tools. The agent can then use these tools to perform actions and interact with the external world.
+*   **Model Features:** The `ModelFeatures` enum defines the features supported by the models (e.g., text generation, image generation, audio transcription). The `get_best_model` method in the `BaseApi` class allows you to select the best model based on the required features.
 
-The API wrapper layer provides a unified interface to different LLM providers:
+## Model Features
 
-*   **BaseApi**: Abstract base class that defines the interface for all API implementations.
-*   **DefaultApi**: Provides default implementations for common functionality.
-*   **Provider-specific APIs**: Implementations for OpenAI, Anthropic, Google, and Ollama.
-*   **CombinedApi**: Aggregates multiple API providers and automatically selects the best one for each request.
+Model features are used to specify the capabilities required from an LLM when using the `litemind` API. The `ModelFeatures` enum defines the available features.
 
-The API wrapper handles:
+*   **TextGeneration:** Enables text generation.
+*   **StructuredTextGeneration:** Enables structured text generation.
+*   **ImageGeneration:** Enables image generation.
+*   **AudioGeneration:** Enables audio generation.
+*   **VideoGeneration:** Enables video generation.
+*   **Reasoning:** Enables reasoning capabilities.
+*   **TextEmbeddings:** Enables text embeddings.
+*   **ImageEmbeddings:** Enables image embeddings.
+*   **AudioEmbeddings:** Enables audio embeddings.
+*   **VideoEmbeddings:** Enables video embeddings.
+*   **Image:** Enables image input.
+*   **Audio:** Enables audio input.
+*   **Video:** Enables video input.
+*   **Document:** Enables document input.
+*   **Tools:** Enables tool usage.
+*   **AudioTranscription:** Enables audio transcription.
+*   **VideoConversion:** Enables video conversion.
+*   **DocumentConversion:** Enables document conversion.
 
-*   Model selection based on required features
-*   Message conversion between different formats
-*   Multimodal input processing
-*   Tool usage and function calling
-*   Structured output generation
+When using the `litemind` API, you can request specific features by passing a list of `ModelFeatures` to the `get_best_model` method of the API instance. For example:
 
-### Agentic API
+```python
+from litemind.apis.model_features import ModelFeatures
+from litemind import OpenAIApi
 
-The Agentic API builds on top of the API wrapper to provide a higher-level framework for building conversational agents:
-
-*   **Message**: Represents a message in a conversation, containing multiple blocks of different types (text, image, audio, etc.).
-*   **MessageBlock**: A single block of content within a message.
-*   **Conversation**: A collection of messages that maintains context.
-*   **Agent**: A conversational agent that can use tools and maintain a conversation.
-*   **ReActAgent**: An agent that implements the ReAct (Reasoning + Acting) methodology for step-by-step reasoning.
-*   **ToolSet**: A collection of tools that an agent can use.
-*   **BaseTool**: Abstract base class for all tools.
-*   **FunctionTool**: A tool that wraps a Python function.
-*   **ToolAgent**: A tool that delegates to another agent.
-
-### Model Features
-
-LiteMind uses a feature-based approach to model selection:
-
-*   **ModelFeatures**: An enum that defines the features a model can support (TextGeneration, Image, Audio, Video, Tools, etc.).
-*   **get_best_model()**: A method that selects the best model based on required features.
-*   **has_model_support_for()**: A method that checks if a model supports specific features.
+api = OpenAIApi()
+model_name = api.get_best_model(features=[ModelFeatures.TextGeneration, ModelFeatures.Image])
+```
 
 ## More Code Examples
 
-### API Wrapper: Text Generation with Different Providers
+This section provides more code examples, including examples that cover the wrapper API and the agentic API.
 
 ```python
-# Using OpenAI API
-from litemind.apis.providers.openai.openai_api import OpenAIApi
+from litemind import OpenAIApi, GeminiApi, AnthropicApi, OllamaApi, CombinedApi
 from litemind.agent.messages.message import Message
-
-api = OpenAIApi()
-messages = [Message(role="user", text="Hello, world!")]
-response = api.generate_text(messages=messages, model_name="gpt-4o")
-
-print(response[0])
-# Expected output: "Hello there!"
-```
-
-```python
-# Using Anthropic API
-from litemind.apis.providers.anthropic.anthropic_api import AnthropicApi
-from litemind.agent.messages.message import Message
-
-api = AnthropicApi()
-messages = [Message(role="user", text="Hello, world!")]
-response = api.generate_text(messages=messages, model_name="claude-3-opus-20240229")
-
-print(response[0])
-# Expected output: "Hello there!"
-```
-
-```python
-# Using Google Gemini API
-from litemind.apis.providers.google.google_api import GeminiApi
-from litemind.agent.messages.message import Message
-
-api = GeminiApi()
-messages = [Message(role="user", text="Hello, world!")]
-response = api.generate_text(messages=messages, model_name="models/gemini-1.5-pro")
-
-print(response[0])
-# Expected output: "Hello there!"
-```
-
-```python
-# Using Ollama API (local models)
-from litemind.apis.providers.ollama.ollama_api import OllamaApi
-from litemind.agent.messages.message import Message
-
-api = OllamaApi()
-messages = [Message(role="user", text="Hello, world!")]
-response = api.generate_text(messages=messages, model_name="llama3")
-
-print(response[0])
-# Expected output: "Hello there!"
-```
-
-### API Wrapper: Text Generation with Streaming
-
-```python
-from litemind.apis.combined_api import CombinedApi
-from litemind.agent.messages.message import Message
-from litemind.apis.callbacks.print_callbacks import PrintCallbacks
-from litemind.apis.callbacks.callback_manager import CallbackManager
-
-# Create a callback manager with print callbacks
-callback_manager = CallbackManager()
-callback_manager.add_callback(PrintCallbacks(
-    print_text_generation=True,
-    print_text_streaming=True
-))
-
-# Create an API instance with callbacks
-api = CombinedApi(callback_manager=callback_manager)
-
-# Create messages
-messages = [Message(role="user", text="Tell me a short story about a robot.")]
-
-# Generate a response (callbacks will print information during generation)
-response = api.generate_text(messages=messages)
-
-# Print the final response
-print("\nFinal response:")
-print(response[0])
-```
-
-### API Wrapper: Embedding and Similarity
-
-```python
-from litemind.apis.combined_api import CombinedApi
-import numpy as np
-
-# Create an API instance
-api = CombinedApi()
-
-# Get text embeddings
-texts = [
-    "The quick brown fox jumps over the lazy dog",
-    "A fast auburn fox leaps above the sleepy canine",
-    "The weather is nice today"
-]
-embeddings = api.embed_texts(texts=texts, dimensions=512)
-
-# Calculate cosine similarity
-def cosine_similarity(a, b):
-    return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
-
-# Compare similarities
-sim_1_2 = cosine_similarity(embeddings[0], embeddings[1])
-sim_1_3 = cosine_similarity(embeddings[0], embeddings[2])
-sim_2_3 = cosine_similarity(embeddings[1], embeddings[2])
-
-print(f"Similarity between text 1 and 2: {sim_1_2:.4f}")  # Should be high (similar meaning)
-print(f"Similarity between text 1 and 3: {sim_1_3:.4f}")  # Should be low (different topics)
-print(f"Similarity between text 2 and 3: {sim_2_3:.4f}")  # Should be low (different topics)
-```
-
-### Agentic API: Creating a Tool Agent
-
-```python
-from litemind.agent.agent import Agent
 from litemind.agent.tools.toolset import ToolSet
-from litemind.agent.tools.tool_agent import ToolAgent
-from litemind.apis.combined_api import CombinedApi
+from litemind.agent.tools.function_tool import FunctionTool
+from litemind.apis.model_features import ModelFeatures
+from litemind.agent.react.react_agent import ReActAgent
 
-# Create a translation agent
+# 1. Using the Combined API with Multimodal Input
 api = CombinedApi()
-translation_agent = Agent(api=api)
-translation_agent.append_system_message("You are a translator that translates English to French.")
+message = Message(role="user")
+message.append_text("Describe the image:")
+message.append_image("https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/2560px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg")
+response = api.generate_text(messages=[message])
+print("Combined API with Multimodal Input:", response)
 
-# Create a tool agent that wraps the translation agent
-translation_tool = ToolAgent(
-    agent=translation_agent,
-    description="Translates English text to French."
-)
+# 2. Using the Agent with a Custom Tool
+def get_current_time() -> str:
+    from datetime import datetime
 
-# Create a main agent that uses the translation tool
+    return datetime.now().strftime("%H:%M:%S")
+
+# Create a toolset and add the function tool:
 toolset = ToolSet()
-toolset.add_tool(translation_tool)
+toolset.add_function_tool(get_current_time, "Fetch the current time")
 
-main_agent = Agent(api=api, toolset=toolset)
-main_agent.append_system_message("You are a helpful assistant that can translate text when needed.")
-
-# Run the main agent
-response = main_agent("Can you translate 'Hello, how are you?' to French?")
-
-# Print the response
-print(response[-1])
-# Expected output: "Bonjour, comment allez-vous?"
-```
-
-### Agentic API: Creating a Function Tool
-
-```python
-from litemind.agent.agent import Agent
-from litemind.agent.tools.toolset import ToolSet
-from litemind.apis.combined_api import CombinedApi
-from datetime import datetime
-
-# Define a tool function
-def get_current_date() -> str:
-    """Get the current date."""
-    return datetime.now().strftime("%Y-%m-%d")
-
-# Create a toolset and add the function tool
-toolset = ToolSet()
-toolset.add_function_tool(get_current_date)
-
-# Create an agent with the toolset
-api = CombinedApi()
+# Create the agent:
 agent = Agent(api=api, toolset=toolset)
 
-# Add a system message to define the agent's behavior
-agent.append_system_message("You are a helpful assistant that can provide the current date.")
+# Add a system message:
+agent.append_system_message("You are a helpful assistant.")
 
-# Run the agent with a user query
-response = agent("What is the current date?")
+# Run the agent:
+response = agent("What is the current time?")
+print("Agent with Tool Response:", response)
+
+# 3. Using the ReAct Agent with a Custom Tool
+# Create the ReAct agent
+react_agent = ReActAgent(api=api, toolset=toolset, temperature=0.0, max_reasoning_steps=3)
+
+# Add a system message
+react_agent.append_system_message(
+    "You are a helpful assistant that can answer questions and use tools."
+)
+
+# Ask a question
+response = react_agent("What is the current time?")
 
 # Print the response
-print(response[-1])
-# Expected output: The current date
+print("ReAct Agent Response:", response)
+
+# 4. Using the Agent with a JSON Response Format
+from pydantic import BaseModel
+
+class Weather(BaseModel):
+    temperature: float
+    condition: str
+
+api = OpenAIApi()
+agent = Agent(api=api)
+agent.append_system_message("You are a weather bot.")
+response = agent(
+    "What is the weather like in Paris?",
+    response_format=Weather,
+)
+print("Agent with JSON Response:", response)
+
+# 5. Using the Agent with a Code Block
+api = OpenAIApi()
+agent = Agent(api=api)
+agent.append_system_message("You are a code generation assistant.")
+response = agent(
+    "Write a python function that returns the factorial of a number.",
+)
+print("Agent with Code Block:", response)
+
+# 6. Using the Agent with a Table
+from pandas import DataFrame
+
+# Create a small table with pandas:
+table = DataFrame({"A": [1, 2, 3], "B": [4, 5, 6]})
+
+user_message = Message(role="user")
+user_message.append_text("Can you describe what you see in the table?")
+user_message.append_table(table)
+
+# Run agent:
+response = agent(user_message)
+
+print("Agent with Table:", response)
 ```
 
 ## Tools
 
-LiteMind provides a command-line tool `litemind` to perform various operations.
+LiteMind provides command-line tools to facilitate common tasks. These tools are installed when you install the `litemind` package.
 
 ### `litemind codegen`
 
-This command generates files, such as README.md files, for a Python repository based on a prompt and the contents of the repository.
+The `litemind codegen` tool generates files, such as README.md files, for a Python repository based on a prompt and a folder containing the repository's files. It uses an LLM to generate the content of the file.
 
-#### Usage
+**Usage:**
 
 ```bash
-litemind codegen [model]
+litemind codegen [model] [-f FILE]
 ```
 
-*   `model`: (Optional) The LLM model to use for generation.  Defaults to `combined`.  Available options are `gemini`, `openai`, `claude`, `ollama`, and `combined`.
+*   `model`: The model to use for generating the file.  Defaults to `combined`.  Options are `gemini`, `openai`, `claude`, `ollama`, and `combined`.
+*   `-f` or `--file`: The specific file to generate. If not provided, all files will be generated.
 
-This command requires a `.codegen` folder in the root of your repository.  This folder should contain `.codegen.yml` files.
+**Example:**
 
-#### `.codegen.yml` file format
-
-The `.codegen.yml` files contain instructions for the code generation process.  Here's a template:
+1.  Create a `.codegen` folder in the root of your repository.
+2.  Inside the `.codegen` folder, create a `README.codegen.yml` file with the following content:
 
 ```yaml
-# .codegen/README.codegen.yml
 prompt: |
-  You are a helpful assistant that generates a README.md file for a Python repository.
-  The README.md should include the following sections:
+  You are a helpful assistant with deep expertise in Software Engineering and best practices for Open Source projects.
+  You know how to write complete, compelling and informative README files for Python repositories.
+  Your task is to help a user generate a README.md file for a Python repository.
+  The README.md should at least include the following sections:
   - Summary
   - Features
   - Installation
   - Usage
   - Concepts
+  - Model Features
   - More Code Examples
   - Tools
   - Caveats and Limitations
@@ -584,13 +356,33 @@ prompt: |
   - Roadmap
   - Contributing
   - License
+  But feel free to include additional sections as needed.
   The 'Summary' section should provide an enthusiastic and complete description of the library, its purpose, and philosophy.
   The 'Usage' section should consist of rich, striking and illustrative examples of the Agentic API in use with multimodal inputs.
   The 'Concepts' section should explain the concepts behind the library, the main classes and their purpose, and how they interact.
-  The 'Code Health' section should include the results of unit test in file 'test_report.md'. Please provide file names for failed tests and statistics about the number of failed tests and an analysis of what happened.
+  The 'Model Features' section should explain what model features are, why they are needed, and how to request features when using litemind's API.
+  The 'Code Health' section should include the results of unit test in file 'test_report.md'. Please provide file names for failed tests and statistics about the number of failed tests and an analysis of what happened. You can also consult the ANALYSIS.md file for more information if it exists.
   The 'Roadmap' section can use the contents of TODO.md as a starting point, keep the checkmarks.
   The 'More Code Examples' section further expands with many more also covering the wrapper API, uses ideas and code from the unit tests (no need to mention that).
   The 'Tools' section should explain litemind command line tools and how to use them, with example command lines (check tools package and its contents for details). Please also explain the format of the *.codegen.yml files and give a template. Explain that you need a .codegen folder in the root of the repository and you can apply that to your own repositories.
+  For code examples:
+  - Please use markdown code blocks for code examples and other code snippets.
+  - Make sure that the code examples are complete and can be run as-is.
+  - Make sure that the code can run without errors, e.g. make sure that all required imports are included.
+  - Make sure, if possible to include the expected output as comments in the code.
+  - Make sure that comments are emphatically didactic.
+  - Make sure that the code is well-formatted and follows PEP-8.
+  - Make sure to include a variety of examples that cover different use cases and edge cases.
+  - Make sure that the code examples are complete and can be run as-is.
+  - Avoid putting multiple code examples in the same code block, unless they are chained.
+  - Avoid giving examples of features that have poor code health, i.e. for which tests are failing.
+  - Examples that use specific model features must have code to request these features.
+  - In the examples, make sure to use real URLs of files that really exist, for example those used in the tests.
+  Please make sure to explain the difference between the API wrapper layer versus the agentic API -- this should also
+  be reflected in the examples.
+  Explain that logging is done with Arbol (http://github.com/royerlab/arbol) and it can be deactivated by setting Arbol.passthrough to True.
+  At the end of the README, include a note explaining that the README was generated with the help of AI.
+  Avoid hallucinating things that are not in the repository.
 folder:
   path: .
 file: README.md
@@ -608,90 +400,110 @@ excluded_files:
   - build
 ```
 
-*   `prompt`: The prompt to use for generating the file.  This prompt should include instructions for the LLM on what to generate.
-*   `folder`:  Specifies the folder to include in the context of the prompt.
-    *   `path`: The path to the folder to include.  Use `.` for the current directory.
-*   `file`: The name of the file to generate.
-*   `allowed_extensions`: A list of file extensions to include in the context.
-*   `excluded_files`: A list of files to exclude from the context.
-
-#### Example
-
-To generate a README.md file for a repository, create a `.codegen` folder in the root of the repository and add a `.codegen.yml` file with the appropriate prompt and file information. Then, run:
+3.  Run the command:
 
 ```bash
 litemind codegen
 ```
 
-This will generate a README.md file in the root of the repository.
+This will generate a `README.md` file in the root of your repository.
 
 ### `litemind export`
 
-This command exports the entire repository to a single file.
+The `litemind export` tool exports the entire repository to a single file.
 
-#### Usage
-
-```bash
-litemind export <folder_path> -o <output_file> [-e <extensions>] [-x <exclude>]
-```
-
-*   `<folder_path>`: The path to the folder containing the repository to export.
-*   `-o` or `--output-file`: The path to the file to save the entire repository to.
-*   `-e` or `--extensions`: (Optional) A list of allowed extensions for files to include in the export.
-*   `-x` or `--exclude`: (Optional) A list of files to exclude from the export.
-
-#### Example
-
-To export a repository to a single file, run:
+**Usage:**
 
 ```bash
-litemind export . -o repository.txt -e .py .md -x README.md
+litemind export [-f FOLDER_PATH] [-o OUTPUT_FILE] [-e EXTENSIONS] [-x EXCLUDE]
 ```
 
-This will export the current directory (.), including all `.py` and `.md` files, excluding `README.md`, to a file named `repository.txt`.
+*   `-f` or `--folder-path`: The path to the folder containing the repository to export. Defaults to the current directory (`.`).
+*   `-o` or `--output-file`: The path to the file to save the entire repository to. Defaults to `exported.txt`.
+*   `-e` or `--extensions`: The list of allowed extensions for files to include in the export.
+*   `-x` or `--exclude`: The list of files to exclude from the export.
+
+**Example:**
+
+```bash
+litemind export -f . -o my_repo.txt -e .py .md -x README.md
+```
+
+This will export all `.py` and `.md` files in the current directory (excluding `README.md`) to a file named `my_repo.txt`.
+
+### `.codegen` Folder and YAML Files
+
+The `.codegen` folder in the root of the repository is used to store configuration files for the `litemind codegen` tool. These files are YAML files that specify the prompt, the input folder, the output file, and other parameters for generating files.
+
+**YAML File Template:**
+
+```yaml
+prompt: |
+  [Your prompt here]
+folder:
+  path: [Path to the folder containing the files to be used as context]
+file: [Name of the output file]
+allowed_extensions:
+  - [List of allowed file extensions]
+excluded_files:
+  - [List of excluded files]
+```
 
 ## Caveats and Limitations
 
-*   **API Keys**: You need to provide your own API keys for the various providers (OpenAI, Anthropic, Google, Ollama).
-*   **Cost**: Using commercial LLM APIs incurs costs based on their pricing models.
-*   **Model Availability**: Not all features are available with all models or providers.
-*   **Token Limits**: Different models have different token limits that may affect the complexity of tasks they can handle.
-*   **Tool Execution**: Tools are executed locally, which means they have access to your local environment.
-*   **ReAct Agent Limitations**: The ReAct agent implementation has some limitations in handling complex reasoning chains and may occasionally fail to follow the correct reasoning format.
-*   **Video Processing**: Video processing requires ffmpeg to be installed and may be resource-intensive.
-*   **Document Processing**: Document processing requires additional dependencies and may not work perfectly with all document formats.
+*   **API Key Management:** The library relies on environment variables for API keys. Consider using a more secure key management solution in production environments.
+*   **Error Handling:** Error handling could be improved, particularly in the API wrapper layer.
+*   **Token Management:** The library lacks explicit token management, which is crucial for controlling costs and avoiding rate limits.
+*   **Documentation:** More detailed documentation, including API references and usage examples, would be beneficial.
+*   **Performance:** Performance considerations, such as caching and optimization of API calls, are not explicitly addressed.
 
 ## Code Health
 
-The test suite for LiteMind shows good overall health with 34 passing tests and 1 failing test. There are 3 skipped tests.
+The code health is assessed based on unit tests and code analysis.
 
-The failing tests are primarily in the ReAct agent implementation:
-*   `src/litemind/agent/react/tests/test_react_agent.py`
-    *   `test_react_agent_single_tool` (1 failure)
+### Test Report
 
-These failures indicate that the ReAct agent and tool agent implementations need further refinement to ensure consistent behavior across different LLM providers.
+The unit tests are located in the `src/litemind/apis/tests` directory and the `test_reports` directory contains the test reports.
 
-The skipped tests are primarily due to certain features not being available with all providers, which is expected behavior.
+```
+## Failed Tests
+
+*   test_apis_text_generation.py::test_text_generation_with_simple_parameterless_tool - The test failed.
+*   test_apis_text_generation.py::test_text_generation_with_simple_toolset - The test failed.
+*   test_apis_text_generation.py::test_text_generation_with_simple_toolset_and_struct_output - The test failed.
+*   test_apis_text_generation.py::test_text_generation_with_complex_toolset - The test failed.
+```
+
+The following tests are failing:
+
+*   `test_apis_text_generation.py::test_text_generation_with_simple_parameterless_tool`
+*   `test_apis_text_generation.py::test_text_generation_with_simple_toolset`
+*   `test_apis_text_generation.py::test_text_generation_with_simple_toolset_and_struct_output`
+*   `test_apis_text_generation.py::test_text_generation_with_complex_toolset`
+
+These tests relate to text generation with tools.
+
+### Code Analysis
+
+The `ANALYSIS.md` file provides a detailed analysis of the code health, architecture, and design principles.
 
 ## Roadmap
 
--   [ ] Deal with message sizes in tokens sent to models
--   [ ] RAG
--   [ ] Improve vendor api robustness features such as retry call when server errors, etc...
--   [ ] Reorganise media files used for testing into a single media folder
--   [ ] Improve and uniformize exception handling
--   [ ] Add support for adding nD images to messages.
--   [ ] Improve logging with arbol, with option to turn off.
--   [ ] Implement 'brainstorming' mode for text generation, possibly with API fusion.
+*   Deal with message sizes in tokens sent to models.
+*   RAG
+*   Improve vendor API robustness features such as retry call when server errors, etc...
+*   Reorganise media files used for testing into a single media folder
+*   Improve and uniformize exception handling
+*   Add support for adding nD images to messages.
+*   Improve logging with arbol, with option to turn off.
+*   Implement 'brainstorming' mode for text generation, possibly with API fusion.
 
 ## Contributing
 
-We welcome contributions to LiteMind! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details on how to contribute.
+We welcome contributions! Please see our [CONTRIBUTING.md](CONTRIBUTING.md) file for details on how to contribute.
 
 ## License
 
-LiteMind is licensed under the BSD-3-Clause License. See [LICENSE](LICENSE) for details.
-
----
+This project is licensed under the BSD-3-Clause License - see the [LICENSE](LICENSE) file for details.
 
 This README was generated with the help of AI.

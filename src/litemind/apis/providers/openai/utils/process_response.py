@@ -14,7 +14,7 @@ def process_response_from_openai(
 
     Parameters
     ----------
-    response : Any
+    openai_response : Any
         The response from OpenAI API.
     response_format : Optional[BaseModel | str]
         The format of the response.

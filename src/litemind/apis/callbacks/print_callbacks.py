@@ -45,6 +45,9 @@ class PrintCallbacks(BaseCallbacks):
         self.print_image_description = print_image_description
         self.print_audio_description = print_audio_description
 
+        if kwargs:
+            raise ValueError(f"Unknown arguments: {pformat(kwargs)}")
+
     def on_availability_check(self, available: bool) -> None:
         aprint(f"Availability Check: {available}")
 

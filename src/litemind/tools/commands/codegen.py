@@ -14,30 +14,46 @@ from litemind.tools.commands.utils import default_folder_scanning_parameters, pa
 def codegen(
     folder_path: str,
     api: Optional[BaseApi] = None,
+    file_selection: Optional[str] = None,
 ) -> str:
+    with asection(
+        f"Generating files in folder: {folder_path} using API: {api} and selection: {file_selection}"
+    ):
 
-    # Locate folder '.codegen' within folder_path:
-    codegen_folder = os.path.join(folder_path, ".codegen")
+        # Locate folder '.codegen' within folder_path:
+        codegen_folder = os.path.join(folder_path, ".codegen")
 
-    # For each file that ends in 'codegen.txt' in the '.codegen' folder:
-    for file in os.listdir(codegen_folder):
-        if file.endswith("codegen.yml"):
+        # Strip file_selection:
+        if file_selection is not None:
+            file_selection = file_selection.strip()
 
-            # Get the file's absolute path:
-            file = os.path.join(codegen_folder, file)
+        # For each file that ends in 'codegen.txt' in the '.codegen' folder:
+        for file in os.listdir(codegen_folder):
+            if file.endswith("codegen.yml"):
 
-            # Parse yml file:
-            parsed_data = parse_yaml(file)
+                # Check if file_selection is not None and if file_selection is not in file:
+                if file_selection is not None:
+                    if file_selection not in file:
+                        # Skip this file:
+                        continue
 
-            # Generate the file:
-            generate(
-                prompt=parsed_data["prompt"],
-                input_folder=os.path.join(folder_path, parsed_data["folder"]["path"]),
-                output_file=os.path.join(folder_path, parsed_data["file"]),
-                allowed_extensions=parsed_data.get("allowed_extensions", None),
-                excluded_files=parsed_data.get("excluded_files", None),
-                api=api,
-            )
+                # Get the file's absolute path:
+                file = os.path.join(codegen_folder, file)
+
+                # Parse yml file:
+                parsed_data = parse_yaml(file)
+
+                # Generate the file:
+                generate(
+                    prompt=parsed_data["prompt"],
+                    input_folder=os.path.join(
+                        folder_path, parsed_data["folder"]["path"]
+                    ),
+                    output_file=os.path.join(folder_path, parsed_data["file"]),
+                    allowed_extensions=parsed_data.get("allowed_extensions", None),
+                    excluded_files=parsed_data.get("excluded_files", None),
+                    api=api,
+                )
 
 
 def generate(
@@ -79,6 +95,11 @@ def generate(
 
     with asection(f"Generating file: {output_file_name}"):
 
+        # If output file already exists, delete it:
+        if os.path.exists(output_file):
+            aprint(f"File {output_file} already exists. Deleting it.")
+            os.remove(output_file)
+
         # Get the default folder scanning parameters:
         allowed_extensions, excluded_files = default_folder_scanning_parameters(
             allowed_extensions, excluded_files
@@ -118,9 +139,11 @@ def generate(
         # extract the file content from the response:
         file_contents = response[-1][0].content.strip()
 
-        # If it starts with '```markdown', remove it:
+        # If it starts with '```markdown' or '```md', remove it:
         if file_contents.startswith("```markdown"):
             file_contents = file_contents[11:]
+        if file_contents.startswith("```md"):
+            file_contents = file_contents[5:]
 
         # If it ends with '```', remove it:
         if file_contents.endswith("```"):

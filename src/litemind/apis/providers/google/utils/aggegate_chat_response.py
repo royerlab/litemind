@@ -1,9 +1,5 @@
 from typing import Callable, Iterable
 
-from litemind.apis.providers.google.utils.text_generation_helpers import (
-    _extract_text_from_parts,
-)
-
 
 def aggregate_chat_response(chunks: Iterable["ChatResponse"], callback: Callable):
 
@@ -43,3 +39,17 @@ def aggregate_chat_response(chunks: Iterable["ChatResponse"], callback: Callable
                 function_calls.append(dict_part["function_call"])
 
     return {"text": aggregated_text, "tool_calls": function_calls}
+
+
+def _extract_text_from_parts(parts) -> str:
+    """
+    Convert each part to a dict, append `dict_part['text']` if present.
+    (Ignore function calls, code, etc.)
+    """
+    out_text = []
+    for p in parts:
+        part_dict = type(p).to_dict(p, use_integers_for_enums=False)
+        # If there's a "text" key, gather it:
+        if "text" in part_dict:
+            out_text.append(part_dict["text"])
+    return "".join(out_text)

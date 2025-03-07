@@ -3,11 +3,11 @@ from arbol import aprint
 
 from litemind import API_IMPLEMENTATIONS
 from litemind.apis.base_api import ModelFeatures
-from litemind.apis.tests.base_test import BaseTest
+from litemind.media.media_resources import MediaResources
 
 
 @pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
-class TestBaseApiImplementationsBasics(BaseTest):
+class TestBaseApiImplementationsBasics(MediaResources):
     """
     A tests suite that runs the same tests on each ApiClass
     implementing the abstract BaseApi interface.

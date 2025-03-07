@@ -128,7 +128,7 @@ class Agent:
     def __call__(self, *args, **kwargs) -> List[Message]:
 
         # Prepare the call by normalising parameters:
-        messages = self._prepare_call(*args, **kwargs)
+        self._prepare_call(*args, **kwargs)
 
         # Get last message in conversation
         last_message = self.conversation.get_last_message()
@@ -143,6 +143,8 @@ class Agent:
                 if self.toolset:
                     for tool in self.toolset:
                         aprint(tool.pretty_string())
+                else:
+                    aprint("No tools available")
 
             with asection("Last message in conversation:"):
                 aprint(last_message)
@@ -230,3 +232,9 @@ class Agent:
                 raise ValueError("text must be a string")
 
         return messages
+
+    def __repr__(self):
+        return f"{self.name}(model={self.model}, api={self.api.__class__.__name__})"
+
+    def __str__(self):
+        return self.__repr__()

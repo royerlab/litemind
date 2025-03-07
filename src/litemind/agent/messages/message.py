@@ -432,11 +432,12 @@ class Message(ABC):
             The source of the table (e.g., file path or url).
         """
 
-        # By default, the source is None:
-        source = None
-
         # If table is an URI of table file (csv, tsv, xls, xlsx, etc.) download file and load it as a pandas DataFrame:
         if isinstance(table, str):
+
+            # source is URI that the table comes from:
+            source = table
+
             # Check that it is a valid table URI:
             if not table.startswith("http") and not table.startswith("file"):
                 raise ValueError(
@@ -448,9 +449,6 @@ class Message(ABC):
                 raise ValueError(
                     f"Invalid table URI: '{table}' (must have a valid table file extension)"
                 )
-
-            # source is:
-            source = table
 
             # Download the table file to a local temp file using download_table_to_temp_file:
             table = uri_to_local_file_path(table)

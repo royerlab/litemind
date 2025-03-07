@@ -4,7 +4,7 @@ from io import BytesIO
 from typing import List, Optional, Sequence, Union
 
 import requests
-from arbol import aprint
+from openai import OpenAI
 from PIL import Image
 from PIL.Image import Resampling
 from pydantic import BaseModel
@@ -16,6 +16,9 @@ from litemind.apis.base_api import ModelFeatures
 from litemind.apis.callbacks.callback_manager import CallbackManager
 from litemind.apis.default_api import DefaultApi
 from litemind.apis.exceptions import APIError, APINotAvailableError
+from litemind.apis.providers.openai.utils.check_availability import (
+    check_openai_api_availability,
+)
 from litemind.apis.providers.openai.utils.convert_messages import (
     convert_messages_for_openai,
 )
@@ -69,11 +72,22 @@ class OpenAIApi(DefaultApi):
                 "The api_key client option must be set either by passing api_key to the client or by setting the OPENAI_API_KEY environment variable"
             )
 
+        # Save the API key:
+        self.api_key = api_key
+
+        # Save base URL:
+        self.base_url = base_url
+
+        # Save additional kwargs:
+        self.kwargs = kwargs
+
         try:
             # Create an OpenAI client:
             from openai import OpenAI
 
-            self.client: OpenAI = OpenAI(api_key=api_key, base_url=base_url, **kwargs)
+            self.client: OpenAI = OpenAI(
+                api_key=self.api_key, base_url=self.base_url, **self.kwargs
+            )
 
             # Get the raw list of models:
             self._raw_model_list = _get_raw_openai_model_list(self.client)
@@ -89,39 +103,21 @@ class OpenAIApi(DefaultApi):
             raise APINotAvailableError(f"Error initializing Gemini client: {e}")
 
     def check_availability_and_credentials(self, api_key: Optional[str] = None) -> bool:
-        messages = []
-        try:
-            # Create a user message:
-            user_message = Message(role="user")
-            user_message.append_text("Hello!")
-            messages.append(user_message)
 
-            # Call the OpenAI raw API to generate a completion (not using the API wrapper):
-            response = self.client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=convert_messages_for_openai(messages),
-                max_completion_tokens=10,
-            )
+        # Check if the API key is provided:
+        if api_key is not None:
+            client = OpenAI(api_key=api_key, base_url=self.base_url, **self.kwargs)
+        else:
+            client = self.client
 
-            # Check if the response contains any choices:
-            result = len(response.choices) > 0
-            if result:
-                aprint("OpenAI API key is valid.")
-                self.callback_manager.on_availability_check(True)
-                return True
-            else:
-                aprint("OpenAI API key is invalid.")
-                self.callback_manager.on_availability_check(False)
-                return False
+        # Check the OpenAI API key:
+        result = check_openai_api_availability(client)
 
-        except Exception as e:
-            # print error message from exception:
-            aprint(f"Error while trying to check the OpenAI API key: {e}")
-            import traceback
+        # Call the callback manager:
+        self.callback_manager.on_availability_check(result)
 
-            traceback.print_exc()
-            self.callback_manager.on_availability_check(False)
-            return False
+        # Return the result:
+        return result
 
     def list_models(
         self, features: Optional[Sequence[ModelFeatures]] = None

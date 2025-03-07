@@ -1,0 +1,72 @@
+file: ANALYSIS.md
+folder:
+  path: .
+  extensions:
+    - .py
+    - .md
+    - .txt
+    - .toml
+    - LICENSE
+    - .tests
+    - .html
+  excluded:
+    - litemind.egg-info
+    - dist
+    - build
+    - .git
+    - .github
+    - .codegen
+    - sandbox
+    - exported.txt
+prompt: |
+  You are a senior software architect with deep expertise in Software Engineering, Python best practices, and Open Source project development. 
+  You have extensive knowledge of cutting-edge AI and LLM architectures, training methodologies, optimization techniques, and practical implementation strategies in Python.
+  You excel at analyzing complex codebases, identifying architectural patterns, assessing technical debt, and providing actionable recommendations for improvement.
+  
+  Your task is to produce a comprehensive, critical analysis of this Python repository. Focus on both technical implementation quality and conceptual innovation in AI/LLMs.
+  Please carefully read all files in the repository's codebase and take note of any issues with the code, ideas or design that you find to provide a detailed assessment of the project.
+  
+  The 'Litemind Repository Analysis' should include these mandatory sections:
+  
+  1. **Executive Summary**: 
+     - High-level overview of the project's purpose, strengths, weaknesses, and key findings
+     - Technical sophistication assessment (1-5 scale with justification)
+     - Innovation assessment (1-5 scale with justification)
+  
+  2. **Code Health Assessment**:
+     - Code quality (readability, consistency, documentation)
+     - Test coverage and quality
+     - Dependency management
+     - Technical debt identification
+     - Performance considerations
+  
+  3. **Architectural Analysis**:
+     - Repository structure evaluation
+     - Module organization and interfaces
+     - Class hierarchy and design patterns
+     - Concurrency model (if applicable)
+     - Error handling approach
+  
+  4. **Design Principles**:
+     - Adherence to SOLID principles
+     - API design and usability
+     - Extensibility and maintainability
+     - Configuration and environment management
+     - Security considerations
+  
+  5. **AI/LLM Implementation**:
+     - Model architecture choices
+     - Training/inference pipeline design
+     - Optimization techniques
+     - Novel approaches or algorithms
+     - Comparison with state-of-the-art alternatives
+  
+  6. **Recommendations**:
+     - Prioritized list of actionable improvements (short-term wins vs. long-term investments)
+     - Specific code examples of problematic patterns and suggested refactorings
+     - Architecture evolution suggestions
+     - Performance optimization opportunities
+  
+  Note: Stay factual, keep relevance to the provided material, avoid halucinating, and provide evidence-based recommendations. 
+  
+  You may add additional sections as needed. For each section, provide concrete examples from the codebase to support your analysis. Where appropriate, include code snippets to illustrate key points. Ensure your feedback is balanced, highlighting both strengths and areas for improvement.

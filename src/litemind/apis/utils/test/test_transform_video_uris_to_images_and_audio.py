@@ -7,6 +7,7 @@ from litemind.agent.messages.message_block_type import BlockType
 from litemind.apis.utils.transform_video_uris_to_images_and_audio import (
     transform_video_uris_to_images_and_audio,
 )
+from litemind.media.media_resources import MediaResources
 
 
 @pytest.fixture
@@ -14,8 +15,8 @@ def create_message_with_video_uri():
     # Combine the two to get the absolute path to 'harvard.wav'
     current_dir = os.path.dirname(__file__)
 
-    # Combine the two to get the absolute path to 'flying.mp4'
-    video_path = os.path.join(current_dir, "media/bunny.mp4")
+    # Combine the two to get the absolute path to 'bunny.mp4'
+    video_path = MediaResources._get_local_test_video_uri("bunny.mp4")
 
     # Convert to URI:
     video_uri = f"file://{video_path}"

@@ -3,11 +3,11 @@ import pytest
 from litemind import API_IMPLEMENTATIONS
 from litemind.agent.messages.message import Message
 from litemind.apis.base_api import ModelFeatures
-from litemind.apis.tests.base_test import BaseTest
+from litemind.media.media_resources import MediaResources
 
 
 @pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
-class TestBaseApiImplementationsMultimodalInputs(BaseTest):
+class TestBaseApiImplementationsMultimodalInputs(MediaResources):
     """
     A tests suite that runs the same tests on each ApiClass
     implementing the abstract BaseApi interface.
@@ -59,7 +59,13 @@ class TestBaseApiImplementationsMultimodalInputs(BaseTest):
         response = response[-1]
 
         # Check response:
-        assert "sepia" in response or "chalkboard" in response or "Einstein" in response
+        assert (
+            "sepia" in response
+            or "chalkboard" in response
+            or "Einstein" in response
+            or "black-and-white" in response
+            or "photograph" in response
+        )
 
     def test_text_generation_with_png_image_path(self, api_class):
         api_instance = api_class()

@@ -29,7 +29,7 @@ class ToolCall:
         arguments = ", ".join(
             [f"{key}={value}" for key, value in self.arguments.items()]
         )
-        return f"ToolUse(tool={self.tool_name}, arguments={arguments}, result={self.result}, id={self.id})"
+        return f"ToolUse(tool={self.tool_name}, arguments={arguments}, id={self.id})"
 
     def pretty_string(self):
         """

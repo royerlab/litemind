@@ -1,4 +1,4 @@
-class BaseTest:
+class MediaResources:
 
     @staticmethod
     def _get_local_test_folder_path(folder_name: str):
@@ -28,24 +28,24 @@ class BaseTest:
 
     @staticmethod
     def _get_local_test_image_uri(image_name: str):
-        return BaseTest._get_local_test_file_uri("images", image_name)
+        return MediaResources._get_local_test_file_uri("images", image_name)
 
     @staticmethod
     def _get_local_test_audio_uri(image_name: str):
-        return BaseTest._get_local_test_file_uri("audio", image_name)
+        return MediaResources._get_local_test_file_uri("audio", image_name)
 
     @staticmethod
     def _get_local_test_video_uri(image_name: str):
-        return BaseTest._get_local_test_file_uri("videos", image_name)
+        return MediaResources._get_local_test_file_uri("videos", image_name)
 
     @staticmethod
     def _get_local_test_document_uri(doc_name: str):
-        return BaseTest._get_local_test_file_uri("documents", doc_name)
+        return MediaResources._get_local_test_file_uri("documents", doc_name)
 
     @staticmethod
     def _get_local_test_table_uri(doc_name: str):
-        return BaseTest._get_local_test_file_uri("tables", doc_name)
+        return MediaResources._get_local_test_file_uri("tables", doc_name)
 
     @staticmethod
     def _get_local_test_archive_uri(doc_name: str):
-        return BaseTest._get_local_test_file_uri("archives", doc_name)
+        return MediaResources._get_local_test_file_uri("archives", doc_name)

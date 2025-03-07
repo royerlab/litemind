@@ -12,6 +12,9 @@ from litemind.apis.utils.random_projector import DeterministicRandomProjector
 
 
 class BaseApi(ABC):
+    """
+    The base class for all APIs. This class provides the interface for all provider APIs to implement.
+    """
 
     # constructor:
     def __init__(self, callback_manager: Optional[CallbackManager] = None):

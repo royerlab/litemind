@@ -1,8 +1,8 @@
 import pytest
 
 from litemind import API_IMPLEMENTATIONS
+from litemind.agent.tools.agent_tool import AgentTool
 from litemind.agent.tools.function_tool import FunctionTool
-from litemind.agent.tools.tool_agent import ToolAgent
 from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.model_features import ModelFeatures
 
@@ -77,10 +77,11 @@ def test_toolset_add_agent_tool(api_class):
     # Retrieve and validate the AgentTool
     added_tool = toolset.get_tool("agent_tool")
     assert isinstance(
-        added_tool, ToolAgent
+        added_tool, AgentTool
     ), "The tool should be an instance of AgentTool"
     assert (
-        added_tool.description == "Sample agent tool for testing"
+        added_tool.description
+        == "Sample agent tool for testing."  # Note the period at the end
     ), "The tool description should match the description provided"
 
     # Execute the AgentTool with a sample prompt

@@ -3,7 +3,7 @@ import pytest
 from litemind.agent.messages.message import Message
 from litemind.apis.model_features import ModelFeatures
 from litemind.apis.providers.ollama.ollama_api import OllamaApi
-from litemind.apis.tests.base_test import BaseTest
+from litemind.media.media_resources import MediaResources
 
 
 def test_compare_images_with_separate_messages():
@@ -32,14 +32,14 @@ def test_compare_images_with_separate_messages():
     # User message for the first image:
     user_message_1 = Message(role="user")
     user_message_1.append_text("Here is the first image.")
-    cat_image_path = BaseTest._get_local_test_image_uri("cat.jpg")
+    cat_image_path = MediaResources._get_local_test_image_uri("cat.jpg")
     user_message_1.append_image(cat_image_path)
     messages.append(user_message_1)
 
     # User message for the second image:
     user_message_2 = Message(role="user")
     user_message_2.append_text("Here is the second image.")
-    panda_image_path = BaseTest._get_local_test_image_uri("panda.jpg")
+    panda_image_path = MediaResources._get_local_test_image_uri("panda.jpg")
     user_message_2.append_image(panda_image_path)
     messages.append(user_message_2)
 
@@ -60,7 +60,7 @@ def test_compare_images_with_separate_messages():
         print(message)
 
     # Get the last response message:
-    response = messages[-1].lower()
+    response = response[-1].lower()
 
     # Check response:
     assert (

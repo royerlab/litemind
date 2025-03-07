@@ -14,6 +14,9 @@ from litemind.apis.exceptions import APIError, APINotAvailableError
 from litemind.apis.providers.google.utils.aggegate_chat_response import (
     aggregate_chat_response,
 )
+from litemind.apis.providers.google.utils.check_gemini_api_availability import (
+    check_gemini_api_availability,
+)
 from litemind.apis.providers.google.utils.convert_messages import (
     convert_messages_for_gemini,
 )
@@ -61,13 +64,14 @@ class GeminiApi(DefaultApi):
             )
 
         self._api_key = api_key
+        self.kwargs = kwargs
 
         try:
             # google.generativeai references
             import google.generativeai as genai
 
             # Register the API key with google.generativeai
-            genai.configure(api_key=self._api_key, **kwargs)
+            genai.configure(api_key=self._api_key, **self.kwargs)
 
             # Get the raw model list:
             self._model_list = _get_gemini_models_list()
@@ -81,37 +85,21 @@ class GeminiApi(DefaultApi):
 
     def check_availability_and_credentials(self, api_key: Optional[str] = None) -> bool:
 
-        # Local import to avoid loading the library if not needed:
+        # Check the availability of the API:
+        result = check_gemini_api_availability(
+            api_key=api_key, default_api_key=self._api_key
+        )
+
+        # Call the callback manager:
+        self.callback_manager.on_availability_check(result)
+
+        # Ensure that the correct key is set:
         import google.generativeai as genai
 
-        # Use the provided key or the default key:
-        candidate_key = api_key or self._api_key
-        if not candidate_key:
-            self.callback_manager.on_availability_check(False)
-            return False
+        genai.configure(api_key=self._api_key, **self.kwargs)
 
-        # We’ll try a trivial call; if it fails, we assume invalid.
-        try:
-            # Minimal call: generate a short response
-            model = genai.GenerativeModel()
-
-            # Generate a short response:
-            resp = model.generate_content("Hello, Gemini!")
-
-            # If the response is not empty, we assume the API is available:
-            if len(resp.text) > 0:
-                self.callback_manager.on_availability_check(True)
-                return True
-
-            # If the response is empty, we assume the API is not available:
-            self.callback_manager.on_availability_check(False)
-            return False
-        except Exception:
-            import traceback
-
-            traceback.print_exc()
-            self.callback_manager.on_availability_check(False)
-            return False
+        # Return the result:
+        return result
 
     def list_models(
         self, features: Optional[Sequence[ModelFeatures]] = None
@@ -453,8 +441,6 @@ class GeminiApi(DefaultApi):
                 # Process the response:
                 response = process_response_from_gemini(
                     gemini_response,
-                    model_name=model_name,
-                    max_num_output_tokens=max_num_output_tokens,
                     response_format=response_format,
                 )
 

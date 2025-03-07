@@ -51,7 +51,7 @@ class ToolSet:
         # Return the function tool:
         return function_tool
 
-    def add_agent_tool(self, agent, description: str) -> "ToolAgent":
+    def add_agent_tool(self, agent, description: str) -> "AgentTool":
         """
         Add a new tool by wrapping an agent and its description.
 
@@ -64,15 +64,15 @@ class ToolSet:
 
         Returns
         -------
-        ToolAgent
+        AgentTool
             The tool agent.
 
         """
         # Import here to avoid circular imports
-        from litemind.agent.tools.tool_agent import ToolAgent
+        from litemind.agent.tools.agent_tool import AgentTool
 
         # Create the tool agent:
-        tool_agent = ToolAgent(agent, description)
+        tool_agent = AgentTool(agent, description)
 
         # Add the tool to the tool set:
         self.tools.append(tool_agent)

@@ -24,7 +24,8 @@ def convert_image_to_png(file_path: str) -> str:
     with Image.open(file_path) as img:
         # Create a temporary file to save the image:
         with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as temp_file:
-            # Save the image as a JPEG file:
+            # Save the image as a PNG file:
             img.save(temp_file.name, "PNG")
 
+            # Return the path to the PNG file:
             return temp_file.name

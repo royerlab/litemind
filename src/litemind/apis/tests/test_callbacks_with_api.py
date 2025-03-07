@@ -8,7 +8,7 @@ from litemind.apis.base_api import BaseApi
 from litemind.apis.callbacks.base_callbacks import BaseCallbacks
 from litemind.apis.callbacks.callback_manager import CallbackManager
 from litemind.apis.model_features import ModelFeatures
-from litemind.apis.tests.base_test import BaseTest
+from litemind.media.media_resources import MediaResources
 
 
 class MockCallback(BaseCallbacks):
@@ -167,7 +167,7 @@ def test_audio_transcription(api_class):
         ModelFeatures.AudioTranscription
     )
     if audio_transcription_model_name:
-        audio_path = BaseTest._get_local_test_audio_uri("harvard.wav")
+        audio_path = MediaResources._get_local_test_audio_uri("harvard.wav")
         api_instance.transcribe_audio(
             audio_path, model_name=audio_transcription_model_name
         )
@@ -292,8 +292,8 @@ def test_image_embedding(api_class):
         ModelFeatures.ImageEmbeddings
     )
     if image_embedding_model_name:
-        image_1_uri = BaseTest._get_local_test_image_uri("cat.jpg")
-        image_2_uri = BaseTest._get_local_test_image_uri("panda.jpg")
+        image_1_uri = MediaResources._get_local_test_image_uri("cat.jpg")
+        image_2_uri = MediaResources._get_local_test_image_uri("panda.jpg")
         api_instance.embed_images(
             image_uris=[image_1_uri, image_2_uri], model_name=image_embedding_model_name
         )
@@ -312,8 +312,8 @@ def test_audio_embedding(api_class):
         ModelFeatures.AudioEmbeddings
     )
     if audio_embedding_model_name:
-        audio_1_uri = BaseTest._get_local_test_audio_uri("harvard.wav")
-        audio_2_uri = BaseTest._get_local_test_audio_uri("preamble.wav")
+        audio_1_uri = MediaResources._get_local_test_audio_uri("harvard.wav")
+        audio_2_uri = MediaResources._get_local_test_audio_uri("preamble.wav")
         api_instance.embed_audios(
             audio_uris=[audio_1_uri, audio_2_uri], model_name=audio_embedding_model_name
         )
@@ -332,8 +332,8 @@ def test_video_embedding(api_class):
         ModelFeatures.VideoEmbeddings
     )
     if video_embedding_model_name:
-        video_1_uri = BaseTest._get_local_test_video_uri("flying.mp4")
-        video_2_uri = BaseTest._get_local_test_video_uri("lunar_park.mp4")
+        video_1_uri = MediaResources._get_local_test_video_uri("flying.mp4")
+        video_2_uri = MediaResources._get_local_test_video_uri("lunar_park.mp4")
         api_instance.embed_videos(
             video_uris=[video_1_uri, video_2_uri], model_name=video_embedding_model_name
         )
@@ -352,7 +352,7 @@ def test_image_description(api_class):
         [ModelFeatures.TextGeneration, ModelFeatures.Image]
     )
     if image_description_model_name:
-        image_uri = BaseTest._get_local_test_image_uri("cat.jpg")
+        image_uri = MediaResources._get_local_test_image_uri("cat.jpg")
         api_instance.describe_image(image_uri, model_name=image_description_model_name)
         assert "on_image_description" in mock_callback.called_methods
 
@@ -369,7 +369,7 @@ def test_audio_description(api_class):
         [ModelFeatures.TextGeneration, ModelFeatures.Audio]
     )
     if audio_description_model_name:
-        audio_uri = BaseTest._get_local_test_audio_uri("harvard.wav")
+        audio_uri = MediaResources._get_local_test_audio_uri("harvard.wav")
         api_instance.describe_audio(audio_uri, model_name=audio_description_model_name)
         assert "on_audio_description" in mock_callback.called_methods
 
@@ -386,6 +386,6 @@ def test_video_description(api_class):
         [ModelFeatures.TextGeneration, ModelFeatures.Video]
     )
     if video_description_model_name:
-        video_uri = BaseTest._get_local_test_video_uri("flying.mp4")
+        video_uri = MediaResources._get_local_test_video_uri("flying.mp4")
         api_instance.describe_video(video_uri, model_name=video_description_model_name)
         assert "on_video_description" in mock_callback.called_methods

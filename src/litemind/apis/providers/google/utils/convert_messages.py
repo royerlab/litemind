@@ -8,6 +8,7 @@ from PIL import Image
 from litemind.agent.messages.message import Message
 from litemind.agent.messages.message_block_type import BlockType
 from litemind.agent.messages.tool_use import ToolUse
+from litemind.apis.utils.convert_image_to_png import convert_image_to_png
 from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_path
 
 
@@ -35,6 +36,9 @@ def convert_messages_for_gemini(
                 try:
                     # Convert the image URI to a local file path:
                     local_path = uri_to_local_file_path(image_uri)
+
+                    if local_path.endswith(".gif"):
+                        local_path = convert_image_to_png(local_path)
 
                     # Open the image:
                     with Image.open(local_path) as img:
