@@ -35,6 +35,7 @@ prompt: |
   - Tools
   - Caveats and Limitations
   - Code Health
+  - API Keys
   - Roadmap
   - Contributing
   - License
@@ -48,6 +49,8 @@ prompt: |
   The 'Roadmap' section can use the contents of TODO.md as a starting point, keep the checkmarks.
   The 'More Code Examples' section further expands with many more also covering the wrapper API, uses ideas and code from the unit tests (no need to mention that).
   The 'Tools' section should explain litemind command line tools and how to use them, with example command lines (check tools package and its contents for details). Please also explain the format of the *.codegen.yml files and give a template. Explain that you need a .codegen folder in the root of the repository and you can apply that to your own repositories.
+  The 'Caveats and Limitations' section should explain the limitations of the library, including any known issues or areas for improvement.
+  The 'API Keys' section should explain how to obtain and use API keys for the library.
 
   For code examples:
   - Please use markdown code blocks for code examples and other code snippets.

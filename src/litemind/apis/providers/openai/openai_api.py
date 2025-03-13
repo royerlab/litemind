@@ -38,6 +38,20 @@ from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_pa
 
 
 class OpenAIApi(DefaultApi):
+    """
+    An OpenAI API implementation conforming to the BaseApi interface.
+
+    Set the OPENAI_API_KEY environment variable to your OpenAI API key, or pass it as an argument to the constructor.
+    You can get your API key from https://platform.openai.com/account/api-keys.
+
+    The OpenAIApi class provides a high-level interface for interacting with the OpenAI API.
+    It supports various features such as text generation, image generation, audio processing, and more.
+    The class also provides methods for checking the availability of the API, listing available models, and selecting the best model based on the required features.
+    The OpenAIApi class is designed to be used with the OpenAI API, but it can also be used with other APIs that are compatible with the OpenAI API.
+    The OpenAIApi class is a subclass of the DefaultApi class, which provides a default implementation of the BaseApi interface.
+
+    """
+
 
     def __init__(
         self,
@@ -956,7 +970,7 @@ class OpenAIApi(DefaultApi):
 
     def embed_texts(
         self,
-        texts: List[str],
+        texts: Sequence[str],
         model_name: Optional[str] = None,
         dimensions: int = 512,
         **kwargs,

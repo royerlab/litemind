@@ -1,21 +1,29 @@
 from functools import lru_cache
 
+from arbol import aprint
 
-@lru_cache
-def check_gemini_api_availability(api_key, default_api_key):
+# Cache the result of the check_gemini_api_availability function
+_cached_check_gemini_api_availability = None
+
+def check_gemini_api_availability(api_key):
     """
     Check if the Gemini API is available by sending a test message to the API.
     Parameters
     ----------
     api_key: str
         API key to use for the test.
-    default_api_key: str
-        Default API key to reset to after the test.
 
     Returns
     -------
 
     """
+
+    # Use the global variable
+    global _cached_check_gemini_api_availability
+
+    # Check if we have a cached result
+    if _cached_check_gemini_api_availability is not None:
+        return _cached_check_gemini_api_availability
 
     # Local import to avoid loading the library if not needed:
     import google.generativeai as genai
@@ -37,12 +45,23 @@ def check_gemini_api_availability(api_key, default_api_key):
         # If the response is not empty, we assume the API is available:
         result = len(resp.text) > 0
 
-    except Exception:
-        # If we get an error, we assume it's because the API is not available:
-        import traceback
 
+    except Exception as e:
+        # If we get an error, we assume it's because the API is not available:
+        aprint(f"Error while trying to check availability of Ollama API: {e}")
+
+        import traceback
         traceback.print_exc()
+
         result = False
+
+    if result:
+        aprint("Gemini API is available.")
+    else:
+        aprint("Gemini API is not available.")
+
+    # Cache the result:
+    _cached_check_gemini_api_availability = result
 
     # Print the result:
     return result

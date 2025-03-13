@@ -14,9 +14,8 @@ from litemind.apis.exceptions import APIError, APINotAvailableError
 from litemind.apis.providers.google.utils.aggegate_chat_response import (
     aggregate_chat_response,
 )
-from litemind.apis.providers.google.utils.check_gemini_api_availability import (
-    check_gemini_api_availability,
-)
+from litemind.apis.providers.google.utils.check_availability import check_gemini_api_availability
+
 from litemind.apis.providers.google.utils.convert_messages import (
     convert_messages_for_gemini,
 )
@@ -34,6 +33,13 @@ class GeminiApi(DefaultApi):
     """
     A Gemini 1.5+ API implementation conforming to the BaseApi interface.
     Uses the google.generativeai library (previously known as Google GenAI).
+
+    Set the GOOGLE_GEMINI_API_KEY environment variable to your Google API key.
+    You can get a key from the Google Cloud Console: https://ai.google.dev/gemini-api/docs/api-key
+
+    Note: The API key must be enabled for the Gemini API.
+    You can also pass the API key explicitly to the constructor.
+
     """
 
     def __init__(
@@ -56,7 +62,7 @@ class GeminiApi(DefaultApi):
         super().__init__(callback_manager=callback_manager)
 
         if api_key is None:
-            api_key = os.environ.get("GOOGLE_API_KEY")
+            api_key = os.environ.get("GOOGLE_GEMINI_API_KEY")
         if not api_key:
             raise APIError(
                 "A valid GOOGLE_API_KEY is required for GeminiApi. "
@@ -86,9 +92,7 @@ class GeminiApi(DefaultApi):
     def check_availability_and_credentials(self, api_key: Optional[str] = None) -> bool:
 
         # Check the availability of the API:
-        result = check_gemini_api_availability(
-            api_key=api_key, default_api_key=self._api_key
-        )
+        result = check_gemini_api_availability(api_key=api_key)
 
         # Call the callback manager:
         self.callback_manager.on_availability_check(result)
@@ -581,7 +585,7 @@ class GeminiApi(DefaultApi):
 
     def embed_texts(
         self,
-        texts: List[str],
+        texts: Sequence[str],
         model_name: Optional[str] = None,
         dimensions: int = 512,
         **kwargs,

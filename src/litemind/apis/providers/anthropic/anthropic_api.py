@@ -34,7 +34,10 @@ from litemind.apis.providers.anthropic.utils.process_response import (
 class AnthropicApi(DefaultApi):
     """
     An Anthropic API implementation that conforms to the `BaseApi` abstract interface.
-    Uses the `anthropic` library's `client.messages.create(...)` methods for completions.
+
+    Set the ANTHROPIC_API_KEY environment variable to your Anthropic API key.
+    You can get it from https://console.anthropic.com/account/api-keys.
+
     """
 
     def __init__(

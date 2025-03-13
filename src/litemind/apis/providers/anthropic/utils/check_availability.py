@@ -1,8 +1,19 @@
 from functools import lru_cache
 
+from arbol import aprint
 
-@lru_cache
+# Cache the result of the check_anthropic_api_availability function
+_cached_check_anthropic_api_availability = None
+
 def check_anthropic_api_availability(client: "Anthropic", model_name: str):
+
+    # Use the global variable
+    global _cached_check_anthropic_api_availability
+
+    # Check if we have a cached result
+    if _cached_check_anthropic_api_availability is not None:
+        return _cached_check_anthropic_api_availability
+
     # We'll attempt a trivial request
     try:
         # Local import to avoid loading the library if not needed:
@@ -32,9 +43,21 @@ def check_anthropic_api_availability(client: "Anthropic", model_name: str):
 
     except Exception:
         # If we get an error, we assume it's because the API is not available:
-        import traceback
+        aprint(f"Error while trying to check availability of Ollama API: {e}")
 
+        # print stack trace:
+        import traceback
         traceback.print_exc()
+
         result = False
+
+
+    if result:
+        aprint("Gemini API is available.")
+    else:
+        aprint("Gemini API is not available.")
+
+    # Cache the result:
+    _cached_check_anthropic_api_availability = result
 
     return result

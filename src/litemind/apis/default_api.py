@@ -930,7 +930,7 @@ class DefaultApi(BaseApi):
 
     def embed_texts(
         self,
-        texts: List[str],
+        texts: Sequence[str],
         model_name: Optional[str] = None,
         dimensions: int = 512,
         **kwargs,
@@ -951,6 +951,9 @@ class DefaultApi(BaseApi):
             raise FeatureNotAvailableError(
                 "Text Embedding feature: fastembed is not available! \n Install with: pip install fastembed"
             )
+
+        # Ensure texts is a list:
+        texts = list(texts)
 
         # Embed the text using fastembed:
         embeddings = fastembed_text(texts=texts, dimensions=dimensions, **kwargs)

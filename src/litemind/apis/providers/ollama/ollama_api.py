@@ -27,6 +27,14 @@ from litemind.apis.providers.ollama.utils.process_response import (
 
 
 class OllamaApi(DefaultApi):
+    """
+    Ollama API client for interacting with the Ollama server that conforms to the BaseApi interface.
+
+    This class provides methods to check API availability, list models, get the best model,
+    check model support for specific features, and generate text using the Ollama API.
+
+    """
+
     def __init__(
         self,
         host: Optional[str] = None,
@@ -440,7 +448,7 @@ class OllamaApi(DefaultApi):
 
     def embed_texts(
         self,
-        texts: List[str],
+        texts: Sequence[str],
         model_name: Optional[str] = None,
         dimensions: int = 512,
         **kwargs,

@@ -426,7 +426,7 @@ class BaseApi(ABC):
 
     def embed_texts(
         self,
-        texts: List[str],
+        texts: Sequence[str],
         model_name: Optional[str] = None,
         dimensions: int = 512,
         **kwargs,

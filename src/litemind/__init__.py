@@ -8,8 +8,10 @@ from litemind.apis.providers.anthropic.anthropic_api import AnthropicApi
 from litemind.apis.providers.google.google_api import GeminiApi
 from litemind.apis.providers.ollama.ollama_api import OllamaApi
 from litemind.apis.providers.openai.openai_api import OpenAIApi
+from litemind.rag.vector_db.in_memory_vector_db import InMemoryVectorDatabase
+from litemind.rag.vector_db.qdrant_vector_db import QdrantVectorDatabase
 
-# Put all your implementations in this list:
+# LLM API implementations:
 API_IMPLEMENTATIONS = [
     DefaultApi,
     OpenAIApi,
@@ -20,7 +22,6 @@ API_IMPLEMENTATIONS = [
 ]
 
 # Check availability of each API and remove it from the list if it is not available:
-
 for api_class in API_IMPLEMENTATIONS:
     try:
         # Trying to instantiate the API class:
@@ -38,6 +39,12 @@ for api_class in API_IMPLEMENTATIONS:
             f"API {api_class.__name__} could not be instantiated: {e}. Removing it from the list."
         )
         API_IMPLEMENTATIONS.remove(api_class)
+
+
+# Vector database implementations:
+VECDB_IMPLEMENTATIONS=[QdrantVectorDatabase, InMemoryVectorDatabase]
+
+
 
 # Initialize and silence the Abseil logging system:
 import absl.logging
