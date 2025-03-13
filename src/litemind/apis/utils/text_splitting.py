@@ -7,7 +7,7 @@ def is_semanticText_available() -> bool:
     try:
         import importlib.util
 
-        return importlib.util.find_spec("semantic-text-splitter") is not None
+        return importlib.util.find_spec("semantic_text_splitter") is not None
 
     except ImportError:
         return False
@@ -18,7 +18,7 @@ def is_treeSitter_available() -> bool:
     try:
         import importlib.util
 
-        return importlib.util.find_spec("tree-sitter-languages") is not None
+        return importlib.util.find_spec("tree_sitter_languages") is not None
 
     except ImportError:
         return False
