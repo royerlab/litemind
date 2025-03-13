@@ -1,6 +1,7 @@
 from typing import List, Tuple
+from functools import lru_cache
 
-
+@lru_cache
 def is_semanticText_available() -> bool:
     # Check if package semantic-text-splitter s available:
     try:
@@ -11,7 +12,7 @@ def is_semanticText_available() -> bool:
     except ImportError:
         return False
 
-
+@lru_cache
 def is_treeSitter_available() -> bool:
     # Check if package tree-sitter-languages s available:
     try:
