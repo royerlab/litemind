@@ -198,6 +198,33 @@ class Message(ABC):
 
         return message
 
+    def append_thinking(self, thinking_text: str, **kwargs) -> MessageBlock:
+        """
+        Append a thinking block to the message.
+
+        Parameters
+        ----------
+        thinking_text: str
+            The text to append to the message.
+        kwargs: dict
+            Additional attributes for the thinking block.
+
+        Returns
+        -------
+        MessageBlock
+            The thinking block appended to the message.
+
+        """
+
+        # Check that it is really a string:
+        if not isinstance(thinking_text, str):
+            raise ValueError(f"Text must be a string, not {type(thinking_text)}")
+
+        # Append the thinking block:
+        return self.append_block(
+            MessageBlock(block_type="thinking", content=thinking_text, **kwargs)
+        )
+
     def append_text(self, text: str) -> MessageBlock:
         """
         Append text to the message.

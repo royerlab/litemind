@@ -44,6 +44,19 @@ def convert_messages_for_anthropic(
                     text = text.rstrip()
 
                 content.append({"type": "text", "text": text})
+
+            elif block.block_type == BlockType.Thinking:
+                if "redacted" in block.attributes:
+                    content.append({"type": "redacted_thinking", "data": block.content})
+                else:
+                    content.append(
+                        {
+                            "type": "thinking",
+                            "thinking": block.content,
+                            "signature": block.attributes["signature"],
+                        }
+                    )
+
             elif block.block_type == BlockType.Image:
 
                 # Get the image URI and convert file to base64:

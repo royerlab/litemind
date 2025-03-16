@@ -46,6 +46,10 @@ def process_response_from_anthropic(
                 tool_name=block.name, arguments=block.input, id=block.id
             )
             is_tool_use = True
+        elif block.type == "thinking":
+            processed_reponse.append_thinking(block.thinking, signature=block.signature)
+        elif block.type == "redacted_thinking":
+            processed_reponse.append_thinking(block.data, redacted=True)
         else:
             raise ValueError(f"Unexpected block type: {block.type}")
 

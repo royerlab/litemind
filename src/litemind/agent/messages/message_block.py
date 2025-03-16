@@ -90,6 +90,8 @@ class MessageBlock:
         """
         if self.block_type == BlockType.Text:
             return self.content
+        elif self.block_type == BlockType.Thinking:
+            return f"<thinking>\n{self.content.strip()}\n<thinking/>\n"
         elif type(self.content) == str:
             return f"{self.block_type}: {self.content}"
         else:

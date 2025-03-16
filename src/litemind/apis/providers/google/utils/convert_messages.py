@@ -2,8 +2,8 @@ import pathlib
 import time
 from typing import List, Union
 
-from arbol import aprint
 from PIL import Image
+from arbol import aprint
 
 from litemind.agent.messages.message import Message
 from litemind.agent.messages.message_block_type import BlockType
@@ -27,10 +27,19 @@ def convert_messages_for_gemini(
     # Iterate over each message:
     for message in messages:
 
+        # If the message is a system message, skip it:
+        if message.role == "system":
+            continue
+
         # Iterate over each block in the message:
         for block in message.blocks:
             if block.block_type == BlockType.Text:
                 gemini_messages.append(f"{message.role}: {block.content}")
+
+            elif block.block_type == BlockType.Thinking:
+                # Thinking blocks are not passed back to the model:
+                pass
+
             elif block.block_type == BlockType.Image:
                 image_uri = block.content
                 try:
