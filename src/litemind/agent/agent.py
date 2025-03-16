@@ -96,7 +96,7 @@ class Agent:
             model_name=self.model, features=ModelFeatures.TextGeneration
         ):
             raise ValueError("The model does not support text generation")
-        if not self.api.has_model_support_for(
+        if toolset is not None and not self.api.has_model_support_for(
             model_name=self.model, features=ModelFeatures.Tools
         ):
             raise ValueError("The model does not support tools")

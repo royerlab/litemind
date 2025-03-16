@@ -1,7 +1,7 @@
 from typing import Dict, List, Optional, Sequence, Union
 
-from arbol import aprint
 from PIL.Image import Image
+from arbol import aprint
 from pydantic import BaseModel
 
 from litemind.agent.messages.message import Message
@@ -9,6 +9,7 @@ from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.base_api import BaseApi
 from litemind.apis.callbacks.callback_manager import CallbackManager
 from litemind.apis.default_api import DefaultApi
+from litemind.apis.exceptions import APIError
 from litemind.apis.model_features import ModelFeatures
 
 
@@ -45,12 +46,33 @@ class CombinedApi(DefaultApi):
 
         # If no APIs are provided, use the default ones:
         if apis is None:
+
+            # Import the APIs:
             from litemind.apis.providers.anthropic.anthropic_api import AnthropicApi
             from litemind.apis.providers.google.google_api import GeminiApi
             from litemind.apis.providers.ollama.ollama_api import OllamaApi
             from litemind.apis.providers.openai.openai_api import OpenAIApi
 
-            apis = [OpenAIApi(), AnthropicApi(), OllamaApi(), GeminiApi()]
+            # List of classes:
+            api_classes = [OpenAIApi, AnthropicApi, OllamaApi, GeminiApi]
+
+            # List of APIs to combine:
+            apis = []
+
+            # Add the APIs to the list:
+            for api_class in api_classes:
+                try:
+                    api_instance = api_class()
+                    if api_instance.check_availability_and_credentials():
+                        apis.append(api_instance)
+                    else:
+                        aprint(
+                            f"API {api_class.__name__} is not available. Removing it from the list."
+                        )
+                except Exception as e:
+                    aprint(
+                        f"API {api_class.__name__} could not be instantiated: {e}. Removing it from the list."
+                    )
 
         # Add the _callbacks from this CombinedApi class to the callback manager of each individual APIs:
         if callback_manager:
@@ -113,28 +135,47 @@ class CombinedApi(DefaultApi):
         return result
 
     def list_models(
-        self, features: Optional[Sequence[ModelFeatures]] = None
+        self,
+        features: Optional[
+            Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
+        ] = None,
+        non_features: Optional[
+            Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
+        ] = None,
     ) -> List[str]:
 
-        # Get the list of models from the model_to_api dictionary:
-        model_list = list(self.model_to_api.keys())
+        try:
+            # Normalise the features:
+            features = ModelFeatures.normalise(features)
+            non_features = ModelFeatures.normalise(non_features)
 
-        # Add the models from the super class:
-        model_list += super().list_models()
+            # Get the list of models from the model_to_api dictionary:
+            model_list = list(self.model_to_api.keys())
 
-        # Filter the models based on the features:
-        if features:
-            model_list = self._filter_models(model_list, features=features)
+            # Add the models from the super class:
+            model_list += super().list_models()
 
-        # Call _callbacks:
-        self.callback_manager.on_model_list(model_list)
+            # Filter the models based on the features:
+            if features:
+                model_list = self._filter_models(
+                    model_list, features=features, non_features=non_features
+                )
 
-        # return the model list:
-        return model_list
+            # Call _callbacks:
+            self.callback_manager.on_model_list(model_list)
+
+            # return the model list:
+            return model_list
+
+        except Exception:
+            raise APIError("Error fetching model list from OpenAI.")
 
     def get_best_model(
         self,
         features: Optional[
+            Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
+        ] = None,
+        non_features: Optional[
             Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
         ] = None,
         exclusion_filters: Optional[List[str]] = None,
@@ -145,7 +186,9 @@ class CombinedApi(DefaultApi):
 
                 # get the best model from the api object:
                 best_model = api.get_best_model(
-                    features=features, exclusion_filters=exclusion_filters
+                    features=features,
+                    non_features=non_features,
+                    exclusion_filters=exclusion_filters,
                 )
 
                 # if the best model is None or not in the model_to_api dictionary we continue:

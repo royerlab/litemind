@@ -4,9 +4,9 @@ from io import BytesIO
 from typing import List, Optional, Sequence, Union
 
 import requests
-from openai import OpenAI
 from PIL import Image
 from PIL.Image import Resampling
+from openai import OpenAI
 from pydantic import BaseModel
 
 from litemind.agent.messages.message import Message
@@ -134,10 +134,19 @@ class OpenAIApi(DefaultApi):
         return result
 
     def list_models(
-        self, features: Optional[Sequence[ModelFeatures]] = None
+        self,
+        features: Optional[
+            Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
+        ] = None,
+        non_features: Optional[
+            Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
+        ] = None,
     ) -> List[str]:
 
         try:
+            # Normalise the features:
+            features = ModelFeatures.normalise(features)
+            non_features = ModelFeatures.normalise(non_features)
 
             # Get the models from OpenAI:
             model_list = list(self._model_list)
@@ -147,7 +156,9 @@ class OpenAIApi(DefaultApi):
 
             # Filter the models based on the features:
             if features:
-                model_list = self._filter_models(model_list, features=features)
+                model_list = self._filter_models(
+                    model_list, features=features, non_features=non_features
+                )
 
             # Call _callbacks:
             self.callback_manager.on_model_list(model_list)
@@ -162,18 +173,25 @@ class OpenAIApi(DefaultApi):
         features: Optional[
             Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
         ] = None,
+        non_features: Optional[
+            Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
+        ] = None,
         exclusion_filters: Optional[Union[str, List[str]]] = None,
     ) -> Optional[str]:
 
         # Normalise the features:
         features = ModelFeatures.normalise(features)
+        non_features = ModelFeatures.normalise(non_features)
 
         # Get model list:
         model_list = self.list_models()
 
         # Filter the models based on the requirements:
         model_list = self._filter_models(
-            model_list, features=features, exclusion_filters=exclusion_filters
+            model_list,
+            features=features,
+            non_features=non_features,
+            exclusion_filters=exclusion_filters,
         )
 
         # By default, result is None:
@@ -217,15 +235,15 @@ class OpenAIApi(DefaultApi):
                 if not self._has_text_gen_support(model_name):
                     return False
 
+            elif feature == ModelFeatures.Thinking:
+                if not self._has_thinking_support(model_name):
+                    return False
+
             elif feature == ModelFeatures.AudioGeneration:
                 pass
 
             elif feature == ModelFeatures.ImageGeneration:
                 if not self._has_image_gen_support(model_name):
-                    return False
-
-            elif feature == ModelFeatures.Reasoning:
-                if not self._has_reasoning_support(model_name):
                     return False
 
             elif feature == ModelFeatures.TextEmbeddings:
@@ -302,17 +320,9 @@ class OpenAIApi(DefaultApi):
             return False
         return True
 
-    def _has_reasoning_support(self, model_name: str) -> bool:
-        if (
-            "text-embedding" in model_name
-            or "dall-e" in model_name
-            or "realtime" in model_name
-            or "instruct" in model_name
-            or "audio" in model_name
-        ):
-            return False
+    def _has_thinking_support(self, model_name: str) -> bool:
 
-        if "o1" in model_name:
+        if "o1" in model_name or "o3" in model_name:
             return True
 
         return False
@@ -688,6 +698,15 @@ class OpenAIApi(DefaultApi):
         # Convert ToolSet to OpenAI-compatible JSON schema if toolset is provided
         openai_tools = format_tools_for_openai(toolset) if toolset else NotGiven()
 
+        # Reasoning effort:
+        if self._has_thinking_support(model_name):
+            # get what is after the last '-' in the name:
+            reasoning_effort = model_name.split("-")[-1]
+            # Remove that postfix from the name:
+            model_name = model_name.replace(f"-{reasoning_effort}", "")
+        else:
+            reasoning_effort = NotGiven()
+
         # Make sure that reponse_format is NotGiven if not set:
         if response_format is None:
             response_format = NotGiven()
@@ -712,6 +731,7 @@ class OpenAIApi(DefaultApi):
                     max_completion_tokens=effective_max_output_tokens,
                     tools=openai_tools,
                     response_format=response_format,
+                    reasoning_effort=reasoning_effort,
                     **kwargs,
                 ) as streaming_response:
                     # Process the stream

@@ -3,6 +3,7 @@ from enum import Enum
 
 class BlockType(Enum):
     Text = "text"
+    Thinking = "thinking"
     Json = "json"
     Code = "code"
     Object = "object"

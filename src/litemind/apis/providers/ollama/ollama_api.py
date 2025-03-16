@@ -89,10 +89,19 @@ class OllamaApi(DefaultApi):
         return result
 
     def list_models(
-        self, features: Optional[Sequence[ModelFeatures]] = None
+        self,
+        features: Optional[
+            Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
+        ] = None,
+        non_features: Optional[
+            Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
+        ] = None,
     ) -> List[str]:
 
         try:
+            # Normalise the features:
+            features = ModelFeatures.normalise(features)
+            non_features = ModelFeatures.normalise(non_features)
 
             # Get raw Ollama model list:
             model_list = list(self._model_list)
@@ -102,7 +111,9 @@ class OllamaApi(DefaultApi):
 
             # Filter the models based on the features:
             if features:
-                model_list = self._filter_models(model_list, features=features)
+                model_list = self._filter_models(
+                    model_list, features=features, non_features=non_features
+                )
 
             # Call _callbacks:
             self.callback_manager.on_model_list(model_list)
@@ -116,18 +127,25 @@ class OllamaApi(DefaultApi):
         features: Optional[
             Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
         ] = None,
+        non_features: Optional[
+            Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
+        ] = None,
         exclusion_filters: Optional[Union[str, List[str]]] = None,
     ) -> Optional[str]:
 
         # Normalise the features:
         features = ModelFeatures.normalise(features)
+        non_features = ModelFeatures.normalise(non_features)
 
         # Get the list of models:
         model_list = self.list_models()
 
         # Filter the models based on the requirements:
         model_list = self._filter_models(
-            model_list, features=features, exclusion_filters=exclusion_filters
+            model_list,
+            features=features,
+            non_features=non_features,
+            exclusion_filters=exclusion_filters,
         )
 
         # If we have any models left, return the first one
@@ -167,6 +185,10 @@ class OllamaApi(DefaultApi):
 
             if feature == ModelFeatures.TextGeneration:
                 if not self._has_text_generation_support(model_name):
+                    return False
+
+            elif feature == ModelFeatures.Thinking:
+                if not self._has_thinking_support(model_name):
                     return False
 
             elif feature == ModelFeatures.TextEmbeddings:
@@ -231,6 +253,11 @@ class OllamaApi(DefaultApi):
             return False
         return True
 
+    def _has_thinking_support(self, model_name: str) -> bool:
+        if model_name.endswith("-thinking"):
+            return True
+        return False
+
     @lru_cache
     def _has_image_support(self, model_name: str) -> bool:
 
@@ -267,7 +294,7 @@ class OllamaApi(DefaultApi):
 
         try:
             model_template = self.client.show(model_name).template
-            return "$.Tools" in model_template
+            return ".Tools" in model_template
         except:
             return False
 
@@ -358,17 +385,38 @@ class OllamaApi(DefaultApi):
         # Preprocess the messages:
         preprocessed_messages = self._preprocess_messages(messages=messages)
 
+        # If this is a thinking model then we need to add a system message about thinking:
+        if self._has_thinking_support(model_name):
+
+            # Remove the -thinking postfix from the model name:
+            if model_name.endswith("-thinking"):
+                model_name = model_name[:-9]
+
+            # Find the first system message in  preprocessed_messages:
+            system_message = next(
+                (m for m in preprocessed_messages if m.role == "system"), None
+            )
+            # Append the instruction to the system message:
+            if not system_message:
+                # Create a new empty system message and add it at the beginning:
+                system_message = Message(role="system", text="")
+                preprocessed_messages.insert(0, system_message)
+
+            # Find the first text block in the system message:
+            for block in system_message.blocks:
+                if block.block_type == BlockType.Text:
+                    # Append the instruction to the text block:
+                    block.content += "\n"
+                    block.content += "Think carefully step-by-step before responding: restate the input, analyze it, consider options, make a plan, and proceed methodically to your conclusion. \n"
+                    block.content += f"Enclose all reasoning within <thinking>your step-by-step analysis here</thinking> tags before providing your final answer.\n\n"
+                    break
+
         # Get max num of output tokens for model if not provided:
         if max_num_output_tokens is None:
             max_num_output_tokens = self.max_num_output_tokens(model_name)
 
         # Convert toolset (if any) to Ollama's tools schema
         ollama_tools = format_tools_for_ollama(toolset) if toolset else None
-
-        # Ollama specific: normalise response format to JSON schema string:
-        response_format_schema = (
-            response_format.model_json_schema() if response_format else response_format
-        )
 
         # List of new messages part of the response:
         new_messages = []

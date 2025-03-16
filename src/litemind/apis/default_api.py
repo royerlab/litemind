@@ -2,9 +2,9 @@ import copy
 import json
 from typing import List, Optional, Sequence, Union
 
+from PIL.Image import Image
 from arbol import aprint, asection
 from pandas import DataFrame
-from PIL.Image import Image
 from pydantic import BaseModel
 
 from litemind.agent.messages.message import Message
@@ -60,17 +60,18 @@ class DefaultApi(BaseApi):
         return True
 
     def list_models(
-        self, features: Optional[Sequence[ModelFeatures]] = None
+        self,
+        features: Optional[
+            Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
+        ] = None,
+        non_features: Optional[
+            Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
+        ] = None,
     ) -> List[str]:
-        """
-        Get the list of models available that satisfy a given set of features.
 
-        Returns
-        -------
-        List[str]
-            The list of models available
-
-        """
+        # Normalise the features:
+        features = ModelFeatures.normalise(features)
+        non_features = ModelFeatures.normalise(non_features)
 
         # We start with an empty list:
         model_list = []
@@ -93,7 +94,9 @@ class DefaultApi(BaseApi):
 
         # Filter the models based on the features:
         if features:
-            model_list = self._filter_models(model_list, features=features)
+            model_list = self._filter_models(
+                model_list, features=features, non_features=non_features
+            )
 
         # Call _callbacks:
         self.callback_manager.on_model_list(model_list)
@@ -105,18 +108,25 @@ class DefaultApi(BaseApi):
         features: Optional[
             Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
         ] = None,
+        non_features: Optional[
+            Union[List[str], ModelFeatures, Sequence[ModelFeatures]]
+        ] = None,
         exclusion_filters: Optional[List[str]] = None,
     ) -> Optional[str]:
 
         # Normalise the features:
         features = ModelFeatures.normalise(features)
+        non_features = ModelFeatures.normalise(non_features)
 
         # Get model list:
         model_list = self.list_models()
 
         # Filter the models based on the requirements:
         model_list = self._filter_models(
-            model_list, features=features, exclusion_filters=exclusion_filters
+            model_list,
+            features=features,
+            non_features=non_features,
+            exclusion_filters=exclusion_filters,
         )
 
         # If no model is left, return None:
@@ -138,6 +148,9 @@ class DefaultApi(BaseApi):
         self,
         model_list: List[str],
         features: Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]],
+        non_features: Optional[
+            Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
+        ] = None,
         exclusion_filters: Optional[Union[str, List[str]]] = None,
     ) -> List[str]:
         """
@@ -148,6 +161,8 @@ class DefaultApi(BaseApi):
             List of models.
         features: Sequence[ModelFeatures], or ModelFeatures, or str, or List[str]
             List of features to filter on.
+        non_features: Optional[Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]]
+            List of features to exclude.
         exclusion_filters: Optional[Union[str,List[str]]]
             List of strings that if found in the model name exclude it.
 
@@ -163,6 +178,10 @@ class DefaultApi(BaseApi):
             # Nothing to filter:
             return model_list
 
+        # Normalise the features and non_features:
+        features = ModelFeatures.normalise(features)
+        non_features = ModelFeatures.normalise(non_features)
+
         # if exclusion_filters is a string then wrap in singleton list:
         if isinstance(exclusion_filters, str):
             exclusion_filters = [exclusion_filters]
@@ -171,6 +190,15 @@ class DefaultApi(BaseApi):
 
             # Check if the model should be excluded:
             if exclusion_filters and any([f in model for f in exclusion_filters]):
+                continue
+
+            # exclude models that have the non features:
+            if non_features and any(
+                [
+                    self.has_model_support_for(model_name=model, features=nf)
+                    for nf in non_features
+                ]
+            ):
                 continue
 
             # Append models that support the given features:

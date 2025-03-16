@@ -97,9 +97,20 @@ def get_openai_model_list(
         # Actual sorting:
         sorted_model_list = sorted(model_list, key=model_key, reverse=True)
 
-        # debug:
-        # for model in sorted_model_list:
-        #    aprint(f"Model: {model} Key: {model_key(model)}")
+        # List of reasoning models:
+        reasoning_models = ["o1", "o1-mini", "o3-mini"]
+
+        # Replace each reasoning model 'X' with its three variants:  X-low, X-mid, X-high:
+        for reasoning_model in reasoning_models:
+            if reasoning_model in sorted_model_list:
+                # Find index of reasoning model:
+                index = sorted_model_list.index(reasoning_model)
+                # Insert three variants:
+                sorted_model_list.insert(index + 1, f"{reasoning_model}-high")
+                sorted_model_list.insert(index + 2, f"{reasoning_model}-medium")
+                sorted_model_list.insert(index + 3, f"{reasoning_model}-low")
+                # Remove the original reasoning model:
+                sorted_model_list.remove(reasoning_model)
 
         return sorted_model_list
 

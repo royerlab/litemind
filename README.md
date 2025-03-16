@@ -1,14 +1,14 @@
 
 [![PyPI](https://img.shields.io/pypi/v/litemind)](https://pypi.org/project/litemind)
 [![License](https://img.shields.io/badge/license-BSD--3--Clause-blue)](https://opensource.org/licenses/BSD-3-Clause)
-[![PyPI - Downloads](https://static.pepy.tech/badge/litemind)](https://pepy.tech/project/litemind)
+[![Pepy.tech](https://static.pepy.tech/badge/litemind)](https://pepy.tech/project/litemind)
 [![GitHub stars](https://img.shields.io/github/stars/royerlab/litemind?style=social)](https://github.com/royerlab/litemind)
 
 # LiteMind: Multimodal Agentic AI Framework
 
 ## Summary
 
-LiteMind is a Python library and framework designed to simplify the development of multimodal agentic AI applications. It provides a unified and elegant API for interacting with various Large Language Model (LLM) providers, including OpenAI, Anthropic, Google Gemini, and Ollama. The library's core philosophy centers around enabling developers to build sophisticated conversational agents and tools that can seamlessly handle multimodal inputs (text, images, audio, video, documents, and tables). LiteMind abstracts away the complexities of interacting with different LLM APIs, allowing developers to focus on the core logic and functionality of their agentic applications.
+LiteMind is a powerful Python library and framework designed to streamline the development of multimodal agentic AI applications. It provides a unified and elegant API for interacting with a variety of Large Language Model (LLM) providers, including OpenAI, Anthropic, Google Gemini, and Ollama. The library's core philosophy is centered around empowering developers to build sophisticated conversational agents and tools that can seamlessly handle multimodal inputs (text, images, audio, video, documents, and tables). LiteMind abstracts away the complexities of interacting with different LLM APIs, allowing developers to focus on the core logic and functionality of their agentic applications.
 
 ## Features
 

@@ -48,10 +48,23 @@ class BaseApi(ABC):
 
     @abstractmethod
     def list_models(
-        self, features: Optional[Sequence[ModelFeatures]] = None
+        self,
+        features: Optional[
+            Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
+        ] = None,
+        non_features: Optional[
+            Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
+        ] = None,
     ) -> List[str]:
         """
-        Get the list of models available that satisfy a given set of features.
+        Get the list of models available that satisfy a given set of included and excluded features.
+
+        Parameters
+        ----------
+        features: Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
+            The feature(s) to filter on.
+        non_features: Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
+            The feature(s) to exclude from the list.
 
         Returns
         -------
@@ -67,6 +80,9 @@ class BaseApi(ABC):
         features: Optional[
             Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
         ] = None,
+        non_features: Optional[
+            Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
+        ] = None,
         exclusion_filters: Optional[List[str]] = None,
     ) -> Optional[str]:
         """
@@ -76,6 +92,8 @@ class BaseApi(ABC):
         ----------
         features: Sequence[ModelFeatures], or ModelFeatures, or str, or List[str]
             List of features to filter on.
+        non_features: Sequence[ModelFeatures], or ModelFeatures, or str, or List[str]
+            List of features to exclude from the list.
         exclusion_filters: Optional[List[str]]
             List of strings that if found in the model name exclude it.
 
