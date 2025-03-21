@@ -84,16 +84,23 @@ class ChromaDB:
             raise RuntimeError(f'{e}')
         print(f'A collection was created with the name {self.collection_name}')
 
-    def get_collection(self, name: str) -> None:
+    def get_collection_name(self) -> str:
+        """
+        This function return the name of the collection.
+        """
+        return self.collection_name
+
+    def get_collection(self, name: str) -> chromadb.Collection:
         """
         This function return an existing collection
         """
         try:
-            self.chroma_client.get_collection(name=name)
+            collection = self.chroma_client.get_collection(name=name)
         except Exception as e:
             raise RuntimeError(f' {e}')
         
-        print(f"{self.collection_name}.")
+        #print(f"{self.collection_name}.")
+        return collection
 
     def delete_collection(self, name: str) -> None:
         """
