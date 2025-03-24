@@ -1,31 +1,29 @@
-from litemind.agent.agent import Agent
-from litemind.apis.base_api import BaseApi, ModelFeatures
-from typing import Optional, Union, List, Sequence
-from litemind.agent.tools.toolset import ToolSet
-from arbol import aprint, asection
-from litemind.apis.utils.vector_database import ChromaDB
-from litemind.agent.messages.message import Message
-from litemind.agent.messages.conversation import Conversation
-from litemind.apis.utils.chromadb_embeddings import EmbeddingModel
-from litemind.agent.rag.prompts import rag_default_prompt
-from enum import EnumType
+from typing import List, Optional, Sequence, Union
 
+from arbol import aprint, asection
+from litemind.agent.agent import Agent
+from litemind.agent.messages.message import Message
+from litemind.agent.rag.prompts import rag_default_prompt
+from litemind.agent.rag.vector_database import ChromaDB
+from litemind.agent.tools.toolset import ToolSet
+from litemind.apis.base_api import BaseApi, ModelFeatures
 
 
 class RagAgent(Agent):
 
-
     def __init__(
-            self,
-            api: BaseApi,
-            chroma_vectorestore = ChromaDB,
-            embedding_function = EmbeddingModel,
-            model_name: Optional[str] = None,
-            model_features: Optional[Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]] = None,
-            temperature: float = 0.0,
-            toolset: Optional[ToolSet] = None,
-            name: str = "RagAgent",
-            **kwargs):
+        self,
+        api: BaseApi,
+        chroma_vectorestore=ChromaDB,
+        model_name: Optional[str] = None,
+        model_features: Optional[
+            Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
+        ] = None,
+        temperature: float = 0.0,
+        toolset: Optional[ToolSet] = None,
+        name: str = "RagAgent",
+        **kwargs,
+    ):
         """
         Initialize the ReAct agent.
 
@@ -33,6 +31,8 @@ class RagAgent(Agent):
         ----------
         api: BaseApi
             The API to use for generating responses.
+        chroma_vectorestore: ChromaDB
+            The Chroma vectorestore containing the relevant data.
         model_name: Optional[str]
             The model to use for generating responses.
         model_features: Optional[Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
@@ -52,7 +52,7 @@ class RagAgent(Agent):
 
         """
 
-         # Initialize the agent:
+        # Initialize the agent:
         super().__init__(
             api=api,
             model_name=model_name,
@@ -68,35 +68,33 @@ class RagAgent(Agent):
         # initialize Chromadb vectorestore
         self._chroma_vectorestore = chroma_vectorestore
 
-        # initialize embedding model
-        self.embedding_function = embedding_function
-
         # get model and Feature name from chroma and embedding function
-        self.embedding_name = self._chroma_vectorestore.embedding_function._model_name
-        self.dimension = self._chroma_vectorestore.embedding_function._dimension
-        self.chroma_collection = self._chroma_vectorestore.get_collection(name=self._chroma_vectorestore.get_collection_name())
-
+        self.chroma_collection = self._chroma_vectorestore.get_collection(
+            name=self._chroma_vectorestore.get_collection_name()
+        )
 
     def _get_rag_prompt(self) -> str:
-        """ Get the RAG prompt istruction"""
+        """Get the RAG prompt instruction"""
         return self._prompt
-    
+
     def _add_context_to_prompt(self, prompt: str, context: str) -> str:
-        """ Join the context to the prompt"""
+        """Join the context to the prompt"""
         return prompt + context
 
     def query_message(self, query: str):
-        
+        """Extract the relevant chunks from the vectorestore"""
         # transform the query into a vector
-        query_embedding = self.api.embed_texts(texts=[query], model_name=self.embedding_name, dimensions=self.dimension, **self._chroma_vectorestore.embedding_function._kwargs)
+        query_embedding = self._chroma_vectorestore.embedding_function(input=[query])
         # extract vector
         query_vector = query_embedding[0]
 
         # filter out relevant documents
-        responses = self.chroma_collection.query(query_embeddings= query_vector)
+        responses = self.chroma_collection.query(query_embeddings=query_vector)
 
         # Extract relevant chuncks
-        relevant_chuncks = [doc for sublist in responses["documents"] for doc in sublist]
+        relevant_chuncks = [
+            doc for sublist in responses["documents"] for doc in sublist
+        ]
 
         print("getting relevant information")
 
@@ -106,12 +104,11 @@ class RagAgent(Agent):
         """Create the prompt with the context"""
         relevant_chunks = self.query_message(query=response)
         # join all relevant chunks togheter
-        context = '\n\n'.join(relevant_chunks)
+        context = "\n\n".join(relevant_chunks)
 
         prompt = self._add_context_to_prompt(prompt=self._prompt, context=context)
 
         return Message(role="system", text=prompt)
-
 
     def __call__(self, *args, **kwargs) -> Message:
         """
@@ -121,12 +118,12 @@ class RagAgent(Agent):
         # Prepare call by extracting conversation, message, and text:
         self._prepare_call(*args, **kwargs)
 
-         # Get last message in conversation
+        # Get last message in conversation
         last_message = self.conversation.get_last_message()
 
         # check if user custom input
         if "prompt" in kwargs:
-            self._prompt = kwargs["prompt"] + '\n\n' + '### BEGINNING OF CHUNKS'
+            self._prompt = kwargs["prompt"] + "\n\n" + "### BEGINNING OF CHUNKS" + "\n"
 
         with asection("Calling Rag Agent"):
 
@@ -145,15 +142,15 @@ class RagAgent(Agent):
                 aprint(last_message)
 
             # create the context
-            question = ''.join(args)
+            # use the query inserted by the user
+            question = "".join(args)
 
             # create new Message
             message_system = self._create_system_message(response=question)
-            
+
             message_user = Message(role="user", text=question)
             # create List of Messages for the text generation
             message_question = [message_system, message_user]
-
 
             # Call the OpenAI API:
             response = self.api.generate_text(
@@ -173,10 +170,3 @@ class RagAgent(Agent):
 
         # Return response
         return response
-
-
-
-
-
-
-

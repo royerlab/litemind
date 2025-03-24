@@ -1,5 +1,6 @@
-from typing import List, Tuple
 from functools import lru_cache
+from typing import List, Tuple
+
 
 @lru_cache
 def is_semanticText_available() -> bool:
@@ -12,6 +13,7 @@ def is_semanticText_available() -> bool:
     except ImportError:
         return False
 
+
 @lru_cache
 def is_treeSitterPython_available() -> bool:
     # Check if package tree-sitter-languages s available:
@@ -23,6 +25,7 @@ def is_treeSitterPython_available() -> bool:
     except ImportError:
         return False
 
+
 @lru_cache
 def is_treeSitterJava_available() -> bool:
     # Check if package tree-sitter-languages s available:
@@ -33,7 +36,8 @@ def is_treeSitterJava_available() -> bool:
 
     except ImportError:
         return False
-    
+
+
 @lru_cache
 def is_treeSitterC_available() -> bool:
     # Check if package tree-sitter-languages s available:
@@ -44,6 +48,8 @@ def is_treeSitterC_available() -> bool:
 
     except ImportError:
         return False
+
+
 @lru_cache
 def is_treeSitterCPP_available() -> bool:
     # Check if package tree-sitter-languages s available:
@@ -54,6 +60,8 @@ def is_treeSitterCPP_available() -> bool:
 
     except ImportError:
         return False
+
+
 @lru_cache
 def is_treeSitterCSharp_available() -> bool:
     # Check if package tree-sitter-languages s available:
@@ -64,6 +72,8 @@ def is_treeSitterCSharp_available() -> bool:
 
     except ImportError:
         return False
+
+
 @lru_cache
 def is_treeSitterHtml_available() -> bool:
     # Check if package tree-sitter-languages s available:
@@ -74,6 +84,8 @@ def is_treeSitterHtml_available() -> bool:
 
     except ImportError:
         return False
+
+
 @lru_cache
 def is_treeSitterJson_available() -> bool:
     # Check if package tree-sitter-languages s available:
@@ -84,6 +96,8 @@ def is_treeSitterJson_available() -> bool:
 
     except ImportError:
         return False
+
+
 @lru_cache
 def is_treeSitterBash_available() -> bool:
     # Check if package tree-sitter-languages s available:
@@ -212,96 +226,101 @@ def code_splitting(
         "cpp": "c++",
         "cs": "c#",
         "json": "json",
-        "sh": "bash"
+        "sh": "bash",
     }
     if language not in languages.keys():
-        raise TypeError(
-            "This coding language is not supported."
-        )
-    
+        raise TypeError("This coding language is not supported.")
+
     python_extension = languages[language]
 
     # Wanted to use match case but this python version <3.10 are accepted
     if python_extension == "python":
         # check module availability
         if not is_treeSitterPython_available():
-                raise ImportError(
-                    "tree-sitter-python is not available. Please install it to use this function."
-                )
-        
+            raise ImportError(
+                "tree-sitter-python is not available. Please install it to use this function."
+            )
+
         import tree_sitter_python
+
         language_parser = tree_sitter_python.language()
 
     elif python_extension == "java":
         # check module availability
         if not is_treeSitterJava_available():
-                raise ImportError(
-                    "tree-sitter-java is not available. Please install it to use this function."
-                )
-        
+            raise ImportError(
+                "tree-sitter-java is not available. Please install it to use this function."
+            )
+
         import tree_sitter_java
+
         language_parser = tree_sitter_java.language()
 
     elif python_extension == "html":
         # check module availability
         if not is_treeSitterHtml_available():
-                raise ImportError(
-                    "tree-sitter-html is not available. Please install it to use this function."
-                )
-        
+            raise ImportError(
+                "tree-sitter-html is not available. Please install it to use this function."
+            )
+
         import tree_sitter_html
+
         language_parser = tree_sitter_html.language()
 
     elif python_extension == "c":
         # check module availability
         if not is_treeSitterC_available():
-                raise ImportError(
-                    "tree-sitter-c is not available. Please install it to use this function."
-                )
-        
+            raise ImportError(
+                "tree-sitter-c is not available. Please install it to use this function."
+            )
+
         import tree_sitter_c
+
         language_parser = tree_sitter_c.language()
 
     elif python_extension == "c++":
         # check module availability
         if not is_treeSitterCPP_available():
-                raise ImportError(
-                    "tree-sitter-cpp is not available. Please install it to use this function."
-                )
-        
+            raise ImportError(
+                "tree-sitter-cpp is not available. Please install it to use this function."
+            )
+
         import tree_sitter_cpp
+
         language_parser = tree_sitter_cpp.language()
 
     elif python_extension == "c#":
         # check module availability
         if not is_treeSitterCSharp_available():
-                raise ImportError(
-                    "tree-sitter-c-sharp is not available. Please install it to use this function."
-                )
-        
+            raise ImportError(
+                "tree-sitter-c-sharp is not available. Please install it to use this function."
+            )
+
         import tree_sitter_c_sharp
+
         language_parser = tree_sitter_c_sharp.language()
 
     elif python_extension == "json":
         # check module availability
         if not is_treeSitterJson_available():
-                raise ImportError(
-                    "tree-sitter-json is not available. Please install it to use this function."
-                )
-        
+            raise ImportError(
+                "tree-sitter-json is not available. Please install it to use this function."
+            )
+
         import tree_sitter_json
+
         language_parser = tree_sitter_json.language()
 
     else:
-         # check module availability bash
+        # check module availability bash
         if not is_treeSitterBash_available():
-                raise ImportError(
-                    "tree-sitter-bash is not available. Please install it to use this function."
-                )
-        
+            raise ImportError(
+                "tree-sitter-bash is not available. Please install it to use this function."
+            )
+
         import tree_sitter_bash
-        language_parser = tree_sitter_bash.language()        
-    
+
+        language_parser = tree_sitter_bash.language()
 
     # Import the module
     import semantic_text_splitter
