@@ -1,13 +1,15 @@
 import io
 import os
 from functools import lru_cache
+from pathlib import Path
 from tempfile import mkdtemp
-from typing import List, Tuple
+from typing import List, Tuple, Union
 
 from PIL import Image
 from arbol import aprint
-
+from litemind.utils.file_extensions import document_file_extensions
 from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_path
+from PIL import Image
 
 
 @lru_cache()
@@ -306,3 +308,86 @@ def extract_text_and_image_from_document(
 
     doc.close()
     return pages_content
+
+
+def load_document(uris: Union[str, List[str]]) -> List[dict]:
+    """
+    This function loads the text content of documents from a file path, directory path,
+    or a list of paths (files/directories).
+
+    Parameter
+    ---------
+    uris: str | List[str]
+        The URI or file path of the document(s) to process.
+
+    Returns
+    -------
+    List[dict]
+        Returns a list of dictionaries:
+            'id': File name
+            'metadata' : all the metadata available from the document.
+            'text': The extracted text of the document
+    Raises
+    ------
+    ImportError
+        When the user has not installed pymupdf.
+    ValueError
+        If the file given has an unsupport extension.
+    RunTimeError
+        If is unable to open the file.
+    TypeError
+        If the path given is invalid.
+            {"id": filename, "metadata": file metadata, "text": extracted text}
+    """
+    import pymupdf
+
+    # Check if package pymupdf is available:
+    if not is_pymupdf_available():
+        raise ImportError(
+            "pymupdf is not available. Please install it to use this function."
+        )
+
+    def process_file(file_path: Path) -> dict:
+        """Process a single file and extract its metadata and text."""
+        if file_path.suffix[1:] not in document_file_extensions:
+            raise ValueError(f"Unsupported file extension: {file_path.suffix}")
+
+        document_path = uri_to_local_file_path(str(file_path))
+
+        try:
+            file = pymupdf.open(document_path)
+            if file_path.suffix == ".pdf":
+                text = convert_document_to_markdown(document_path)
+            else:
+                text = "".join([page.get_text() for page in file])
+        except Exception as e:
+            raise RuntimeError(f"Failed to open document '{document_path}': {e}")
+
+        # Extract metadata and add file type
+        metadata = file.metadata
+        metadata["filename"] = file_path.stem
+        metadata["filetype"] = file_path.suffix[1:]
+
+        return {"metadata": metadata, "text": text}
+
+    list_documents = []
+    paths = [Path(uris)] if isinstance(uris, str) else [Path(uri) for uri in uris]
+
+    doc_id = 1
+    for path in paths:
+        if path.is_file():
+            doc = process_file(path)
+            doc["id"] = str(doc_id)
+            list_documents.append(doc)
+            doc_id += 1
+        elif path.is_dir():
+            for file_path in path.iterdir():
+                if file_path.is_file():
+                    doc = process_file(path)
+                    doc["id"] = doc_id
+                    list_documents.append(doc)
+                    doc_id += 1
+        else:
+            raise TypeError(f"Invalid path: {path}")
+
+    return list_documents

@@ -13,6 +13,12 @@ document_file_extensions = [
     "json",
     "xml",
     "epub",
+    "py",
+    "java",
+    "c",
+    "cpp",
+    "cs",
+    "sh"
 ]
 table_file_extensions = ["csv", "tab", "tsv", "xls", "xlsx", "ods"]
 archive_file_extensions = ["zip", "tar", "gz", "bz2", "xz", "7z", "rar"]
