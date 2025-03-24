@@ -102,10 +102,19 @@ class GeminiApi(DefaultApi):
         return result
 
     def list_models(
-        self, features: Optional[Sequence[ModelFeatures]] = None
+        self,
+        features: Optional[
+            Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
+        ] = None,
+        non_features: Optional[
+            Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
+        ] = None,
     ) -> List[str]:
 
         try:
+            # Normalise the features:
+            features = ModelFeatures.normalise(features)
+            non_features = ModelFeatures.normalise(non_features)
 
             # Get the full list of models:
             model_list = list(self._model_list)
@@ -118,7 +127,9 @@ class GeminiApi(DefaultApi):
 
             # Filter the models based on the features:
             if features:
-                model_list = self._filter_models(model_list, features=features)
+                model_list = self._filter_models(
+                    model_list, features=features, non_features=non_features
+                )
 
             # Call _callbacks:
             self.callback_manager.on_model_list(model_list)
@@ -133,18 +144,25 @@ class GeminiApi(DefaultApi):
         features: Optional[
             Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
         ] = None,
+        non_features: Optional[
+            Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
+        ] = None,
         exclusion_filters: Optional[Union[str, List[str]]] = None,
     ) -> Optional[str]:
 
         # Normalise the features:
         features = ModelFeatures.normalise(features)
+        non_features = ModelFeatures.normalise(non_features)
 
         # Get the full list of models:
         model_list = self.list_models()
 
         # Filter the models based on the requirements:
         model_list = self._filter_models(
-            model_list, features=features, exclusion_filters=exclusion_filters
+            model_list,
+            features=features,
+            non_features=non_features,
+            exclusion_filters=exclusion_filters,
         )
 
         if model_list:
@@ -183,24 +201,19 @@ class GeminiApi(DefaultApi):
         for feature in features:
 
             if feature == ModelFeatures.TextGeneration:
-                if "models/gemini" not in model_name.lower():
+                if not self._has_text_generation_support(model_name):
                     return False
 
             elif feature == ModelFeatures.ImageGeneration:
-                # FIXME: We need to figure out how to call the video generation API, not working right now.
-                return False
-                # if 'imagen' not in model_name.lower():
-                #     return False
+                if not self._has_image_gen_support(model_name):
+                    return False
 
-            elif feature == ModelFeatures.Reasoning:
-                if (
-                    "models/gemini" not in model_name.lower()
-                    or "thinking" in model_name.lower()
-                ):
+            elif feature == ModelFeatures.Thinking:
+                if not self._has_thinking_support(model_name):
                     return False
 
             elif feature == ModelFeatures.TextEmbeddings:
-                if "text-embedding" not in model_name.lower():
+                if "embedding" not in model_name.lower():
                     return False
 
             elif feature == ModelFeatures.ImageEmbeddings:
@@ -244,6 +257,28 @@ class GeminiApi(DefaultApi):
                     return False
 
         return True
+
+    def _has_text_generation_support(self, model_name: str) -> bool:
+        if (
+            "models/gemini" not in model_name.lower()
+            or "embedding" in model_name.lower()
+        ):
+            return False
+        return True
+
+    def _has_thinking_support(self, model_name: str) -> bool:
+        if (
+            "models/gemini" not in model_name.lower()
+            and "thinking" not in model_name.lower()
+        ):
+            return False
+        return True
+
+    def _has_image_gen_support(self, model_name: str) -> bool:
+        # FIXME: We need to figure out how to call the video generation API, not working right now.
+        return False
+        # if 'imagen' not in model_name.lower():
+        #     return False
 
     def _has_image_support(self, model_name: Optional[str] = None) -> bool:
 
@@ -384,6 +419,18 @@ class GeminiApi(DefaultApi):
             if model_name is None:
                 raise APIError(f"No suitable model with features: {features}")
 
+        # Get system instruction from messages:
+        system_instruction = ""
+        for message in messages:
+            if message.role == "system":
+                for block in message.blocks:
+                    if block.block_type == BlockType.Text:
+                        system_instruction += block.content
+
+        # If reasoning model is selected, we request that the thinking be enclosed in a <thinking> ... <thinking/ tag:
+        if self._has_thinking_support(model_name):
+            system_instruction += f"\n\nAll reasoning (thinking) which precedes the final answer must be enclosed within thinking tags: <thinking>... reasoning goes here ... </thinking>.\n\n"
+
         # Convert user messages -> gemini format
         preprocessed_messages = self._preprocess_messages(
             messages=messages, convert_videos=False
@@ -419,6 +466,7 @@ class GeminiApi(DefaultApi):
                 model_name=model_name,
                 tools=gemini_tools,
                 generation_config=generation_cfg,
+                system_instruction=system_instruction,
             )
 
             # Start chat

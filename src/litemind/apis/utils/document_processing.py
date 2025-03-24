@@ -5,6 +5,7 @@ from pathlib import Path
 from tempfile import mkdtemp
 from typing import List, Tuple, Union
 
+from PIL import Image
 from arbol import aprint
 from litemind.utils.file_extensions import document_file_extensions
 from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_path

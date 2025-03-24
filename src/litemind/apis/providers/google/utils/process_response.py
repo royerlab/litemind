@@ -3,6 +3,7 @@ from typing import Any, Optional, Union
 from pydantic import BaseModel
 
 from litemind.agent.messages.message import Message
+from litemind.apis.utils.extract_thinking import extract_thinking_content
 from litemind.apis.utils.json_to_object import json_to_object
 
 
@@ -17,9 +18,16 @@ def process_response_from_gemini(
     # Text content and tool calls:
     text_content, tool_cals = gemini_response["text"], gemini_response["tool_calls"]
 
+    # Extract the thnking from the text:
+    text_content, thinking_content = extract_thinking_content(text_content)
+
     # If there is text content, add it to the processed response:
     if text_content:
         processed_reponse.append_text(text_content)
+
+    # If there is thinking content, add it to the processed response:
+    if thinking_content:
+        processed_reponse.append_thinking(thinking_content)
 
     # Variable to hold whether the response is a tool use:
     is_tool_use = False

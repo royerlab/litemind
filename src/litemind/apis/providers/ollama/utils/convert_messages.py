@@ -38,6 +38,10 @@ def convert_messages_for_ollama(
                     # Append the message to the list of messages:
                     ollama_messages.append(message_dict)
 
+            elif block.block_type == BlockType.Thinking:
+                # By default we don't send back the thinking content back to the LLM:
+                pass
+
             elif block.block_type == BlockType.Image:
                 # Get the image URI:
                 image_uri = block.content

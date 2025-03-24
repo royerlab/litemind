@@ -105,8 +105,12 @@ class AnthropicApi(DefaultApi):
         else:
             client = self.client
 
+        # get model list without thinking models:
+        model_list = list(self._model_list)
+        model_list = [model for model in model_list if "thinking" not in model]
+
         # Get one model name:
-        model_name = self._model_list[0]
+        model_name = model_list[0]
 
         result = check_anthropic_api_availability(client, model_name)
 
@@ -117,10 +121,21 @@ class AnthropicApi(DefaultApi):
         return result
 
     def list_models(
-        self, features: Optional[Sequence[ModelFeatures]] = None
+        self,
+        features: Optional[
+            Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
+        ] = None,
+        non_features: Optional[
+            Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
+        ] = None,
     ) -> List[str]:
 
         try:
+            # Normalize the features:
+            features = ModelFeatures.normalise(features)
+            non_features = ModelFeatures.normalise(non_features)
+
+            # Get the model list:
             model_list = list(self._model_list)
 
             # Add the models from the super class:
@@ -128,7 +143,9 @@ class AnthropicApi(DefaultApi):
 
             # Filter the models based on the features:
             if features:
-                model_list = self._filter_models(model_list, features=features)
+                model_list = self._filter_models(
+                    model_list, features=features, non_features=non_features
+                )
 
             # Call _callbacks:
             self.callback_manager.on_model_list(model_list)
@@ -143,11 +160,15 @@ class AnthropicApi(DefaultApi):
         features: Optional[
             Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
         ] = None,
+        non_features: Optional[
+            Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
+        ] = None,
         exclusion_filters: Optional[Union[str, List[str]]] = None,
     ) -> Optional[str]:
 
         # Normalise the features:
         features = ModelFeatures.normalise(features)
+        non_features = ModelFeatures.normalise(non_features)
 
         # Get the list of models:
         model_list = self.list_models()
@@ -155,7 +176,10 @@ class AnthropicApi(DefaultApi):
         # Filter models based on requirements:
         # Filter the models based on the requirements:
         model_list = self._filter_models(
-            model_list, features=features, exclusion_filters=exclusion_filters
+            model_list,
+            features=features,
+            non_features=non_features,
+            exclusion_filters=exclusion_filters,
         )
 
         # If we have any models left, return the first one
@@ -200,6 +224,10 @@ class AnthropicApi(DefaultApi):
             elif feature == ModelFeatures.ImageGeneration:
                 return False
 
+            elif feature == ModelFeatures.Thinking:
+                if not self._has_thinking_support(model_name):
+                    return False
+
             elif feature == ModelFeatures.Image:
                 if not self._has_image_support(model_name):
                     return False
@@ -232,6 +260,11 @@ class AnthropicApi(DefaultApi):
 
     def _has_text_gen_support(self, model_name: str) -> bool:
         if not "claude" in model_name.lower():
+            return False
+        return True
+
+    def _has_thinking_support(self, model_name: str) -> bool:
+        if not "thinking" in model_name.lower():
             return False
         return True
 
@@ -413,6 +446,25 @@ class AnthropicApi(DefaultApi):
         # Convert a ToolSet to Anthropic "tools" param if any
         anthropic_tools = format_tools_for_anthropic(toolset) if toolset else NotGiven()
 
+        # Thinking mode:
+        if model_name.endswith("-thinking-high"):
+            budget_tokens = max(1000, max_num_output_tokens // 2 - 1000)
+            thinking = {"type": "enabled", "budget_tokens": budget_tokens}
+            model_name = model_name.replace("-thinking-high", "")
+            temperature = 1.0
+        elif model_name.endswith("-thinking-mid"):
+            budget_tokens = max(1000, max_num_output_tokens // 2 - 1000)
+            thinking = {"type": "enabled", "budget_tokens": budget_tokens}
+            model_name = model_name.replace("-thinking-mid", "")
+            temperature = 1.0
+        elif model_name.endswith("-thinking-low"):
+            budget_tokens = max(1000, max_num_output_tokens // 4 - 1000)
+            thinking = {"type": "enabled", "budget_tokens": budget_tokens}
+            model_name = model_name.replace("-thinking-low", "")
+            temperature = 1.0
+        else:
+            thinking = NotGiven()
+
         # List of new messages part of the response:
         new_messages = []
 
@@ -435,6 +487,7 @@ class AnthropicApi(DefaultApi):
                     max_tokens=max_num_output_tokens,
                     tools=anthropic_tools,
                     system=system_messages,
+                    thinking=thinking,
                     # Pass system message as top-level parameter
                     **kwargs,
                 ) as streaming_response:

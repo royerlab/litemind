@@ -4,6 +4,7 @@ from pydantic import BaseModel
 
 from litemind.agent.messages.message import Message
 from litemind.agent.tools.toolset import ToolSet
+from litemind.apis.utils.extract_thinking import extract_thinking_content
 from litemind.apis.utils.json_to_object import json_to_object
 
 
@@ -56,6 +57,12 @@ def process_response_from_ollama(
 
     # Get text message:
     text_message = ollama_message.get("content", "")
+
+    # Extract thinking block from Ollama message:
+    text_message, thinking = extract_thinking_content(text_message)
+
+    if thinking is not None and len(thinking) > 0:
+        processed_reponse.append_thinking(thinking)
 
     # Append the text message to the processed response:
     if text_message.strip():

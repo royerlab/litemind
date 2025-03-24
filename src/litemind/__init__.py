@@ -1,4 +1,4 @@
-__version__ = "2025.3.7"
+__version__ = "2025.3.15"
 
 from arbol import aprint
 

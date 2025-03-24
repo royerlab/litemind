@@ -12,7 +12,7 @@ class ModelFeatures(Enum):
     ImageGeneration = "ImageGeneration"
     AudioGeneration = "AudioGeneration"
     VideoGeneration = "VideoGeneration"
-    Reasoning = ("Reasoning",)
+    Thinking = ("Thinking",)
     TextEmbeddings = "TextEmbeddings"
     ImageEmbeddings = "ImageEmbeddings"
     AudioEmbeddings = "AudioEmbeddings"
@@ -61,8 +61,41 @@ class ModelFeatures(Enum):
         if all(isinstance(feature, ModelFeatures) for feature in features):
             return features
 
-        # If it is a list of strings, convert to a list of enums , ignoring case:
-        return [ModelFeatures(feature) for feature in features]
+        # Convert the list of strings to lower case:
+        if all(isinstance(feature, str) for feature in features):
+            features = [feature.lower() for feature in features]
+        else:
+            # If anything is not a string, ensure it is a string:
+            features = [str(feature) for feature in features]
+
+        # Create an empty list to hold the normalised enum features:
+        normalised_features = []
+
+        # Iterate over the provided features normalised to lower case strings:
+        for feature in features:
+
+            # By default we have not found the corresponding feature:
+            found = False
+
+            # Iterate over the ModelFeatures enums:
+            for feature_enum in ModelFeatures:
+                # Get the lower case string for the feature:
+                feature_name = feature_enum.name.lower()
+
+                # If the feature is found, add it to the normalised list:
+                if feature_name == feature:
+                    normalised_features.append(feature_enum)
+                    found = True
+                    break
+
+            if not found:
+                # If the feature is not found, raise an error:
+                raise ValueError(
+                    f"Unknown feature: {feature} should be one of {', '.join([f.name for f in ModelFeatures])}"
+                )
+
+        # Return the normalised list of features
+        return normalised_features
 
     def __str__(self):
         return self.name
