@@ -178,11 +178,102 @@ print("ReAct Agent Response:", response)
 # ReAct Agent Response: [Message(role='assistant', content='The current date is 2024-03-08.')]
 ```
 
+### RAG Examples
+This section shows the use of the RAG Agent
+```python
+# Create a vectorestore
+from litemind.apis.utils.document_processing import load_document
+from litemind.agent.rag.chromadb_embeddings import EmbeddingModel
+from litemind.agent.rag.vector_database import ChromaDB
+from litemind import OpenAIApi
+
+# load a document or a list of document
+list_document = load_document('path/to/document(s)')
+
+# Initialize API
+# Initialize the API
+api = OpenAIApi()
+
+# Define Embedding model to use
+embedding_function = EmbeddingModel(api=api, model_name="text-embedding-3-small") # other parameters available
+# Initialize a chroma Client
+chroma_client = ChromaDB(persistent_path='path/where/to/create/vectorestore', collection_name="name_of_collection", embedding_function=embedding_function)
+
+# Create a chroma collection
+chroma_client.create_collection()
+
+# Add to the vectorestore the documents text, the embedding vectore and the metadata of the documents
+chroma_client.create_vectorestore_from_documents(document_list=list_document, embeddin_function=embedding_function, size=1000, overlap=0, trim=False)
+
+# Visualize the new created vectorestore
+chroma_client.show_vectorstore()
+
+
+# Use the local vectorestore with the Rag Agent
+
+# Import needed Object/Function
+from litemind.agent.rag.rag_agent import RagAgent
+from litemind.agent.rag.chromadb_embeddings import EmbeddingModel
+from litemind.agent.rag.vector_database import ChromaDB
+from litemind import OpenAIApi
+from litemind.agent.tools.toolset import ToolSet
+from litemind.agent.agent import Agent
+
+# Initialize the API
+api = OpenAIApi()
+
+# initialize vectore store
+embedding_function = EmbeddingModel(api=api, model_name="text-embedding-3-small")
+
+chroma_client = ChromaDB(persistent_path=os.getcwd(), collection_name="my_test_collection", embedding_function=embedding_function)
+
+# Initialize the Rag Agent
+agent = RagAgent(api=api, chroma_vectorestore=chroma_client, model_name="gpt-4o-mini")
+
+response = agent("Make a summary about the article 'The hGIDGID4 E3 ubiquitin ligase complex targets'") # adding the parameter prompt="custom promt", you can specify a specific prompt for the Rag Agent
+
+print("Rag Agent: ", response)
+
+
+# Use the Rag Agent as a tool for a more general agent
+
+# Initialize the API
+api = OpenAIApi()
+
+# initialize vectore store
+embedding_function = EmbeddingModel(api=api, model_name="text-embedding-3-small")
+
+chroma_client = ChromaDB(persistent_path=os.getcwd(), collection_name="my_test_collection", embedding_function=embedding_function)
+
+# Initialize the Rag Agent
+agent = RagAgent(api=api, chroma_vectorestore=chroma_client, model_name="gpt-4o-mini")
+
+# Initialize the toolset
+available_tool = ToolSet()
+
+# add the Rag agent
+available_tool.add_agent_tool(agent=agent, description="This Agent is a RAG Agent. It gives you helpful context about a question of a user that you might not know about or you have little knowledge about it.")
+
+# Initialize Main Agent
+mainAgent = Agent(api=api, model_name="gpt-4o-mini", toolset=available_tool)
+
+# add description to the agent
+mainAgent.append_system_message(message="You are an helpful scientific assisent in a Lab of a research group at the University. Your main task is to assiste all your scientifc collaboratores using your knowledge and the list of tools that you have a disposition.")
+
+# Ask a general question
+response = mainAgent("What are the main components of a cell? Explain me their structure and function")
+
+
+# See the answer
+print("Agent answer: ", response)
+```
+
+
 ## Concepts
 
 *   **API Abstraction:** The `BaseApi` class defines an abstract interface for interacting with LLM providers. Concrete implementations (e.g., `OpenAIApi`, `GeminiApi`) inherit from `BaseApi` and provide provider-specific implementations for common operations like text generation, image generation, and embeddings. The `CombinedApi` class allows you to use multiple APIs at once.
 *   **Message Handling:** The `Message` class represents a single message in a conversation. It can contain text, images, audio, video, documents, tables, and tool calls. The `Conversation` class manages a sequence of `Message` objects, representing the history of a conversation.
-*   **Agentic AI:** The `Agent` class provides a framework for building conversational agents. It takes an API instance, a model name, and a toolset. The agent can then be used to generate responses to user queries. The `ReActAgent` class extends the `Agent` class to implement the ReAct (Reasoning and Acting) methodology, enabling agents to reason and act in a structured manner.
+*   **Agentic AI:** The `Agent` class provides a framework for building conversational agents. It takes an API instance, a model name, and a toolset. The agent can then be used to generate responses to user queries. The `ReActAgent` class extends the `Agent` class to implement the ReAct (Reasoning and Acting) methodology, enabling agents to reason and act in a structured manner. `RagAgent` class extends the `Agent` class to implement a RAG Agent (Retrieval Agumentation) that enable agents to use information contained into a vectorestore, giving the necessary context to specific question for which the LLM was not train on.
 *   **Tool Integration:** The `ToolSet` class manages a collection of tools. The `FunctionTool` class allows you to wrap Python functions as tools. The agent can then use these tools to perform actions and interact with the external world.
 *   **Model Features:** The `ModelFeatures` enum defines the features supported by the models (e.g., text generation, image generation, audio transcription). The `get_best_model` method in the `BaseApi` class allows you to select the best model based on the required features.
 

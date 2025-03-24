@@ -8,7 +8,7 @@ from litemind.agent.rag.text_splitting import (
     markdown_splitting,
     semantic_splitting,
 )
-from litemind.utils.database import is_chromadb_available
+from litemind.agent.rag.database import is_chromadb_available
 
 
 class ChromaDB:
@@ -175,12 +175,11 @@ class ChromaDB:
             If the rename of the collection fails.
         """
         try:
-            self.chroma_client.modify(name=name)
+            self.chroma_client.get_collection(self.get_collection_name()).modify(name=name)
+            print(f"The collection {self.collection_name} was renamed in {name}")
             self.collection_name = name
         except Exception as e:
             raise RuntimeError(f"Runtimerror {e}")
-
-        print(f"The collection {self.collection_name} was renamed in {name}")
 
     def get_settings(self) -> chromadb.config.Settings:
         """

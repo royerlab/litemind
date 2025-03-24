@@ -119,6 +119,15 @@ extra-dependencies = [
     "pytest-html",
     "pytest-cov",
     "pytest-md-report",
+    semantic-text-splitter,
+    tree-sitter-python,
+    tree-sitter-java,
+    tree-sitter-c,
+    tree-sitter-cpp,
+    tree-sitter-csharp,
+    tree-sitter-html,
+    tree-sitter-json,
+    tree-sitter-bash
 ]
 
 
