@@ -1,9 +1,8 @@
-from functools import lru_cache
-
 from arbol import aprint
 
 # Cache the result of the check_ollama_api_availability function
 _cached_check_ollama_api_availability = None
+
 
 def check_ollama_api_availability(client):
     """
@@ -40,6 +39,7 @@ def check_ollama_api_availability(client):
 
         # print stack trace:
         import traceback
+
         traceback.print_exc()
 
         result = False

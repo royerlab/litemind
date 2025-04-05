@@ -9,7 +9,7 @@ black .
 mkdir test_reports
 
 # Run tests and generate test report:
-# filtering specific tests: -k "tools"
+# filtering specific tests: -k_dict "tools"
 pytest  --cov-report json:./test_reports/test_coverage.json --md-report --md-report-verbose=1 --md-report-output=./test_reports/test_report.md .
 
 # Generate updated ANALYSIS.md and README.md:

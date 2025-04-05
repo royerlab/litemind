@@ -4,7 +4,6 @@ from typing import Dict, List, Optional, Sequence, Union
 from arbol import aprint
 
 from litemind.agent.messages.message import Message
-from litemind.agent.messages.message_block_type import BlockType
 from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.base_api import ModelFeatures
 from litemind.apis.callbacks.callback_manager import CallbackManager
@@ -24,11 +23,17 @@ from litemind.apis.providers.ollama.utils.list_models import _get_ollama_models_
 from litemind.apis.providers.ollama.utils.process_response import (
     process_response_from_ollama,
 )
+from litemind.media.types.media_action import Action
+from litemind.media.types.media_text import Text
 
 
 class OllamaApi(DefaultApi):
     """
     Ollama API client for interacting with the Ollama server that conforms to the BaseApi interface.
+
+    Ollama models support text generation, some support image inputs and thinking,
+    but do not support all features natively. Support for these features
+    are provided by the Litemind API via our fallback mechanism.
 
     This class provides methods to check API availability, list models, get the best model,
     check model support for specific features, and generate text using the Ollama API.
@@ -404,11 +409,13 @@ class OllamaApi(DefaultApi):
 
             # Find the first text block in the system message:
             for block in system_message.blocks:
-                if block.block_type == BlockType.Text:
+                if block.has_type(Text):
+                    text: str = block.media.text
+
                     # Append the instruction to the text block:
-                    block.content += "\n"
-                    block.content += "Think carefully step-by-step before responding: restate the input, analyze it, consider options, make a plan, and proceed methodically to your conclusion. \n"
-                    block.content += f"Enclose all reasoning within <thinking>your step-by-step analysis here</thinking> tags before providing your final answer.\n\n"
+                    text += "\n"
+                    text += "Think carefully step-by-step before responding: restate the input, analyze it, consider options, make a plan, and proceed methodically to your conclusion. \n"
+                    text += f"All reasoning (thinking) which precedes the final answer must be enclosed within thinking tags: <thinking> reasoning goes here... </thinking> final answer here...\n\n"
                     break
 
         # Get max num of output tokens for model if not provided:
@@ -459,7 +466,7 @@ class OllamaApi(DefaultApi):
                 new_messages.append(response)
 
                 # If the model wants to use a tool, parse out the tool calls:
-                if not response.has(BlockType.Tool):
+                if not response.has(Action):
                     # Break out of the loop if no tool use is required anymore:
                     break
 

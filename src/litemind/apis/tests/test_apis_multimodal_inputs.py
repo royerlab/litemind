@@ -3,7 +3,7 @@ import pytest
 from litemind import API_IMPLEMENTATIONS
 from litemind.agent.messages.message import Message
 from litemind.apis.base_api import ModelFeatures
-from litemind.media.media_resources import MediaResources
+from litemind.ressources.media_resources import MediaResources
 
 
 @pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
@@ -11,6 +11,7 @@ class TestBaseApiImplementationsMultimodalInputs(MediaResources):
     """
     A tests suite that runs the same tests on each ApiClass
     implementing the abstract BaseApi interface.
+    These tests are for the multimodal inputs of the API.
     """
 
     def test_text_generation_with_image_url(self, api_class):
@@ -105,7 +106,7 @@ class TestBaseApiImplementationsMultimodalInputs(MediaResources):
         # User message:
         user_message = Message(role="user")
         user_message.append_text("Can you describe what you see in the image?")
-        image_path = self._get_local_test_image_uri("python.png")
+        image_path = self.get_local_test_image_uri("python.png")
         user_message.append_image(image_path)
 
         messages.append(user_message)
@@ -156,7 +157,7 @@ class TestBaseApiImplementationsMultimodalInputs(MediaResources):
         # User message:
         user_message = Message(role="user")
         user_message.append_text("Can you describe what you see in the image?")
-        image_path = self._get_local_test_image_uri("future.jpeg")
+        image_path = self.get_local_test_image_uri("future.jpeg")
         user_message.append_image(image_path)
 
         messages.append(user_message)
@@ -203,7 +204,7 @@ class TestBaseApiImplementationsMultimodalInputs(MediaResources):
         # User message:
         user_message = Message(role="user")
         user_message.append_text("Can you describe what you see in the image?")
-        image_path = self._get_local_test_image_uri("beach.webp")
+        image_path = self.get_local_test_image_uri("beach.webp")
         user_message.append_image(image_path)
 
         messages.append(user_message)
@@ -250,7 +251,7 @@ class TestBaseApiImplementationsMultimodalInputs(MediaResources):
         # User message:
         user_message = Message(role="user")
         user_message.append_text("Can you describe what you see in the image?")
-        image_path = self._get_local_test_image_uri("field.gif")
+        image_path = self.get_local_test_image_uri("field.gif")
         user_message.append_image(image_path)
 
         messages.append(user_message)
@@ -299,8 +300,8 @@ class TestBaseApiImplementationsMultimodalInputs(MediaResources):
         user_message.append_text(
             "Can you compare these two images? What is similar and what is different?"
         )
-        cat_image_path = self._get_local_test_image_uri("cat.jpg")
-        panda_image_path = self._get_local_test_image_uri("panda.jpg")
+        cat_image_path = self.get_local_test_image_uri("cat.jpg")
+        panda_image_path = self.get_local_test_image_uri("panda.jpg")
         user_message.append_image(cat_image_path)
         user_message.append_image(panda_image_path)
 
@@ -359,7 +360,7 @@ class TestBaseApiImplementationsMultimodalInputs(MediaResources):
         # User message:
         user_message = Message(role="user")
         user_message.append_text("Can you describe what you heard in the audio file?")
-        audio_path = self._get_local_test_audio_uri("harvard.wav")
+        audio_path = self.get_local_test_audio_uri("harvard.wav")
         user_message.append_audio(audio_path)
 
         messages.append(user_message)
@@ -456,7 +457,7 @@ class TestBaseApiImplementationsMultimodalInputs(MediaResources):
         # User message:
         user_message = Message(role="user")
         user_message.append_text("Can you describe what you see in the video?")
-        video_path = self._get_local_test_video_uri("flying.mp4")
+        video_path = self.get_local_test_video_uri("flying.mp4")
         user_message.append_video(video_path)
         messages.append(user_message)
 

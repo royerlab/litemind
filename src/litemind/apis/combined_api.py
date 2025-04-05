@@ -1,7 +1,7 @@
 from typing import Dict, List, Optional, Sequence, Union
 
-from PIL.Image import Image
 from arbol import aprint
+from PIL.Image import Image
 from pydantic import BaseModel
 
 from litemind.agent.messages.message import Message

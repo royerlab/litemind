@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "litemind"  # <-- Add the project name here
 dynamic = ["version"]
 description = "A wrapper API around LLM APIs and agentic AI framework"
-authors = [{name = "Loic A. Royer"}]
+authors = [{ name = "Loic A. Royer" }]
 license = "BSD-3-Clause"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -37,16 +37,18 @@ dependencies = [
     "numpy",
     "chardet",
     "pyyaml",
-    "absl-py"
+    "absl-py",
+    "scipy",
+    "numpy",
 ]
 
 [tool.hatch.build.targets.sdist]
 ignore-vcs = true
 packages = ["src/litemind"]
 include = [
-  "**",
-  "README.md",
-  "LICENSE",
+    "**",
+    "README.md",
+    "LICENSE",
 ]
 exclude = [
     "**/tests/**",
@@ -80,7 +82,8 @@ dev = [
 # Optional dependencies:
 rag = [
     "fastembed",
-    "chromadb"
+    "chromadb",
+    "qdrant-client"
 ]
 whisper = [
     "openai-whisper"
@@ -88,6 +91,7 @@ whisper = [
 documents = [
     "pymupdf",
     "pymupdf4llm",
+    "openpyxl"
 ]
 tables = [
     "tabulate"
@@ -95,6 +99,9 @@ tables = [
 videos = [
     "ffmpeg-python",
     "imageio[ffmpeg]",
+]
+audio = [
+    "soundfile"
 ]
 
 
@@ -104,11 +111,16 @@ litemind = "litemind.tools.litemind_tools:main"
 
 [tool.hatch.envs.hatch-test]
 default-args = ["src/"]
+exclude = [
+    "sandbox",
+]
 extra-dependencies = [
+    "qdrant-client",
     "chromadb",
     "openai-whisper",
     "pymupdf",
     "pymupdf4llm",
+    "openpyxl",
     "pandas",
     "numpy",
     "chardet",
@@ -119,6 +131,8 @@ extra-dependencies = [
     "pytest-html",
     "pytest-cov",
     "pytest-md-report",
+    "pypdf",
+    "soundfile"
 ]
 
 

@@ -242,6 +242,24 @@ class BaseCallbacks(ABC):
         """
         pass
 
+    def on_document_embedding(
+        self, document_uris: List[str], embeddings: Sequence[Sequence[float]], **kwargs
+    ) -> None:
+        """
+        Called when document embeddings are generated.
+
+        Parameters
+        ----------
+        document_uris: List[str]
+            The input video URIs.
+        embeddings: Sequence[Sequence[float]]
+            The generated embeddings.
+        kwargs: dict
+            Other and additional keyword arguments.
+
+        """
+        pass
+
     def on_image_description(self, image_uri: str, description: str, **kwargs) -> None:
         """
         Called when an image is described.
@@ -282,6 +300,23 @@ class BaseCallbacks(ABC):
         Parameters
         ----------
         video_uri: str
+            The video URI.
+        description: str
+            The description.
+        kwargs: dict
+            Other and additional keyword arguments.
+        """
+        pass
+
+    def on_document_description(
+        self, document_uri: str, description: str, **kwargs
+    ) -> None:
+        """
+        Called when a document is described.
+
+        Parameters
+        ----------
+        document_uri: str
             The video URI.
         description: str
             The description.

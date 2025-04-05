@@ -1,20 +1,20 @@
 import copy
-from typing import Union
+from typing import Any, Type
 
-from numpy import ndarray
-from pandas import DataFrame
-from pydantic import BaseModel
-
-from litemind.agent.messages.message_block_type import BlockType
-from litemind.agent.messages.tool_call import ToolCall
-from litemind.agent.messages.tool_use import ToolUse
+from litemind.media.media_base import MediaBase
+from litemind.media.types.media_object import Object
+from litemind.media.types.media_text import Text
 
 
 class MessageBlock:
+    """
+    Message blocks are the building blocks of messages.
+    Each message block is a container for media content and its associated attributes.
+    """
+
     def __init__(
         self,
-        block_type: Union[str, BlockType],
-        content: Union[str, BaseModel, ndarray, DataFrame, ToolCall, ToolUse],
+        media: MediaBase,
         **attributes,
     ):
         """
@@ -22,18 +22,78 @@ class MessageBlock:
 
         Parameters
         ----------
-        block_type: Union[str, BlockType]
-            The type of the block (e.g., 'text', 'json', 'image', 'audio', 'video', 'document', table, tool ).
-        content: Union[str, BaseModel, ndarray, ]
-            The content of the block. Can be a free string, a JSON string, a URI, a numpy array, a panda frame, or a Pydantic model.
+        media: MediaBase
+            The media content of the block. Can be a free string, a JSON string, a URI, a numpy array, a panda frame, or a Pydantic model.
         """
-        if isinstance(block_type, str):
-            block_type = BlockType.from_str(block_type)
-        self.block_type: BlockType = block_type
-        self.content: Union[str, BaseModel, ndarray, DataFrame, ToolCall, ToolUse] = (
-            content
-        )
-        self.attributes = attributes
+        self.media: MediaBase = media
+        self.attributes: dict = attributes
+
+    def get_content(self) -> Any:
+        """
+        Get the content of the message block.
+
+        Returns
+        -------
+        Any
+            The content of the message block.
+        """
+        return self.media.get_content()
+
+    def has_type(self, block_type: Type[MediaBase]) -> bool:
+        """
+        Returns True if the message block has the specified media type.
+
+        Parameters
+        ----------
+        block_type: Type[MediaBase]
+            The media type to check.
+
+        Returns
+        -------
+        bool
+        True if this message block has the specified media type.
+
+        """
+        return isinstance(self.media, block_type)
+
+    def get_type(self) -> Type[MediaBase]:
+        """
+        Returns the message block type.
+
+        Returns
+        -------
+        Type[MediaBase]
+        The message block type.
+
+        """
+
+        return type(self.media)
+
+    def get_type_name(self) -> str:
+        """
+        Returns the message block type name.
+
+        Returns
+        -------
+        str
+            The message block type name.
+        """
+        return self.get_type().__name__
+
+    def has_attribute(self, attribute_key):
+        """
+        Check if the message block has the specified attribute.
+
+        Parameters
+        ----------
+        attribute_key: str
+            The attribute key to check.
+
+        Returns
+        -------
+
+        """
+        return attribute_key in self.attributes
 
     def copy(self) -> "MessageBlock":
         """
@@ -45,9 +105,7 @@ class MessageBlock:
             A copy of the message block.
 
         """
-        return MessageBlock(
-            block_type=self.block_type, content=self.content, **self.attributes
-        )
+        return MessageBlock(media=self.media, **self.attributes)
 
     def __deepcopy__(self, memo):
         """
@@ -59,8 +117,7 @@ class MessageBlock:
             A deep copy of the message block.
         """
         return MessageBlock(
-            block_type=self.block_type,
-            content=copy.deepcopy(self.content, memo),
+            media=copy.deepcopy(self.media, memo),
             **copy.deepcopy(self.attributes, memo),
         )
 
@@ -78,24 +135,25 @@ class MessageBlock:
         bool
             True if the text is found in the message block, False otherwise.
         """
-        return text in str(self.content)
+        return text in str(self.get_content())
 
     def __str__(self):
         """
         Return the message block as a string.
+
         Returns
         -------
         str
             The message block as a string.
         """
-        if self.block_type == BlockType.Text:
-            return self.content
-        elif self.block_type == BlockType.Thinking:
-            return f"<thinking>\n{self.content.strip()}\n<thinking/>\n"
-        elif type(self.content) == str:
-            return f"{self.block_type}: {self.content}"
+        if isinstance(self.media, Text):
+            return self.media.text
+        elif "thinking" in self.attributes:
+            return f"<thinking>\n{self.get_content().strip()}\n<thinking/>\n"
+        elif self.has_type(Object):
+            return f"{type(self.get_content()).__name__}: {self.get_content()}"
         else:
-            return f"{type(self.content).__name__}: {self.content}"
+            return f"{type(self.media).__name__}: {str(self.media)}"
 
     def __repr__(self):
         """
@@ -116,16 +174,4 @@ class MessageBlock:
             The length of the content of the message block.
         """
 
-        if isinstance(self.content, str):
-            return len(self.content)
-        elif isinstance(self.content, BaseModel):
-            return len(self.content.model_dump())
-        elif isinstance(self.content, ndarray):
-            return self.content.size
-        elif isinstance(self.content, DataFrame):
-            content: DataFrame = self.content
-            return content.size
-        elif isinstance(self.content, ToolUse):
-            return len(str(self.content.result))
-        else:
-            return len(str(self.content))
+        return len(self.media)

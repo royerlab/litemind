@@ -1,32 +1,40 @@
 import copy
 import os
 from abc import ABC
-from json import loads
-from typing import Any, List, Optional, Sequence, Union
+from typing import Any, List, Optional, Sequence, Type, Union
 
 from pydantic import BaseModel
 
+from litemind.agent.messages.actions.tool_call import ToolCall
+from litemind.agent.messages.actions.tool_use import ToolUse
 from litemind.agent.messages.message_block import MessageBlock
-from litemind.agent.messages.message_block_type import BlockType
-from litemind.agent.messages.tool_call import ToolCall
-from litemind.agent.messages.tool_use import ToolUse
-from litemind.agent.utils.folder_description import (
-    file_info_header,
-    generate_tree_structure,
-    is_text_file,
-    read_binary_file_info,
-    read_file_content,
-)
+from litemind.media.media_base import MediaBase
+from litemind.media.types.media_action import Action
+from litemind.media.types.media_audio import Audio
+from litemind.media.types.media_code import Code
+from litemind.media.types.media_document import Document
+from litemind.media.types.media_image import Image
+from litemind.media.types.media_json import Json
+from litemind.media.types.media_object import Object
+from litemind.media.types.media_table import Table
+from litemind.media.types.media_text import Text
+from litemind.media.types.media_video import Video
 from litemind.utils.extract_archive import extract_archive
 from litemind.utils.file_extensions import (
     archive_file_extensions,
     audio_file_extensions,
     document_file_extensions,
     image_file_extensions,
-    table_file_extensions,
     video_file_extensions,
 )
-from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_path
+from litemind.utils.folder_description import (
+    file_info_header,
+    generate_tree_structure,
+    is_text_file,
+    read_binary_file_info,
+    read_file_content,
+)
+from litemind.utils.uri_utils import is_uri
 
 
 class Message(ABC):
@@ -198,6 +206,37 @@ class Message(ABC):
 
         return message
 
+    def append_media(self, media: MediaBase, **kwargs) -> MessageBlock:
+        """
+        Append a media block to the message.
+
+        Parameters
+        ----------
+        media : MediaBase
+            The media block to append.
+        kwargs : dict
+            Additional attributes for the media block.
+        """
+
+        # Append the media block:
+        return self.append_block(MessageBlock(media=media, **kwargs))
+
+    def append_text(self, text: str, **kwargs) -> MessageBlock:
+        """
+        Append text to the message.
+
+        Parameters
+        ----------
+        text : str
+            The text to append to the message.
+        kwargs: dict
+            Additional attributes for the text block.
+
+        """
+
+        # Append the text block:
+        return self.append_block(MessageBlock(media=Text(text=text), **kwargs))
+
     def append_thinking(self, thinking_text: str, **kwargs) -> MessageBlock:
         """
         Append a thinking block to the message.
@@ -220,28 +259,15 @@ class Message(ABC):
         if not isinstance(thinking_text, str):
             raise ValueError(f"Text must be a string, not {type(thinking_text)}")
 
+        # Add 'thinking' to the attributes:
+        kwargs["thinking"] = True
+
         # Append the thinking block:
-        return self.append_block(
-            MessageBlock(block_type="thinking", content=thinking_text, **kwargs)
-        )
+        return self.append_block(MessageBlock(media=Text(text=thinking_text), **kwargs))
 
-    def append_text(self, text: str) -> MessageBlock:
-        """
-        Append text to the message.
-
-        Parameters
-        ----------
-        text : str
-            The text to append to the message.
-        """
-        # Check that it is really a string:
-        if not isinstance(text, str):
-            raise ValueError(f"Text must be a string, not {type(text)}")
-
-        # Append the text block:
-        return self.append_block(MessageBlock(block_type="text", content=text))
-
-    def append_json(self, json_str: str, source: Optional[str] = None) -> MessageBlock:
+    def append_json(
+        self, json_str: str, source: Optional[str] = None, **kwargs
+    ) -> MessageBlock:
         """
         Append json to the message.
 
@@ -251,25 +277,18 @@ class Message(ABC):
             The structured text to append to the message.
         source : Optional[str]
             The source of the json (e.g., file path or url).
+        kwargs: dict
+            Additional attributes for the json block.
 
         """
 
-        # Check that it is correctly formatted json:
-        try:
-            # parse json string using json library to check if it correctly formatted:
-            parsed_json = loads(json_str)
-            assert parsed_json and isinstance(parsed_json, dict)
-
-        except:
-            raise ValueError(f"Json must be correctly formatted")
-
         # Append the json block:
         return self.append_block(
-            MessageBlock(block_type="json", content=json_str, source=source)
+            MessageBlock(media=Json(json_str), source=source, **kwargs)
         )
 
     def append_code(
-        self, code: str, lang: str = "python", source: Optional[str] = None
+        self, code: str, lang: str = "python", source: Optional[str] = None, **kwargs
     ) -> MessageBlock:
         """
         Append code to the message.
@@ -282,18 +301,18 @@ class Message(ABC):
             The language of the code (default: 'python').
         source : Optional[str]
             The source of the code (e.g., file path or url).
+        kwargs: dict
+            Additional attributes for the json block.
         """
-
-        # Check that it is really a string:
-        if not isinstance(code, str):
-            raise ValueError(f"Code must be a string, not {type(code)}")
 
         # Append the code block:
         return self.append_block(
-            MessageBlock(block_type="code", content=code, lang=lang, source=source)
+            MessageBlock(media=Code(code=code, lang=lang), source=source, **kwargs)
         )
 
-    def append_object(self, obj: BaseModel) -> MessageBlock:
+    def append_object(
+        self, obj: BaseModel, source: Optional[str] = None, **kwargs
+    ) -> MessageBlock:
         """
         Append a Pydantic object to the message.
 
@@ -301,48 +320,17 @@ class Message(ABC):
         ----------
         obj : BaseModel
             The object to append to the message.
+        source : Optional[str]
+            The source of the object (e.g., file path or url).
+        kwargs: dict
+            Additional attributes for the json block.
         """
-
-        # Check that it is a Pydantic object:
-        if not isinstance(obj, BaseModel):
-            raise ValueError(f"Object must be a Pydantic object, not {type(obj)}")
 
         # Append the object block:
-        return self.append_block(MessageBlock(block_type="object", content=obj))
-
-    def append_uri(
-        self, uri: str, block_type: str, source: Optional[str] = None
-    ) -> MessageBlock:
-        """
-        Append a URI to the message.
-
-        Parameters
-        ----------
-        uri : str
-            The URI to append.
-        block_type : str
-            The type of the block (e.g., 'image', 'audio', 'video', 'document')
-        source : Optional[str]
-            The source of the URI (e.g., file path or url).
-        """
-
-        # Check that it is a valid URI:
-        if (
-            not uri.startswith("http")
-            and not uri.startswith("file")
-            and not uri.startswith("data")
-        ):
-            raise ValueError(
-                f"Invalid URI: '{uri}' (must start with 'http', 'file', or 'data')"
-            )
-
-        # Append the URI block:
-        return self.append_block(
-            MessageBlock(block_type=block_type, content=uri, source=source)
-        )
+        return self.append_block(MessageBlock(media=Object(obj), **kwargs))
 
     def append_image(
-        self, image_uri: str, source: Optional[str] = None
+        self, image_uri: str, source: Optional[str] = None, **kwargs
     ) -> MessageBlock:
         """
         Append an image to the message.
@@ -353,23 +341,17 @@ class Message(ABC):
             The image to append.
         source : Optional[str]
             The source of the image (e.g., file path or url).
+        kwargs: dict
+            Additional attributes for the image block.
         """
 
-        # Check that it is a valid image URI (including data uri):
-        if (
-            not image_uri.startswith("http")
-            and not image_uri.startswith("file")
-            and not image_uri.startswith("data")
-        ):
-            raise ValueError(
-                f"Invalid image URI: '{image_uri}' (must start with 'http', 'file', or 'data')"
-            )
-
         # Append the image block:
-        return self.append_uri(image_uri, "image", source=source)
+        return self.append_block(
+            MessageBlock(media=Image(uri=image_uri), source=source, **kwargs)
+        )
 
     def append_audio(
-        self, audio_uri: str, source: Optional[str] = None
+        self, audio_uri: str, source: Optional[str] = None, **kwargs
     ) -> MessageBlock:
         """
         Append an audio to the message.
@@ -380,23 +362,18 @@ class Message(ABC):
             The audio to append.
         source : Optional[str]
             The source of the audio (e.g., file path or url).
+        kwargs : dict
+            Additional attributes for the audio block.
+
         """
 
-        # Check that it is a valid audio URI (including data uri):
-        if (
-            not audio_uri.startswith("http")
-            and not audio_uri.startswith("file")
-            and not audio_uri.startswith("data")
-        ):
-            raise ValueError(
-                f"Invalid audio URI: '{audio_uri}' (must start with 'http', 'file', or 'data')"
-            )
-
         # Append the audio block:
-        return self.append_uri(audio_uri, "audio", source=source)
+        return self.append_block(
+            MessageBlock(media=Audio(uri=audio_uri), source=source, **kwargs)
+        )
 
     def append_video(
-        self, video_uri: str, source: Optional[str] = None
+        self, video_uri: str, source: Optional[str] = None, **kwargs
     ) -> MessageBlock:
         """
         Append a video to the message.
@@ -407,16 +384,14 @@ class Message(ABC):
             The video to append.
         source : Optional[str]
             The source of the video (e.g., file path or url).
+        kwargs : dict
+            Additional attributes for the video block.
         """
 
-        # Check that  the file extension is valid:
-        if not any(video_uri.endswith(ext) for ext in video_file_extensions):
-            raise ValueError(
-                f"Invalid video URI: '{video_uri}' (must have a valid video file extension)"
-            )
-
         # Append the video block:
-        return self.append_uri(video_uri, "video", source=source)
+        return self.append_block(
+            MessageBlock(Video(uri=video_uri), source=source, **kwargs)
+        )
 
     def append_document(
         self, document_uri: str, source: Optional[str] = None
@@ -432,18 +407,10 @@ class Message(ABC):
             The source of the document (e.g., file path or url).
         """
 
-        # Check that the file extension is valid:
-        if not any(document_uri.endswith(ext) for ext in document_file_extensions):
-            # If it is a remote URL, then it is ok to not see a correct extension!
-            if document_uri.startswith("http"):
-                pass
-            else:
-                raise ValueError(
-                    f"Invalid document URI: '{document_uri}' (must have a valid document file extension)"
-                )
-
         # Append the document block:
-        return self.append_uri(document_uri, "document", source=source)
+        return self.append_block(
+            MessageBlock(Document(uri=document_uri), source=source)
+        )
 
     def append_table(
         self, table: Union[str, "ndarray", "DataFrame"], source: Optional[str] = None
@@ -459,51 +426,39 @@ class Message(ABC):
             The source of the table (e.g., file path or url).
         """
 
-        # If table is an URI of table file (csv, tsv, xls, xlsx, etc.) download file and load it as a pandas DataFrame:
-        if isinstance(table, str):
-
-            # source is URI that the table comes from:
-            source = table
-
-            # Check that it is a valid table URI:
-            if not table.startswith("http") and not table.startswith("file"):
-                raise ValueError(
-                    f"Invalid table URI: '{table}' (must start with 'http' or 'file')"
-                )
-
-            # Check that the file extension is valid:
-            if not any(table.endswith(ext) for ext in table_file_extensions):
-                raise ValueError(
-                    f"Invalid table URI: '{table}' (must have a valid table file extension)"
-                )
-
-            # Download the table file to a local temp file using download_table_to_temp_file:
-            table = uri_to_local_file_path(table)
-
-            # Detect character encoding:
-            import chardet
-
-            with open(table, "rb") as f:
-                result = chardet.detect(f.read())
-
-            # Download the table file taking care of the character encoding and errors
-            from pandas import read_csv
-
-            table = read_csv(table, encoding=result["encoding"])
-
         # Check that it is a numpy array or a pandas DataFrame:
         from numpy import ndarray
         from pandas import DataFrame
 
-        if not (isinstance(table, ndarray) or isinstance(table, DataFrame)):
+        # If table is an URI of table file (csv, tsv, xls, xlsx, etc.) download file and load it as a pandas DataFrame:
+        if isinstance(table, str) and is_uri(table):
+
+            # source is URI that the table comes from:
+            source = table
+
+            # Create a table block from the URI:
+            block = MessageBlock(Table(table), source=source)
+
+        elif isinstance(table, ndarray):
+
+            # Convert numpy array to DataFrame:
+            table = DataFrame(table)
+
+            # Create a table block from the DataFrame:
+            block = MessageBlock(Table.from_dataframe(table), source=source)
+
+        elif isinstance(table, DataFrame):
+
+            # Create a table block from the DataFrame:
+            block = MessageBlock(Table.from_dataframe(table), source=source)
+
+        else:
             raise ValueError(
                 f"Table must be a numpy array or a pandas DataFrame, not {type(table)}"
             )
 
         # Append the table block:
-        return self.append_block(
-            MessageBlock(block_type="table", content=table, source=source)
-        )
+        return self.append_block(block)
 
     def append_folder(
         self,
@@ -513,7 +468,7 @@ class Message(ABC):
         excluded_files: List[str] = None,
         all_archive_files: bool = False,
         include_hidden_files: bool = False,
-    ) -> MessageBlock:
+    ):
         """
         Append a folder to the message.
 
@@ -537,6 +492,26 @@ class Message(ABC):
 
         # Expand folder string into an absolute path:
         folder = os.path.abspath(folder)
+
+        # If folder does not exist, then append a message that explains that:
+        if not os.path.exists(folder):
+            self.append_text(f"Folder '{folder}' does not exist.")
+            return
+
+        # if folder is empty (does not contain any files or folders) then append a message that explains that:
+        if not os.listdir(folder):
+            self.append_text(f"Folder '{folder}' is empty.")
+            return
+
+        # If folder is a file, then append the file:
+        if os.path.isfile(folder):
+            # Get the file path and URI
+            file_path = folder
+            file_uri = "file://" + file_path
+
+            # Append the file to the message:
+            self.append_text(f"File '{folder}' is not a folder.")
+            return
 
         # 1) Generate and append the directory tree (with sizes, no timestamps).
         tree_structure = generate_tree_structure(
@@ -678,9 +653,7 @@ class Message(ABC):
         """
 
         # Create a new tool use message block:
-        block = MessageBlock(
-            block_type=BlockType.Tool, content=ToolCall(tool_name, arguments, id)
-        )
+        block = MessageBlock(media=Action(ToolCall(tool_name, arguments, id)))
 
         # Append the tool use block to the message:
         return self.append_block(block)
@@ -704,9 +677,7 @@ class Message(ABC):
         """
 
         # Create a new tool use message block:
-        block = MessageBlock(
-            block_type=BlockType.Tool, content=ToolUse(tool_name, arguments, result, id)
-        )
+        block = MessageBlock(media=Action(ToolUse(tool_name, arguments, result, id)))
 
         # Append the tool use block to the message:
         return self.append_block(block)
@@ -742,12 +713,12 @@ class Message(ABC):
         for block in self.blocks:
 
             # Check if the block is a text block and contains the filter string:
-            if block.block_type == BlockType.Text and any(
-                f in block.content for f in filters
+            if isinstance(block.media, Text) and any(
+                f in block.get_content() for f in filters
             ):
                 # Parse the string to extract text strings in the form: "```... ```"
                 # and create a new markdown block for each one.
-                text = "" + block.content
+                text = "" + block.get_content()
 
                 # Extract markdown blocks from the text:
                 while "```" in text:
@@ -760,16 +731,12 @@ class Message(ABC):
                         start = text.find("\n", start + 3) + 1
                         # add the markdown block to the list:
                         markdown_blocks.append(
-                            MessageBlock(
-                                block_type=BlockType.Text, content=text[start:end]
-                            )
+                            MessageBlock(media=Text(text[start:end]))
                         )
                     else:
                         # add the markdown block to the list:
                         markdown_blocks.append(
-                            MessageBlock(
-                                block_type=BlockType.Text, content=text[start : end + 3]
-                            )
+                            MessageBlock(media=Text(text[start : end + 3]))
                         )
 
                     # remove the markdown block from the text:
@@ -819,17 +786,17 @@ class Message(ABC):
             True if the string is found, False otherwise.
         """
         for block in self.blocks:
-            if item in str(block.content):
+            if item in str(block):
                 return True
         return False
 
-    def has(self, block_type: BlockType):
+    def has(self, block_type: Type[MediaBase]):
         """
         Check if the given block type is in the message blocks.
 
         Parameters
         ----------
-        block_type : BlockType
+        block_type : Type[MediaBase]
             The block type to check for.
 
         Returns
@@ -838,7 +805,7 @@ class Message(ABC):
             True if the block type is found, False otherwise.
         """
         for block in self.blocks:
-            if block.block_type == block_type:
+            if isinstance(block.media, block_type):
                 return True
         return False
 
@@ -877,8 +844,7 @@ class Message(ABC):
         """
         plain_text = ""
         for block in self.blocks:
-            if block.block_type == BlockType.Text:
-                plain_text += block.content + "\n"
+            plain_text += str(block.media) + "\n"
         return plain_text
 
     def __repr__(self) -> str:
@@ -915,13 +881,25 @@ class Message(ABC):
         bool
             True if the messages are equal, False otherwise.
         """
+
+        # Check if is a Message:
+        if not isinstance(other, Message):
+            raise TypeError(f"Cannot compare {type(other)} with {type(self)}")
+
+        # Check if the roles are the same:
         if self.role != other.role:
             return False
+
+        # Check that there is the same number of blocks:
         if len(self.blocks) != len(other.blocks):
             return False
+
+        # Check that the blocks are the same:
         for block1, block2 in zip(self.blocks, other.blocks):
             if block1 != block2:
                 return False
+
+        # If all checks pass, the messages are equal:
         return True
 
     def __ne__(self, other: "Message") -> bool:
@@ -934,37 +912,95 @@ class Message(ABC):
         """
         return not self == other
 
-    def __add__(self, other: "Message") -> "Message":
+    def __add__(self, other: Union["Message", MessageBlock]) -> "Message":
         """
         Concatenate two messages.
+
+        Parameters
+        ----------
+        other : Union[Message, MessageBlock]
+            The message or message block to concatenate.
+
         Returns
         -------
         Message
             The concatenated message.
         """
+
+        # Create a new message as copy of the current message:
         new_message = self.copy()
-        new_message.blocks += other.blocks
+
+        if isinstance(other, Message):
+            # Concatenate the blocks of the other message to the new message:
+            new_message.blocks += other.blocks
+        elif isinstance(other, MessageBlock):
+            # Append the message block to the new message:
+            new_message.blocks.append(other)
+        else:
+            # Raise an error if the other object is not a Message or MessageBlock:
+            raise ValueError(
+                f"Cannot concatenate message with {type(other)}. Only Message or MessageBlock are allowed."
+            )
+
+        # Return the new message:
         return new_message
 
-    def __iadd__(self, other: "Message") -> "Message":
+    def __iadd__(self, other: Union["Message", MessageBlock]) -> "Message":
         """
         Concatenate another message to the current message.
+
+        Parameters
+        ----------
+        other : Union[Message, MessageBlock]
+            The message or message block to concatenate.
+
         Returns
         -------
         Message
             The concatenated message.
         """
-        self.blocks += other.blocks
+        if isinstance(other, Message):
+            # Concatenate the blocks of the other message to the current message:
+            self.blocks += other.blocks
+        elif isinstance(other, MessageBlock):
+            # Append the message block to the current message:
+            self.blocks.append(other)
+        else:
+            # Raise an error if the other object is not a Message or MessageBlock:
+            raise ValueError(
+                f"Cannot concatenate message with {type(other)}. Only Message or MessageBlock are allowed."
+            )
+
+        # Return the current message:
         return self
 
-    def __radd__(self, other: "Message") -> "Message":
+    def __radd__(self, other: Union["Message", MessageBlock]) -> "Message":
         """
         Concatenate the current message to another message.
+
+        Parameters
+        ----------
+        other : Union[Message, MessageBlock]
+            The message or message block to concatenate.
+
         Returns
         -------
         Message
             The concatenated message.
         """
+
+        # Create a new message as copy of the current message:
         new_message = other.copy()
-        new_message.blocks += self.blocks
+
+        if isinstance(other, Message):
+            # Concatenate the blocks of the current message to the new message:
+            new_message.blocks += self.blocks
+        elif isinstance(other, MessageBlock):
+            # Append the message block to the new message:
+            new_message.blocks.append(self)
+        else:
+            # Raise an error if the other object is not a Message or MessageBlock:
+            raise ValueError(
+                f"Cannot concatenate message with {type(other)}. Only Message or MessageBlock are allowed."
+            )
         return new_message

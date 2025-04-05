@@ -2,39 +2,36 @@ import copy
 import json
 from typing import List, Optional, Sequence, Union
 
-from PIL.Image import Image
 from arbol import aprint, asection
-from pandas import DataFrame
 from pydantic import BaseModel
 
+from litemind.agent.messages.actions.tool_call import ToolCall
 from litemind.agent.messages.message import Message
 from litemind.agent.messages.message_block import MessageBlock
-from litemind.agent.messages.message_block_type import BlockType
-from litemind.agent.messages.tool_call import ToolCall
+from litemind.agent.tools.base_tool import BaseTool
 from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.base_api import BaseApi
 from litemind.apis.callbacks.callback_manager import CallbackManager
 from litemind.apis.exceptions import FeatureNotAvailableError
 from litemind.apis.model_features import ModelFeatures
-from litemind.apis.utils.document_processing import (
-    create_images_of_each_document_page,
-    extract_text_from_document_pages,
-    is_pymupdf_available,
-)
-from litemind.apis.utils.fastembed_embeddings import (
-    fastembed_text,
-    is_fastembed_available,
-)
-from litemind.apis.utils.ffmpeg_utils import (
-    convert_video_to_frames_and_audio,
-    is_ffmpeg_available,
-)
-from litemind.apis.utils.random_projector import DeterministicRandomProjector
-from litemind.apis.utils.whisper_transcribe_audio import (
+from litemind.media.types.media_action import Action
+from litemind.media.types.media_audio import Audio
+from litemind.media.types.media_code import Code
+from litemind.media.types.media_document import Document
+from litemind.media.types.media_image import Image
+from litemind.media.types.media_json import Json
+from litemind.media.types.media_object import Object
+from litemind.media.types.media_table import Table
+from litemind.media.types.media_text import Text
+from litemind.media.types.media_video import Video
+from litemind.utils.document_processing import is_pymupdf_available
+from litemind.utils.fastembed_embeddings import fastembed_text, is_fastembed_available
+from litemind.utils.ffmpeg_utils import is_ffmpeg_available
+from litemind.utils.random_projector import DeterministicRandomProjector
+from litemind.utils.whisper_transcribe_audio import (
     is_local_whisper_available,
     transcribe_audio_with_local_whisper,
 )
-from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_path
 
 
 class DefaultApi(BaseApi):
@@ -264,6 +261,7 @@ class DefaultApi(BaseApi):
                 or feature == ModelFeatures.ImageEmbeddings
                 or feature == ModelFeatures.AudioEmbeddings
                 or feature == ModelFeatures.VideoEmbeddings
+                or feature == ModelFeatures.DocumentEmbeddings
             ):
 
                 # In this class we only support fastembed:
@@ -293,6 +291,12 @@ class DefaultApi(BaseApi):
                 elif (
                     feature == ModelFeatures.VideoEmbeddings
                     and not self.has_model_support_for(ModelFeatures.Video)
+                ):
+                    aprint("Video Embeddings feature: model does not support video!")
+                    return False
+                elif (
+                    feature == ModelFeatures.DocumentEmbeddings
+                    and not self.has_model_support_for(ModelFeatures.Image)
                 ):
                     aprint("Video Embeddings feature: model does not support video!")
                     return False
@@ -486,7 +490,7 @@ class DefaultApi(BaseApi):
         new_messages.append(tool_use_message)
 
         # Get the tool calls:
-        tool_calls = [b.content for b in response if b.block_type == BlockType.Tool]
+        tool_calls = [b.media.get_content() for b in response if b.has_type(Action)]
 
         # Iterate through tool calls:
         for tool_call in tool_calls:
@@ -496,7 +500,9 @@ class DefaultApi(BaseApi):
                 tool_name = tool_call.tool_name
 
                 # Get the corresponding tool in toolset:
-                tool = toolset.get_tool(tool_name) if toolset else None
+                tool: Optional[BaseTool] = (
+                    toolset.get_tool(tool_name) if toolset else None
+                )
 
                 # Get the input arguments:
                 tool_arguments = tool_call.arguments
@@ -604,31 +610,30 @@ class DefaultApi(BaseApi):
 
     def _convert_audio_block(self, block, message, exclude_extensions, model_name):
         # Check if the block is an audio block:
-        if block.block_type == BlockType.Audio and block.content:
+        if block.media and isinstance(block.media, Audio):
             try:
+                # Cast to Audio:
+                audio: Audio = block.media
+
                 # Extract filename from URI:
-                original_filename = block.content.split("/")[-1]
+                original_filename = audio.get_filename()
 
                 # Extract the file extension from URI:
-                file_extension = block.content.split(".")[-1]
+                file_extension = audio.get_extension()
 
                 # Check if the file extension is in the exclude list:
                 if exclude_extensions and file_extension in exclude_extensions:
                     return
 
                 # We use a local instance of whisper instead:
-                transcription = self.transcribe_audio(
-                    block.content, model_name=model_name
-                )
+                transcription = self.transcribe_audio(audio.uri, model_name=model_name)
 
                 # Add markdown quotes ''' around the transcribed text, and
                 # add prefix: "Transcription: " to the transcribed text:
                 transcription = f"\nTranscription of audio file '{original_filename}': \n'''\n{transcription}\n'''\n"
 
                 # Make a new text block:
-                transcription_block = MessageBlock(
-                    block_type=BlockType.Text, content=transcription
-                )
+                transcription_block = MessageBlock(Text(transcription))
 
                 # Add the transcribed text to the message right after the audio block:
                 message.insert_block(transcription_block, block_before=block)
@@ -642,7 +647,7 @@ class DefaultApi(BaseApi):
 
                 traceback.print_exc()
                 raise ValueError(
-                    f"Could not transcribe audio from: '{block.content}', error: {e}"
+                    f"Could not transcribe audio from: '{block.get_content()}', error: {e}"
                 )
 
     def convert_documents_to_markdown_in_messages(
@@ -680,25 +685,27 @@ class DefaultApi(BaseApi):
             for block in message.blocks:
 
                 # Check if the block is a document block:
-                if block.block_type == BlockType.Document and block.content is not None:
+                if block.media is not None and isinstance(block.media, Document):
+
+                    # get document
+                    document: Document = block.media
+
                     try:
                         # Extract filename from URI:
-                        original_filename = block.content.split("/")[-1]
+                        original_filename = document.get_filename()
 
                         # Extract the file extension from URI:
-                        file_extension = block.content.split(".")[-1]
+                        file_extension = document.get_extension()
 
                         # Check if the file extension is in the exclude list:
                         if exclude_extensions and file_extension in exclude_extensions:
                             continue
 
                         # Extract text from each page of the document:
-                        pages_text = extract_text_from_document_pages(block.content)
+                        pages_text = document.extract_text_from_pages()
 
                         # Extract images of each page of the document:
-                        pages_images = create_images_of_each_document_page(
-                            block.content
-                        )
+                        pages_images = document.take_image_of_each_page()
 
                         # Get the number of pages from both lists:
                         num_pages = min(len(pages_text), len(pages_images))
@@ -718,12 +725,12 @@ class DefaultApi(BaseApi):
                             page_image = pages_images[page_index]
 
                             # Add markdown quotes around the text, and add the extension, for example: ```pdf for extension 'pdf':
-                            text = f"\nText extracted from document '{original_filename}' page {page_index + 1}: \n'''{file_extension}\n{page_text}\n'''\nImage of the page:\n"
+                            text: str = (
+                                f"\nText extracted from document '{original_filename}' page {page_index + 1}: \n'''{file_extension}\n{page_text}\n'''\nImage of the page:\n"
+                            )
 
                             # Create text block:
-                            text_block = MessageBlock(
-                                block_type=BlockType.Text, content=text
-                            )
+                            text_block = MessageBlock(Text(text))
 
                             # Insert the text block after the document block:
                             message.insert_block(
@@ -732,9 +739,7 @@ class DefaultApi(BaseApi):
                             last_block_added = text_block
 
                             # Create an image block:
-                            image_block = MessageBlock(
-                                block_type=BlockType.Image, content=page_image
-                            )
+                            image_block = MessageBlock(Image(page_image))
 
                             # Insert image block right after the text block:
                             message.insert_block(
@@ -747,7 +752,7 @@ class DefaultApi(BaseApi):
 
                         # Call the callback manager:
                         self.callback_manager.on_document_conversion(
-                            document_uri=block.content, markdown=text_log
+                            document_uri=document.uri, markdown=text_log
                         )
 
                         # Remove the document block:
@@ -755,18 +760,18 @@ class DefaultApi(BaseApi):
 
                     except Exception as e:
                         raise ValueError(
-                            f"Could not extract text from document: '{block.content}', error: {e}"
+                            f"Could not extract text from document: '{document}', error: {e}"
                         )
 
-                elif block.block_type == BlockType.Json and block.content is not None:
+                elif block.media is not None and isinstance(block.media, Json):
+
+                    # Cast to JSON media:
+                    json_media: Json = block.media
+
                     try:
-                        # Convert JSON to markdown:
-                        markdown = f"```json\n{block.content}\n```"
 
                         # Create a text block:
-                        text_block = MessageBlock(
-                            block_type=BlockType.Text, content=markdown
-                        )
+                        text_block = MessageBlock(json_media.to_markdown_text_media())
 
                         # Insert the text block after the JSON block:
                         message.insert_block(text_block, block_before=block)
@@ -776,18 +781,19 @@ class DefaultApi(BaseApi):
 
                     except Exception as e:
                         raise ValueError(
-                            f"Could not convert JSON to markdown: '{block.content}', error: {e}"
+                            f"Could not convert JSON to markdown: '{json_media}', error: {e}"
                         )
-                elif block.block_type == BlockType.Object and block.content is not None:
+                elif block.media is not None and isinstance(block.media, Object):
+
+                    # Get the object from the block:
+                    obj: Object = block.media
+
                     try:
-                        # Convert object to json since it is a pydantic object:
-                        json_str = block.content.model_dump_json()
-                        markdown = f"```json\n{json_str}\n```"
+                        # Convert the object to markdown text media:
+                        markdown: Text = obj.to_markdown_text_media()
 
                         # Create a text block:
-                        text_block = MessageBlock(
-                            block_type=BlockType.Text, content=markdown
-                        )
+                        text_block = MessageBlock(markdown)
 
                         # Insert the text block after the object block:
                         message.insert_block(text_block, block_before=block)
@@ -797,20 +803,16 @@ class DefaultApi(BaseApi):
 
                     except Exception as e:
                         raise ValueError(
-                            f"Could not convert object to markdown: '{block.content}', error: {e}"
+                            f"Could not convert object to markdown: '{obj}', error: {e}"
                         )
-                elif block.block_type == BlockType.Code and block.content is not None:
+                elif block.media is not None and isinstance(block.media, Code):
+
+                    # Get the code:
+                    code: Code = block.media
+
                     try:
-                        # Get language from block attributes with default '':
-                        language = block.attributes.get("language", "")
-
-                        # Convert code to markdown:
-                        markdown = f"```{language}\n{block.content}\n```"
-
-                        # Create a text block:
-                        text_block = MessageBlock(
-                            block_type=BlockType.Text, content=markdown
-                        )
+                        # Text block:
+                        text_block = MessageBlock(code.to_markdown_text_media())
 
                         # Insert the text block after the code block:
                         message.insert_block(text_block, block_before=block)
@@ -820,22 +822,16 @@ class DefaultApi(BaseApi):
 
                     except Exception as e:
                         raise ValueError(
-                            f"Could not convert code to markdown: '{block.content}', error: {e}"
+                            f"Could not convert code to markdown: '{code}', error: {e}"
                         )
-                elif block.block_type == BlockType.Table and block.content is not None:
+                elif block.media is not None and isinstance(block.media, Table):
+
+                    # Getting the Table:
+                    table: Table = block.media
+
                     try:
-                        table: DataFrame = block.content
-
-                        # pretty print the pandas dataframe into markdown-like / compatible string:
-                        markdown_table = table.to_markdown()
-
-                        # Convert table to markdown:
-                        markdown = f"```dataframe\n{markdown_table}\n```"
-
                         # Create a text block:
-                        text_block = MessageBlock(
-                            block_type=BlockType.Text, content=markdown
-                        )
+                        text_block = MessageBlock(Text(table.to_markdown()))
 
                         # Insert the text block after the table block:
                         message.insert_block(text_block, block_before=block)
@@ -845,22 +841,27 @@ class DefaultApi(BaseApi):
 
                     except Exception as e:
                         raise ValueError(
-                            f"Could not convert table to markdown: '{block.content}', error: {e}"
+                            f"Could not convert table to markdown: '{table}', error: {e}"
                         )
-                elif block.block_type == BlockType.Text and block.content is not None:
+                elif block.media is not None and isinstance(block.media, Text):
+
+                    # Get the text:
+                    text: Text = block.media
+
                     try:
-                        text: str = block.content
+                        # get the string:
+                        text_str = text.text
 
                         # Check if the text ends with at least one '\n' if not, then add it:
-                        if not text.endswith("\n"):
-                            text += "\n"
+                        if not text_str.endswith("\n"):
+                            text_str += "\n"
 
                         # Set the block content to the text:
-                        block.content = text
+                        text.text = text_str
 
                     except Exception as e:
                         raise ValueError(
-                            f"Could not convert table to markdown: '{block.content}', error: {e}"
+                            f"Could not convert text: '{block.media}', error: {e}"
                         )
 
                 else:
@@ -903,19 +904,19 @@ class DefaultApi(BaseApi):
             for block in message.blocks:
 
                 # Check if the block is a video block:
-                if block.block_type == BlockType.Video and block.content:
-                    # Normalise the URI to a local file path:
-                    local_path = uri_to_local_file_path(block.content)
+                if block.media is not None and isinstance(block.media, Video):
+
+                    video: Video = block.media
 
                     # extract the file extension from the URI:
-                    file_extension = block.content.split(".")[-1]
+                    file_extension = video.get_extension()
 
                     # Check if the file extension is in the exclude list:
                     if exclude_extensions and file_extension in exclude_extensions:
                         continue
 
                     # Append video frames and audio to the message:
-                    blocks = convert_video_to_frames_and_audio(local_path)
+                    blocks = video.convert_to_frames_and_audio()
 
                     # Insert this message -- al its blocks -- right after the video block:
                     message.insert_blocks(blocks, block_before=block)
@@ -1039,7 +1040,10 @@ class DefaultApi(BaseApi):
         for image_uri in image_uris:
             # Describe image and then embed the description of the image:
             description = self.describe_image(
-                image_uri=image_uri, model_name=image_text_model_name, **kwargs
+                image_uri=image_uri,
+                model_name=image_text_model_name,
+                query="Please describe the following image.",
+                **kwargs,
             )
 
             # Append the description to the list:
@@ -1103,7 +1107,10 @@ class DefaultApi(BaseApi):
             if audio_text_model_name is not None:
                 # Describe video and then embed the description of the video:
                 description = self.describe_audio(
-                    audio_uri=audio_uri, model_name=audio_text_model_name, **kwargs
+                    audio_uri=audio_uri,
+                    model_name=audio_text_model_name,
+                    query="Please describe the following audio.",
+                    **kwargs,
                 )
             elif audio_transcription_model_name is not None:
                 # Transcribe audio and then embed the transcription of the audio:
@@ -1122,7 +1129,9 @@ class DefaultApi(BaseApi):
 
         # Embed the audio descriptions:
         audio_embeddings = self.embed_texts(
-            texts=audio_descriptions, model_name=model_name, dimensions=dimensions
+            texts=audio_descriptions,
+            model_name=model_name,
+            dimensions=dimensions,
         )
 
         # Update kwargs with other parameters:
@@ -1172,7 +1181,10 @@ class DefaultApi(BaseApi):
         for video_uri in video_uris:
             # Describe video and then embed the description of the video:
             description = self.describe_video(
-                video_uri=video_uri, model_name=video_text_model_name, **kwargs
+                video_uri=video_uri,
+                model_name=video_text_model_name,
+                query="Please describe the following video.",
+                **kwargs,
             )
 
             # Append the description to the list:
@@ -1199,6 +1211,67 @@ class DefaultApi(BaseApi):
 
         # Return the video embeddings:
         return video_embeddings
+
+    def embed_documents(
+        self,
+        document_uris: List[str],
+        model_name: Optional[str] = None,
+        dimensions: int = 512,
+        **kwargs,
+    ) -> Sequence[Sequence[float]]:
+
+        # If no model is passed get a default model with text embedding support:
+        if model_name is None:
+            model_name = self.get_best_model(features=[ModelFeatures.TextEmbeddings])
+
+        # Get best image model name:
+        document_text_model_name = self.get_best_model(
+            [ModelFeatures.Document, ModelFeatures.TextGeneration]
+        )
+
+        # Check model is not None:
+        if not document_text_model_name:
+            raise FeatureNotAvailableError(
+                "Can't find a text generation model that supports documents."
+            )
+
+        # List to store document descriptions:
+        document_descriptions = []
+
+        # Iterate over the video_uris:
+        for document_uri in document_uris:
+            # Describe document and then embed the description of the document:
+            description = self.describe_document(
+                document_uri=document_uri,
+                model_name=document_text_model_name,
+                query="Please describe the following document.",
+                **kwargs,
+            )
+
+            # Append the description to the list:
+            document_descriptions.append(description)
+
+        # Embed the video descriptions:
+        document_embeddings = self.embed_texts(
+            texts=document_descriptions, model_name=model_name, dimensions=dimensions
+        )
+
+        # Update kwargs with other parameters:
+        kwargs.update(
+            {
+                "model_name": model_name,
+                "document_embeddings": document_embeddings,
+                "dimensions": dimensions,
+            }
+        )
+
+        # Call the callback manager:
+        self.callback_manager.on_document_embedding(
+            document_uris=document_uris, embeddings=document_embeddings, **kwargs
+        )
+
+        # Return the video embeddings:
+        return document_embeddings
 
     def describe_image(
         self,
@@ -1243,8 +1316,6 @@ class DefaultApi(BaseApi):
                 )
 
             try:
-                # Get best image model name:
-                image_model_name = self.get_best_model(ModelFeatures.Image)
 
                 # Default response:
                 response = None
@@ -1269,7 +1340,7 @@ class DefaultApi(BaseApi):
                     # Run agent:
                     response = self.generate_text(
                         messages=messages,
-                        model_name=image_model_name,
+                        model_name=model_name,
                         temperature=temperature,
                         max_num_output_tokens=max_output_tokens,
                     )
@@ -1324,6 +1395,10 @@ class DefaultApi(BaseApi):
                 self.callback_manager.on_image_description(
                     image_uri=image_uri, description=response, **kwargs
                 )
+
+                # print the description::
+                with asection(f"Description:"):
+                    aprint(response)
 
                 return response
 
@@ -1380,8 +1455,6 @@ class DefaultApi(BaseApi):
 
             try:
 
-                audio_model_name = self.get_best_model(ModelFeatures.Audio)
-
                 # Retry in case of model refusing to answer:
                 for tries in range(number_of_tries):
 
@@ -1402,7 +1475,7 @@ class DefaultApi(BaseApi):
                     # Run agent:
                     response = self.generate_text(
                         messages=messages,
-                        model_name=audio_model_name,
+                        model_name=model_name,
                         temperature=temperature,
                         max_num_output_tokens=max_output_tokens,
                     )
@@ -1438,6 +1511,10 @@ class DefaultApi(BaseApi):
                         audio_uri=audio_uri, description=response, **kwargs
                     )
 
+                    # print the description::
+                    with asection(f"Description:"):
+                        aprint(response)
+
                     return response
 
             except Exception as e:
@@ -1452,7 +1529,7 @@ class DefaultApi(BaseApi):
     def describe_video(
         self,
         video_uri: str,
-        system: str = "You are a helpful AI assistant that can describe/analyse videos.",
+        system: str = "You are a helpful AI assistant that can describe and analyse videos.",
         query: str = "Here is a video file, please carefully and completely describe it in detail.",
         model_name: Optional[str] = None,
         temperature: float = 0,
@@ -1493,8 +1570,6 @@ class DefaultApi(BaseApi):
 
             try:
 
-                video_model_name = self.get_best_model(ModelFeatures.Video)
-
                 # Retry in case of model refusing to answer:
                 for tries in range(number_of_tries):
 
@@ -1515,7 +1590,7 @@ class DefaultApi(BaseApi):
                     # Run agent:
                     response = self.generate_text(
                         messages=messages,
-                        model_name=video_model_name,
+                        model_name=model_name,
                         temperature=temperature,
                         max_num_output_tokens=max_output_tokens,
                     )
@@ -1550,6 +1625,125 @@ class DefaultApi(BaseApi):
                     self.callback_manager.on_video_description(
                         video_uri=video_uri, description=response, **kwargs
                     )
+
+                    # print the description::
+                    with asection(f"Description:"):
+                        aprint(response)
+
+                    return response
+
+            except Exception as e:
+                # Log the error:
+                aprint(f"Error: '{e}'")
+                # print stack trace:
+                import traceback
+
+                traceback.print_exc()
+                return f"Error: '{e}'"
+
+    def describe_document(
+        self,
+        document_uri: str,
+        system: str = "You are a helpful AI assistant that can describe and analyse documents.",
+        query: str = "Here is a document, please carefully and completely describe it in detail.",
+        model_name: Optional[str] = None,
+        temperature: float = 0,
+        max_output_tokens: Optional[int] = None,
+        number_of_tries: int = 4,
+    ) -> Optional[str]:
+
+        with asection(
+            f"Asking model {model_name} to describe a given document: '{document_uri}':"
+        ):
+            aprint(f"Query: '{query}'")
+            aprint(f"Model: '{model_name}'")
+            aprint(f"Max tokens: '{max_output_tokens}'")
+
+            # If no model is passed get a default model with video support:
+            if model_name is None:
+                model_name = self.get_best_model(
+                    features=[ModelFeatures.TextGeneration, ModelFeatures.Document]
+                )
+
+            # If the model does not support documents, return an error:
+            if not self.has_model_support_for(
+                model_name=model_name,
+                features=[ModelFeatures.TextGeneration, ModelFeatures.Document],
+            ):
+                raise FeatureNotAvailableError(
+                    f"Model '{model_name}' does not support documents."
+                )
+
+            # if no max_output_tokens is passed, get the default value:
+            if max_output_tokens is None:
+                max_output_tokens = self.max_num_output_tokens(model_name)
+            else:
+                # Limit the number of tokens to the maximum allowed by the model:
+                max_output_tokens = min(
+                    max_output_tokens, self.max_num_output_tokens(model_name)
+                )
+
+            try:
+
+                # Retry in case of model refusing to answer:
+                for tries in range(number_of_tries):
+
+                    messages = []
+
+                    # System message:
+                    system_message = Message(role="system")
+                    system_message.append_text(system)
+                    messages.append(system_message)
+
+                    # User message:
+                    user_message = Message(role="user")
+                    user_message.append_text(query)
+                    user_message.append_document(document_uri)
+
+                    messages.append(user_message)
+
+                    # Run agent:
+                    response = self.generate_text(
+                        messages=messages,
+                        model_name=model_name,
+                        temperature=temperature,
+                        max_num_output_tokens=max_output_tokens,
+                    )
+
+                    # Normalize response:
+                    response = str(response)
+
+                    # Check if the response is empty:
+                    if not response:
+                        aprint(f"Response is empty. Trying again...")
+                        continue
+
+                    # response in lower case and trimmed of white spaces
+                    response_lc = response.lower().strip()
+
+                    # Check if response is too short:
+                    if len(response_lc) < 3:
+                        aprint(f"Response is empty. Trying again...")
+                        continue
+
+                    # Update kwargs with other parameters:
+                    kwargs = {
+                        "model_name": model_name,
+                        "temperature": temperature,
+                        "max_output_tokens": max_output_tokens,
+                        "number_of_tries": number_of_tries,
+                        "system": system,
+                        "query": query,
+                    }
+
+                    # call the callback manager:
+                    self.callback_manager.on_document_description(
+                        video_uri=document_uri, description=response, **kwargs
+                    )
+
+                    # print the description::
+                    with asection(f"Description:"):
+                        aprint(response)
 
                     return response
 

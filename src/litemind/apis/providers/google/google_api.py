@@ -5,7 +5,6 @@ from PIL import Image
 from pydantic import BaseModel
 
 from litemind.agent.messages.message import Message
-from litemind.agent.messages.message_block_type import BlockType
 from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.base_api import ModelFeatures
 from litemind.apis.callbacks.callback_manager import CallbackManager
@@ -14,8 +13,9 @@ from litemind.apis.exceptions import APIError, APINotAvailableError
 from litemind.apis.providers.google.utils.aggegate_chat_response import (
     aggregate_chat_response,
 )
-from litemind.apis.providers.google.utils.check_availability import check_gemini_api_availability
-
+from litemind.apis.providers.google.utils.check_availability import (
+    check_gemini_api_availability,
+)
 from litemind.apis.providers.google.utils.convert_messages import (
     convert_messages_for_gemini,
 )
@@ -26,13 +26,19 @@ from litemind.apis.providers.google.utils.process_response import (
 )
 from litemind.apis.providers.google.utils.response_to_object import response_to_object
 from litemind.apis.tests.test_callback_manager import callback_manager
-from litemind.apis.utils.json_to_object import json_to_object
+from litemind.media.types.media_action import Action
+from litemind.media.types.media_text import Text
+from litemind.utils.json_to_object import json_to_object
 
 
 class GeminiApi(DefaultApi):
     """
     A Gemini 1.5+ API implementation conforming to the BaseApi interface.
     Uses the google.generativeai library (previously known as Google GenAI).
+
+    Gemini models support text generation, image inputs, audio and video inputs, and thinking,
+    but do not support all features natively. Support for these features
+    are provided by the Litemind API via our fallback mechanism.
 
     Set the GOOGLE_GEMINI_API_KEY environment variable to your Google API key.
     You can get a key from the Google Cloud Console: https://ai.google.dev/gemini-api/docs/api-key
@@ -428,12 +434,16 @@ class GeminiApi(DefaultApi):
         for message in messages:
             if message.role == "system":
                 for block in message.blocks:
-                    if block.block_type == BlockType.Text:
-                        system_instruction += block.content
+                    if block.has_type(Text):
+                        system_instruction += block.get_content()
 
         # If reasoning model is selected, we request that the thinking be enclosed in a <thinking> ... <thinking/ tag:
         if self._has_thinking_support(model_name):
-            system_instruction += f"\n\nAll reasoning (thinking) which precedes the final answer must be enclosed within thinking tags: <thinking>... reasoning goes here ... </thinking>.\n\n"
+            system_instruction += "\nThink carefully step-by-step before responding: restate the input, analyze it, consider options, make a plan, and proceed methodically to your conclusion. \n"
+            system_instruction += (
+                f"All reasoning (thinking) which precedes the final answer must be enclosed within thinking tags."
+                f"This is how your response should be formatted: <thinking> reasoning goes here... </thinking> final answer goes here...\n\n"
+            )
 
         # Convert user messages -> gemini format
         preprocessed_messages = self._preprocess_messages(
@@ -502,7 +512,7 @@ class GeminiApi(DefaultApi):
                 new_messages.append(response)
 
                 # If the model wants to use a tool, parse out the tool calls:
-                if not response.has(BlockType.Tool):
+                if not response.has(Action):
                     # Break out of the loop if no tool use is required anymore:
                     break
 
@@ -542,7 +552,7 @@ class GeminiApi(DefaultApi):
                 # If the message is not None or empty, set the processed response to the structured message:
                 if structured_message:
                     json_to_object(
-                        response, response_format, structured_message[0].content
+                        response, response_format, structured_message[0].get_content()
                     )
 
             # Fire final callback:

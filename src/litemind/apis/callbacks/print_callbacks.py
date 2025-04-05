@@ -24,8 +24,11 @@ class PrintCallbacks(BaseCallbacks):
         print_image_embedding: bool = False,
         print_audio_embedding: bool = False,
         print_video_embedding: bool = False,
+        print_document_embedding: bool = False,
         print_image_description: bool = False,
         print_audio_description: bool = False,
+        print_video_description: bool = False,
+        print_document_description: bool = False,
         **kwargs,
     ):
         super().__init__()
@@ -42,8 +45,11 @@ class PrintCallbacks(BaseCallbacks):
         self.print_image_embedding = print_image_embedding
         self.print_audio_embedding = print_audio_embedding
         self.print_video_embedding = print_video_embedding
+        self.print_document_embedding = print_document_embedding
         self.print_image_description = print_image_description
         self.print_audio_description = print_audio_description
+        self.print_video_description = print_video_description
+        self.print_document_description = print_document_description
 
         if kwargs:
             raise ValueError(f"Unknown arguments: {pformat(kwargs)}")
@@ -155,6 +161,16 @@ class PrintCallbacks(BaseCallbacks):
             if kwargs:
                 aprint(f"Additional arguments: {pformat(kwargs)}")
 
+    def on_document_embedding(
+        self, document_uris: List[str], embeddings: Sequence[Sequence[float]], **kwargs
+    ) -> None:
+        if self.print_document_embedding:
+            aprint(
+                f"Document Embedding: Document URIs: {document_uris}, Embeddings: {embeddings}"
+            )
+            if kwargs:
+                aprint(f"Additional arguments: {pformat(kwargs)}")
+
     def on_image_description(self, image_uri: str, description: str, **kwargs) -> None:
         aprint(f"Image Description: Image URI: {image_uri}, Description: {description}")
         if kwargs:
@@ -167,5 +183,14 @@ class PrintCallbacks(BaseCallbacks):
 
     def on_video_description(self, video_uri: str, description: str, **kwargs) -> None:
         aprint(f"Video Description: Video URI: {video_uri}, Description: {description}")
+        if kwargs:
+            aprint(f"Additional arguments: {pformat(kwargs)}")
+
+    def on_document_description(
+        self, document_uri: str, description: str, **kwargs
+    ) -> None:
+        aprint(
+            f"Document Description: Document URI: {document_uri}, Description: {description}"
+        )
         if kwargs:
             aprint(f"Additional arguments: {pformat(kwargs)}")

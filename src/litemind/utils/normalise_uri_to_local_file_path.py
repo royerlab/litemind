@@ -1,11 +1,34 @@
+import atexit
 import base64
+import binascii
 import mimetypes
 import os
 import random
+import shutil
 import tempfile
 import urllib.parse
 
 import requests
+
+from litemind.utils.uri_utils import is_uri, is_valid_path
+
+# Keep track of temp directories for cleanup
+_temp_directories = set()
+
+
+def _register_cleanup():
+    """Register cleanup of temporary directories at process exit."""
+
+    def cleanup_temp_dirs():
+        for dir_path in _temp_directories:
+            if os.path.exists(dir_path):
+                shutil.rmtree(dir_path, ignore_errors=True)
+
+    atexit.register(cleanup_temp_dirs)
+
+
+# Register cleanup on module import
+_register_cleanup()
 
 
 def uri_to_local_file_path(file_uri: str) -> str:
@@ -13,13 +36,43 @@ def uri_to_local_file_path(file_uri: str) -> str:
     Given a file URI (which can be an existing local file path, a remote URL, or
     Base64-encoded data), returns the absolute path to a local file.
 
-    1. If file_uri is already a local file (including 'file://' URI),
-       returns its absolute path (scenario i).
-    2. Otherwise (remote or base64), downloads/decodes into a temporary directory
-       and returns the path to that file, using the best-guessed name/extension.
-    """
+    1. If file_uri is already a local file path, returns its absolute path.
+    2. If file_uri is a 'file://' URI, converts it to a local path.
+    3. If file_uri is a remote URL (http/https/ftp), downloads it to a temp file.
+    4. If file_uri is a data URI or raw Base64, decodes it to a temp file.
 
-    # List of possible user agents (as before).
+    Parameters
+    ----------
+    file_uri : str
+        The file URI to be converted, or a well formed local file path.
+
+    Returns
+    -------
+    str
+        The absolute path to the local file.
+    """
+    if not file_uri:
+        raise ValueError("Empty or null file URI provided")
+
+    # SCENARIO 0: Check if it's already a valid local file path
+    if is_valid_path(file_uri) and os.path.exists(file_uri):
+        return os.path.abspath(file_uri)
+
+    # Parse the URI to determine its type
+    parsed = urllib.parse.urlparse(file_uri)
+
+    # SCENARIO 1: file:// URI
+    if parsed.scheme == "file":
+        local_path = urllib.parse.unquote(parsed.path)
+        # On Windows, remove leading slash if present
+        if os.name == "nt" and local_path.startswith("/"):
+            local_path = local_path[1:]
+        local_path = os.path.abspath(local_path)
+        if not os.path.exists(local_path):
+            raise ValueError(f"Local file not found: '{local_path}'")
+        return local_path
+
+    # List of possible user agents
     user_agents = [
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36",
         "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:102.0) Gecko/20100101 Firefox/102.0",
@@ -32,84 +85,91 @@ def uri_to_local_file_path(file_uri: str) -> str:
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 12_4_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36",
         "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.114 Safari/537.36",
     ]
-    selected_user_agent = random.choice(user_agents)
-    headers = {"User-Agent": selected_user_agent}
 
-    parsed = urllib.parse.urlparse(file_uri)
-
-    # ---------- SCENARIO 1: If it's a local file, return its absolute path ----------
-    # 1(a). file:// URI
-    if parsed.scheme == "file":
-        local_path = os.path.abspath(parsed.path)
-        if os.path.exists(local_path):
-            return local_path
-
-    # 1(b). Existing local file (absolute or relative path)
-    if os.path.exists(file_uri):
-        return os.path.abspath(file_uri)
-
-    # ---------- SCENARIO 2: If it's remote, download to a temp directory ----------
+    # SCENARIO 2: Remote URL (http/https/ftp)
     if parsed.scheme in ["http", "https", "ftp"]:
-        with requests.get(file_uri, headers=headers, stream=True) as r:
-            r.raise_for_status()
+        selected_user_agent = random.choice(user_agents)
+        headers = {"User-Agent": selected_user_agent}
 
-            # Attempt to derive filename from the URL path
-            filename = os.path.basename(parsed.path)
-            # If there's no filename or no extension in the URL, we might check Content-Type
-            if not filename or "." not in filename:
-                content_type = r.headers.get("Content-Type", "")
-                # Attempt to guess an extension from the content-type
-                guessed_ext = mimetypes.guess_extension(content_type.split(";")[0])
-                if guessed_ext is None:
-                    guessed_ext = ".bin"
-                if not filename:
-                    # Just pick something like "download.bin"
-                    filename = f"download{guessed_ext}"
-                else:
-                    # e.g., we got 'somefile' from URL but no extension -> add the guessed_ext
-                    filename += guessed_ext
+        try:
+            with requests.get(file_uri, headers=headers, stream=True) as r:
+                r.raise_for_status()
 
-            # Create a temp directory, store the file there
-            temp_dir = tempfile.mkdtemp(prefix="download_")
-            local_path = os.path.join(temp_dir, filename)
+                # Derive filename from the URL path or Content-Type
+                filename = os.path.basename(parsed.path)
+                if not filename or "." not in filename:
+                    content_type = r.headers.get("Content-Type", "")
+                    guessed_ext = mimetypes.guess_extension(content_type.split(";")[0])
+                    if guessed_ext is None:
+                        guessed_ext = ".bin"
+                    if not filename:
+                        filename = f"download{guessed_ext}"
+                    else:
+                        filename += guessed_ext
 
-            with open(local_path, "wb") as f:
-                for chunk in r.iter_content(chunk_size=8192):
-                    f.write(chunk)
+                # Create a temp directory, store the file there
+                temp_dir = tempfile.mkdtemp(prefix="download_")
+                _temp_directories.add(temp_dir)  # For cleanup later
+                local_path = os.path.join(temp_dir, filename)
 
-        return os.path.abspath(local_path)
+                with open(local_path, "wb") as f:
+                    for chunk in r.iter_content(chunk_size=8192):
+                        f.write(chunk)
 
-    # ---------- SCENARIO 3: Otherwise, treat as Base64 data ----------
-    # We try to guess a filename/extension, especially if it's data:... with a MIME type
+            return os.path.abspath(local_path)
+        except requests.exceptions.RequestException as e:
+            raise ValueError(
+                f"Failed to download from URL: {file_uri}. Error: {str(e)}"
+            )
+
+    # SCENARIO 3: data: URI
     mime_type = None
     b64_data = file_uri
-    if file_uri.startswith("data:"):
-        # e.g., data:application/pdf;base64,JVBERi0xLjQK...
-        header, b64_data = file_uri.split(",", 1)
-        # header might be 'data:application/pdf;base64'
-        # Extract 'application/pdf'
-        if ";" in header:
-            # e.g. 'data:application/pdf;base64'
-            mime_type = header.split(":", 1)[1].split(";", 1)[0]  # 'application/pdf'
 
-    # If it is none of these cases the raise exception:
-    if not b64_data:
+    if parsed.scheme == "data":
+        if "," not in file_uri:
+            raise ValueError(f"Invalid data URI format: {file_uri}")
+
+        header, b64_data = file_uri.split(",", 1)
+        # Extract MIME type from header
+        if ";" in header:
+            mime_type = header.split(":", 1)[1].split(";", 1)[0]
+
+    # If it's not a recognized URI scheme, try to interpret as Base64
+    elif not is_uri(file_uri):
+        # Try to validate if it looks like base64
+        try:
+            # Check if padding is correct
+            padding_needed = len(b64_data) % 4
+            if padding_needed:
+                b64_data += "=" * (4 - padding_needed)
+
+            # Verify it can be decoded
+            base64.b64decode(b64_data, validate=True)
+        except (binascii.Error, ValueError) as e:
+            raise ValueError(
+                f"Invalid URI format and not valid Base64 data: '{file_uri}'. Error: {str(e)}"
+            )
+    else:
         raise ValueError(
-            f"Invalid video URI: '{file_uri}' (must start with 'data:video/', 'http://', 'https://', 'ftp://', or 'file://')"
+            f"Unsupported URI scheme: '{parsed.scheme}'. Supported schemes: file, http, https, ftp, data"
         )
 
-    # Decode base64
-    file_data = base64.b64decode(b64_data)
+    # Decode base64 data
+    try:
+        file_data = base64.b64decode(b64_data)
+    except (binascii.Error, ValueError) as e:
+        raise ValueError(f"Failed to decode Base64 data: {str(e)}")
 
-    # Decide on a filename for the base64 content:
+    # Decide on a filename with appropriate extension
     ext = None
     if mime_type:
         ext = mimetypes.guess_extension(mime_type)
     if not ext:
         ext = ".bin"
 
-    # We'll just use something like 'decodedXXXX.bin'
     temp_dir = tempfile.mkdtemp(prefix="b64_")
+    _temp_directories.add(temp_dir)  # For cleanup later
     filename = f"decoded{ext}"
     local_path = os.path.join(temp_dir, filename)
 

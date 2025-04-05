@@ -5,7 +5,7 @@ import pytest
 from litemind import API_IMPLEMENTATIONS
 from litemind.agent.messages.message import Message
 from litemind.apis.base_api import ModelFeatures
-from litemind.media.media_resources import MediaResources
+from litemind.ressources.media_resources import MediaResources
 
 
 @pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
@@ -13,6 +13,7 @@ class TestBaseApiImplementationsDocuments(MediaResources):
     """
     A tests suite that runs the same tests on each ApiClass
     implementing the abstract BaseApi interface.
+    These tests are for the document methods of the API.
     """
 
     def test_text_generation_with_pdf_document(self, api_class):
@@ -60,7 +61,7 @@ class TestBaseApiImplementationsDocuments(MediaResources):
         user_message.append_text(
             "Can you write a review for the provided paper? Please break down your comments into major and minor comments."
         )
-        doc_path = self._get_local_test_document_uri("intracktive_preprint.pdf")
+        doc_path = self.get_local_test_document_uri("intracktive_preprint.pdf")
         user_message.append_document(doc_path)
 
         messages.append(user_message)
@@ -317,7 +318,7 @@ class TestBaseApiImplementationsDocuments(MediaResources):
         messages.append(system_message)
 
         # _get_local_test_table_uri
-        table_path = self._get_local_test_table_uri("spreadsheet.csv")
+        table_path = self.get_local_test_table_uri("spreadsheet.csv")
 
         # User message:
         user_message = Message(role="user")
@@ -379,7 +380,7 @@ class TestBaseApiImplementationsDocuments(MediaResources):
         messages.append(system_message)
 
         # _get_local_test_archive_uri
-        archive_path = self._get_local_test_archive_uri("alexander.zip")
+        archive_path = self.get_local_test_archive_uri("alexander.zip")
 
         # User message:
         user_message = Message(role="user")
@@ -440,7 +441,7 @@ class TestBaseApiImplementationsDocuments(MediaResources):
         messages.append(system_message)
 
         # get the path of a folder at this relative path: './images' to this python file:
-        folder_path = self._get_local_test_folder_path("images")
+        folder_path = self.get_local_test_folder_path("images")
 
         # User message:
         user_message = Message(role="user")

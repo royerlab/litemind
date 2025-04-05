@@ -2,7 +2,6 @@ from typing import List
 
 
 def _get_ollama_models_list(client) -> List[str]:
-
     # Get the ls of models:
     model_list = list(client.list().models)
 

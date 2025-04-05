@@ -2,16 +2,15 @@ from typing import List, Optional
 
 from pydantic import BaseModel
 
+from litemind.agent.messages.actions.action_base import ActionBase
+from litemind.agent.messages.actions.tool_call import ToolCall
+from litemind.agent.messages.actions.tool_use import ToolUse
 from litemind.agent.messages.message import Message
-from litemind.agent.messages.message_block_type import BlockType
-from litemind.agent.messages.tool_call import ToolCall
-from litemind.agent.messages.tool_use import ToolUse
-from litemind.apis.utils.get_media_type_from_uri import get_media_type_from_uri
-from litemind.apis.utils.read_file_and_convert_to_base64 import (
-    base64_to_data_uri,
-    read_file_and_convert_to_base64,
-)
-from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_path
+from litemind.media.types.media_action import Action
+from litemind.media.types.media_audio import Audio
+from litemind.media.types.media_document import Document
+from litemind.media.types.media_image import Image
+from litemind.media.types.media_text import Text
 
 
 def convert_messages_for_anthropic(
@@ -36,45 +35,46 @@ def convert_messages_for_anthropic(
         content = []
 
         for block in message.blocks:
-            if block.block_type == BlockType.Text:
-                text: str = block.content
+            if block.has_type(Text) and not block.has_attribute("thinking"):
+
+                # Get Text's string:
+                text: str = block.get_content()
 
                 if message.role == "assistant":
                     # remove trailing whitespace as it is not allowed by Anthropic!
                     text = text.rstrip()
 
+                # Append the text to the Anthropic's message content:
                 content.append({"type": "text", "text": text})
 
-            elif block.block_type == BlockType.Thinking:
-                if "redacted" in block.attributes:
-                    content.append({"type": "redacted_thinking", "data": block.content})
+            elif block.has_type(Text) and block.has_attribute("thinking"):
+
+                # Get Text's string:
+                text: str = block.get_content()
+
+                if block.has_attribute("redacted"):
+                    # if the block is redacted, add it as a redacted thinking block:
+                    content.append({"type": "redacted_thinking", "data": text})
                 else:
+                    # Append the thinking text to the Anthropic's message content:
                     content.append(
                         {
                             "type": "thinking",
-                            "thinking": block.content,
+                            "thinking": text,
                             "signature": block.attributes["signature"],
                         }
                     )
 
-            elif block.block_type == BlockType.Image:
+            elif block.has_type(Image):
 
-                # Get the image URI and convert file to base64:
-                image_uri = block.content
-                media_type = get_media_type_from_uri(image_uri)
-                if image_uri.startswith("file://"):
-                    local_path = image_uri.replace("file://", "")
-                    base64_data = read_file_and_convert_to_base64(local_path)
-                    image_uri = base64_to_data_uri(base64_data, media_type)
-                elif image_uri.startswith("http://") or image_uri.startswith(
-                    "https://"
-                ):
-                    local_path = uri_to_local_file_path(image_uri)
-                    base64_data = read_file_and_convert_to_base64(local_path)
-                elif image_uri.startswith("data:image/"):
-                    base64_data = image_uri.split(",")[-1]
-                else:
-                    raise ValueError(f"Unsupported image URI: {image_uri}")
+                # Cast to Image:
+                image: Image = block.media
+
+                # Get media type
+                media_type = image.get_media_type()
+
+                # get base64 data:
+                base64_data = image.to_base64_data()
 
                 # Add the image to the content:
                 content.append(
@@ -83,23 +83,20 @@ def convert_messages_for_anthropic(
                         "source": {
                             "type": "base64",
                             "media_type": media_type,
-                            "data": (
-                                image_uri.split(",")[-1]
-                                if image_uri.startswith("data:image/")
-                                else base64_data
-                            ),
+                            "data": (base64_data),
                         },
                     }
                 )
-            elif block.block_type == BlockType.Audio:
+            elif block.has_type(Audio):
 
-                # Get the audio URI and convert file to base64:
-                audio_uri = block.content
-                media_type = get_media_type_from_uri(audio_uri)
-                if audio_uri.startswith("file://"):
-                    local_path = audio_uri.replace("file://", "")
-                    base64_data = read_file_and_convert_to_base64(local_path)
-                    audio_uri = base64_to_data_uri(base64_data, media_type)
+                # Cast to Audio:
+                audio: Audio = block.media
+
+                # Get media type
+                media_type = audio.get_media_type()
+
+                # get base64 data:
+                base64_data = audio.to_base64_data()
 
                 # Add the audio to the content:
                 content.append(
@@ -108,31 +105,21 @@ def convert_messages_for_anthropic(
                         "source": {
                             "type": "base64",
                             "media_type": media_type,
-                            "data": (
-                                audio_uri.split(",")[-1]
-                                if audio_uri.startswith("data:audio/")
-                                else base64_data
-                            ),
+                            "data": base64_data,
                         },
                     }
                 )
-            elif block.block_type == BlockType.Document and block.content.endswith(
-                ".pdf"
-            ):
-                # Convert PDF to base64:
-                pdf_uri = block.content
-                media_type = "application/pdf"
-                if pdf_uri.startswith("file://"):
-                    local_path = pdf_uri.replace("file://", "")
-                    base64_data = read_file_and_convert_to_base64(local_path)
-                    pdf_uri = base64_to_data_uri(base64_data, media_type)
-                elif pdf_uri.startswith("http://") or pdf_uri.startswith("https://"):
-                    local_path = uri_to_local_file_path(pdf_uri)
-                    base64_data = read_file_and_convert_to_base64(local_path)
-                elif pdf_uri.startswith("data:application/pdf;"):
-                    base64_data = pdf_uri.split(",")[-1]
-                else:
-                    raise ValueError(f"Unsupported PDF URI: {pdf_uri}")
+
+            elif block.has_type(Document) and block.media.has_extension("pdf"):
+
+                # Get Document:
+                document: Document = block.media
+
+                # Get media type
+                media_type = document.get_media_type()
+
+                # get base64 data:
+                base64_data = document.to_base64_data()
 
                 # Add the document to the content:
                 content.append(
@@ -141,21 +128,19 @@ def convert_messages_for_anthropic(
                         "source": {
                             "type": "base64",
                             "media_type": media_type,
-                            "data": (
-                                pdf_uri.split(",")[-1]
-                                if pdf_uri.startswith("data:application/pdf;")
-                                else base64_data
-                            ),
+                            "data": base64_data,
                         },
                     }
                 )
-            elif block.block_type == BlockType.Tool:
+            elif block.has_type(Action):
+
+                tool_action: ActionBase = block.get_content()
 
                 # if contents is a ToolUse object do the following:
-                if isinstance(block.content, ToolUse):
+                if isinstance(tool_action, ToolUse):
 
                     # Get the tool use object:
-                    tool_use: ToolUse = block.content
+                    tool_use: ToolUse = tool_action
 
                     # Add tool use to the content:
                     content.append(
@@ -171,10 +156,10 @@ def convert_messages_for_anthropic(
                         }
                     )
 
-                elif isinstance(block.content, ToolCall):
+                elif isinstance(tool_action, ToolCall):
 
                     # Get the tool use object:
-                    tool_call: ToolUse = block.content
+                    tool_call: ToolUse = tool_action
 
                     # Add the tool to the content:
                     content.append(
@@ -186,8 +171,13 @@ def convert_messages_for_anthropic(
                         }
                     )
 
+                else:
+                    raise ValueError(
+                        f"Unsupported action type: {type(tool_action).__name__}"
+                    )
+
             else:
-                raise ValueError(f"Unsupported block type: {block.block_type}")
+                raise ValueError(f"Unsupported block type: {type(block).__name__}")
 
         anthropic_messages.append(
             {

@@ -1,7 +1,6 @@
 def estimate_num_input_tokens(
     max_num_input_tokens, max_num_output_tokens, preprocessed_messages
 ):
-
     # Estimate the number of input tokens:
     estimated_num_input_tokens = (
         sum([len(str(message).split()) for message in preprocessed_messages]) * 3

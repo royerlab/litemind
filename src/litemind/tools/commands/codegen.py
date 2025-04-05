@@ -113,9 +113,15 @@ def generate(
         if api is None:
             api = CombinedApi()
 
+        model_name = api.get_best_model(
+            features=[ModelFeatures.TextGeneration],
+            non_features=[ModelFeatures.Thinking],
+        )
+
         # Initialize the agent
         agent = Agent(
             api=api,
+            model_name=model_name,
             model_features=[ModelFeatures.TextGeneration, ModelFeatures.Document],
         )
 
@@ -130,30 +136,33 @@ def generate(
             excluded_files=excluded_files,
         )
         message.append_text(
-            f"Please generate a detailed, complete and informative {output_file_name} file without any preamble or postamble."
+            f"\n\n\n# Task:\nPlease generate a detailed, complete and informative {output_file_name} file without any preamble or postamble: \n"
         )
 
         # Use the agent to generate the file contents:
         response = agent(message)
 
         # extract the file content from the response:
-        file_contents = response[-1][0].content.strip()
+        main_response = response[-1][0].get_content()
+
+        # Strip the response:
+        text = main_response.strip()
 
         # If it starts with '```markdown' or '```md', remove it:
-        if file_contents.startswith("```markdown"):
-            file_contents = file_contents[11:]
-        if file_contents.startswith("```md"):
-            file_contents = file_contents[5:]
+        if text.startswith("```markdown"):
+            text = text[11:]
+        if text.startswith("```md"):
+            text = text[5:]
 
         # If it ends with '```', remove it:
-        if file_contents.endswith("```"):
-            file_contents = file_contents[:-3]
+        if text.endswith("```"):
+            text = text[:-3]
 
         # Make sure that all folders leading to the file exist:
         os.makedirs(os.path.dirname(output_file), exist_ok=True)
 
         # Write the generated content to output file:
         with open(output_file, "w") as readme_file:
-            readme_file.write(file_contents)
+            readme_file.write(text)
 
-        return file_contents
+        return text

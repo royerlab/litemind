@@ -5,10 +5,12 @@ from pydantic import BaseModel
 
 from litemind import API_IMPLEMENTATIONS
 from litemind.agent.messages.message import Message
-from litemind.agent.messages.message_block_type import BlockType
 from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.base_api import ModelFeatures
-from litemind.media.media_resources import MediaResources
+from litemind.media.types.media_action import Action
+from litemind.media.types.media_object import Object
+from litemind.media.types.media_text import Text
+from litemind.ressources.media_resources import MediaResources
 
 
 @pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
@@ -16,6 +18,7 @@ class TestBaseApiImplementationsTextGeneration(MediaResources):
     """
     A tests suite that runs the same tests on each ApiClass
     implementing the abstract BaseApi interface.
+    These tests are for the text generation methods of the API.
     """
 
     def test_text_generation_simple(self, api_class):
@@ -205,13 +208,13 @@ class TestBaseApiImplementationsTextGeneration(MediaResources):
         object_block = response[-1]
 
         # assert that result should be a message of type object:
-        assert (
-            object_block.block_type == BlockType.Object
+        assert object_block.has_type(
+            Object
         ), f"{api_class.__name__} completion should return an object."
 
         # assert that result should be a message containing an object of type Order:
         assert isinstance(
-            object_block.content, Order
+            object_block.get_content(), Order
         ), f"{api_class.__name__} completion should return an object of type Order."
 
     def test_text_generation_with_simple_parameterless_tool(self, api_class):
@@ -265,7 +268,7 @@ class TestBaseApiImplementationsTextGeneration(MediaResources):
         assert len(response) == 3, f"Expected three message in the response."
 
         # Check that the second last message in response is a tool use message:
-        assert response[-2][0].block_type == BlockType.Tool
+        assert response[-2][0].has_type(Action)
 
         # Extract the last message from the list which contains the actual final response:
         response = response[-1]
@@ -332,7 +335,7 @@ class TestBaseApiImplementationsTextGeneration(MediaResources):
         assert len(response) == 3, f"Expected three message in the response."
 
         # Check that the second last message in reponse is a tool use message:
-        assert response[-2][0].block_type == BlockType.Tool
+        assert response[-2][0].has_type(Action)
 
         # Extract the last message from the list which contains the actual final response:
         response = response[-1]
@@ -403,7 +406,7 @@ class TestBaseApiImplementationsTextGeneration(MediaResources):
         assert len(response) >= 3, f"Expected three message in the response."
 
         # Check that the second last message in response is a tool use message:
-        assert response[-2][0].block_type == BlockType.Tool
+        assert response[-2][0].has_type(Action)
 
         # Extract the last message from the list which contains the actual final response:
         response = response[-1]
@@ -421,7 +424,7 @@ class TestBaseApiImplementationsTextGeneration(MediaResources):
 
         # Check that the response is of type OrderInfo:
         assert isinstance(
-            object_block.content, OrderInfo
+            object_block.get_content(), OrderInfo
         ), f"The response of {api_class.__name__} should be of type OrderInfo."
 
     def test_text_generation_with_complex_toolset(self, api_class):
@@ -565,6 +568,12 @@ class TestBaseApiImplementationsTextGeneration(MediaResources):
         )
         # exclusion_filters=['deepseek','llava'])
 
+        if model_name is None:
+            # Skip the test if no model is found
+            pytest.skip(
+                f"{api_class.__name__} does not support text generation with thinking. Skipping tests."
+            )
+
         # Print the model name
         print("\n" + model_name)
 
@@ -588,9 +597,7 @@ class TestBaseApiImplementationsTextGeneration(MediaResources):
         response = api_instance.generate_text(model_name=model_name, messages=messages)
 
         # get the last message in the response:
-        response = response[-1]
-
-        # Print the response
+        response = response[0]  # Only one message is expected in list...
         print("\n" + str(response))
 
         # Check that we have a response
@@ -602,7 +609,9 @@ class TestBaseApiImplementationsTextGeneration(MediaResources):
         ):
             # Check if there are MessageBlocks of type Thinking
             thinking_blocks = [
-                block for block in response if block.block_type == BlockType.Thinking
+                block
+                for block in response
+                if block.has_type(Text) and block.has_attribute("thinking")
             ]
             assert len(thinking_blocks) > 0, "No thinking blocks found in the response"
 

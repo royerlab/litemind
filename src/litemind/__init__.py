@@ -1,15 +1,17 @@
-__version__ = "2025.3.15"
+__version__ = "2025.4.5"
 
 from arbol import aprint
 
+from litemind.agent.augmentations.vector_db.in_memory_vector_db import (
+    InMemoryVectorDatabase,
+)
+from litemind.agent.augmentations.vector_db.qdrant_vector_db import QdrantVectorDatabase
 from litemind.apis.combined_api import CombinedApi
 from litemind.apis.default_api import DefaultApi
 from litemind.apis.providers.anthropic.anthropic_api import AnthropicApi
 from litemind.apis.providers.google.google_api import GeminiApi
 from litemind.apis.providers.ollama.ollama_api import OllamaApi
 from litemind.apis.providers.openai.openai_api import OpenAIApi
-from litemind.rag.vector_db.in_memory_vector_db import InMemoryVectorDatabase
-from litemind.rag.vector_db.qdrant_vector_db import QdrantVectorDatabase
 
 # LLM API implementations:
 API_IMPLEMENTATIONS = [
@@ -40,11 +42,29 @@ for api_class in API_IMPLEMENTATIONS:
         )
         API_IMPLEMENTATIONS.remove(api_class)
 
-
 # Vector database implementations:
-VECDB_IMPLEMENTATIONS=[QdrantVectorDatabase, InMemoryVectorDatabase]
+VECDB_IMPLEMENTATIONS = [QdrantVectorDatabase, InMemoryVectorDatabase]
 
+# Check availability of each vector database implementation:
+for vecdb_class in list(VECDB_IMPLEMENTATIONS):
+    try:
+        # Check specific dependencies based on the vector database class
+        if vecdb_class == QdrantVectorDatabase:
+            import qdrant_client
+        # InMemoryVectorDatabase doesn't require external dependencies
 
+    except ImportError as e:
+        # If dependencies are not installed, remove the vector database from the list
+        aprint(
+            f"Vector database {vecdb_class.__name__} dependencies are not installed: {e}. Removing it from the list."
+        )
+        VECDB_IMPLEMENTATIONS.remove(vecdb_class)
+    except Exception as e:
+        # Handle any other exceptions
+        aprint(
+            f"Error checking vector database {vecdb_class.__name__}: {e}. Removing it from the list."
+        )
+        VECDB_IMPLEMENTATIONS.remove(vecdb_class)
 
 # Initialize and silence the Abseil logging system:
 import absl.logging

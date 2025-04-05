@@ -4,13 +4,12 @@ from io import BytesIO
 from typing import List, Optional, Sequence, Union
 
 import requests
+from openai import OpenAI
 from PIL import Image
 from PIL.Image import Resampling
-from openai import OpenAI
 from pydantic import BaseModel
 
 from litemind.agent.messages.message import Message
-from litemind.agent.messages.message_block_type import BlockType
 from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.base_api import ModelFeatures
 from litemind.apis.callbacks.callback_manager import CallbackManager
@@ -34,12 +33,17 @@ from litemind.apis.providers.openai.utils.preprocess_messages import (
 from litemind.apis.providers.openai.utils.process_response import (
     process_response_from_openai,
 )
+from litemind.media.types.media_action import Action
 from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_path
 
 
 class OpenAIApi(DefaultApi):
     """
     An OpenAI API implementation conforming to the BaseApi interface.
+
+    OpenAI models support text generation, some support image and audio inputs and thinking,
+    but do not support all features natively. Support for these features
+    are provided by the Litemind API via our fallback mechanism.
 
     Set the OPENAI_API_KEY environment variable to your OpenAI API key, or pass it as an argument to the constructor.
     You can get your API key from https://platform.openai.com/account/api-keys.
@@ -51,7 +55,6 @@ class OpenAIApi(DefaultApi):
     The OpenAIApi class is a subclass of the DefaultApi class, which provides a default implementation of the BaseApi interface.
 
     """
-
 
     def __init__(
         self,
@@ -114,7 +117,7 @@ class OpenAIApi(DefaultApi):
             import traceback
 
             traceback.print_exc()
-            raise APINotAvailableError(f"Error initializing Gemini client: {e}")
+            raise APINotAvailableError(f"Error initializing OpenAI client: {e}")
 
     def check_availability_and_credentials(self, api_key: Optional[str] = None) -> bool:
 
@@ -307,6 +310,7 @@ class OpenAIApi(DefaultApi):
             or "realtime" in model_name
             or "instruct" in model_name
             or "audio" in model_name
+            or "transcribe" in model_name
         ):
             return False
 
@@ -316,7 +320,7 @@ class OpenAIApi(DefaultApi):
         return False
 
     def _has_image_gen_support(self, model_name: str) -> bool:
-        if "dall-e" not in model_name:
+        if "dall-e" not in model_name or "transcribe" in model_name:
             return False
         return True
 
@@ -482,6 +486,10 @@ class OpenAIApi(DefaultApi):
         # GPT-4o, GPT-4o-mini, GPT-4o-audio, etc.
         # All standard GPT-4o versions: 128k token context
 
+        if "gpt-4.5" in name:
+            # gpt-4.5:
+            return 128000
+
         if "gpt-4o-mini-realtime" in name:
             # Realtime previews do not change the total context limit
             # (still 128k context overall).
@@ -613,6 +621,13 @@ class OpenAIApi(DefaultApi):
             return 4096
         if "gpt-4-1106-preview" in name or "gpt-4-0125-preview" in name:
             return 4096
+
+        # -----------------------------------
+        # GPT-4.5 family
+        # -----------------------------------
+        if "gpt-4.5" in name:
+            # gpt-4.5:
+            return 16384
 
         # -----------------------------------
         # GPT-4 (standard)
@@ -756,7 +771,7 @@ class OpenAIApi(DefaultApi):
                 new_messages.append(response)
 
                 # If the model wants to use a tool, parse out the tool calls:
-                if not response.has(BlockType.Tool):
+                if not response.has(Action):
                     # Break out of the loop if no tool use is required anymore:
                     break
 

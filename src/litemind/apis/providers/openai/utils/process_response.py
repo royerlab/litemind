@@ -3,7 +3,7 @@ from typing import Any, Optional, Union
 from pydantic import BaseModel
 
 from litemind.agent.messages.message import Message
-from litemind.apis.utils.json_to_object import json_to_object
+from litemind.utils.json_to_object import json_to_object
 
 
 def process_response_from_openai(
@@ -18,6 +18,8 @@ def process_response_from_openai(
         The response from OpenAI API.
     response_format : Optional[BaseModel | str]
         The format of the response.
+    thinking_model : bool
+        Whether the model is a thinking model or not.
 
     Returns
     -------

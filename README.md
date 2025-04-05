@@ -8,18 +8,17 @@
 
 ## Summary
 
-LiteMind is a powerful Python library and framework designed to streamline the development of multimodal agentic AI applications. It provides a unified and elegant API for interacting with a variety of Large Language Model (LLM) providers, including OpenAI, Anthropic, Google Gemini, and Ollama. The library's core philosophy is centered around empowering developers to build sophisticated conversational agents and tools that can seamlessly handle multimodal inputs (text, images, audio, video, documents, and tables). LiteMind abstracts away the complexities of interacting with different LLM APIs, allowing developers to focus on the core logic and functionality of their agentic applications.
+LiteMind is a powerful and versatile Python library designed to streamline the development of multimodal agentic AI applications. It provides a unified and elegant API, acting as a wrapper around various Large Language Model (LLM) providers, including OpenAI, Anthropic, Google Gemini, and Ollama. The core philosophy of LiteMind is to empower developers to build sophisticated conversational agents and tools that can seamlessly handle a wide range of multimodal inputs, including text, images, audio, video, documents, and tables. By abstracting away the complexities of interacting with different LLM APIs, LiteMind allows developers to focus on the core logic and functionality of their agentic applications, fostering rapid prototyping and deployment. Logging is done with Arbol (http://github.com/royerlab/arbol) and it can be deactivated by setting `Arbol.passthrough` to `True`.
 
 ## Features
 
 *   **Unified API:** A `CombinedApi` class that provides a single point of access to multiple LLM providers, simplifying model selection and usage.
 *   **Multimodal Input Support:** Comprehensive support for various input modalities, including text, images, audio, video, documents, and tables.
-*   **Agentic Framework:** The `Agent` and `ReActAgent` classes provide a robust foundation for building agentic AI applications, including tool integration and conversation management.
+*   **Agentic Framework:** The `Agent` class provides a robust foundation for building agentic AI applications, including tool integration and conversation management.
 *   **Tool Integration:** Seamless integration of tools, enabling agents to perform actions and interact with the external world.
 *   **Flexible Model Selection:** Easy selection of models based on features and capabilities.
 *   **Command-Line Tools:** Command-line tools for code generation (`litemind codegen`) and repository export (`litemind export`).
 *   **Extensible Architecture:** Designed for extensibility, allowing for easy addition of new LLM providers and tool integrations.
-*   **Logging:** Logging is done with Arbol (http://github.com/royerlab/arbol) and it can be deactivated by setting `Arbol.passthrough` to `True`.
 
 ## Installation
 
@@ -35,154 +34,248 @@ To install with optional dependencies (e.g., for RAG, whisper, documents, tables
 pip install litemind[rag,whisper,documents,tables,videos]
 ```
 
-## Usage
+## Basic Usage
 
-LiteMind offers two main APIs: the wrapper API and the agentic API. The wrapper API provides a simplified interface to interact with various LLM providers, while the agentic API provides a framework for building conversational agents and tools.
+LiteMind's agentic API provides a flexible framework for building conversational agents and tools. Here are several short examples that cover different topics: (i) basic agent usage, (ii) agent with tools, (iii) agent with tools and augmentation (RAG) (iv) More complex example with multimodal inputs, tools and augmentations.
 
-### Wrapper API Examples
+### (i) Basic Agent Usage
 
-This section demonstrates the use of the wrapper API to generate text, images, audio, and embeddings.
-
-```python
-from litemind import OpenAIApi, GeminiApi, AnthropicApi, OllamaApi, CombinedApi
-from litemind.agent.messages.message import Message
-from litemind.apis.model_features import ModelFeatures
-
-# Example 1: Text Generation with OpenAI
-api = OpenAIApi()
-messages = [
-    Message(role="system", text="You are a helpful assistant."),
-    Message(role="user", text="Write a short poem about the ocean."),
-]
-response = api.generate_text(messages=messages, model_name="gpt-4o")
-print("OpenAI Text Generation:", response)
-# Expected output:
-# OpenAI Text Generation: [Message(role='assistant', content='The ocean vast, a canvas blue,\nWhere waves like brushstrokes gently accrue.\nSunlight dances, a shimmering gleam,\nWhispering secrets in a watery dream.')]
-
-# Example 2: Image Generation with Gemini
-api = GeminiApi()
-image = api.generate_image(
-    positive_prompt="A futuristic cityscape at night, neon lights, cyberpunk style",
-    image_width=512,
-    image_height=512,
-)
-print("Gemini Image Generation:", image)
-# Expected output:
-# Gemini Image Generation: <PIL.Image.Image image mode=RGB size=512x512 at 0x...>
-
-# Example 3: Audio Generation with Anthropic
-api = AnthropicApi()
-audio_uri = api.generate_audio(text="Hello, how are you?", voice="alloy")
-print("Anthropic Audio Generation:", audio_uri)
-# Expected output:
-# Anthropic Audio Generation: file:///var/folders/..../T/tmp...mp3
-
-# Example 4: Text Embeddings with Ollama
-api = OllamaApi()
-embeddings = api.embed_texts(
-    texts=["This is the first text.", "This is the second text."],
-    model_name="all-MiniLM-L6-v2",
-    dimensions=384,
-)
-print("Ollama Text Embeddings:", embeddings)
-# Expected output:
-# Ollama Text Embeddings: [[0.01, 0.02, ...], [0.03, 0.04, ...]]
-
-# Example 5: Combined API
-api = CombinedApi()
-messages = [
-    Message(role="user", text="What is the capital of France?"),
-]
-response = api.generate_text(messages=messages)
-print("Combined API Text Generation:", response)
-# Expected output:
-# Combined API Text Generation: [Message(role='assistant', content='The capital of France is Paris.')]
-```
-
-### Agentic API Examples
-
-This section demonstrates the use of the agentic API to build conversational agents and tools.
+This example demonstrates the basic usage of an agent with text generation.
 
 ```python
-from litemind import OpenAIApi, GeminiApi, AnthropicApi, OllamaApi, CombinedApi
+from litemind import OpenAIApi
 from litemind.agent.agent import Agent
 from litemind.agent.messages.message import Message
-from litemind.agent.tools.toolset import ToolSet
-from litemind.agent.tools.function_tool import FunctionTool
-from litemind.apis.model_features import ModelFeatures
 
-# Example 1: Simple Agent with Text Generation
+# Initialize the OpenAI API
 api = OpenAIApi()
+
+# Create an agent
 agent = Agent(api=api)
+
+# Add a system message to guide the agent's behavior
 agent.append_system_message("You are a helpful assistant.")
+
+# Ask a question
 response = agent("What is the capital of France?")
+
+# Print the response
 print("Simple Agent Response:", response)
 # Expected output:
 # Simple Agent Response: [Message(role='assistant', content='The capital of France is Paris.')]
+```
 
-# Example 2: Agent with a Tool
+### (ii) Agent with Tools
+
+This example shows how to create an agent that can use tools.
+
+```python
+from litemind import OpenAIApi
+from litemind.agent.agent import Agent
+from litemind.agent.tools.toolset import ToolSet
+from litemind.agent.tools.function_tool import FunctionTool
+
+from datetime import datetime
+
+# Define a function to get the current date
+def get_current_date() -> str:
+    return datetime.now().strftime("%Y-%m-%d")
+
+# Initialize the OpenAI API
+api = OpenAIApi()
+
+# Create a toolset
+toolset = ToolSet()
+
+# Add the function tool to the toolset
+toolset.add_function_tool(get_current_date, "Fetch the current date")
+
+# Create the agent, passing the toolset
+agent = Agent(api=api, toolset=toolset)
+
+# Add a system message
+agent.append_system_message("You are a helpful assistant.")
+
+# Ask a question that requires the tool
+response = agent("What is the current date?")
+
+# Print the response
+print("Agent with Tool Response:", response)
+# Expected output:
+# Agent with Tool Response: [Message(role='assistant', content='The current date is 2024-03-08.')]
+```
+
+### (iii) Agent with Tools and Augmentation (RAG)
+
+This example shows how to create an agent that can use tools and augmentations.
+
+```python
+from litemind import OpenAIApi
+from litemind.agent.agent import Agent
+from litemind.agent.tools.toolset import ToolSet
+from litemind.agent.tools.function_tool import FunctionTool
+from litemind.agent.augmentations.information.information import Information
+from litemind.agent.augmentations.vector_db.in_memory_vector_db import (
+    InMemoryVectorDatabase,
+)
+from litemind.media.types.media_text import Text
+
+# Define a function to get the current date
 def get_current_date() -> str:
     from datetime import datetime
 
     return datetime.now().strftime("%Y-%m-%d")
 
-# Create a toolset and add the function tool:
-toolset = ToolSet()
-toolset.add_function_tool(get_current_date, "Fetch the current date")
-
-# Create the agent:
-agent = Agent(api=api, toolset=toolset)
-
-# Add a system message:
-agent.append_system_message("You are a helpful assistant.")
-
-# Run the agent:
-response = agent("What is the current date?")
-print("Agent with Tool Response:", response)
-# Expected output:
-# Agent with Tool Response: [Message(role='assistant', content='The current date is 2024-03-08.')]
-
-# Example 3: Agent with Multimodal Input (Image)
-api = GeminiApi()
-agent = Agent(api=api, model_features=[ModelFeatures.TextGeneration, ModelFeatures.Image])
-agent.append_system_message("You are an image description expert.")
-image_url = "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Einstein_1921_by_F_Schmutzer_-_restoration.jpg/456px-Einstein_1921_by_F_Schmutzer_-_restoration.jpg"
-message = Message(role="user")
-message.append_text("Describe the image:")
-message.append_image(image_url)
-response = agent(message)
-print("Agent with Image Response:", response)
-# Expected output:
-# Agent with Image Response: [Message(role='assistant', content='The image is a black and white photograph of Albert Einstein.')]
-
-# Example 4: ReAct Agent
-from litemind.agent.react.react_agent import ReActAgent
-
-# Initialize API
+# Initialize the OpenAI API
 api = OpenAIApi()
 
-# Create the ReAct agent
-react_agent = ReActAgent(api=api, temperature=0.0, max_reasoning_steps=3)
+# Create a toolset
+toolset = ToolSet()
+
+# Add the function tool to the toolset
+toolset.add_function_tool(get_current_date, "Fetch the current date")
+
+# Create the agent
+agent = Agent(api=api, toolset=toolset)
+
+# Create vector database augmentation
+vector_augmentation = InMemoryVectorDatabase(name="test_augmentation")
+
+# Add sample informations to the augmentation
+informations = [
+    Information(
+        Text(
+            "Igor Bolupskisty was a German-born theoretical physicist who developed the theory of indelible unitarity."
+        ),
+        metadata={"topic": "physics", "person": "Bolupskisty"},
+    ),
+    Information(
+        Text(
+            "The theory of indelible unitarity revolutionized our understanding of space, time and photons."
+        ),
+        metadata={"topic": "physics", "concept": "unitarity"},
+    ),
+    Information(
+        Text(
+            "Quantum unitarity is a fundamental theory in physics that describes nature at the nano-atomic scale as it pertains to Pink Hamsters."
+        ),
+        metadata={"topic": "physics", "concept": "quantum unitarity"},
+    ),
+]
+
+# Add informations to the vector database
+vector_augmentation.add_informations(informations)
+
+# Add augmentation to agent
+agent.add_augmentation(vector_augmentation)
 
 # Add a system message
-react_agent.append_system_message(
-    "You are a helpful assistant that can answer questions and use tools."
+agent.append_system_message("You are a helpful assistant.")
+
+# Ask a question that requires the tool
+response = agent(
+    "Tell me about Igor Bolupskisty's theory of indelible unitarity. Also, what is the current date?"
 )
 
-# Ask a question
-response = react_agent("What is the current date?")
+# Print the response
+print("Agent with Tool and Augmentation Response:", response)
+# Expected output:
+# Agent with Tool and Augmentation Response: [Message(role='assistant', content='The current date is 2024-03-08. Igor Bolupskisty was a German-born theoretical physicist who developed the theory of indelible unitarity.')]
+```
+
+### (iv) More Complex Example with Multimodal Inputs, Tools and Augmentations
+
+This example demonstrates a more complex use case, combining multimodal inputs, tools, and augmentations.
+
+```python
+from litemind import GeminiApi
+from litemind.agent.agent import Agent
+from litemind.agent.messages.message import Message
+from litemind.agent.tools.toolset import ToolSet
+from litemind.agent.tools.function_tool import FunctionTool
+from litemind.agent.augmentations.information.information import Information
+from litemind.agent.augmentations.vector_db.in_memory_vector_db import (
+    InMemoryVectorDatabase,
+)
+from litemind.media.types.media_image import Image
+from litemind.media.types.media_text import Text
+from litemind.apis.model_features import ModelFeatures
+from datetime import datetime
+
+# Define a function to get the current date
+def get_current_date() -> str:
+    return datetime.now().strftime("%Y-%m-%d")
+
+# Initialize the Gemini API
+api = GeminiApi()
+
+# Create a toolset
+toolset = ToolSet()
+
+# Add the function tool to the toolset
+toolset.add_function_tool(get_current_date, "Fetch the current date")
+
+# Create the agent
+agent = Agent(
+    api=api,
+    toolset=toolset,
+    model_features=[ModelFeatures.TextGeneration, ModelFeatures.Image],
+)
+
+# Create vector database augmentation
+vector_augmentation = InMemoryVectorDatabase(name="test_augmentation")
+
+# Add sample informations to the augmentation
+informations = [
+    Information(
+        Text(
+            "Igor Bolupskisty was a German-born theoretical physicist who developed the theory of indelible unitarity."
+        ),
+        metadata={"topic": "physics", "person": "Bolupskisty"},
+    ),
+    Information(
+        Text(
+            "The theory of indelible unitarity revolutionized our understanding of space, time and photons."
+        ),
+        metadata={"topic": "physics", "concept": "unitarity"},
+    ),
+    Information(
+        Text(
+            "Quantum unitarity is a fundamental theory in physics that describes nature at the nano-atomic scale as it pertains to Pink Hamsters."
+        ),
+        metadata={"topic": "physics", "concept": "quantum unitarity"},
+    ),
+]
+
+# Add informations to the vector database
+vector_augmentation.add_informations(informations)
+
+# Add augmentation to agent
+agent.add_augmentation(vector_augmentation)
+
+# Add a system message
+agent.append_system_message("You are a helpful assistant.")
+
+# Create a message with multimodal input (image and text)
+image_url = "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Einstein_1921_by_F_Schmutzer_-_restoration.jpg/456px-Einstein_1921_by_F_Schmutzer_-_restoration.jpg"
+message = Message(role="user")
+message.append_text("Describe the image and tell me the current date:")
+message.append_image(image_url)
+
+# Run agent on message
+response = agent(message)
 
 # Print the response
-print("ReAct Agent Response:", response)
+print("Multimodal Agent Response:", response)
 # Expected output:
-# ReAct Agent Response: [Message(role='assistant', content='The current date is 2024-03-08.')]
+# Multimodal Agent Response: [Message(role='assistant', content='The image is a black and white photograph of Albert Einstein. The current date is 2024-03-08. Igor Bolupskisty was a German-born theoretical physicist who developed the theory of indelible unitarity.')]
 ```
 
 ## Concepts
 
 *   **API Abstraction:** The `BaseApi` class defines an abstract interface for interacting with LLM providers. Concrete implementations (e.g., `OpenAIApi`, `GeminiApi`) inherit from `BaseApi` and provide provider-specific implementations for common operations like text generation, image generation, and embeddings. The `CombinedApi` class allows you to use multiple APIs at once.
 *   **Message Handling:** The `Message` class represents a single message in a conversation. It can contain text, images, audio, video, documents, tables, and tool calls. The `Conversation` class manages a sequence of `Message` objects, representing the history of a conversation.
-*   **Agentic AI:** The `Agent` class provides a framework for building conversational agents. It takes an API instance, a model name, and a toolset. The agent can then be used to generate responses to user queries. The `ReActAgent` class extends the `Agent` class to implement the ReAct (Reasoning and Acting) methodology, enabling agents to reason and act in a structured manner.
+*   **Agentic AI:** The `Agent` class provides a framework for building conversational agents. It takes an API instance, a model name, and a toolset. The agent can then be used to generate responses to user queries.
 *   **Tool Integration:** The `ToolSet` class manages a collection of tools. The `FunctionTool` class allows you to wrap Python functions as tools. The agent can then use these tools to perform actions and interact with the external world.
 *   **Model Features:** The `ModelFeatures` enum defines the features supported by the models (e.g., text generation, image generation, audio transcription). The `get_best_model` method in the `BaseApi` class allows you to select the best model based on the required features.
 
@@ -200,6 +293,7 @@ Model features are used to specify the capabilities required from an LLM when us
 *   **ImageEmbeddings:** Enables image embeddings.
 *   **AudioEmbeddings:** Enables audio embeddings.
 *   **VideoEmbeddings:** Enables video embeddings.
+*   **DocumentEmbeddings:** Enables document embeddings.
 *   **Image:** Enables image input.
 *   **Audio:** Enables audio input.
 *   **Video:** Enables video input.
@@ -219,6 +313,16 @@ api = OpenAIApi()
 model_name = api.get_best_model(features=[ModelFeatures.TextGeneration, ModelFeatures.Image])
 ```
 
+You can also provide the features as strings:
+
+```python
+from litemind.apis.model_features import ModelFeatures
+from litemind import OpenAIApi
+
+api = OpenAIApi()
+model_name = api.get_best_model(features=["TextGeneration", "Image"])
+```
+
 ## More Code Examples
 
 This section provides more code examples, including examples that cover the wrapper API and the agentic API.
@@ -230,12 +334,16 @@ from litemind.agent.tools.toolset import ToolSet
 from litemind.agent.tools.function_tool import FunctionTool
 from litemind.apis.model_features import ModelFeatures
 from litemind.agent.react.react_agent import ReActAgent
+from pydantic import BaseModel
+from pandas import DataFrame
 
 # 1. Using the Combined API with Multimodal Input
 api = CombinedApi()
 message = Message(role="user")
 message.append_text("Describe the image:")
-message.append_image("https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/2560px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg")
+message.append_image(
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/2560px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg"
+)
 response = api.generate_text(messages=[message])
 print("Combined API with Multimodal Input:", response)
 
@@ -275,8 +383,6 @@ response = react_agent("What is the current time?")
 print("ReAct Agent Response:", response)
 
 # 4. Using the Agent with a JSON Response Format
-from pydantic import BaseModel
-
 class Weather(BaseModel):
     temperature: float
     condition: str
@@ -300,8 +406,6 @@ response = agent(
 print("Agent with Code Block:", response)
 
 # 6. Using the Agent with a Table
-from pandas import DataFrame
-
 # Create a small table with pandas:
 table = DataFrame({"A": [1, 2, 3], "B": [4, 5, 6]})
 

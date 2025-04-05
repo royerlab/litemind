@@ -104,7 +104,6 @@ def test_tool_agent(api_class):
 
 @pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
 def test_tool_agent_with_internal_tool(api_class):
-
     # Initialize the OpenAIApi and Agent
     api = api_class()  # Assumes API key is available in the environment
 

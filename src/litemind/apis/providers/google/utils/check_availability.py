@@ -1,9 +1,8 @@
-from functools import lru_cache
-
 from arbol import aprint
 
 # Cache the result of the check_gemini_api_availability function
 _cached_check_gemini_api_availability = None
+
 
 def check_gemini_api_availability(api_key):
     """
@@ -45,12 +44,12 @@ def check_gemini_api_availability(api_key):
         # If the response is not empty, we assume the API is available:
         result = len(resp.text) > 0
 
-
     except Exception as e:
         # If we get an error, we assume it's because the API is not available:
         aprint(f"Error while trying to check availability of Ollama API: {e}")
 
         import traceback
+
         traceback.print_exc()
 
         result = False

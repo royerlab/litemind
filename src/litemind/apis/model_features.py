@@ -17,6 +17,7 @@ class ModelFeatures(Enum):
     ImageEmbeddings = "ImageEmbeddings"
     AudioEmbeddings = "AudioEmbeddings"
     VideoEmbeddings = "VideoEmbeddings"
+    DocumentEmbeddings = "DocumentEmbeddings"
     Image = "Image"
     Audio = "Audio"
     Video = "Video"

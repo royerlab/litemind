@@ -4,8 +4,8 @@ from pydantic import BaseModel
 
 from litemind.agent.messages.message import Message
 from litemind.agent.tools.toolset import ToolSet
-from litemind.apis.utils.extract_thinking import extract_thinking_content
-from litemind.apis.utils.json_to_object import json_to_object
+from litemind.utils.extract_thinking import extract_thinking_content
+from litemind.utils.json_to_object import json_to_object
 
 
 def process_response_from_ollama(
@@ -77,7 +77,6 @@ def process_response_from_ollama(
     if tool_calls and toolset:
         is_tool_use = True
         for tool_call in tool_calls:
-
             func_info = tool_call.get("function", {})
             function_name = func_info.get("name", "")
             arguments = func_info.get("arguments", {})

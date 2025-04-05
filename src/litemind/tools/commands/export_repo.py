@@ -36,7 +36,6 @@ def export_repo(
     with asection(
         f"Exporting entire repository in {folder_path} to single file: {output_file}"
     ):
-
         # Get output_file's base name:
         output_file_name = os.path.basename(output_file)
 

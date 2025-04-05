@@ -8,7 +8,7 @@ from litemind.agent.messages.message import Message
 from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.callbacks.callback_manager import CallbackManager
 from litemind.apis.model_features import ModelFeatures
-from litemind.apis.utils.random_projector import DeterministicRandomProjector
+from litemind.utils.random_projector import DeterministicRandomProjector
 
 
 class BaseApi(ABC):
@@ -493,7 +493,7 @@ class BaseApi(ABC):
         **kwargs,
     ) -> Sequence[Sequence[float]]:
         """
-        Embed images using the model.
+        Embed images using the given model.
 
         Parameters
         ----------
@@ -522,7 +522,7 @@ class BaseApi(ABC):
         **kwargs,
     ) -> Sequence[Sequence[float]]:
         """
-        Embed audios using the model.
+        Embed audios using the given model.
 
         Parameters
         ----------
@@ -553,7 +553,7 @@ class BaseApi(ABC):
         **kwargs,
     ) -> Sequence[Sequence[float]]:
         """
-        Embed videos using the model.
+        Embed videos using the given model.
 
         Parameters
         ----------
@@ -570,6 +570,37 @@ class BaseApi(ABC):
         -------
         Sequence[Sequence[float]]
             The embeddings of the videos.
+
+        """
+
+        pass
+
+    @abstractmethod
+    def embed_documents(
+        self,
+        documents_uris: List[str],
+        model_name: Optional[str] = None,
+        dimensions: int = 512,
+        **kwargs,
+    ) -> Sequence[Sequence[float]]:
+        """
+        Embed documents using the given model.
+
+        Parameters
+        ----------
+        documents_uris: List[str]
+            List of document URIs.
+        model_name: Optional[str]
+            The name of the model to use.
+        dimensions: int
+            The number of dimensions for the embedding.
+        kwargs: dict
+            Additional arguments to pass to the embedding function.
+
+        Returns
+        -------
+        Sequence[Sequence[float]]
+            The embeddings of the documents.
 
         """
 
@@ -688,6 +719,46 @@ class BaseApi(ABC):
         -------
         str | None
             Description of the video
+
+        """
+
+        pass
+
+    @abstractmethod
+    def describe_document(
+        self,
+        document_uri: str,
+        system: str = "You are a helpful AI assistant that can describe/analyse documents.",
+        query: str = "Here is a document, please carefully and completely describe it in detail.",
+        model_name: Optional[str] = None,
+        temperature: float = 0,
+        max_output_tokens: Optional[int] = None,
+        number_of_tries: int = 4,
+    ) -> Optional[str]:
+        """
+        Describe a document using the model.
+
+        Parameters
+        ----------
+        document_uri: str
+            Can be: a path to a document file, a URL to a document file, or a base64 encoded document.
+        system:
+            System message to use
+        query  : str
+            Query to use with video
+        model_name   : str
+            Model to use
+        temperature: float
+            Temperature to use
+        max_output_tokens  : int
+            Maximum number of tokens to use
+        number_of_tries : int
+            Number of times to try to send the request to the model
+
+        Returns
+        -------
+        str | None
+            Description of the document
 
         """
 

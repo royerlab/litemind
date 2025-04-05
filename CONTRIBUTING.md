@@ -23,12 +23,14 @@ cd litemind
 ```
 
 2. Create a virtual environment:
+
 ```bash
 python -m venv venv
 source venv/bin/activate  # On Windows: `venv\Scripts\activate`
 ```
 
 3. Install development dependencies:
+
 ```bash
 pip install -e ".[dev]"
 ```
@@ -43,15 +45,18 @@ We use several tools to maintain code quality:
 - **mypy** for static type checking
 
 Run the following before committing:
+
 ```bash
 isort .
 black .
 flake8 .
 mypy src/litemind
 ```
+
 And fix any issues that arise in the files you've modified.
 
 Better yet, set up pre-commit hooks:
+
 ```bash
 pre-commit install
 ```
@@ -69,6 +74,7 @@ pre-commit install
 - Keep the README.md up to date
 
 Example docstring:
+
 ```python
 def function_name(param1: str, param2: int) -> bool:
     """
@@ -114,6 +120,7 @@ def function_name(param1: str, param2: int) -> bool:
 ## Commit Messages
 
 Follow conventional commits:
+
 ```
 feat: add new feature
 fix: correct bug
@@ -148,8 +155,8 @@ Please read our Code of Conduct. We expect all contributors to adhere to it.
 
 By contributing, you agree that your contributions will be licensed under the BSD-3-Clause License.
 
-
 This CONTRIBUTING.md:
+
 - Sets clear expectations
 - Makes it easy for new contributors to get started
 - Provides specific commands and examples

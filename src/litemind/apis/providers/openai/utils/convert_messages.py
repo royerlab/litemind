@@ -1,13 +1,12 @@
 import json
 
-from litemind.agent.messages.message_block_type import BlockType
-from litemind.agent.messages.tool_call import ToolCall
-from litemind.agent.messages.tool_use import ToolUse
-from litemind.apis.utils.get_media_type_from_uri import get_media_type_from_uri
-from litemind.apis.utils.read_file_and_convert_to_base64 import (
-    base64_to_data_uri,
-    read_file_and_convert_to_base64,
-)
+from litemind.agent.messages.actions.action_base import ActionBase
+from litemind.agent.messages.actions.tool_call import ToolCall
+from litemind.agent.messages.actions.tool_use import ToolUse
+from litemind.media.types.media_action import Action
+from litemind.media.types.media_audio import Audio
+from litemind.media.types.media_image import Image
+from litemind.media.types.media_text import Text
 
 
 def convert_messages_for_openai(messages):
@@ -41,34 +40,45 @@ def convert_messages_for_openai(messages):
         for block in message.blocks:
 
             # If the block is not a tool call block then set current_tool_call_formatted_message to None:
-            if block.block_type != BlockType.Tool or (
-                block.block_type == BlockType.Tool
-                and isinstance(block.content, ToolUse)
+            if not block.has_type(Action) or (
+                block.has_type(Action) and isinstance(block.media.action, ToolUse)
             ):
                 # Reset the current_tool_call_formatted_message
                 current_tool_call_formatted_message = None
 
-            if block.block_type == BlockType.Text:
-                formatted_message["content"].append(
-                    {"type": "text", "text": block.content}
-                )
-            elif block.block_type == BlockType.Image:
-                image_uri = block.content
-                media_type = get_media_type_from_uri(image_uri)
-                if image_uri.startswith("file://"):
-                    local_path = image_uri.replace("file://", "")
-                    base64_data = read_file_and_convert_to_base64(local_path)
-                    image_uri = base64_to_data_uri(base64_data, media_type)
+            if block.has_type(Text):
+
+                # Get strings:
+                text: str = block.get_content()
+
+                # Adding text block:
+                formatted_message["content"].append({"type": "text", "text": text})
+
+            elif block.has_type(Image):
+
+                # Cast to Image:
+                image: Image = block.media
+
+                # non-local image URI:
+                image_uri = image.to_remote_or_data_uri()
+
+                # Add Image block:
                 formatted_message["content"].append(
                     {"type": "image_url", "image_url": {"url": image_uri}}
                 )
-            elif block.block_type == BlockType.Audio:
-                audio_uri = block.content
-                media_type = get_media_type_from_uri(audio_uri)
-                if audio_uri.startswith("file://"):
-                    local_path = audio_uri.replace("file://", "")
-                    base64_data = read_file_and_convert_to_base64(local_path)
-                    audio_uri = base64_to_data_uri(base64_data, media_type)
+
+            elif block.has_type(Audio):
+
+                # Cast to Image:
+                audio: Audio = block.media
+
+                # Non-local image URI:
+                audio_uri = audio.to_remote_or_data_uri()
+
+                # Media type:
+                media_type = audio.get_media_type()
+
+                # Audio block:
                 formatted_message["content"].append(
                     {
                         "type": "input_audio",
@@ -78,11 +88,15 @@ def convert_messages_for_openai(messages):
                         },
                     }
                 )
-            elif block.block_type == BlockType.Tool:
-                if isinstance(block.content, ToolCall):
+
+            elif block.has_type(Action):
+
+                tool_action: ActionBase = block.get_content()
+
+                if isinstance(tool_action, ToolCall):
 
                     # Extract the tool use from the block
-                    tool_call: ToolCall = block.content
+                    tool_call: ToolCall = tool_action
 
                     # If the current tool call is None then we are starting a new tool calls message:
                     if current_tool_call_formatted_message is None:
@@ -116,18 +130,23 @@ def convert_messages_for_openai(messages):
                         oa_tool_call
                     )
 
-                elif isinstance(block.content, ToolUse):
+                elif isinstance(tool_action, ToolUse):
 
                     # Extract the tool use from the block
-                    tool_use: ToolUse = block.content
+                    tool_use: ToolUse = tool_action
 
                     # Format the tool message for OpenAI:s
                     formatted_message["role"] = "tool"
                     formatted_message["tool_call_id"] = tool_use.id
                     formatted_message["content"] = tool_use.result
 
+                else:
+                    raise ValueError(
+                        f"Unsupported action type: {type(tool_action).__name__}"
+                    )
+
             else:
-                raise ValueError(f"Unsupported block type: {block.block_type}")
+                raise ValueError(f"Unsupported block type: {block.get_type()}")
 
         # Append the formatted message to the list if it has been filled:
         if current_tool_call_formatted_message is None:

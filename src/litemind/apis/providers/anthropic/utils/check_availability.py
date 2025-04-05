@@ -1,12 +1,10 @@
-from functools import lru_cache
-
 from arbol import aprint
 
 # Cache the result of the check_anthropic_api_availability function
 _cached_check_anthropic_api_availability = None
 
-def check_anthropic_api_availability(client: "Anthropic", model_name: str):
 
+def check_anthropic_api_availability(client: "Anthropic", model_name: str):
     # Use the global variable
     global _cached_check_anthropic_api_availability
 
@@ -47,10 +45,10 @@ def check_anthropic_api_availability(client: "Anthropic", model_name: str):
 
         # print stack trace:
         import traceback
+
         traceback.print_exc()
 
         result = False
-
 
     if result:
         aprint("Gemini API is available.")

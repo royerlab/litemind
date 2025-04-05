@@ -11,9 +11,12 @@ def print_callbacks():
         print_audio_embedding=True,
         print_video_embedding=True,
         print_image_embedding=True,
+        print_document_embedding=True,
         print_audio_description=True,
         print_image_description=True,
         print_audio_generation=True,
+        print_video_description=True,
+        print_document_description=True,
         print_image_generation=True,
         print_video_conversion=True,
         print_document_conversion=True,
@@ -152,6 +155,18 @@ def test_on_video_embedding(print_callbacks, capsys):
     assert "Additional arguments: {'param': 'value'}" in captured.out
 
 
+def test_on_document_embedding(print_callbacks, capsys):
+    print_callbacks.on_document_embedding(
+        ["document_uri1", "document_uri2"], [[0.1, 0.2], [0.3, 0.4]], param="value"
+    )
+    captured = capsys.readouterr()
+    assert (
+        "Document Embedding: Document URIs: ['document_uri1', 'document_uri2'], Embeddings: [[0.1, 0.2], [0.3, 0.4]]"
+        in captured.out
+    )
+    assert "Additional arguments: {'param': 'value'}" in captured.out
+
+
 def test_on_image_description(print_callbacks, capsys):
     print_callbacks.on_image_description("image_uri", "description", param="value")
     captured = capsys.readouterr()
@@ -177,6 +192,18 @@ def test_on_video_description(print_callbacks, capsys):
     captured = capsys.readouterr()
     assert (
         "Video Description: Video URI: video_uri, Description: description"
+        in captured.out
+    )
+    assert "Additional arguments: {'param': 'value'}" in captured.out
+
+
+def test_on_document_description(print_callbacks, capsys):
+    print_callbacks.on_document_description(
+        "document_uri", "description", param="value"
+    )
+    captured = capsys.readouterr()
+    assert (
+        "Document Description: Document URI: document_uri, Description: description"
         in captured.out
     )
     assert "Additional arguments: {'param': 'value'}" in captured.out

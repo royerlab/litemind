@@ -2,12 +2,13 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel
 
+from litemind.agent.messages.actions.action_base import ActionBase
+from litemind.agent.messages.actions.tool_call import ToolCall
+from litemind.agent.messages.actions.tool_use import ToolUse
 from litemind.agent.messages.message import Message
-from litemind.agent.messages.message_block_type import BlockType
-from litemind.agent.messages.tool_call import ToolCall
-from litemind.agent.messages.tool_use import ToolUse
-from litemind.apis.utils.convert_image_to_png import convert_image_to_png
-from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_path
+from litemind.media.types.media_action import Action
+from litemind.media.types.media_image import Image
+from litemind.media.types.media_text import Text
 
 
 def convert_messages_for_ollama(
@@ -30,27 +31,33 @@ def convert_messages_for_ollama(
             # Initialize the message dictionary:
             message_dict = {"role": message.role, "content": ""}
 
-            if block.block_type == BlockType.Text:
-                if block.content.strip():
+            if block.has_type(Text) and not block.has_attribute("thinking"):
+
+                # Get Text's string:
+                text: str = block.media.text
+
+                if text.strip():
                     # Append the text content to the message dictionary:
-                    message_dict["content"] += block.content + "\n"
+                    message_dict["content"] += block.get_content() + "\n"
 
                     # Append the message to the list of messages:
                     ollama_messages.append(message_dict)
 
-            elif block.block_type == BlockType.Thinking:
+            elif block.has_type(Text) and block.has_attribute("thinking"):
                 # By default we don't send back the thinking content back to the LLM:
                 pass
 
-            elif block.block_type == BlockType.Image:
-                # Get the image URI:
-                image_uri = block.content
+            elif block.has_type(Image):
+
+                # Get the Image media from the block:
+                image: Image = block.media
 
                 # Convert the image URI to a local file path:
-                local_image_path = uri_to_local_file_path(image_uri)
+                local_image_path = image.to_local_file_path()
 
-                if local_image_path.endswith(".webp"):
-                    local_image_path = convert_image_to_png(local_image_path)
+                if image.get_extension() == "webp":
+                    # Convert the image to PNG format:
+                    local_image_path = image.normalise_to_png()
 
                 # Append the local image paths to the message dictionary:
                 if local_image_path:
@@ -59,13 +66,15 @@ def convert_messages_for_ollama(
                 # Append the message to the list of messages:
                 ollama_messages.append(message_dict)
 
-            elif block.block_type == BlockType.Tool:
+            elif block.has_type(Action):
+
+                tool_action: ActionBase = block.get_content()
 
                 # if contents is a ToolUse object do the following:
-                if isinstance(block.content, ToolUse):
+                if isinstance(tool_action, ToolUse):
 
                     # Get the tool use object:
-                    tool_use: ToolUse = block.content
+                    tool_use: ToolUse = tool_action
 
                     # Set the role to 'tool':
                     message_dict["role"] = "tool"
@@ -73,10 +82,10 @@ def convert_messages_for_ollama(
                     # Append the tool use results to the message dictionary:
                     message_dict["content"] = tool_use.pretty_string()
 
-                elif isinstance(block.content, ToolCall):
+                elif isinstance(tool_action, ToolCall):
 
                     # Get the tool use object:
-                    tool_call: ToolUse = block.content
+                    tool_call: ToolCall = tool_action
 
                     # Initialize the tool calls list:
                     tool_calls = []
@@ -95,14 +104,18 @@ def convert_messages_for_ollama(
                     # Set the tool calls in the message dictionary:
                     message_dict["tool_calls"] = tool_calls
 
+                else:
+                    raise ValueError(
+                        f"Unsupported action type: {type(tool_action).__name__}"
+                    )
+
                 # Append the message to the list of messages:
                 ollama_messages.append(message_dict)
 
             else:
-                raise ValueError(f"Block type {block.block_type} not supported")
+                raise ValueError(f"Block type {block.get_type_name()} not supported")
 
     if response_format:
-
         # Create a message dictionary for the response format:
         message_dict = {
             "role": "user",

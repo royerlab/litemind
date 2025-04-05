@@ -116,6 +116,12 @@ class CallbackManager(BaseCallbacks):
         for callback in self.callbacks:
             callback.on_video_embedding(video_uris, embeddings, **kwargs)
 
+    def on_document_embedding(
+        self, document_uris: List[str], embeddings: Sequence[Sequence[float]], **kwargs
+    ) -> None:
+        for callback in self.callbacks:
+            callback.on_document_embedding(document_uris, embeddings, **kwargs)
+
     def on_image_description(self, image_uri: str, description: str, **kwargs) -> None:
         for callback in self.callbacks:
             callback.on_image_description(image_uri, description, **kwargs)
@@ -127,3 +133,9 @@ class CallbackManager(BaseCallbacks):
     def on_video_description(self, video_uri: str, description: str, **kwargs) -> None:
         for callback in self.callbacks:
             callback.on_video_description(video_uri, description, **kwargs)
+
+    def on_document_description(
+        self, video_uri: str, description: str, **kwargs
+    ) -> None:
+        for callback in self.callbacks:
+            callback.on_document_description(video_uri, description, **kwargs)

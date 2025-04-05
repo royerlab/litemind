@@ -3,21 +3,22 @@ from typing import Iterator, List, Optional, Union
 
 from pydantic import BaseModel
 
-from litemind.agent.augmentations.document import Document
+from litemind.agent.augmentations.information.information import Information
+from litemind.media.media_base import MediaBase
 
 
 class AugmentationBase(ABC):
     """
     Abstract base class defining the interface for all augmentations.
-    
+
     Augmentations provide additional context to the LLM by retrieving relevant
-    documents based on a query.
+    informations based on a query.
     """
-    
+
     def __init__(self, name: str, description: Optional[str] = None):
         """
         Create a new augmentation.
-        
+
         Parameters
         ----------
         name: str
@@ -27,46 +28,59 @@ class AugmentationBase(ABC):
         """
         self.name = name
         self.description = description or f"{name} Augmentation"
-    
+
     @abstractmethod
-    def get_relevant_documents(self, query: Union[str, BaseModel], k: int = 5) -> List[Document]:
+    def get_relevant_informations(
+        self,
+        query: Union[str, BaseModel, MediaBase, Information],
+        k: int = 5,
+        threshold: float = 0.0,
+    ) -> List[MediaBase]:
         """
-        Retrieve documents relevant to the query.
-        
+        Retrieve informations relevant to the query.
+
         Parameters
         ----------
-        query: Union[str, BaseModel]
-            The query to retrieve documents for. Can be a string or a structured Pydantic model.
+        query: Union[str, BaseModel, MediaBase, Information]
+            The query to retrieve informations for. Can be a string, a structured Pydantic model, a MediaBase object, or an Information object.
         k: int
-            The maximum number of documents to retrieve.
-            
+            The maximum number of informations to retrieve.
+        threshold: float
+            The score threshold_dict for the augmentation. If the score is below this value, the augmentation will not be used.
+
         Returns
         -------
-        List[Document]
-            A list of relevant documents.
+        List[InformationBase]
+            A list of relevant informations.
         """
         pass
-    
-    def get_relevant_documents_iterator(self, query: Union[str, BaseModel], k: int = 5) -> Iterator[Document]:
+
+    def get_relevant_informations_iterator(
+        self,
+        query: Union[str, BaseModel, MediaBase, Information],
+        k: int = 5,
+        threshold: float = 0.0,
+    ) -> Iterator[MediaBase]:
         """
-        Retrieve documents relevant to the query as an iterator.
+        Retrieve informations relevant to the query as an iterator.
         This default implementation calls get_relevant_documents and yields from the result.
-        
+
         Parameters
         ----------
-        query: Union[str, BaseModel]
-            The query to retrieve documents for. Can be a string or a structured Pydantic model.
+        query: Union[str, BaseModel, MediaBase, Information]
+            The query to retrieve informations for. Can be a string, a structured Pydantic model.
         k: int
-            The maximum number of documents to retrieve.
-            
+            The maximum number of informations to retrieve.
+        threshold: float
+            The score threshold_dict for the augmentation. If the score is below this value, the augmentation will not be returned.
+
         Returns
         -------
-        Iterator[Document]
-            An iterator over relevant documents.
+        Iterator[InformationBase]
+            An iterator over relevant informations.
         """
-        for doc in self.get_relevant_documents(query, k=k):
-            yield doc
-    
+        pass
+
     def __repr__(self):
         return f"{self.__class__.__name__}(name='{self.name}')"
 

@@ -1,5 +1,3 @@
-from functools import lru_cache
-
 from arbol import aprint
 
 from litemind.agent.messages.message import Message
@@ -9,6 +7,7 @@ from litemind.apis.providers.openai.utils.convert_messages import (
 
 # Cache the result of the check_openai_api_availability function
 _cached_check_openai_api_availability = None
+
 
 def check_openai_api_availability(client):
     """
@@ -51,6 +50,7 @@ def check_openai_api_availability(client):
 
         # print stack trace:
         import traceback
+
         traceback.print_exc()
 
         result = False

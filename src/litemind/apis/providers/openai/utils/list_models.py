@@ -65,7 +65,7 @@ def get_openai_model_list(
 
         if excluded is None:
             # Exclude models that are not supported by the API:
-            excluded = ["ada-002"]
+            excluded = ["ada-002", "o1-pro", "o3-pro"]
 
         # Convert to list of model ids:
         models = [model.id for model in raw_model_list]
@@ -98,7 +98,7 @@ def get_openai_model_list(
         sorted_model_list = sorted(model_list, key=model_key, reverse=True)
 
         # List of reasoning models:
-        reasoning_models = ["o1", "o1-mini", "o3-mini"]
+        reasoning_models = ["o1", "o1-pro", "o1-mini", "o3-mini"]
 
         # Replace each reasoning model 'X' with its three variants:  X-low, X-mid, X-high:
         for reasoning_model in reasoning_models:
@@ -130,10 +130,10 @@ def _remove_dated_models(models):
     for model in models:
 
         # Remove '-preview' from name:
-        model = model.replace("-preview", "")
+        model_ = model.replace("-preview", "")
 
-        if "-" in model:
-            parts = model.split("-")
+        if "-" in model_:
+            parts = model_.split("-")
 
             if len(parts) >= 4:
 
@@ -157,7 +157,9 @@ def _remove_dated_models(models):
 def model_key(model):
     score = 0
 
-    if "o3" in model:
+    if "gpt-4.5" in model:
+        score += 130
+    elif "o3" in model:
         score += 120
     elif "o1" in model:
         score += 110
@@ -172,6 +174,9 @@ def model_key(model):
 
     if "mini" in model:
         score -= 5
+
+    if "pro" in model:
+        score += 4
 
     if "preview" in model:
         score -= 2

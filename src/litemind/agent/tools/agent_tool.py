@@ -53,7 +53,6 @@ class AgentTool(BaseTool):
     def execute(self, prompt: str) -> Any:
         """Execute the agent with a prompt and return a structured output."""
         with asection(f"Executing tool agent '{self.name}'"):
-
             # Clear the conversation if the agent does not have memory:
             if not self.has_memory:
                 self.agent.conversation.clear_conversation()

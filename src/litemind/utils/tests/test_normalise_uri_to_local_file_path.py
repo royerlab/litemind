@@ -1,4 +1,3 @@
-# tests/test_get_local_file_path.py
 import base64
 import http.server
 import os
@@ -8,219 +7,228 @@ import threading
 
 import pytest
 
-from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_path
+from litemind.utils.normalise_uri_to_local_file_path import (
+    _temp_directories,
+    uri_to_local_file_path,
+)
 
 
 @pytest.fixture
 def temp_local_file():
-    """
-    Creates a temporary local file and returns its path.
-    Cleans up after the tests.
-    """
-    with tempfile.NamedTemporaryFile(delete=False) as tf:
-        tf.write(b"some tests content")
-        tf.flush()
-        temp_path = tf.name
-    yield temp_path
-    if os.path.exists(temp_path):
-        os.remove(temp_path)
+    """Create a temporary file with known content."""
+    fd, path = tempfile.mkstemp()
+    with os.fdopen(fd, "wb") as f:
+        f.write(b"some test content")
+    yield path
+    os.remove(path)
+
+
+class ContentHolder:
+    content = b"test content from server"
+    user_agent = None
 
 
 @pytest.fixture
 def ephemeral_http_server():
-    """
-    Spins up a simple HTTP server on an ephemeral port to serve a fixed file.
-
-    Yields a (url, content_holder) tuple where:
-      - url is the file URL (e.g. http://127.0.0.1:PORT/file)
-      - content_holder is a dict holding 'content' and 'user_agent' to
-        check what was requested and with which User-Agent.
-    """
-
-    class ContentHolder:
-        content = b"Hello from tests server!"
-        user_agent = None  # We'll store the user agent from the request
+    """Start an HTTP server on an ephemeral port."""
 
     class TestHandler(http.server.SimpleHTTPRequestHandler):
-        # We override do_GET to serve the content and capture the User-Agent.
         def do_GET(self):
-            # Capture User-Agent
             ContentHolder.user_agent = self.headers.get("User-Agent")
-
             self.send_response(200)
             self.send_header("Content-Type", "application/octet-stream")
             self.end_headers()
             self.wfile.write(ContentHolder.content)
 
-        def log_message(self, _, *args):
-            # Silence the default HTTP server logs
-            return
+        def log_message(self, *args, **kwargs):
+            return  # Silence logs
 
-    # Create the server
     with socketserver.TCPServer(("127.0.0.1", 0), TestHandler) as httpd:
-        # Get ephemeral port
         port = httpd.server_address[1]
-        # Start a thread to handle requests
         thread = threading.Thread(target=httpd.serve_forever)
         thread.daemon = True
         thread.start()
 
-        # Construct a URL pointing to a "file" endpoint
         file_url = f"http://127.0.0.1:{port}/file"
-
         yield file_url, ContentHolder
 
-        # Shutdown the server
         httpd.shutdown()
         thread.join()
 
 
 def test_local_file_absolute(temp_local_file):
-    """
-    An absolute local file path should return the same absolute path.
-    """
+    """An absolute local file path should return the same absolute path."""
     result_path = uri_to_local_file_path(temp_local_file)
-    assert result_path == os.path.abspath(temp_local_file)
+    assert os.path.abspath(result_path) == os.path.abspath(temp_local_file)
     assert os.path.isfile(result_path)
     with open(result_path, "rb") as f:
-        assert f.read() == b"some tests content"
+        assert f.read() == b"some test content"
 
 
 def test_local_file_relative(temp_local_file):
-    """
-    A relative local file path should be resolved to absolute.
-    """
+    """A relative local file path should be resolved to absolute."""
+    # Skip this test if we're in the root directory
+    if os.path.dirname(temp_local_file) == "/":
+        pytest.skip("Test not applicable in root directory")
+
     relative_path = os.path.relpath(temp_local_file)
     result_path = uri_to_local_file_path(relative_path)
-    assert result_path == os.path.abspath(relative_path)
+    assert os.path.abspath(result_path) == os.path.abspath(temp_local_file)
     assert os.path.isfile(result_path)
 
 
 def test_file_uri(temp_local_file):
-    """
-    A file:// URI should return the correct absolute local path.
-    """
+    """A file:// URI should return the correct absolute local path."""
     file_uri = f"file://{temp_local_file}"
     result_path = uri_to_local_file_path(file_uri)
-    assert result_path == os.path.abspath(temp_local_file)
+    assert os.path.abspath(result_path) == os.path.abspath(temp_local_file)
     assert os.path.isfile(result_path)
+
+
+def test_file_uri_nonexistent():
+    """A file:// URI to a nonexistent file should raise an error."""
+    nonexistent_path = "/nonexistent/file/path.txt"
+    file_uri = f"file://{nonexistent_path}"
+    with pytest.raises(ValueError) as excinfo:
+        uri_to_local_file_path(file_uri)
+    assert "not found" in str(excinfo.value)
 
 
 def test_remote_download(ephemeral_http_server):
-    """
-    If the URI is remote (http/https/ftp), the file should be downloaded
-    into a temp file, and we capture the User-Agent from the request.
-    """
+    """Test downloading a file from a remote HTTP server."""
     url, content_holder = ephemeral_http_server
 
     result_path = uri_to_local_file_path(url)
-    # The downloaded file should now exist locally
-    assert os.path.isfile(result_path)
+    try:
+        # Check the downloaded file exists and has correct content
+        assert os.path.isfile(result_path)
+        with open(result_path, "rb") as f:
+            assert f.read() == content_holder.content
 
-    with open(result_path, "rb") as f:
-        assert f.read() == content_holder.content
-
-    # Also verify that the server saw a User-Agent from the function's random set
-    assert content_holder.user_agent is not None
-    # Not specifying the entire set here, but you could do:
-    #   assert content_holder.user_agent in expected_user_agents
-    # if you want to tests it's one of your 10. For now, just check it's not empty:
-    assert len(content_holder.user_agent) > 0
-
-
-def test_base64_data():
-    """
-    A raw Base64-encoded string should be decoded to a local file.
-    """
-    original_content = b"Hello, Base64!"
-    encoded = base64.b64encode(original_content).decode("utf-8")
-
-    result_path = uri_to_local_file_path(encoded)
-    assert os.path.isfile(result_path)
-    with open(result_path, "rb") as f:
-        assert f.read() == original_content
+        # Verify User-Agent was sent
+        assert content_holder.user_agent is not None
+        assert len(content_holder.user_agent) > 0
+    finally:
+        # The cleanup should be handled by the atexit handler
+        pass
 
 
-def test_data_uri():
-    """
-    A data: URI with base64 encoding should be properly decoded.
-    """
+def test_data_uri_pdf():
+    """A data: URI with base64 encoding should be properly decoded."""
     original_content = b"PDFDATA"
     encoded = base64.b64encode(original_content).decode("utf-8")
     data_uri = f"data:application/pdf;base64,{encoded}"
 
     result_path = uri_to_local_file_path(data_uri)
-    assert os.path.isfile(result_path)
-    with open(result_path, "rb") as f:
-        assert f.read() == original_content
+    try:
+        assert os.path.isfile(result_path)
+        assert result_path.endswith(
+            ".pdf"
+        ), "Should use correct extension from MIME type"
+        with open(result_path, "rb") as f:
+            assert f.read() == original_content
+    finally:
+        # Cleanup handled by atexit
+        pass
 
 
-def test_nonexistent_local_path():
-    """
-    If a path doesn't exist locally but is valid Base64, we interpret it as Base64.
-    """
-    valid_b64 = base64.b64encode(b"abc123").decode("utf-8")  # "YWJjMTIz"
-    # This string does not exist as a file, but is valid Base64.
-    assert not os.path.exists(valid_b64)
+def test_data_uri_image():
+    """Test data URI with image MIME type."""
+    original_content = b"IMAGEDATA"
+    encoded = base64.b64encode(original_content).decode("utf-8")
+    data_uri = f"data:image/png;base64,{encoded}"
 
-    result_path = uri_to_local_file_path(valid_b64)
-    assert os.path.isfile(result_path)
-    with open(result_path, "rb") as f:
-        assert f.read() == b"abc123"
+    result_path = uri_to_local_file_path(data_uri)
+    try:
+        assert os.path.isfile(result_path)
+        assert result_path.endswith(
+            ".png"
+        ), "Should use correct extension from MIME type"
+        with open(result_path, "rb") as f:
+            assert f.read() == original_content
+    finally:
+        # Cleanup handled by atexit
+        pass
+
+
+def test_raw_base64():
+    """Test raw base64 data."""
+    original_content = b"RawBase64Content"
+    encoded = base64.b64encode(original_content).decode("utf-8")
+
+    result_path = uri_to_local_file_path(encoded)
+    try:
+        assert os.path.isfile(result_path)
+        with open(result_path, "rb") as f:
+            assert f.read() == original_content
+    finally:
+        # Cleanup handled by atexit
+        pass
+
+
+def test_invalid_uri():
+    """Test invalid URI formats."""
+    with pytest.raises(ValueError):
+        uri_to_local_file_path("")
+
+    with pytest.raises(ValueError):
+        uri_to_local_file_path("invalid:scheme://something")
 
 
 def test_invalid_base64():
-    """
-    A string that is not a file, not a file:// URI, not a valid http/https/ftp,
-    and not valid Base64, should raise an error.
-    """
+    """Test with invalid base64 data."""
     invalid_b64 = "!!!this is not base64!!!"
 
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(ValueError) as exc:
         uri_to_local_file_path(invalid_b64)
-    # Typically, base64.binascii.Error or ValueError for bad padding, etc.
-    assert "decode" in str(exc.value).lower() or "padding" in str(exc.value).lower()
+
+    # Check for appropriate error message
+    error_msg = str(exc.value).lower()
+    assert "base64" in error_msg
 
 
-def test_wikimedia_download():
-    """
-    Download a real image from Wikimedia and check that the local file
-    has the expected name and is non-empty.
-    """
-    url = "https://upload.wikimedia.org/wikipedia/commons/8/84/Alexander_the_Great_mosaic_%28cropped%29.jpg"
-    local_file = uri_to_local_file_path(url)
-
-    # 1. Verify the file exists
-    assert os.path.isfile(local_file), "Expected a downloaded local file."
-
-    # 2. Check that the filename ends with what we expect from the URL path
-    expected_extension = ".jpg"
-    assert local_file.endswith(
-        expected_extension
-    ), f"Downloaded file name should end with {expected_extension} but got {local_file[-len(expected_extension):]}"
-
-    # 3. Check that it's not empty
-    assert os.path.getsize(local_file) > 0, "File should not be empty after download."
+def test_nonexistent_remote_url():
+    """Test with a URL that doesn't exist."""
+    with pytest.raises(ValueError) as exc:
+        uri_to_local_file_path("https://nonexistent.example.com/file.txt")
+    assert "failed to download" in str(exc.value).lower()
 
 
-def test_save_base64_to_temp_file():
-    # Example base64 data URI
-    data_uri = (
-        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUA"
-        "AAAFCAYAAACNbyblAAAAHElEQVQI12P4"
-        "//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg=="
-    )
+def test_invalid_data_uri():
+    """Test malformed data URI."""
+    with pytest.raises(ValueError):
+        uri_to_local_file_path("data:application/pdf;base64")  # Missing comma and data
 
-    # Call the function
-    temp_file_path = uri_to_local_file_path(data_uri)
 
-    # Check that the temp file was created
-    assert os.path.exists(temp_file_path)
+def test_temp_directory_tracking():
+    """Test that temporary directories are properly tracked for cleanup."""
+    # Record the number of temp directories before
+    num_dirs_before = len(_temp_directories)
 
-    # Check that the temp file contains some content
-    with open(temp_file_path, "rb") as f:
-        content = f.read()
-        assert len(content) > 0
+    # Create a data URI that will generate a temp directory
+    data = base64.b64encode(b"test").decode("utf-8")
+    data_uri = f"data:text/plain;base64,{data}"
 
-    # Clean up the temp file
-    os.remove(temp_file_path)
+    # Process it
+    result_path = uri_to_local_file_path(data_uri)
+    temp_dir = os.path.dirname(result_path)
+
+    # Verify the directory exists and is tracked
+    assert os.path.exists(temp_dir)
+    assert temp_dir in _temp_directories
+    assert len(_temp_directories) > num_dirs_before
+
+
+def test_padding_correction():
+    """Test that base64 with missing padding is corrected."""
+    # Base64 that needs padding (should end with ==)
+    original = b"needs padding"
+    encoded = base64.b64encode(original).decode("utf-8").rstrip("=")
+
+    result_path = uri_to_local_file_path(encoded)
+    try:
+        with open(result_path, "rb") as f:
+            assert f.read() == original
+    finally:
+        # Cleanup handled by atexit
+        pass

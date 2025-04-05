@@ -3,7 +3,7 @@ from typing import Any, Optional, Union
 from pydantic import BaseModel
 
 from litemind.agent.messages.message import Message
-from litemind.apis.utils.json_to_object import json_to_object
+from litemind.utils.json_to_object import json_to_object
 
 
 def process_response_from_anthropic(

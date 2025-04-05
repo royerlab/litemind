@@ -4,7 +4,6 @@ from typing import List, Optional, Sequence, Union
 from pydantic import BaseModel
 
 from litemind.agent.messages.message import Message
-from litemind.agent.messages.message_block_type import BlockType
 from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.base_api import ModelFeatures
 from litemind.apis.callbacks.callback_manager import CallbackManager
@@ -29,11 +28,17 @@ from litemind.apis.providers.anthropic.utils.list_models import (
 from litemind.apis.providers.anthropic.utils.process_response import (
     process_response_from_anthropic,
 )
+from litemind.media.types.media_action import Action
+from litemind.media.types.media_text import Text
 
 
 class AnthropicApi(DefaultApi):
     """
     An Anthropic API implementation that conforms to the `BaseApi` abstract interface.
+
+    Anthropic models support text generation, image inputs, pdf inputs, and thinking,
+    but do not support audio, video, or embeddings natively. Support for these features
+    are provided by the Litemind API via our fallback mechanism.
 
     Set the ANTHROPIC_API_KEY environment variable to your Anthropic API key.
     You can get it from https://console.anthropic.com/account/api-keys.
@@ -427,9 +432,9 @@ class AnthropicApi(DefaultApi):
         non_system_messages = []
         for message in messages:
             if message.role == "system":
-                for anthropic_block in message.blocks:
-                    if anthropic_block.block_type == BlockType.Text:
-                        system_messages += anthropic_block.content
+                for block in message.blocks:
+                    if block.has_type(Text):
+                        system_messages += block.media.text
                     else:
                         raise ValueError(
                             "System message should only contain text blocks."
@@ -446,7 +451,7 @@ class AnthropicApi(DefaultApi):
         if max_num_output_tokens is None:
             max_num_output_tokens = self.max_num_output_tokens(model_name)
 
-        # Convert a ToolSet to Anthropic "tools" param if any
+        # Convert a ToolSet to Anthropic "tools" attribute_key if any
         anthropic_tools = format_tools_for_anthropic(toolset) if toolset else NotGiven()
 
         # Thinking mode:
@@ -515,7 +520,7 @@ class AnthropicApi(DefaultApi):
                 new_messages.append(response)
 
                 # If the model wants to use a tool, parse out the tool calls:
-                if not response.has(BlockType.Tool):
+                if not response.has(Action):
                     # Break out of the loop if no tool use is required anymore:
                     break
 

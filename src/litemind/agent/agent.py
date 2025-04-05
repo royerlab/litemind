@@ -2,14 +2,15 @@ from typing import List, Optional, Sequence, Union
 
 from arbol import aprint, asection
 
+from litemind.agent.augmentations.augmentation_base import AugmentationBase
+from litemind.agent.augmentations.augmentation_set import AugmentationSet
+from litemind.agent.augmentations.information.information_base import InformationBase
 from litemind.agent.messages.conversation import Conversation
 from litemind.agent.messages.message import Message
 from litemind.agent.tools.base_tool import BaseTool
 from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.base_api import BaseApi
 from litemind.apis.model_features import ModelFeatures
-from litemind.agent.augmentations.augmentation_base import AugmentationBase, Document
-from litemind.agent.augmentations.augmentation_set import AugmentationSet
 
 
 class Agent:
@@ -49,7 +50,7 @@ class Agent:
         augmentation_set: Optional[AugmentationSet]
             The set of augmentations to use for document retrieval.
         augmentation_k: int
-            The number of documents to retrieve from augmentations.
+            The number of informations to retrieve from augmentations.
         augmentation_context_position: str
             Where to place the retrieved context. Options are:
             - "before_query": Add context right before the user query
@@ -96,25 +97,29 @@ class Agent:
             model_name=self.model, features=ModelFeatures.TextGeneration
         ):
             raise ValueError("The model does not support text generation")
-        if toolset is not None and not self.api.has_model_support_for(
+
+        model_supports_tools = self.api.has_model_support_for(
             model_name=self.model, features=ModelFeatures.Tools
-        ):
+        )
+        if toolset is not None and not model_supports_tools:
             raise ValueError("The model does not support tools")
 
         # Set the temperature, toolset, and name:
         self.temperature = temperature
-        self.toolset = toolset or ToolSet()
+        self.toolset = toolset or (ToolSet() if model_supports_tools else None)
         self.name = name
         self._agent_kwargs = kwargs
 
         # Initialize augmentation parameters
         self.augmentation_set = augmentation_set or AugmentationSet()
         self.augmentation_k = augmentation_k
-        
+
         # Validate context_position
         valid_positions = ["before_query", "system"]
         if augmentation_context_position not in valid_positions:
-            raise ValueError(f"Invalid augmentation_context_position: {augmentation_context_position}. Valid options are: {valid_positions}")
+            raise ValueError(
+                f"Invalid augmentation_context_position: {augmentation_context_position}. Valid options are: {valid_positions}"
+            )
         self.augmentation_context_position = augmentation_context_position
 
         # Initialise conversation:
@@ -147,6 +152,8 @@ class Agent:
         tool: BaseTool
             The tool to add.
         """
+        if self.toolset is None:
+            raise ValueError("The model does not support tools")
         self.toolset.add_tool(tool)
 
     def remove_tool(self, name: str) -> bool:
@@ -163,32 +170,45 @@ class Agent:
         bool
             True if the tool was removed, False if not found.
         """
+        if self.toolset is None:
+            raise ValueError("The model does not support tools")
         return self.toolset.remove_tool(name)
 
     def clear_tools(self) -> None:
         """Clear all tools from the agent's toolset."""
+        if self.toolset is None:
+            raise ValueError("The model does not support tools")
         self.toolset = ToolSet()
 
-    def add_augmentation(self, augmentation: AugmentationBase) -> None:
+    def add_augmentation(
+        self,
+        augmentation: AugmentationBase,
+        k: int = 5,
+        threshold: float = 0.0,
+    ) -> None:
         """
         Add an augmentation to the agent's augmentation set.
-        
+
         Parameters
         ----------
         augmentation: AugmentationBase
             The augmentation to add.
+        k: int
+            The number of informations to retrieve from the augmentation.
+        threshold: float
+            The score threshold_dict for the augmentation. If the score is below this value, the augmentation will not be used.
         """
-        self.augmentation_set.add_augmentation(augmentation)
-        
+        self.augmentation_set.add_augmentation(augmentation, k=k, threshold=threshold)
+
     def remove_augmentation(self, name: str) -> bool:
         """
         Remove an augmentation by name from the agent's augmentation set.
-        
+
         Parameters
         ----------
         name: str
             The name of the augmentation to remove.
-            
+
         Returns
         -------
         bool
@@ -199,11 +219,11 @@ class Agent:
     def clear_augmentations(self) -> None:
         """Clear all augmentations from the agent's augmentation set."""
         self.augmentation_set = AugmentationSet()
-    
+
     def list_augmentations(self) -> List[AugmentationBase]:
         """
         Get all augmentations in the agent's augmentation set.
-        
+
         Returns
         -------
         List[AugmentationBase]
@@ -211,71 +231,94 @@ class Agent:
         """
         return self.augmentation_set.list_augmentations()
 
-    def _retrieve_relevant_documents(self, query_text: str) -> List[Document]:
+    def _retrieve_relevant_documents(self, query_text: str) -> List[InformationBase]:
         """
-        Retrieve relevant documents from the augmentation set.
-        
+        Retrieve relevant informations from the augmentation set.
+
         Parameters
         ----------
         query_text: str
-            The query to retrieve documents for.
-            
+            The query to retrieve informations for.
+
         Returns
         -------
         List[Document]
-            A list of relevant documents.
+            A list of relevant informations.
         """
-        with asection(f"Retrieving relevant documents for query: '{query_text[:100]}...'"):
-            documents = self.augmentation_set.search_combined(query_text, k=self.augmentation_k)
-            aprint(f"Retrieved {len(documents)} documents from augmentation set")
+        with asection(
+            f"Retrieving relevant informations for query: '{query_text[:100]}...'"
+        ):
+            documents = self.augmentation_set.search_combined(
+                query_text, k=self.augmentation_k
+            )
+            with asection(
+                f"Retrieved {len(documents)} informations from augmentation set:"
+            ):
+                for doc in documents:
+                    aprint(f"Document ID: {doc.id}, Score: {doc.score:.4f}")
             return documents
 
-    def _add_context_to_conversation(self, query_message: Message, documents: List[Document]) -> None:
+    def _add_context_to_conversation(
+        self,
+        query_message: Message,
+        documents: List[InformationBase],
+        max_doc_length: int = 1000,
+    ) -> None:
         """
-        Add context from documents to the conversation.
-        
+        Add context from informations to the conversation.
+
         Parameters
         ----------
         query_message: Message
             The user's query message.
         documents: List[Document]
-            The documents to add as context.
+            The informations to add as context.
         """
         if not documents:
             return
-            
-        # Create context message
-        context_text = "Additional context information:\n\n"
-        
-        for i, doc in enumerate(documents):  
-            # Truncate very long documents
-            doc_content = doc.content
-            if len(doc_content) > 1000:
-                doc_content = doc_content[:1000] + "..."
-                
-            context_text += f"--- Document {i+1} "
+
+        # Add the context based on the specified position
+        if self.augmentation_context_position == "before_query":
+            # Create a user message with the context
+            augmentation_message = Message(role="user")
+
+            # Insert the context message right before the user query
+            idx = self.conversation.standard_messages.index(query_message)
+            self.conversation.standard_messages.insert(idx, augmentation_message)
+
+        elif self.augmentation_context_position == "system":
+            # Add as a system message
+            augmentation_message = Message(role="system")
+            self.conversation.system_messages.append(augmentation_message)
+
+        else:
+            raise ValueError(
+                f"Invalid augmentation_context_position: {self.augmentation_context_position}"
+            )
+
+        augmentation_message.append_text("Additional context information:\n\n")
+
+        for i, doc in enumerate(documents):
+
+            # prepare the context text
+            context_text = ""
+            context_text += f"--- Document {i + 1} "
             if doc.score is not None:
                 context_text += f"(Relevance: {doc.score:.4f}) "
             if "augmentation" in doc.metadata:
                 context_text += f"[Source: {doc.metadata['augmentation']}] "
             context_text += "---\n"
-            context_text += f"{doc_content}\n\n"
-        
-        # Add the context based on the specified position
-        if self.augmentation_context_position == "before_query":
-            # Create a user message with the context
-            context_message = Message(role="user")
-            context_message.append_text(context_text)
-            
-            # Insert the context message right before the user query
-            idx = self.conversation.standard_messages.index(query_message)
-            self.conversation.standard_messages.insert(idx, context_message)
-            
-        elif self.augmentation_context_position == "system":
-            # Add as a system message
-            context_message = Message(role="system")
-            context_message.append_text(context_text)
-            self.conversation.system_messages.append(context_message)
+
+            # Add document context:
+            augmentation_message.append_text(context_text)
+
+            # Add document content:
+            augmentation_message += doc.to_message_block()
+
+        with asection(
+            f"Added {len(documents)} informations to conversation, context message:"
+        ):
+            aprint(str(augmentation_message))
 
     def __getitem__(self, item) -> Message:
         return self.conversation[item]
@@ -307,7 +350,7 @@ class Agent:
                         aprint(tool.pretty_string())
                 else:
                     aprint("No tools available")
-                    
+
             with asection("Available augmentations"):
                 augmentations = self.augmentation_set.list_augmentations()
                 if augmentations:
@@ -318,14 +361,14 @@ class Agent:
 
             with asection("Last message in conversation:"):
                 aprint(last_message)
-                
+
             # Process augmentations if we have any and there's a query message
             if len(self.augmentation_set) > 0 and last_message:
                 query_text = last_message.to_plain_text()
-                
-                # Retrieve relevant documents
+
+                # Retrieve relevant informations
                 relevant_documents = self._retrieve_relevant_documents(query_text)
-                
+
                 # Add context to the conversation
                 if relevant_documents:
                     self._add_context_to_conversation(last_message, relevant_documents)

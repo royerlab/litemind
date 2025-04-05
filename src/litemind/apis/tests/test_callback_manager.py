@@ -8,6 +8,10 @@ from litemind.apis.callbacks.callback_manager import CallbackManager
 
 
 class MockCallback(BaseCallbacks):
+    """
+    A mock callback class that records the methods called on it.
+    """
+
     def __init__(self):
         self.called_methods = []
 
@@ -79,15 +83,35 @@ class MockCallback(BaseCallbacks):
 
 @pytest.fixture
 def callback_manager():
+    """
+    Fixture for creating a CallbackManager instance.
+    Returns
+    -------
+    CallbackManager
+        An instance of the CallbackManager class.
+
+    """
     return CallbackManager()
 
 
 @pytest.fixture
 def mock_callback():
+    """
+    Fixture for creating a MockCallback instance.
+    Returns
+    -------
+    MockCallback
+        An instance of the MockCallback class.
+
+    """
     return MockCallback()
 
 
 def test_add_and_remove_callback(callback_manager, mock_callback):
+    """
+    Test adding and removing a callback from the CallbackManager.
+    """
+
     # Add the callback:
     callback_manager.add_callback(mock_callback)
 
@@ -104,6 +128,10 @@ def test_add_and_remove_callback(callback_manager, mock_callback):
 
 
 def test_on_availability_check(callback_manager, mock_callback):
+    """
+    Test the on_availability_check method of the CallbackManager.
+    """
+
     # Add the callback:
     callback_manager.add_callback(mock_callback)
 
@@ -115,6 +143,10 @@ def test_on_availability_check(callback_manager, mock_callback):
 
 
 def test_on_model_list(callback_manager, mock_callback):
+    """
+    Test the on_model_list method of the CallbackManager.
+    """
+
     # Add the callback:
     callback_manager.add_callback(mock_callback)
 
@@ -126,6 +158,10 @@ def test_on_model_list(callback_manager, mock_callback):
 
 
 def test_on_best_model_selected(callback_manager, mock_callback):
+    """
+    Test the on_best_model_selected method of the CallbackManager.
+    """
+
     # Add the callback:
     callback_manager.add_callback(mock_callback)
 
@@ -137,6 +173,10 @@ def test_on_best_model_selected(callback_manager, mock_callback):
 
 
 def test_on_text_generation(callback_manager, mock_callback):
+    """
+    Test the on_text_generation method of the CallbackManager.
+    """
+
     # Add the callback:
     callback_manager.add_callback(mock_callback)
 
@@ -151,6 +191,10 @@ def test_on_text_generation(callback_manager, mock_callback):
 
 
 def test_on_text_streaming(callback_manager, mock_callback):
+    """
+    Test the on_text_streaming method of the CallbackManager.
+    """
+
     # Add the callback:
     callback_manager.add_callback(mock_callback)
 

@@ -5,7 +5,11 @@ from pydantic import BaseModel
 
 from litemind.agent.messages.message import Message
 from litemind.agent.messages.message_block import MessageBlock
-from litemind.agent.messages.message_block_type import BlockType
+from litemind.media.types.media_audio import Audio
+from litemind.media.types.media_document import Document
+from litemind.media.types.media_image import Image
+from litemind.media.types.media_text import Text
+from litemind.media.types.media_video import Video
 
 _remote_csv_file = "https://www.sample-videos.com/csv/Sample-Spreadsheet-100-rows.csv"
 
@@ -18,8 +22,8 @@ class StructuredText(BaseModel):
 def test_message_deepcopy():
     # Create a message and add some blocks
     original_message = Message(role="user")
-    block1 = MessageBlock(block_type=BlockType.Text, content="First block")
-    block2 = MessageBlock(block_type=BlockType.Text, content="Second block")
+    block1 = MessageBlock(Text("First block"))
+    block2 = MessageBlock(Text("Second block"))
     original_message.append_block(block1)
     original_message.append_block(block2)
 
@@ -29,8 +33,8 @@ def test_message_deepcopy():
     # Verify that the copied message is equal to the original
     assert copied_message.role == original_message.role
     assert len(copied_message) == len(original_message)
-    assert copied_message[0].content == original_message[0].content
-    assert copied_message[1].content == original_message[1].content
+    assert copied_message[0].media.text == original_message[0].media.text
+    assert copied_message[1].media.text == original_message[1].media.text
 
     # Verify that the copied message is a different object
     assert copied_message is not original_message
@@ -41,9 +45,9 @@ def test_message_deepcopy():
 
 def test_insert_block():
     # Create a few blocks:
-    block1 = MessageBlock(block_type=BlockType.Text, content="First block")
-    block2 = MessageBlock(block_type=BlockType.Text, content="Second block")
-    block3 = MessageBlock(block_type=BlockType.Text, content="Inserted block")
+    block1 = MessageBlock(Text("First block"))
+    block2 = MessageBlock(Text("Second block"))
+    block3 = MessageBlock(Text("Inserted block"))
 
     # Create a user message and append blocks:
     user_message = Message(role="user")
@@ -53,9 +57,9 @@ def test_insert_block():
     # Insert block at index 1
     user_message.insert_block(block3, block_before=block1)
 
-    assert user_message[0].content == "First block"
-    assert user_message[1].content == "Inserted block"
-    assert user_message[2].content == "Second block"
+    assert user_message[0].media.get_content() == "First block"
+    assert user_message[1].media.get_content() == "Inserted block"
+    assert user_message[2].media.get_content() == "Second block"
 
 
 def test_insert_message():
@@ -64,9 +68,9 @@ def test_insert_message():
     user_message2 = Message(role="user")
 
     # Create a few blocks:
-    block1 = MessageBlock(block_type=BlockType.Text, content="First block")
-    block2 = MessageBlock(block_type=BlockType.Text, content="Second block")
-    block3 = MessageBlock(block_type=BlockType.Text, content="Third block")
+    block1 = MessageBlock(Text("First block"))
+    block2 = MessageBlock(Text("Second block"))
+    block3 = MessageBlock(Text("Third block"))
 
     # Append blocks to message 1:
     user_message1.append_block(block1)
@@ -78,9 +82,9 @@ def test_insert_message():
     # Insert message at index 1
     user_message1.insert_message(user_message2, block_before=block1)
 
-    assert user_message1[0].content == "First block"
-    assert user_message1[1].content == "Third block"
-    assert user_message1[2].content == "Second block"
+    assert user_message1[0].media.get_content() == "First block"
+    assert user_message1[1].media.get_content() == "Third block"
+    assert user_message1[2].media.get_content() == "Second block"
 
 
 def test_message_text():
@@ -89,7 +93,8 @@ def test_message_text():
 
     assert system_message.role == "system"
     assert any(
-        block.content == "You are an omniscient all-knowing being called Ohmm"
+        block.media.get_content()
+        == "You are an omniscient all-knowing being called Ohmm"
         for block in system_message.blocks
     )
 
@@ -97,7 +102,7 @@ def test_message_text():
     user_message.append_text("Who are you?")
 
     assert user_message.role == "user"
-    assert any(block.content == "Who are you?" for block in user_message.blocks)
+    assert any(block.get_content() == "Who are you?" for block in user_message.blocks)
 
     # Checks contains operator:
     assert "Who" in user_message
@@ -110,7 +115,7 @@ def test_message_object():
     user_message.append_object(obj)
 
     assert user_message.role == "user"
-    assert any(block.content == obj for block in user_message.blocks)
+    assert any(block.get_content() == obj for block in user_message.blocks)
 
 
 def test_message_json():
@@ -123,7 +128,8 @@ def test_message_json():
     user_message.append_json(json)
 
     assert user_message.role == "user"
-    assert any(block.content == json for block in user_message.blocks)
+    assert user_message.blocks[0].get_content()["key"] == "example"
+    assert user_message.blocks[0].get_content()["value"] == "data"
 
 
 def test_message_image():
@@ -133,12 +139,11 @@ def test_message_image():
 
     assert user_message.role == "user"
     assert any(
-        block.content == "Can you describe what you see?"
+        block.get_content() == "Can you describe what you see?"
         for block in user_message.blocks
     )
     assert any(
-        block.content == "https://example.com/image.jpg"
-        and block.block_type == BlockType.Image
+        block.get_content() == "https://example.com/image.jpg" and block.has_type(Image)
         for block in user_message.blocks
     )
 
@@ -153,12 +158,11 @@ def test_message_audio():
 
     assert user_message.role == "user"
     assert any(
-        block.content == "Can you describe what you hear?"
+        block.get_content() == "Can you describe what you hear?"
         for block in user_message.blocks
     )
     assert any(
-        block.content == "https://example.com/audio.mp3"
-        and block.block_type == BlockType.Audio
+        block.get_content() == "https://example.com/audio.mp3" and block.has_type(Audio)
         for block in user_message.blocks
     )
 
@@ -173,12 +177,11 @@ def test_message_video():
 
     assert user_message.role == "user"
     assert any(
-        block.content == "Can you describe what you see in the video?"
+        block.get_content() == "Can you describe what you see in the video?"
         for block in user_message.blocks
     )
     assert any(
-        block.content == "https://example.com/video.mp4"
-        and block.block_type == BlockType.Video
+        block.get_content() == "https://example.com/video.mp4" and block.has_type(Video)
         for block in user_message.blocks
     )
 
@@ -193,12 +196,13 @@ def test_message_document():
 
     assert user_message.role == "user"
     assert any(
-        block.content == "Can you describe what you see in the document?"
+        block.get_content() == "Can you describe what you see in the document?"
         for block in user_message.blocks
     )
     assert any(
-        block.content == "https://example.com/document.pdf"
-        and block.block_type == BlockType.Document
+        block.get_content() == "https://example.com/document.pdf"
+        and block.has_type(Document)
+        for block in user_message.blocks
         for block in user_message.blocks
     )
 
@@ -218,12 +222,12 @@ def test_message_table():
 
     assert user_message.role == "user"
     assert any(
-        block.content == "Can you describe what you see in the table?"
+        block.get_content() == "Can you describe what you see in the table?"
         for block in user_message.blocks
     )
 
-    # Check that the table is in the message with its specific values:
-    assert isinstance(user_message[1].content, DataFrame)
+    # Check that we can get a DataFrame:
+    assert isinstance(user_message[1].media.to_dataframe(), DataFrame)
 
     # Checks contains operator:
     assert "table" in user_message
@@ -236,10 +240,10 @@ def test_message_table():
 
     assert user_message.role == "user"
     assert any(
-        block.content == "Can you describe what you see in the table?"
+        block.get_content() == "Can you describe what you see in the table?"
         for block in user_message.blocks
     )
-    assert isinstance(user_message[1].content, DataFrame)
+    assert isinstance(user_message[1].media.to_dataframe(), DataFrame)
 
 
 def test_message_folder():
@@ -255,9 +259,11 @@ def test_message_folder():
 
     # Create an image file (PNG) with some random pixel values use Pillow:
     import numpy as np
-    from PIL import Image
+    from PIL import Image as Image_PIL
 
-    image = Image.fromarray(np.random.randint(0, 255, (100, 100, 3), dtype=np.uint8))
+    image = Image_PIL.fromarray(
+        np.random.randint(0, 255, (100, 100, 3), dtype=np.uint8)
+    )
     image.save(os.path.join(temp_folder, "image.png"))
 
     # Download this PDF into the folder: https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf
@@ -298,13 +304,13 @@ def test_message_folder():
 
     # Check that the message has a folder tree:
     assert any(
-        block.content == "Can you describe what you see in the folder?"
+        block.get_content() == "Can you describe what you see in the folder?"
         for block in user_message.blocks
     )
 
     # Check that the message has a folder tree and specific files:
     assert any(
-        block.content == "Can you describe what you see in the folder?"
+        block.get_content() == "Can you describe what you see in the folder?"
         for block in user_message.blocks
     )
     assert "file.txt" in str(user_message)
@@ -312,8 +318,8 @@ def test_message_folder():
     assert "document.pdf" in str(user_message)
 
     # Check the presence of a document block and an image block:
-    assert any(block.block_type == BlockType.Document for block in user_message.blocks)
-    assert any(block.block_type == BlockType.Image for block in user_message.blocks)
+    assert any(block.has_type(Document) for block in user_message.blocks)
+    assert any(block.has_type(Image) for block in user_message.blocks)
 
     # Check that sentence 'This is a random sentence.' is in the message:
     assert "This is a random sentence." in str(user_message)
@@ -334,7 +340,7 @@ def test_message_contains():
     assert "audio" in user_message
     assert "video" in user_message
     assert "document" in user_message
-    assert "0.58" in user_message
+    assert "Table" in user_message
 
 
 def test_message_str():
@@ -351,7 +357,7 @@ def test_message_str():
     assert "https://example.com/audio.mp3" in str(user_message)
     assert "https://example.com/video.mp4" in str(user_message)
     assert "https://example.com/document.pdf" in str(user_message)
-    assert "0.58" in str(user_message)
+    assert _remote_csv_file in str(user_message)
 
 
 def test_extract_markdown_block():
@@ -369,9 +375,12 @@ def test_extract_markdown_block():
 
     # Verify that the extracted blocks are correct
     assert len(markdown_blocks) == 2
-    assert markdown_blocks[0].content == "```markdown\n# Header\nSome content\n```"
     assert (
-        markdown_blocks[1].content == "```markdown\n# Another Header\nMore content\n```"
+        markdown_blocks[0].get_content() == "```markdown\n# Header\nSome content\n```"
+    )
+    assert (
+        markdown_blocks[1].get_content()
+        == "```markdown\n# Another Header\nMore content\n```"
     )
 
     # We repeat but we remove the quotes:
@@ -379,5 +388,5 @@ def test_extract_markdown_block():
 
     # Verify that the extracted blocks are correct
     assert len(markdown_blocks) == 2
-    assert markdown_blocks[0].content == "# Header\nSome content\n"
-    assert markdown_blocks[1].content == "# Another Header\nMore content\n"
+    assert markdown_blocks[0].get_content() == "# Header\nSome content\n"
+    assert markdown_blocks[1].get_content() == "# Another Header\nMore content\n"

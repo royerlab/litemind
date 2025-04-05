@@ -95,7 +95,6 @@ def _stream_chat_with_tools(
             next_input = [resp_part]
 
     if response_format is not None:
-
         # Generate the prompt for the user:
         prompt = f"user: Convert the following answer to JSON:\n{final_aggregated_text.strip()}\n to adhere to the following schema:\n{response_format.model_json_schema()}\n"
 

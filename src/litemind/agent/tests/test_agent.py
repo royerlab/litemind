@@ -9,7 +9,6 @@ from litemind.apis.model_features import ModelFeatures
 
 @pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
 def test_agent_with_just_text(api_class):
-
     # Create OpenAI API object:
     api = api_class()
 
@@ -54,7 +53,6 @@ def test_agent_with_just_text(api_class):
 
 @pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
 def test_agent_message_with_image(api_class):
-
     # Create OpenAI API object:
     api = api_class()
 

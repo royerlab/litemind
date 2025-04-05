@@ -2,7 +2,6 @@ from typing import Callable, Iterable
 
 
 def aggregate_chat_response(chunks: Iterable["ChatResponse"], callback: Callable):
-
     # Aggregated text response:
     aggregated_text = ""
 

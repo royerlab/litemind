@@ -79,7 +79,7 @@ def extract_archive(archive_file_path: str) -> str:
             patoolib.extract_archive(archive_file_path, outdir=temp_dir)
 
         else:
-            raise ValueError("Unsupported archive format")
+            raise ValueError(f"Unsupported archive format: {archive_file_path}")
 
     except Exception as e:
         import shutil
