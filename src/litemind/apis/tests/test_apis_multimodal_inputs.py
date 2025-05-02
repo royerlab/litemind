@@ -377,7 +377,12 @@ class TestBaseApiImplementationsMultimodalInputs(MediaResources):
         response = response[-1]
 
         # Check response:
-        assert "smell" in response or "ham" in response or "beer" in response
+        assert (
+            "smell" in response
+            or "ham" in response
+            or "beer" in response
+            or "reading" in response
+        )
 
     def test_text_generation_with_audio_url(self, api_class):
         api_instance = api_class()

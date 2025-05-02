@@ -408,6 +408,18 @@ class AnthropicApi(DefaultApi):
         **kwargs,
     ) -> List[Message]:
 
+        # validate inputs:
+        super().generate_text(
+            messages=messages,
+            model_name=model_name,
+            temperature=temperature,
+            max_num_output_tokens=max_num_output_tokens,
+            toolset=toolset,
+            use_tools=use_tools,
+            response_format=response_format,
+            **kwargs,
+        )
+
         # Anthropic imports:
         from anthropic import NotGiven
 

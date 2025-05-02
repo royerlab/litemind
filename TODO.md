@@ -9,11 +9,12 @@
 - [x] Reorganise media files used for testing into a single media folder
 - [x] RAG (still missing ingestion code for arbitary digital objects: folders, pdf, images, urls, etc...)
 - [x] Improve logging with arbol, with option to turn off.
+- [x] Use specialised libraries for document type identification
+- [ ] Use the faster pybase64 for base64 encoding/decoding.
 - [ ] Automatic feature support discovery for models (which models support images as input, reasoning, etc...)
 - [ ] Deal with message sizes in tokens sent to models
 - [ ] Improve vendor api robustness features such as retry call when server errors, etc...
 - [ ] Improve and uniformize exception handling
 - [ ] Add support for adding nD images to messages.
 - [ ] Implement 'brainstorming' mode for text generation, possibly with API fusion.
-- [ ] Use the faster pybase64 for base64 encoding/decoding.
 - [ ] Response format option for agent.

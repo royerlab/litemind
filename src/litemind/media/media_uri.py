@@ -1,3 +1,4 @@
+import os
 from abc import abstractmethod
 from typing import Optional
 
@@ -8,7 +9,7 @@ from litemind.utils.read_file_and_convert_to_base64 import (
     base64_to_data_uri,
     read_file_and_convert_to_base64,
 )
-from litemind.utils.uri_utils import is_uri
+from litemind.utils.uri_utils import is_uri, is_valid_path
 
 
 class MediaURI(MediaDefault):
@@ -23,7 +24,7 @@ class MediaURI(MediaDefault):
         Parameters
         ----------
         uri: str
-            The media's URI.
+            The media's URI (Uniform Resource Identifier) or local file path.
         extension: str
             Extension/Type of the media file in case it is not clear from the URI.
         kwargs: dict
@@ -33,8 +34,14 @@ class MediaURI(MediaDefault):
         super().__init__(**kwargs)
 
         # Check that it is a valid table URI:
+        if not is_uri(uri) or not is_valid_path(uri):
+            raise ValueError(f"Invalid URI or local file path: '{uri}'.")
+
+        # Check that file is a valid file path and normalise to URI:
         if not is_uri(uri):
-            raise ValueError(f"Invalid URI: '{uri}'.")
+            # Get the absolute file path and then prepend 'file://:
+            uri = os.path.abspath(uri)
+            uri = "file://" + uri
 
         # Set attributes:
         self.uri = uri

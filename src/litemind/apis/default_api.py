@@ -381,7 +381,24 @@ class DefaultApi(BaseApi):
         **kwargs,
     ) -> List[Message]:
 
-        raise NotImplementedError("Text generation is not supported by this API.")
+        if not isinstance(messages, list):
+            raise ValueError("Messages must be a list of Message objects.")
+        if not all(isinstance(m, Message) for m in messages):
+            raise ValueError("All messages must be Message objects.")
+        if not messages:
+            raise ValueError("Messages list cannot be empty.")
+        if not isinstance(temperature, (int, float)):
+            raise ValueError("Temperature must be a number.")
+        if temperature < 0 or temperature > 1:
+            raise ValueError("Temperature must be between 0 and 1.")
+        if max_num_output_tokens is not None and not isinstance(
+            max_num_output_tokens, int
+        ):
+            raise ValueError("max_num_output_tokens must be an integer.")
+        if max_num_output_tokens is not None and max_num_output_tokens <= 0:
+            raise ValueError("max_num_output_tokens must be greater than 0.")
+        if toolset is not None and not isinstance(toolset, ToolSet):
+            raise ValueError("toolset must be a ToolSet object.")
 
     def _preprocess_messages(
         self,
@@ -666,17 +683,6 @@ class DefaultApi(BaseApi):
             raise FeatureNotAvailableError(
                 "No model available for document conversion."
             )
-
-        # Check if the model is pymupdf:
-        if model_name == "pymupdf":
-            # Check if pymupdf is available:
-            if not is_pymupdf_available():
-                # This is redundant, but we check again:
-                raise FeatureNotAvailableError(
-                    "Documents feature: pymupdf is not available! \n Install with: pip install pymupdf pymupdf4llm"
-                )
-        else:
-            raise NotImplementedError("Unknown document conversion model")
 
         # Iterate over each message in the list:
         for message in messages:
@@ -1516,6 +1522,9 @@ class DefaultApi(BaseApi):
                         aprint(response)
 
                     return response
+
+                # Return None if no response was generated:
+                return None
 
             except Exception as e:
                 # Log the error:

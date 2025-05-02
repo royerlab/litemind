@@ -25,6 +25,40 @@ def is_pymupdf_available() -> bool:
         return False
 
 
+def initialize_docling_converter():
+    from docling.datamodel.base_models import InputFormat
+    from docling.datamodel.pipeline_options import (
+        PaginatedPipelineOptions,
+        PdfPipelineOptions,
+    )
+    from docling.document_converter import (
+        DocumentConverter,
+        PdfFormatOption,
+        WordFormatOption,
+    )
+
+    """Initialize the docling document converter with appropriate settings for document processing"""
+    # Configure pipeline options for PDF
+    pdf_pipeline_options = PdfPipelineOptions()
+    pdf_pipeline_options.do_ocr = True  # Enable OCR for image-based PDFs
+    pdf_pipeline_options.do_table_structure = True  # Extract tables
+    pdf_pipeline_options.generate_page_images = True  # Save page images
+
+    # Configure pipeline options for DOCX
+    docx_pipeline_options = PaginatedPipelineOptions()
+    docx_pipeline_options.generate_page_images = True  # Save page images
+
+    # Create document converter with our configured options for both formats
+    converter = DocumentConverter(
+        format_options={
+            InputFormat.PDF: PdfFormatOption(pipeline_options=pdf_pipeline_options),
+            InputFormat.DOCX: WordFormatOption(pipeline_options=docx_pipeline_options),
+        }
+    )
+
+    return converter
+
+
 def convert_document_to_markdown(document_uri: str) -> str:
     """
     Convert a document to a markdown string.
@@ -213,35 +247,66 @@ def extract_text_from_document_pages(document_uri: str) -> List[str]:
     Returns
     -------
     List[str]
-        A list of text strings, one for each page.
+        A list of text strings, one for each page. If the converter does not support page-by-page extraction then a singleton is returned.
     """
-
-    import fitz  # PyMuPDF
-
-    # Check if package pymupdf is available:
-    if not is_pymupdf_available():
-        raise ImportError(
-            "pymupdf is not available. Please install it to use this function."
-        )
 
     # Convert the URI to a local file path:
     document_path = uri_to_local_file_path(document_uri)
-
-    # Open the document using PyMuPDF:
-    doc = fitz.open(document_path)
+    # print(f"Extracting text from uri: {document_uri}")
+    # print(f"Extracting text from path: {document_path}")
 
     # List to store the text of each page:
     pages_text = []
 
-    # Iterate over each page and extract text:
-    for page in doc:
-        page_text = page.get_text(
-            "text"
-        )  # or simply page.get_text() if "text" is default
-        pages_text.append(page_text)
+    # If extension is PDF, then we use PyMuPDF:
+    if document_uri.endswith(".pdf"):
+        import fitz  # PyMuPDF
 
-    # Close the document:
-    doc.close()
+        # Check if package pymupdf is available:
+        if not is_pymupdf_available():
+            raise ImportError(
+                "pymupdf is not available. Please install it to use this function."
+            )
+
+        # Open the document using PyMuPDF:
+        doc = fitz.open(document_path)
+
+        # Iterate over each page and extract text:
+        for page in doc:
+            page_text = page.get_text(
+                "text"
+            )  # or simply page.get_text() if "text" is default
+            pages_text.append(page_text)
+
+        # Close the document:
+        doc.close()
+    else:
+        from docling.document_converter import DocumentConverter
+
+        # Instantiate the DocumentConverter:
+        converter = initialize_docling_converter()
+
+        # Parse the document:
+        result = converter.convert(document_path)
+
+        # Get the document:
+        document = result.document
+
+        # Check if the document has pages:
+        if document.pages:
+
+            # Extract text from each page of the document:
+            for i, page in enumerate(document.pages):
+                # Extract text for this page
+                page_text = page.export_to_markdown()
+
+                # Append the text to the list:
+                pages_text.append(page_text)
+
+        else:
+            # If the document does not have pages, we can still extract text from the document:
+            page_text = document.export_to_markdown()
+            pages_text.append(page_text)
 
     return pages_text
 
@@ -267,41 +332,46 @@ def extract_text_and_image_from_document(
             - A PIL Image object representing the page.
     """
 
-    import fitz  # PyMuPDF
+    if document_uri.endswith(".pdf"):
+        import fitz  # PyMuPDF
 
-    # Check if package pymupdf is available:
-    if not is_pymupdf_available():
-        raise ImportError(
-            "pymupdf is not available. Please install it to use this function."
-        )
+        # Check if package pymupdf is available:
+        if not is_pymupdf_available():
+            raise ImportError(
+                "pymupdf is not available. Please install it to use this function."
+            )
 
-    # Convert the document URI to a local file path.
-    document_path = uri_to_local_file_path(document_uri)
+        # Convert the document URI to a local file path.
+        document_path = uri_to_local_file_path(document_uri)
 
-    try:
-        doc = fitz.open(document_path)
-    except Exception as e:
-        raise RuntimeError(f"Failed to open document '{document_path}': {e}")
-
-    pages_content = []
-    # Compute the zoom factor based on the desired DPI (PDFs default to 72 DPI)
-    zoom = dpi / 72.0
-    mat = fitz.Matrix(zoom, zoom)
-
-    for page_number in range(len(doc)):
         try:
-            # Load the page and extract text
-            page = doc.load_page(page_number)
-            page_text = page.get_text("text")
-            # Render the page to an image using the zoom matrix
-            pix = page.get_pixmap(matrix=mat)
-            # Convert the pixmap to PNG bytes and then to a PIL Image
-            img_bytes = pix.tobytes("png")
-            image = Image.open(io.BytesIO(img_bytes))
-            pages_content.append((page_text, image))
+            doc = fitz.open(document_path)
         except Exception as e:
-            print(f"Error processing page {page_number}: {e}")
-            continue
+            raise RuntimeError(f"Failed to open document '{document_path}': {e}")
 
-    doc.close()
+        pages_content = []
+        # Compute the zoom factor based on the desired DPI (PDFs default to 72 DPI)
+        zoom = dpi / 72.0
+        mat = fitz.Matrix(zoom, zoom)
+
+        for page_number in range(len(doc)):
+            try:
+                # Load the page and extract text
+                page = doc.load_page(page_number)
+                page_text = page.get_text("text")
+                # Render the page to an image using the zoom matrix
+                pix = page.get_pixmap(matrix=mat)
+                # Convert the pixmap to PNG bytes and then to a PIL Image
+                img_bytes = pix.tobytes("png")
+                image = Image.open(io.BytesIO(img_bytes))
+                pages_content.append((page_text, image))
+            except Exception as e:
+                print(f"Error processing page {page_number}: {e}")
+                continue
+
+        doc.close()
+
+    else:
+        raise NotImplementedError("Only PDF documents are supported for now.")
+
     return pages_content

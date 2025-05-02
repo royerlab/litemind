@@ -262,6 +262,8 @@ def test_image_generation(api_class):
             f"{api_class.__name__} does not support image generation. Skipping image generation tests."
         )
 
+    print(f"Image generation model name: {image_generation_model_name}")
+
     api_instance.generate_image("A cute fluffy cat.")
     assert "on_image_generation" in mock_callback.called_methods
 

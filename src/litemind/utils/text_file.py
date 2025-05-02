@@ -1,0 +1,152 @@
+def is_text_file(file_path, blocksize=1024):
+    # First we consider files with known text file extensions as text files:
+    text_extensions = [
+        ".txt",
+        ".csv",
+        ".json",
+        ".xml",
+        ".html",
+        ".md",
+        ".py",
+        ".java",
+        ".c",
+        ".cpp",
+        ".h",
+        ".css",
+        ".js",
+        ".ts",
+        ".yaml",
+        ".yml",
+        ".toml",
+        ".ini",
+        ".log",
+        ".sql",
+        ".sh",
+        ".bash",
+        ".bat",
+        ".ps1",
+        ".r",
+        ".go",
+        ".swift",
+        ".php",
+        ".pl",
+        ".rb",
+        ".lua",
+        ".dart",
+        ".scala",
+        ".el",
+        ".clj",
+        ".cljs",
+        ".coffee",
+        ".less",
+        ".scss",
+        ".xml",
+        ".svg",
+        ".json5",
+        ".jsonl",
+        ".txt",
+        ".text",
+        ".markdown",
+        ".mdx",
+        ".rst",
+        ".asciidoc",
+        ".adoc",
+        ".org",
+        ".properties",
+        ".cfg",
+        ".conf",
+        ".properties",
+        ".env",
+        ".dockerfile",
+        ".gitignore",
+        ".gitattributes",
+        ".npmignore",
+        ".yarnignore",
+        ".dockerignore",
+        ".tf",
+        ".tfstate",
+        ".tfstate.backup",
+        ".tfvars",
+        ".hcl",
+        ".hcl2",
+        ".tfplan",
+    ]
+    if any(file_path.endswith(ext) for ext in text_extensions):
+        return True
+
+    # Second we exclude any files that known extensions that are not text files:
+    binary_extensions = [
+        ".exe",
+        ".bin",
+        ".dll",
+        ".so",
+        ".o",
+        ".class",
+        ".jar",
+        ".zip",
+        ".tar",
+        ".gz",
+        ".bz2",
+        ".xz",
+        ".7z",
+        ".rar",
+        ".iso",
+        ".img",
+        ".dmg",
+        ".apk",
+        ".ipa",
+        ".mp3",
+        ".pdf",
+        ".mp4",
+        ".avi",
+        ".mkv",
+        ".mov",
+        ".wmv",
+        ".flv",
+        ".webm",
+        ".mpg",
+        ".mpeg",
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".gif",
+        ".bmp",
+        ".tiff",
+        ".ico",
+        ".svg",
+        ".webp",
+        ".raw",
+        ".xlsx",
+        ".xls",
+        ".doc",
+        ".docx",
+        ".ppt",
+        ".pptx",
+        ".odt",
+        ".ods",
+        ".odp",
+        ".odg",
+        ".odf",
+        ".epub",
+        ".mobi",
+        ".azw",
+    ]
+    if any(file_path.endswith(ext) for ext in binary_extensions):
+        return False
+
+    # Check if the file is a text file by reading a small chunk
+    try:
+        with open(file_path, "rb") as f:
+            chunk = f.read(blocksize)
+            # If the chunk contains null bytes, it's likely binary.
+            if b"\0" in chunk:
+                return False
+            import chardet
+
+            result = chardet.detect(chunk)
+            # Check that an encoding was found and that the confidence is reasonably high.
+            if not result["encoding"] or result["confidence"] < 0.5:
+                return False
+            return True
+    except Exception:
+        return False

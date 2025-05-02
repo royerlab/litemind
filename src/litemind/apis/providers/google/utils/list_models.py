@@ -12,6 +12,7 @@ def _get_gemini_models_list():
             ("gemini" in model_obj.name.lower() or "imagen" in model_obj.name.lower())
             and not "will be discontinued" in model_obj.description.lower()
             and not "deprecated" in model_obj.description.lower()
+            and not "live" in model_obj.name.lower()
         ):
             model_list.append(model_obj.name)
 
