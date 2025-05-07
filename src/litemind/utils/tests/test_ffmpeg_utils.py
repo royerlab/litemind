@@ -12,6 +12,10 @@ def test_video(tmp_path):
     and return the path to the created file.
     """
 
+    # Skip test if ffmpeg is not available:
+    if not is_ffmpeg_available():
+        return None
+
     import ffmpeg
 
     # Paths for the generated video and final tests file
@@ -58,7 +62,7 @@ def test_extract_frames_and_audio(tmp_path, test_video):
     """
 
     # Skip test if ffmpeg is not available:
-    if not is_ffmpeg_available():
+    if not is_ffmpeg_available() or test_video is None:
         pytest.skip("ffmpeg is not available. Skipping test.")
 
     output_dir = tmp_path / "output"
@@ -110,7 +114,7 @@ def test_load_video_as_array(test_video):
     """Test that load_video_as_array correctly loads a video into a numpy array."""
 
     # Skip test if ffmpeg is not available:
-    if not is_ffmpeg_available():
+    if not is_ffmpeg_available()  or test_video is None:
         pytest.skip("ffmpeg is not available. Skipping test.")
 
     import numpy as np
