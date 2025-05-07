@@ -98,7 +98,7 @@ def get_openai_model_list(
         sorted_model_list = sorted(model_list, key=model_key, reverse=True)
 
         # List of reasoning models:
-        reasoning_models = ["o1", "o1-pro", "o1-mini", "o3-mini"]
+        reasoning_models = ["o1", "o1-pro", "o1-mini", "o3-mini", "o3"]
 
         # Replace each reasoning model 'X' with its three variants:  X-low, X-mid, X-high:
         for reasoning_model in reasoning_models:

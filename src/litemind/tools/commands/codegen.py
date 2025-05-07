@@ -114,16 +114,12 @@ def generate(
             api = CombinedApi()
 
         model_name = api.get_best_model(
-            features=[ModelFeatures.TextGeneration],
+            features=[ModelFeatures.TextGeneration, ModelFeatures.Document],
             non_features=[ModelFeatures.Thinking],
         )
 
         # Initialize the agent
-        agent = Agent(
-            api=api,
-            model_name=model_name,
-            model_features=[ModelFeatures.TextGeneration, ModelFeatures.Document],
-        )
+        agent = Agent(api=api, model_name=model_name)
 
         # Create a message:
         message = Message(role="user")
@@ -136,7 +132,9 @@ def generate(
             excluded_files=excluded_files,
         )
         message.append_text(
-            f"\n\n\n# Task:\nPlease generate a detailed, complete and informative {output_file_name} file without any preamble or postamble: \n"
+            f"\n\n\n# Task:\nPlease generate a detailed, "
+            f"complete and informative {output_file_name} file "
+            f"without any preamble or postamble: \n"
         )
 
         # Use the agent to generate the file contents:

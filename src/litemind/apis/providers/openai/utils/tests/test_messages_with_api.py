@@ -1,8 +1,10 @@
 import os
 
+import pytest
 from openai import OpenAI
 
 from litemind.agent.messages.message import Message
+from litemind.apis.providers.openai.utils.check_availability import check_openai_api_availability
 from litemind.apis.providers.openai.utils.convert_messages import (
     convert_messages_for_openai,
 )
@@ -12,6 +14,13 @@ __url2 = "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsi
 
 
 def test_openai_api_text_only_message():
+
+    # Check if OpenAI API key is available:
+    if not check_openai_api_availability():
+        # Skip the test if the API key is not available:
+        print("Skipping test_convert_text_only_message: OpenAI API key not available.")
+        pytest.skip("OpenAI API key not available.")
+
     # Create a text-only message
     message = Message(role="user")
     message.append_text("Hello, OpenAI!")
@@ -34,6 +43,13 @@ def test_openai_api_text_only_message():
 
 
 def test_openai_api_text_and_image_message():
+
+    # Check if OpenAI API key is available:
+    if not check_openai_api_availability():
+        # Skip the test if the API key is not available:
+        print("Skipping test_convert_text_only_message: OpenAI API key not available.")
+        pytest.skip("OpenAI API key not available.")
+
     # Create a message with text and image
     message = Message(role="user")
     message.append_text("What do you think of this image?")
@@ -59,6 +75,13 @@ def test_openai_api_text_and_image_message():
 
 
 def test_openai_api_multiple_images():
+
+    # Check if OpenAI API key is available:
+    if not check_openai_api_availability():
+        # Skip the test if the API key is not available:
+        print("Skipping test_convert_text_only_message: OpenAI API key not available.")
+        pytest.skip("OpenAI API key not available.")
+
     # Create a message with multiple images
     message = Message(role="user")
     message.append_text("What do you think of these images?")
@@ -83,6 +106,13 @@ def test_openai_api_multiple_images():
 
 
 def test_openai_api_multiple_messages():
+
+    # Check if OpenAI API key is available:
+    if not check_openai_api_availability():
+        # Skip the test if the API key is not available:
+        print("Skipping test_convert_text_only_message: OpenAI API key not available.")
+        pytest.skip("OpenAI API key not available.")
+
     # Create multiple messages
     message1 = Message(role="user")
     message1.append_text("Hello, OpenAI!")

@@ -1,4 +1,4 @@
-__version__ = "2025.4.5"
+__version__ = "2025.5.2"
 
 from arbol import aprint
 
@@ -35,12 +35,27 @@ for api_class in API_IMPLEMENTATIONS:
                 f"API {api_class.__name__} is not available. Removing it from the list."
             )
             API_IMPLEMENTATIONS.remove(api_class)
+
+
+        # Get list of models:
+        if len(api_instance.list_models()) == 0:
+            aprint(
+                f"API {api_class.__name__} has no models available. Removing it from the list."
+            )
+            API_IMPLEMENTATIONS.remove(api_class)
+
+
     except Exception as e:
         # If an exception is raised, remove the API from the list:
         aprint(
             f"API {api_class.__name__} could not be instantiated: {e}. Removing it from the list."
         )
         API_IMPLEMENTATIONS.remove(api_class)
+
+# Remove the default and combined API from the list of implementations if they are the only ones in the list:
+if len(API_IMPLEMENTATIONS) <= 2 and CombinedApi in API_IMPLEMENTATIONS:
+    API_IMPLEMENTATIONS.remove(CombinedApi)
+    aprint("Removing CombinedApi from the list of implementations as it is the only one available.")
 
 # Vector database implementations:
 VECDB_IMPLEMENTATIONS = [QdrantVectorDatabase, InMemoryVectorDatabase]
@@ -65,6 +80,14 @@ for vecdb_class in list(VECDB_IMPLEMENTATIONS):
             f"Error checking vector database {vecdb_class.__name__}: {e}. Removing it from the list."
         )
         VECDB_IMPLEMENTATIONS.remove(vecdb_class)
+
+# If no API_IMPLEMENTATIONS are available then the QdrantVectorDatabase cannot be used:
+if len(API_IMPLEMENTATIONS) == 0 and QdrantVectorDatabase in VECDB_IMPLEMENTATIONS:
+    aprint(
+        "No API implementations available. Removing QdrantVectorDatabase from the list of implementations."
+    )
+    VECDB_IMPLEMENTATIONS.remove(QdrantVectorDatabase)
+
 
 # Initialize and silence the Abseil logging system:
 import absl.logging

@@ -56,6 +56,7 @@ def uri_to_local_file_path(file_uri: str) -> str:
 
     # SCENARIO 0: Check if it's already a valid local file path
     if is_valid_path(file_uri) and os.path.exists(file_uri):
+        # If it's a valid local path, return its absolute path
         return os.path.abspath(file_uri)
 
     # Parse the URI to determine its type

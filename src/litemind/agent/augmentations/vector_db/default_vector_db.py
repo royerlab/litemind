@@ -61,9 +61,14 @@ class DefaultVectorDatabase(AugmentationDefault, BaseVectorDatabase):
 
         # If no api is provided, use the default API:
         if api is None:
-            from litemind import CombinedApi
-
-            api = CombinedApi()
+            try:
+                from litemind import CombinedApi
+                api = CombinedApi()
+            except ValueError:
+                raise ValueError(
+                    "No API provided and litemind's default API is not available. "
+                    "Please provide an API."
+                )
         self.api = api
 
         # Set the embedding function:

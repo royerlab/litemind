@@ -27,10 +27,10 @@ from litemind.utils.file_extensions import (
     image_file_extensions,
     video_file_extensions,
 )
+from litemind.utils.file_types import is_text_file
 from litemind.utils.folder_description import (
     file_info_header,
     generate_tree_structure,
-    is_text_file,
     read_binary_file_info,
     read_file_content,
 )

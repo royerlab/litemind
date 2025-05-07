@@ -96,6 +96,88 @@ class TestBaseApiImplementationsDocuments(MediaResources):
                 "The response might lack in detail!! Please check the response for more details."
             )
 
+    def test_text_generation_with_word_document(self, api_class):
+
+        # If OllamaApi we skip because opensource models are not yet strong enough:
+        if api_class.__name__ == "OllamaApi":
+            pytest.skip(
+                f"{api_class.__name__} does not have strong enough models for this test. Skipping."
+            )
+
+        # Get an instance of the api class:
+        api_instance = api_class()
+
+        # Get the best model for text generation:
+        default_model_name = api_instance.get_best_model(
+            [ModelFeatures.TextGeneration, ModelFeatures.Document, ModelFeatures.Image]
+        )
+
+        # Skip tests if the model does not support text generation:
+        if not default_model_name or not api_instance.has_model_support_for(
+            model_name=default_model_name,
+            features=[
+                ModelFeatures.TextGeneration,
+                ModelFeatures.Document,
+                ModelFeatures.Image,
+            ],
+        ):
+            pytest.skip(
+                f"{api_class.__name__} does not support documents. Skipping documents tests."
+            )
+
+        print("\n" + default_model_name)
+
+        messages = []
+
+        # System message:
+        system_message = Message(role="system")
+        system_message.append_text(
+            "You are a highly qualified recruiter in the biotech sector."
+        )
+        messages.append(system_message)
+
+        # User message:
+        user_message = Message(role="user")
+        user_message.append_text(
+            "Can you write a review for the following candidate? Please provide a well structured and detailed report of the candidate's profile, including their strengths and weaknesses. Please also provide a list of all documents provided."
+        )
+        doc1_path = self.get_local_test_document_uri("job_ad.pdf")
+        doc2_path = self.get_local_test_document_uri("maya_takahashi_cv.docx")
+        user_message.append_document(doc1_path)
+        user_message.append_document(doc2_path)
+
+        messages.append(user_message)
+
+        # Run agent:
+        response = api_instance.generate_text(
+            messages=messages, model_name=default_model_name
+        )
+
+        print("\n" + str(response))
+
+        # Get the last, and possibly only, message in response:
+        response = response[-1]
+
+        # Make sure that the answer is not empty:
+        assert (
+            len(response) > 0
+        ), f"{api_class.__name__}.completion() should return a non-empty string!"
+
+        # Check response details:
+        assert (
+            "virology" in response.lower()
+            or "biology" in response.lower()
+            or "immunology" in response.lower()
+        )
+
+        # Check if the response is detailed and follows instructions:
+
+        if not ("Takahashi" in response and "vitae" in response.lower()):
+            # printout message that warns that the response miight lack in detail:
+            print(
+                "The response might lack in detail!! Please check the response for more details."
+            )
+
     def test_text_generation_with_webpage(self, api_class):
 
         # If OllamaApi we skip because opensource models are not yet strong enough:

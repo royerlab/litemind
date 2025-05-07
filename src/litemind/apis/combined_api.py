@@ -64,7 +64,13 @@ class CombinedApi(DefaultApi):
                 try:
                     api_instance = api_class()
                     if api_instance.check_availability_and_credentials():
-                        apis.append(api_instance)
+
+                        if len(api_instance.list_models()) > 0:
+                            apis.append(api_instance)
+                        else:
+                            aprint(
+                                f"API {api_class.__name__} does not provide any models. Removing it from the list."
+                            )
                     else:
                         aprint(
                             f"API {api_class.__name__} is not available. Removing it from the list."

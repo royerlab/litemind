@@ -1,3 +1,6 @@
+import os
+from typing import Optional
+
 from arbol import aprint
 
 from litemind.agent.messages.message import Message
@@ -9,7 +12,7 @@ from litemind.apis.providers.openai.utils.convert_messages import (
 _cached_check_openai_api_availability = None
 
 
-def check_openai_api_availability(client):
+def check_openai_api_availability(client: Optional = None) -> bool:
     """
     Check if the OpenAI API key is valid by sending a test message to the API.
 
@@ -35,9 +38,17 @@ def check_openai_api_availability(client):
         user_message = Message(role="user")
         user_message.append_text("Hello!")
         messages.append(user_message)
+
+        # If no client is provided, create a new OpenAI API client:
+        if client is None:
+            from openai import OpenAI
+
+            # Initialize the OpenAI API client
+            client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
         # Call the OpenAI raw API to generate a completion (not using the API wrapper):
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4",
             messages=convert_messages_for_openai(messages),
             max_completion_tokens=10,
         )

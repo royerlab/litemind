@@ -97,24 +97,6 @@ def generate_tree_structure(
     return tree_str
 
 
-def is_text_file(file_path, blocksize=1024):
-    try:
-        with open(file_path, "rb") as f:
-            chunk = f.read(blocksize)
-            # If the chunk contains null bytes, it's likely binary.
-            if b"\0" in chunk:
-                return False
-            import chardet
-
-            result = chardet.detect(chunk)
-            # Check that an encoding was found and that the confidence is reasonably high.
-            if not result["encoding"] or result["confidence"] < 0.5:
-                return False
-            return True
-    except Exception:
-        return False
-
-
 def read_file_content(file_path):
     with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
         return f.read()

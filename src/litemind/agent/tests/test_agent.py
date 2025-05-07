@@ -1,5 +1,6 @@
 import pytest
 from arbol import aprint
+from pydantic import BaseModel
 
 from litemind import API_IMPLEMENTATIONS
 from litemind.agent.agent import Agent
@@ -49,6 +50,56 @@ def test_agent_with_just_text(api_class):
 
     # Check that response contains the system message:
     assert "Ohmm" in response
+
+
+@pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
+def test_agent_with_just_text(api_class):
+    # Create OpenAI API object:
+    api = api_class()
+
+    # Check that at least one model is available for text generation, if not, skip test:
+    if not api.has_model_support_for(features=ModelFeatures.TextGeneration):
+        aprint(f"Skipping test for {api_class.__name__} as no text model is available.")
+        return
+
+    aprint(f"Default model: {api.get_best_model()}")
+
+    # 4. Using the Agent with a JSON Response Format
+    class Weather(BaseModel):
+        temperature: float
+        condition: str
+        humidity: float
+
+    # Create agent:
+    agent = Agent(api=api)
+
+    # Add system message:
+    agent.append_system_message("You are a weather bot.")
+
+    # Run agent, you can pass a string directly to the agent:
+    response = agent(
+        "What is the weather like in Paris? (if you don't know, imagine what your favorite weather would be like)",
+        response_format=Weather,
+    )
+    print("Agent with JSON Response:", response)
+
+    # Check that there is one message in the response:
+    assert len(response) == 1
+
+    # Extract last message from response:
+    weather = response[-1][-1].get_content()
+
+    # Check that response contains the system message:
+    assert weather.humidity > 30
+    assert weather.temperature > 10
+    assert weather.condition.lower() in [
+        "sunny",
+        "rainy",
+        "cloudy",
+        "snowy",
+        "partly cloudy",
+        "sunny with light clouds",
+    ]
 
 
 @pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)

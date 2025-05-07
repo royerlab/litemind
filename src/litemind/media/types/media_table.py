@@ -74,7 +74,7 @@ class Table(MediaURI):
         # Check that it is really a string:
         if not isinstance(csv_table_str, str):
             raise ValueError(
-                f"Parameter \`csv_table_str\` must be a string, not {type(csv_table_str)}"
+                f"Parameter `csv_table_str` must be a string, not {type(csv_table_str)}"
             )
 
         # Convert the CSV string to a DataFrame:

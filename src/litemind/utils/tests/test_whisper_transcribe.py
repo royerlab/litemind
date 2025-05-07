@@ -1,10 +1,17 @@
 import os
 
+import pytest
+
 from litemind.ressources.media_resources import MediaResources
-from litemind.utils.whisper_transcribe_audio import transcribe_audio_with_local_whisper
+from litemind.utils.whisper_transcribe_audio import transcribe_audio_with_local_whisper, is_local_whisper_available
 
 
 def test_transcribe_audio():
+
+    # If local whisper is not available, skip the test:
+    if not is_local_whisper_available():
+        pytest.skip("Local Whisper is not available. Skipping test.")
+
     # Get the current directory:
     current_dir = os.path.dirname(__file__)
 

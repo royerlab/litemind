@@ -3,136 +3,100 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "litemind"  # <-- Add the project name here
+name = "litemind"
 dynamic = ["version"]
 description = "A wrapper API around LLM APIs and agentic AI framework"
 authors = [{ name = "Loic A. Royer" }]
-license = "BSD-3-Clause"
+license = "BSD-3-Clause"        # SPDX
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 keywords = ["llm", "ai", "agents", "wrapper"]
 classifiers = [
-    "Development Status :: 4 - Beta",
-    "Intended Audience :: Developers",
-    "License :: OSI Approved :: BSD License",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.6",
-    "Programming Language :: Python :: 3.7",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: BSD License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
-    "openai",
-    "ollama",
-    "anthropic",
-    "google-generativeai",
-    "pillow",
-    "arbol",
-    "ansicolors",
-    "json-repair",
-    "tiktoken",
-    "pydantic",
-    "pandas",
-    "numpy",
-    "chardet",
-    "pyyaml",
-    "absl-py",
-    "scipy",
-    "numpy",
+  "openai",
+  "ollama",
+  "anthropic",
+  "google-generativeai",
+  "pillow",
+  "arbol",
+  "ansicolors",
+  "json-repair",
+  "tiktoken",
+  "pydantic",
+  "pandas",
+  "numpy",
+  "chardet",
+  "pyyaml",
+  "absl-py",
+  "scipy",
+  "filetype",
+  "python-magic",
 ]
 
-[tool.hatch.build.targets.sdist]
-ignore-vcs = true
-packages = ["src/litemind"]
-include = [
-    "**",
-    "README.md",
-    "LICENSE",
+[project.optional-dependencies]
+dev = [
+  "hatch",
+  "pytest",
+  "pytest-html",
+  "pytest-cov",
+  "pytest-md-report",
+  "black[jupyter]",
+  "flake8",
+  "mypy",
+  "isort",
+  "pypdf",
 ]
-exclude = [
-    "**/tests/**",
-    "**/.DS_Store",
-    "*.egg-info",
-    "**/sandbox/**",
-    "src/litemind/media/**"
-]
+rag = ["fastembed", "chromadb", "qdrant-client"]
+whisper = ["openai-whisper"]
+documents = ["pymupdf", "pymupdf4llm", "openpyxl", "docling"]
+tables = ["tabulate"]
+videos = ["ffmpeg-python", "imageio[ffmpeg]"]
+audio  = ["soundfile"]
+
+[project.urls]
+Homepage = "https://github.com/royerlab/litemind"
+Issues   = "https://github.com/royerlab/litemind/issues"
 
 [tool.hatch.version]
 path = "src/litemind/__init__.py"
 
-[project.urls]
-Homepage = "https://github.com/royerlab/litemind"
-Issues = "https://github.com/royerlab/litemind/issues"
-
-# Development dependencies:
-[project.optional-dependencies]
-dev = [
-    "hatch",
-    "pytest",
-    "pytest-html",
-    "pytest-cov",
-    "pytest-md-report",
-    "black",
-    "flake8",
-    "mypy",
-    "isort",
+# Only sdists: keep include/exclude here
+[tool.hatch.build.targets.sdist]
+ignore-vcs = true
+include = ["**", "README.md", "LICENSE"]
+exclude = [
+  "**/tests/**",
+  "**/.DS_Store",
+  "*.egg-info",
+  "**/sandbox/**",
+  "src/litemind/ressources/**",
 ]
 
-# Optional dependencies:
-rag = [
-    "fastembed",
-    "chromadb",
-    "qdrant-client"
-]
-whisper = [
-    "openai-whisper"
-]
-documents = [
-    "pymupdf",
-    "pymupdf4llm",
-    "openpyxl"
-]
-tables = [
-    "tabulate"
-]
-videos = [
-    "ffmpeg-python",
-    "imageio[ffmpeg]",
-]
-audio = [
-    "soundfile"
-]
+# Wheel-only file selection
+[tool.hatch.build.targets.wheel]
+packages = ["src/litemind"]
 
-
-# Commands:
 [project.scripts]
 litemind = "litemind.tools.litemind_tools:main"
 
 [tool.hatch.envs.hatch-test]
 default-args = ["src/"]
-exclude = [
-    "sandbox",
-]
+exclude = ["sandbox"]
 extra-dependencies = [
-    "qdrant-client",
-    "chromadb",
-    "openai-whisper",
-    "pymupdf",
-    "pymupdf4llm",
-    "openpyxl",
-    "pandas",
-    "numpy",
-    "chardet",
-    "tabulate",
-    "fastembed",
-    "ffmpeg-python",
-    "imageio[ffmpeg]",
-    "pytest-html",
-    "pytest-cov",
-    "pytest-md-report",
-    "pypdf",
-    "soundfile"
+  "qdrant-client", "chromadb", "openai-whisper", "pymupdf",
+  "pymupdf4llm", "openpyxl", "docling", "pandas", "numpy",
+  "chardet", "tabulate", "fastembed", "ffmpeg-python",
+  "imageio[ffmpeg]", "pytest-html", "pytest-cov",
+  "pytest-md-report", "pypdf", "soundfile", "filetype",
+  "python-magic",
 ]
-
-

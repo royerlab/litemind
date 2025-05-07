@@ -415,6 +415,18 @@ class GeminiApi(DefaultApi):
         import google.generativeai as genai
         from google.generativeai import types
 
+        # validate inputs:
+        super().generate_text(
+            messages=messages,
+            model_name=model_name,
+            temperature=temperature,
+            max_num_output_tokens=max_num_output_tokens,
+            toolset=toolset,
+            use_tools=use_tools,
+            response_format=response_format,
+            **kwargs,
+        )
+
         # Set default model if not provided
         if model_name is None:
             # We Require the minimum features for text generation:

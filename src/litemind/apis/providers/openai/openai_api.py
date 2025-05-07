@@ -1,9 +1,8 @@
+import base64
 import os
 import tempfile
-from io import BytesIO
 from typing import List, Optional, Sequence, Union
 
-import requests
 from openai import OpenAI
 from PIL import Image
 from PIL.Image import Resampling
@@ -320,9 +319,9 @@ class OpenAIApi(DefaultApi):
         return False
 
     def _has_image_gen_support(self, model_name: str) -> bool:
-        if "dall-e" not in model_name or "transcribe" in model_name:
-            return False
-        return True
+        if "dall-e-" in model_name or "gpt-image-1" in model_name:
+            return True
+        return False
 
     def _has_thinking_support(self, model_name: str) -> bool:
 
@@ -665,6 +664,18 @@ class OpenAIApi(DefaultApi):
         **kwargs,
     ) -> List[Message]:
 
+        # validate inputs:
+        super().generate_text(
+            messages=messages,
+            model_name=model_name,
+            temperature=temperature,
+            max_num_output_tokens=max_num_output_tokens,
+            toolset=toolset,
+            use_tools=use_tools,
+            response_format=response_format,
+            **kwargs,
+        )
+
         from openai import NotGiven
 
         # Set default model if not provided
@@ -931,6 +942,8 @@ class OpenAIApi(DefaultApi):
             ]
         elif "dall-e-3" in model_name:
             allowed_sizes = ["1024x1024", "1024x1792", "1792x1024"]
+        elif "gpt-image-1" in model_name:
+            allowed_sizes = ["1024x1024", "1024x1536", "1536x1024"]
         else:
             raise ValueError(f"Model {model_name} is not supported.")
 
@@ -963,19 +976,47 @@ class OpenAIApi(DefaultApi):
         else:
             closest_size = requested_size
 
+        # If model is gpt-image-1, add output format to the kwargs:
+        if "gpt-image-1" in model_name:
+            kwargs["output_format"] = "png"
+
+        # Se quality to max based on model:
+        #  - `auto` (default value) will automatically select the best quality for the given model.
+        #  - `high`, `medium` and `low` are supported for `gpt-image-1`.
+        #  - `hd` and `standard` are supported for `dall-e-3`.
+        #  - `standard` is the only option for `dall-e-2`.
+        if "gpt-image-1" in model_name:
+            kwargs["quality"] = "auto"
+        elif "dall-e-3" in model_name:
+            kwargs["quality"] = "hd"
+        # elif "dall-e-2" in model_name:
+        #    kwargs["quality"] = "standard"
+
+        # If Dall-E model set the response format to...
+        if "dall-e" in model_name:
+            kwargs["response_format"] = "b64_json"
+
         # Generate image:
         response = self.client.images.generate(
             model=model_name,
             prompt=prompt,
             size=closest_size,
-            quality="hd",
             n=1,
             **kwargs,
         )
 
         # Get the image URL and download the image:
-        image_url = response.data[0].url
-        image = Image.open(BytesIO(requests.get(image_url).content))
+        image_url = response.data[0].b64_json
+
+        # Decode the base64 image:
+        image_data = base64.b64decode(image_url)
+
+        # Create a PIL image from the decoded data:
+        from io import BytesIO
+
+        from PIL import Image
+
+        image = Image.open(BytesIO(image_data))
 
         # Resize the image if needed:
         if closest_size != requested_size:

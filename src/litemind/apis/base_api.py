@@ -233,7 +233,7 @@ class BaseApi(ABC):
         toolset: Optional[ToolSet]
             The toolset to use.
         use_tools: bool
-            Whether to use tools. If True, the toolset must be provided.
+            Whether to use tools if provided.
             In that case this method will run use the tools that the model deems necessary until reaching a final answer.
             If False, when the text generation model requests tool use, the tools are not used and the response contains a message with a ToolCall block.
         response_format: Optional[BaseModel | str]
