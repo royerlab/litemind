@@ -49,9 +49,9 @@ for api_class in API_IMPLEMENTATIONS:
         API_IMPLEMENTATIONS.remove(api_class)
 
 # Remove the default and combined API from the list of implementations if they are the only ones in the list:
-if len(API_IMPLEMENTATIONS) == 2 and DefaultApi in API_IMPLEMENTATIONS and CombinedApi in API_IMPLEMENTATIONS:
-    API_IMPLEMENTATIONS.remove(DefaultApi)
+if len(API_IMPLEMENTATIONS) <= 2 and CombinedApi in API_IMPLEMENTATIONS:
     API_IMPLEMENTATIONS.remove(CombinedApi)
+    aprint("Removing CombinedApi from the list of implementations as it is the only one available.")
 
 # Vector database implementations:
 VECDB_IMPLEMENTATIONS = [QdrantVectorDatabase, InMemoryVectorDatabase]
