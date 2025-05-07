@@ -1,10 +1,20 @@
+import pytest
+
 from litemind.agent.messages.message import Message
+from litemind.apis.providers.openai.utils.check_availability import check_openai_api_availability
 from litemind.apis.providers.openai.utils.convert_messages import (
     convert_messages_for_openai,
 )
 
 
 def test_convert_text_only_message():
+
+    # Check if OpenAI API key is available:
+    if not check_openai_api_availability():
+        # Skip the test if the API key is not available:
+        print("Skipping test_convert_text_only_message: OpenAI API key not available.")
+        pytest.skip("OpenAI API key not available.")
+
     # Create a message with only text
     message = Message(role="user")
     message.append_text("Hello, world!")
@@ -19,6 +29,13 @@ def test_convert_text_only_message():
 
 
 def test_convert_image_only_message():
+
+    # Check if OpenAI API key is available:
+    if not check_openai_api_availability():
+        # Skip the test if the API key is not available:
+        print("Skipping test_convert_text_only_message: OpenAI API key not available.")
+        pytest.skip("OpenAI API key not available.")
+
     # Create a message with only an image URL
     message = Message(role="user")
     message.append_image("https://example.com/image.png")
@@ -35,6 +52,13 @@ def test_convert_image_only_message():
 
 
 def test_convert_text_and_image_message():
+
+    # Check if OpenAI API key is available:
+    if not check_openai_api_availability():
+        # Skip the test if the API key is not available:
+        print("Skipping test_convert_text_only_message: OpenAI API key not available.")
+        pytest.skip("OpenAI API key not available.")
+
     # Create a message with both text and an image URL
     message = Message(role="user")
     message.append_text("Here is an image:")
@@ -53,6 +77,13 @@ def test_convert_text_and_image_message():
 
 
 def test_convert_multiple_images_message():
+
+    # Check if OpenAI API key is available:
+    if not check_openai_api_availability():
+        # Skip the test if the API key is not available:
+        print("Skipping test_convert_text_only_message: OpenAI API key not available.")
+        pytest.skip("OpenAI API key not available.")
+
     # Create a message with multiple image URLs
     message = Message(role="user")
     message.append_text("Here are two images:")
@@ -73,6 +104,13 @@ def test_convert_multiple_images_message():
 
 
 def test_convert_empty_message():
+
+    # Check if OpenAI API key is available:
+    if not check_openai_api_availability():
+        # Skip the test if the API key is not available:
+        print("Skipping test_convert_text_only_message: OpenAI API key not available.")
+        pytest.skip("OpenAI API key not available.")
+
     # Create an empty message (no text, no images)
     message = Message(role="user")
 
@@ -86,6 +124,13 @@ def test_convert_empty_message():
 
 
 def test_convert_multiple_messages():
+
+    # Check if OpenAI API key is available:
+    if not check_openai_api_availability():
+        # Skip the test if the API key is not available:
+        print("Skipping test_convert_text_only_message: OpenAI API key not available.")
+        pytest.skip("OpenAI API key not available.")
+
     # Create multiple messages with various contents
     message1 = Message(role="user")
     message1.append_text("Hello, world!")
