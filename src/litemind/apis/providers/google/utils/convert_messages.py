@@ -2,7 +2,7 @@ import time
 from typing import List, Union
 
 from arbol import aprint
-from PIL import Image as PILImage
+from PIL import Image as PILImageType
 
 from litemind.agent.messages.actions.action_base import ActionBase
 from litemind.agent.messages.actions.tool_call import ToolCall
@@ -17,7 +17,7 @@ from litemind.media.types.media_video import Video
 
 def convert_messages_for_gemini(
     messages: List[Message],
-) -> List[Union[str, PILImage]]:
+) -> List[Union[str, PILImageType]]:
     """
     Convert messages into a format suitable for Gemini, supporting both text and image inputs.
     """

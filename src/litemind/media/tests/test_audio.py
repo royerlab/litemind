@@ -3,7 +3,6 @@ import tempfile
 
 import numpy as np
 import pytest
-import soundfile as sf
 
 from litemind.media.types.media_audio import Audio
 
@@ -21,10 +20,13 @@ def sample_audio_data():
 @pytest.fixture
 def temp_audio_file(sample_audio_data):
     """Fixture creating a temporary audio file"""
+
+
     data, sample_rate = sample_audio_data
     with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
         tmp_path = tmp.name
 
+    import soundfile as sf
     sf.write(tmp_path, data, sample_rate)
 
     yield tmp_path
@@ -69,6 +71,7 @@ def test_from_data_custom_filepath(sample_audio_data):
         assert audio.uri == f"file://{custom_path}"
 
         # Verify the data was written correctly
+        import soundfile as sf
         loaded_data, loaded_sr = sf.read(custom_path)
         assert loaded_sr == sample_rate
         assert np.allclose(loaded_data, data, atol=1e-3, rtol=1e-3)
@@ -107,6 +110,7 @@ def test_stereo_audio():
         stereo_path = tmp.name
 
     try:
+        import soundfile as sf
         sf.write(stereo_path, stereo_data, sample_rate)
 
         audio = Audio(uri=f"file://{stereo_path}")
@@ -132,6 +136,7 @@ def test_different_audio_formats():
             format_path = tmp.name
 
         try:
+            import soundfile as sf
             sf.write(format_path, audio_data, sample_rate, format=fmt)
 
             audio = Audio(uri=f"file://{format_path}")
