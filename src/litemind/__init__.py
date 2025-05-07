@@ -77,6 +77,14 @@ for vecdb_class in list(VECDB_IMPLEMENTATIONS):
         )
         VECDB_IMPLEMENTATIONS.remove(vecdb_class)
 
+# If no API_IMPLEMENTATIONS are available then the QdrantVectorDatabase cannot be used:
+if len(API_IMPLEMENTATIONS) == 0 and QdrantVectorDatabase in VECDB_IMPLEMENTATIONS:
+    aprint(
+        "No API implementations available. Removing QdrantVectorDatabase from the list of implementations."
+    )
+    VECDB_IMPLEMENTATIONS.remove(QdrantVectorDatabase)
+
+
 # Initialize and silence the Abseil logging system:
 import absl.logging
 
