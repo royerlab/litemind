@@ -3,12 +3,20 @@ import pytest
 
 from litemind.media.types.media_video import Video
 from litemind.ressources.media_resources import MediaResources
+from litemind.utils.ffmpeg_utils import is_ffmpeg_available
 from litemind.utils.file_extensions import video_file_extensions
+
+@pytest.fixture(scope="class", autouse=True)
+def skip_if_ffmpeg_not_available(request):
+    """Skip all tests in the class if ffmpeg is not available."""
+    if not is_ffmpeg_available():
+        pytest.skip("ffmpeg is not available, skipping all tests in this class.")
 
 
 class TestVideo:
     def test_init_with_valid_uri(self):
         """Test initializing Video with a valid URI."""
+
         # Get a real video URI from MediaResources
         video_uri = MediaResources.get_local_test_video_uri("flying.mp4")
         video = Video(uri=video_uri)
@@ -16,12 +24,18 @@ class TestVideo:
 
     def test_init_with_invalid_uri(self):
         """Test that initializing with invalid URI raises ValueError."""
+
         invalid_uri = MediaResources.get_local_test_image_uri("future.jpeg")
         with pytest.raises(ValueError, match="Invalid video URI"):
             Video(uri=invalid_uri)
 
     def test_init_with_valid_extension(self):
         """Test initializing Video with valid extension parameter."""
+
+        # Skip test if ffmpeg is not available:
+        if not MediaResources.is_ffmpeg_available():
+            pytest.skip("ffmpeg is not available, skipping test.")
+
         video_uri = MediaResources.get_local_test_video_uri("bunny.mp4")
         video = Video(uri=video_uri, extension="mp4")
         assert video.uri == video_uri

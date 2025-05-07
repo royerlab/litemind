@@ -1,5 +1,6 @@
 import pytest
 
+from litemind.apis.providers.openai.utils.check_availability import check_openai_api_availability
 from litemind.apis.providers.openai.utils.vision import has_vision_support
 
 
@@ -20,6 +21,13 @@ from litemind.apis.providers.openai.utils.vision import has_vision_support
 )
 def test_vision_capable_models(model_name):
     """Test models that should support vision capabilities"""
+
+    # Check if OpenAI API key is available:
+    if not check_openai_api_availability():
+        # Skip the test if the API key is not available:
+        print("Skipping test_convert_text_only_message: OpenAI API key not available.")
+        pytest.skip("OpenAI API key not available.")
+
     assert has_vision_support(model_name) is True
 
 
@@ -39,11 +47,25 @@ def test_vision_capable_models(model_name):
 )
 def test_non_vision_models(model_name):
     """Test models that should not support vision capabilities"""
+
+    # Check if OpenAI API key is available:
+    if not check_openai_api_availability():
+        # Skip the test if the API key is not available:
+        print("Skipping test_convert_text_only_message: OpenAI API key not available.")
+        pytest.skip("OpenAI API key not available.")
+
     assert has_vision_support(model_name) is False
 
 
 def test_invalid_model_name():
     """Test handling of invalid model names"""
+
+    # Check if OpenAI API key is available:
+    if not check_openai_api_availability():
+        # Skip the test if the API key is not available:
+        print("Skipping test_convert_text_only_message: OpenAI API key not available.")
+        pytest.skip("OpenAI API key not available.")
+
     with pytest.raises(ValueError):
         has_vision_support("")
     with pytest.raises(ValueError):
