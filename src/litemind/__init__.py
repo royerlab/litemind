@@ -30,20 +30,12 @@ for api_class in API_IMPLEMENTATIONS:
         api_instance = api_class()
 
         # Checking if the API is available and credentials are correct:
-        if not api_instance.check_availability_and_credentials():
+        if not api_instance.check_availability_and_credentials()\
+                or len(api_instance.list_models()) == 0:
             aprint(
                 f"API {api_class.__name__} is not available. Removing it from the list."
             )
             API_IMPLEMENTATIONS.remove(api_class)
-
-
-        # Get list of models:
-        if len(api_instance.list_models()) == 0:
-            aprint(
-                f"API {api_class.__name__} has no models available. Removing it from the list."
-            )
-            API_IMPLEMENTATIONS.remove(api_class)
-
 
     except Exception as e:
         # If an exception is raised, remove the API from the list:

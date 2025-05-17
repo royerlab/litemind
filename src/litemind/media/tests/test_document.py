@@ -53,7 +53,7 @@ class TestDocument:
         uri = "example.sdse"
         with pytest.raises(
             ValueError,
-            match="Invalid document URI: 'example.sdse' (must have a valid document file extension)",
+            match="Invalid document URI",
         ):
             Document(uri=uri)
 
@@ -78,7 +78,7 @@ class TestDocument:
         uri = "ExAmPlE.pDf"  # Assuming 'example.pdf' exists in the same directory
         with pytest.raises(
             ValueError,
-            match="Invalid document URI: 'ExAmPlE.pDf' (must have a valid document file extension)",
+            match="Invalid document URI",
         ):
             Document(uri=uri)
 

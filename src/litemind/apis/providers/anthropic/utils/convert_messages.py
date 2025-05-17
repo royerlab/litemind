@@ -35,7 +35,7 @@ def convert_messages_for_anthropic(
         content = []
 
         for block in message.blocks:
-            if block.has_type(Text) and not block.has_attribute("thinking"):
+            if block.has_type(Text) and not block.is_thinking():
 
                 # Get Text's string:
                 text: str = block.get_content()
@@ -47,12 +47,12 @@ def convert_messages_for_anthropic(
                 # Append the text to the Anthropic's message content:
                 content.append({"type": "text", "text": text})
 
-            elif block.has_type(Text) and block.has_attribute("thinking"):
+            elif block.has_type(Text) and block.is_thinking():
 
                 # Get Text's string:
                 text: str = block.get_content()
 
-                if block.has_attribute("redacted"):
+                if block.is_thinking():
                     # if the block is redacted, add it as a redacted thinking block:
                     content.append({"type": "redacted_thinking", "data": text})
                 else:

@@ -37,10 +37,10 @@ def convert_messages_for_gemini(
 
         # Iterate over each block in the message:
         for block in message.blocks:
-            if block.has_type(Text) and not block.has_attribute("thinking"):
+            if block.has_type(Text) and not block.is_thinking():
                 gemini_messages.append(f"{message.role}: {block.media}")
 
-            elif block.has_type(Text) and block.has_attribute("thinking"):
+            elif block.has_type(Text) and block.is_thinking():
                 # Thinking blocks are not passed back to the model:
                 pass
 

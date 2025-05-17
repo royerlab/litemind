@@ -33,7 +33,7 @@ class TestVideo:
         """Test initializing Video with valid extension parameter."""
 
         # Skip test if ffmpeg is not available:
-        if not MediaResources.is_ffmpeg_available():
+        if not is_ffmpeg_available():
             pytest.skip("ffmpeg is not available, skipping test.")
 
         video_uri = MediaResources.get_local_test_video_uri("bunny.mp4")

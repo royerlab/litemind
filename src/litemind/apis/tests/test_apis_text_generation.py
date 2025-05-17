@@ -611,7 +611,7 @@ class TestBaseApiImplementationsTextGeneration(MediaResources):
             thinking_blocks = [
                 block
                 for block in response
-                if block.has_type(Text) and block.has_attribute("thinking")
+                if block.has_type(Text) and block.is_thinking()
             ]
             assert len(thinking_blocks) > 0, "No thinking blocks found in the response"
 

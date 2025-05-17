@@ -63,13 +63,13 @@ def test_text_file_is_detected(tmp_path):
     f = _write_text(p, "Hello world!\n")
     meta = probe(f)
     assert meta["is_text"] is True, meta
-    assert classify(f) == "text file"
+    assert classify(f) == "text"
 
 
 def test_pdf_file_is_detected(tmp_path):
     p = tmp_path / "doc.pdf"
     f = _write_bytes(p, _PDF_MIN)
-    assert classify(f) == "PDF document"
+    assert classify(f) == "pdf"
     meta = probe(f)
     # At least one of the MIME avenues should say PDF
     assert (
@@ -95,7 +95,7 @@ def test_binary_file_is_detected(tmp_path):
     f = _write_bytes(p, b"\x00\x01\x02\x03RandomBinary\x00\xff")
     meta = probe(f)
     assert meta["is_text"] is False
-    assert classify(f) == "binary file"
+    assert classify(f) == "binary"
 
 
 def test_content_over_extension_precedence(tmp_path):
@@ -132,10 +132,10 @@ def test_libmagic_integration(tmp_path):
     assert classify(f) == "image"
 
 
-def test_script_detected(tmp_path):
+def test_code_detected(tmp_path):
     p = tmp_path / "hello.py"
     f = _write_text(p, "print('hi')\n")
-    assert classify(f) == "script"
+    assert classify(f) == "code"
 
 
 def test_zip_archive_detected(tmp_path):
@@ -154,7 +154,7 @@ def test_docx_office_detected(tmp_path):
 
     local_path = uri_to_local_file_path(docx_path)
 
-    assert classify(local_path) == "office document"
+    assert classify(local_path) == "office"
 
 
 # --------------- Optional magics still here (unchanged) ------------------------

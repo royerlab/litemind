@@ -88,3 +88,48 @@ class Audio(MediaURI):
         raw_data_bytes = pathlib.Path(local_path).read_bytes()
 
         return raw_data_bytes
+
+    def get_info_markdown(self) -> str:
+        """
+        Get information about the audio file in markdown format.
+
+        Returns
+        -------
+        str
+            Markdown formatted string containing audio file information.
+        """
+        try:
+            # Ensure data is loaded
+            if not hasattr(self, "data") or self.data is None:
+                self.load_from_uri()
+
+            # Get local file path
+            local_path = uri_to_local_file_path(self.uri)
+
+            # Calculate duration in seconds
+            duration = len(self.data) / self.samplerate
+
+            # Format time into minutes and seconds
+            minutes = int(duration // 60)
+            seconds = duration % 60
+
+            # Get file size
+            file_size = pathlib.Path(local_path).stat().st_size
+            file_size_mb = file_size / (1024 * 1024)
+
+            # Create markdown string
+            markdown = \
+f"""
+## Audio Information
+- **Filename**: {pathlib.Path(local_path).name}
+- **Duration**: {minutes}m {seconds:.2f}s
+- **Sample Rate**: {self.samplerate} Hz
+- **Channels**: {self.num_channels}
+- **Data Type**: {self.dtype}
+- **Samples**: {len(self.data)}
+- **File Size**: {file_size_mb:.2f} MB
+"""
+
+            return markdown
+        except Exception as e:
+            return f"## Error\nFailed to extract audio information: {str(e)}"

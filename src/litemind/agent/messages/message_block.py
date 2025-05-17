@@ -95,6 +95,28 @@ class MessageBlock:
         """
         return attribute_key in self.attributes
 
+    def is_thinking(self) -> bool:
+        """
+        Check if the message block is a thinking block.
+
+        Returns
+        -------
+        bool
+            True if the message block is a thinking block, False otherwise.
+        """
+        return self.has_attribute("thinking")
+
+    def is_redacted(self) -> bool:
+        """
+        Check if the message block is redacted.
+
+        Returns
+        -------
+        bool
+            True if the message block is redacted, False otherwise.
+        """
+        return self.has_attribute("redacted")
+
     def copy(self) -> "MessageBlock":
         """
         Create a copy of the message block.

@@ -7,6 +7,7 @@ import random
 import shutil
 import tempfile
 import urllib.parse
+from functools import lru_cache
 
 import requests
 
@@ -31,6 +32,7 @@ def _register_cleanup():
 _register_cleanup()
 
 
+@lru_cache
 def uri_to_local_file_path(file_uri: str) -> str:
     """
     Given a file URI (which can be an existing local file path, a remote URL, or

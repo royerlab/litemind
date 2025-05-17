@@ -24,7 +24,6 @@ from litemind.media.types.media_object import Object
 from litemind.media.types.media_table import Table
 from litemind.media.types.media_text import Text
 from litemind.media.types.media_video import Video
-from litemind.utils.document_processing import is_pymupdf_available
 from litemind.utils.fastembed_embeddings import fastembed_text, is_fastembed_available
 from litemind.utils.ffmpeg_utils import is_ffmpeg_available
 from litemind.utils.random_projector import DeterministicRandomProjector

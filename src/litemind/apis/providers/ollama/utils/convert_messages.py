@@ -31,7 +31,7 @@ def convert_messages_for_ollama(
             # Initialize the message dictionary:
             message_dict = {"role": message.role, "content": ""}
 
-            if block.has_type(Text) and not block.has_attribute("thinking"):
+            if block.has_type(Text) and not block.is_thinking():
 
                 # Get Text's string:
                 text: str = block.media.text
@@ -43,7 +43,7 @@ def convert_messages_for_ollama(
                     # Append the message to the list of messages:
                     ollama_messages.append(message_dict)
 
-            elif block.has_type(Text) and block.has_attribute("thinking"):
+            elif block.has_type(Text) and block.is_thinking():
                 # By default we don't send back the thinking content back to the LLM:
                 pass
 

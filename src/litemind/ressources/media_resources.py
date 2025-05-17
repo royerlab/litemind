@@ -38,6 +38,10 @@ class MediaResources:
         return MediaResources.get_local_test_file_uri("images", image_name)
 
     @staticmethod
+    def get_local_test_ndimage_uri(image_name: str):
+        return MediaResources.get_local_test_file_uri("ndimages", image_name)
+
+    @staticmethod
     def get_local_test_audio_uri(image_name: str):
         return MediaResources.get_local_test_file_uri("audio", image_name)
 
@@ -56,3 +60,7 @@ class MediaResources:
     @staticmethod
     def get_local_test_archive_uri(doc_name: str):
         return MediaResources.get_local_test_file_uri("archives", doc_name)
+
+    @staticmethod
+    def get_local_test_other_uri(doc_name: str):
+        return MediaResources.get_local_test_file_uri("others", doc_name)

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import mimetypes
 import os
+from functools import lru_cache
 from typing import Any, Dict
 
 # 1) Fast, pure-Python signature matcher
@@ -105,14 +106,35 @@ _EXECUTABLE = {
     "application/x-mach-binary",
 }
 
-_SCRIPT_EXTS = {".py", ".js", ".sh", ".bat", ".ps1", ".rb", ".pl"}
+_SCRIPT_EXTS = {".py", ".js", ".sh", ".bat", ".ps1", ".rb", ".pl", ".php", ".go", ".java", ".c", ".cpp", ".h", ".cs", ".swift", ".rs", ".ts",  ".css", ".xml", ".json", ".yaml", ".yml", ".sql"}
+
+_WEB_EXTS = {
+    ".html",
+    ".htm",
+    ".xhtml",
+}
 
 
+def classify_uri(uri: str, read_bytes: int = 4096) -> str:
+    """
+    Convenience wrapper around classify().
+
+    Returns one of:
+      'text' | 'code' | 'pdf' | 'image' | 'audio' |
+      'video' | 'archive' | 'office document' | 'executable' | 'web' | 'binary'
+    """
+    # Convert URI to local file path:
+    from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_path
+
+    local_path = uri_to_local_file_path(uri)
+    return classify(local_path, read_bytes)
+
+@lru_cache()
 def classify(path: str, read_bytes: int = 4096) -> str:
     """
     Return one of:
-      'text file' | 'script' | 'PDF document' | 'image' | 'audio' |
-      'video' | 'archive' | 'office document' | 'executable' | 'binary file'
+      'text' | 'code' | 'pdf' | 'image' | 'audio' |
+      'video' | 'archive' | 'office' | 'executable' | 'web' | 'binary'
     """
     meta = probe(path, read_bytes)
     mime = (
@@ -124,13 +146,13 @@ def classify(path: str, read_bytes: int = 4096) -> str:
 
     # ---- 1. PDF: -----------------------------------
     if "pdf" in mime.lower():
-        return "PDF document"
+        return "pdf"
 
     # ---- 2. Text / script -------------------------------------------------
     if mime.startswith("text") or meta["is_text"]:
         if os.path.splitext(path)[1].lower() in _SCRIPT_EXTS:
-            return "script"
-        return "text file"
+            return "code"
+        return "text"
 
     # ---- 3. Media families ------------------------------------------------
     if any(
@@ -152,14 +174,17 @@ def classify(path: str, read_bytes: int = 4096) -> str:
 
     # ---- 5. Office docs ---------------------------------------------------
     if mime in _OFFICE:  # DOCX/XLSX/PPTX/ODT … :contentReference[oaicite:8]{index=8}
-        return "office document"
+        return "office"
 
     # ---- 6. Executables ---------------------------------------------------
     if mime in _EXECUTABLE:
         return "executable"
 
+    if mime in _WEB_EXTS:
+        return "web"
+
     # ---- 7. Fallback ------------------------------------------------------
-    return "binary file"
+    return "binary"
 
 
 def is_text_file(path: str, read_bytes: int = 4096) -> bool | None:
