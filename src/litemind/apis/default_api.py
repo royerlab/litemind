@@ -1,31 +1,30 @@
 import copy
 import json
-from typing import List, Optional, Sequence, Union
+from typing import List, Optional, Sequence, Set, Type, Union
 
 from arbol import aprint, asection
 from pydantic import BaseModel
 
 from litemind.agent.messages.actions.tool_call import ToolCall
 from litemind.agent.messages.message import Message
-from litemind.agent.messages.message_block import MessageBlock
 from litemind.agent.tools.base_tool import BaseTool
 from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.base_api import BaseApi
 from litemind.apis.callbacks.callback_manager import CallbackManager
 from litemind.apis.exceptions import FeatureNotAvailableError
 from litemind.apis.model_features import ModelFeatures
+from litemind.media.conversion.converters.media_converter_delegated_callables import (
+    MediaConverterApi,
+)
+from litemind.media.conversion.media_converter import MediaConverter
+from litemind.media.media_base import MediaBase
 from litemind.media.types.media_action import Action
 from litemind.media.types.media_audio import Audio
-from litemind.media.types.media_code import Code
 from litemind.media.types.media_document import Document
 from litemind.media.types.media_image import Image
-from litemind.media.types.media_json import Json
-from litemind.media.types.media_object import Object
-from litemind.media.types.media_table import Table
 from litemind.media.types.media_text import Text
 from litemind.media.types.media_video import Video
 from litemind.utils.fastembed_embeddings import fastembed_text, is_fastembed_available
-from litemind.utils.ffmpeg_utils import is_ffmpeg_available
 from litemind.utils.random_projector import DeterministicRandomProjector
 from litemind.utils.whisper_transcribe_audio import (
     is_local_whisper_available,
@@ -44,6 +43,14 @@ class DefaultApi(BaseApi):
     def __init__(self, callback_manager: Optional[CallbackManager] = None):
 
         super().__init__(callback_manager=callback_manager)
+
+        # Instantiate the media converter:
+        self.media_converter = MediaConverter()
+
+        # Add the media converter supporting APIs:
+        media_converter_api = MediaConverterApi(api=self)
+        self.media_converter.add_default_converters()
+        self.media_converter.add_media_converter(media_converter_api)
 
     def check_availability_and_credentials(
         self, api_key: Optional[str] = None
@@ -72,21 +79,14 @@ class DefaultApi(BaseApi):
         # We start with an empty list:
         model_list = []
 
-        # If whisper-local is available then add to the list:
-        if is_local_whisper_available():
-            model_list.append("whisper-local")
-
-        # If fastembed is available then add to the list:
+        # Add fastembed model if available:
         if is_fastembed_available():
+            # Add fastembed model:
             model_list.append("fastembed")
 
-        # If pymupdf is available then add to the list:
-        if is_pymupdf_available():
-            model_list.append("pymupdf")
-
-        # If ffmpeg is available then add to the list:
-        if is_ffmpeg_available():
-            model_list.append("ffmpeg")
+        if is_local_whisper_available():
+            # Add local whisper model:
+            model_list.append("whisper-local")
 
         # Filter the models based on the features:
         if features:
@@ -212,14 +212,6 @@ class DefaultApi(BaseApi):
         # Normalise the features:
         features = ModelFeatures.normalise(features)
 
-        # Get the best model if not provided:
-        if model_name is None:
-            model_name = self.get_best_model(features=features)
-
-        # If model_name is None then we return False:
-        if model_name is None:
-            return False
-
         # We check if the superclass says that the model supports the features:
         if super().has_model_support_for(features=features, model_name=model_name):
             return True
@@ -227,32 +219,32 @@ class DefaultApi(BaseApi):
         # Check that the model has all the required features:
         for feature in features:
 
-            # The following features use 'fallback' best-of-kind libraries:
-
             if feature == ModelFeatures.AudioTranscription:
-
-                # In this class we only support whisper-local:
-                if not model_name == "whisper-local":
+                if not is_local_whisper_available() or model_name != "whisper-local":
                     return False
 
-                # We provide a default implementation for audio transcription using local whisper is available:
-                if model_name == "whisper-local" and not is_local_whisper_available():
-                    aprint(
-                        "Audio Transcription feature: whisper is not available! \n Install with: pip install openai-whisper"
-                    )
+            elif feature == ModelFeatures.ImageConversion:
+                if not self.media_converter.can_convert_within(
+                    source_media_type=Image, allowed_media_types={Text}
+                ):
+                    return False
+
+            elif feature == ModelFeatures.AudioConversion:
+                if not self.media_converter.can_convert_within(
+                    source_media_type=Audio, allowed_media_types={Text}
+                ):
                     return False
 
             elif feature == ModelFeatures.DocumentConversion:
-
-                # In this class we only support pymupdf:
-                if not model_name == "pymupdf":
+                if not self.media_converter.can_convert_within(
+                    source_media_type=Document, allowed_media_types={Text, Image}
+                ):
                     return False
 
-                # Checks if document processing library is installed:
-                if model_name == "pymupdf" and not is_pymupdf_available():
-                    aprint(
-                        "Documents feature: pymupdf is not available! \n Install with: pip install pymupdf pymupdf4llm"
-                    )
+            elif feature == ModelFeatures.VideoConversion:
+                if not self.media_converter.can_convert_within(
+                    source_media_type=Video, allowed_media_types={Text, Image, Audio}
+                ):
                     return False
 
             elif (
@@ -263,12 +255,12 @@ class DefaultApi(BaseApi):
                 or feature == ModelFeatures.DocumentEmbeddings
             ):
 
-                # In this class we only support fastembed:
-                if not model_name == "fastembed":
+                # Check if the model is fastembed:
+                if model_name is not None and model_name != "fastembed":
                     return False
 
                 # Check if the fastembed library is installed:
-                if model_name == "fastembed" and not is_fastembed_available():
+                if not is_fastembed_available():
                     aprint(
                         "Text Embeddings feature: fastembed is not available! \n Install with: pip install fastembed"
                     )
@@ -297,19 +289,8 @@ class DefaultApi(BaseApi):
                     feature == ModelFeatures.DocumentEmbeddings
                     and not self.has_model_support_for(ModelFeatures.Image)
                 ):
-                    aprint("Video Embeddings feature: model does not support video!")
-                    return False
-
-            elif feature == ModelFeatures.VideoConversion:
-
-                # In this class we only support ffmpeg:
-                if not model_name == "ffmpeg":
-                    return False
-
-                # Check if the ffmpeg library is installed:
-                if model_name == "ffmpeg" and not is_ffmpeg_available():
                     aprint(
-                        "Video Conversion feature: ffmpeg is not available! \n Install with: pip install ffmpeg-python"
+                        "Document Embeddings feature: model does not support documents!"
                     )
                     return False
 
@@ -402,9 +383,7 @@ class DefaultApi(BaseApi):
     def _preprocess_messages(
         self,
         messages: List[Message],
-        convert_videos: bool = True,
-        convert_documents: bool = True,
-        transcribe_audio: bool = True,
+        allowed_media_types: Optional[Set[Type[MediaBase]]] = None,
         exclude_extensions: Optional[List[str]] = None,
         deepcopy: bool = True,
     ) -> List[Message]:
@@ -413,47 +392,11 @@ class DefaultApi(BaseApi):
         if deepcopy:
             messages = copy.deepcopy(messages)
 
-        # Convert videos to images and audio:
-        if convert_videos:
-            # Get the best model for video processing:
-            video_conversion_model_name = self.get_best_model(
-                features=ModelFeatures.VideoConversion
-            )
-
-            # Convert videos to images and audio:
-            messages = self.convert_videos_to_images_and_audio_in_messages(
-                messages=messages,
-                exclude_extensions=exclude_extensions,
-                model_name=video_conversion_model_name,
-            )
-
-        # Convert audio messages to text:
-        if transcribe_audio:
-            # Get the best model for audio transcription:
-            audio_transcription_model_name = self.get_best_model(
-                features=ModelFeatures.AudioTranscription
-            )
-
-            # Convert audio message blocks:
-            messages = self.convert_audio_in_messages(
-                messages=messages,
-                exclude_extensions=exclude_extensions,
-                model_name=audio_transcription_model_name,
-            )
-
-        # Convert documents to markdown:
-        if convert_documents:
-            # Get the best model for document conversion:
-            document_conversion_model = self.get_best_model(
-                features=ModelFeatures.DocumentConversion
-            )
-
-            # Convert documents to markdown:
-            messages = self.convert_documents_to_markdown_in_messages(
-                messages,
-                exclude_extensions=exclude_extensions,
-                model_name=document_conversion_model,
-            )
+        messages = self.media_converter.convert(
+            messages=messages,
+            allowed_media_types=allowed_media_types,
+            exclude_extensions=exclude_extensions,
+        )
 
         return messages
 
@@ -554,382 +497,6 @@ class DefaultApi(BaseApi):
                         result=tool_use_error_message,
                         id=tool_call.id,
                     )
-
-    def transcribe_audio(
-        self, audio_uri: str, model_name: Optional[str] = None, **kwargs
-    ) -> str:
-
-        # If model is not provided, get the best model:
-        if model_name is None:
-            model_name = self.get_best_model(
-                features=[ModelFeatures.AudioTranscription]
-            )
-
-        # Check if the model is None:
-        if model_name is None:
-            raise FeatureNotAvailableError(
-                "No model available for audio transcription."
-            )
-
-        # Check if the model is whisper-local:
-        if model_name == "whisper-local":
-            # Check if whisper is available:
-            if not is_local_whisper_available():
-                # This is redundant, but we check again:
-                raise FeatureNotAvailableError(
-                    "Audio Transcription feature: whisper is not available! \n Install with: pip install openai-whisper"
-                )
-
-            transcription = transcribe_audio_with_local_whisper(
-                audio_uri=audio_uri, **kwargs
-            )
-
-            # Call the callback manager:
-            self.callback_manager.on_audio_transcription(
-                audio_uri=audio_uri, transcription=transcription, **kwargs
-            )
-
-            return transcription
-
-        else:
-            raise NotImplementedError("Unknown transcription model")
-
-    def convert_audio_in_messages(
-        self,
-        messages: Sequence[Message],
-        exclude_extensions: Optional[List[str]] = None,
-        model_name: Optional[str] = None,
-    ) -> Sequence[Message]:
-
-        # If model is not provided, get the best model:
-        if model_name is None:
-            model_name = self.get_best_model(
-                features=[ModelFeatures.AudioTranscription]
-            )
-
-        # Check if the model is None:
-        if model_name is None:
-            raise FeatureNotAvailableError(
-                "No model available for audio transcription."
-            )
-
-        # Iterate over each message in the list:
-        for message in messages:
-
-            # Iterate over each block in the message:
-            for block in message.blocks:
-                self._convert_audio_block(
-                    block, message, exclude_extensions, model_name
-                )
-
-        return messages
-
-    def _convert_audio_block(self, block, message, exclude_extensions, model_name):
-        # Check if the block is an audio block:
-        if block.media and isinstance(block.media, Audio):
-            try:
-                # Cast to Audio:
-                audio: Audio = block.media
-
-                # Extract filename from URI:
-                original_filename = audio.get_filename()
-
-                # Extract the file extension from URI:
-                file_extension = audio.get_extension()
-
-                # Check if the file extension is in the exclude list:
-                if exclude_extensions and file_extension in exclude_extensions:
-                    return
-
-                # We use a local instance of whisper instead:
-                transcription = self.transcribe_audio(audio.uri, model_name=model_name)
-
-                # Add markdown quotes ''' around the transcribed text, and
-                # add prefix: "Transcription: " to the transcribed text:
-                transcription = f"\nTranscription of audio file '{original_filename}': \n'''\n{transcription}\n'''\n"
-
-                # Make a new text block:
-                transcription_block = MessageBlock(Text(transcription))
-
-                # Add the transcribed text to the message right after the audio block:
-                message.insert_block(transcription_block, block_before=block)
-
-                # Remove the audio block:
-                message.blocks.remove(block)
-
-            except Exception as e:
-                # Print stacktrace:
-                import traceback
-
-                traceback.print_exc()
-                raise ValueError(
-                    f"Could not transcribe audio from: '{block.get_content()}', error: {e}"
-                )
-
-    def convert_documents_to_markdown_in_messages(
-        self,
-        messages: Sequence[Message],
-        exclude_extensions: Optional[List[str]] = None,
-        model_name: Optional[str] = None,
-    ) -> Sequence[Message]:
-
-        # If model is not provided, get the best model:
-        if model_name is None:
-            model_name = self.get_best_model(features=[ModelFeatures.Document])
-
-        # Check if the model is None:
-        if model_name is None:
-            raise FeatureNotAvailableError(
-                "No model available for document conversion."
-            )
-
-        # Iterate over each message in the list:
-        for message in messages:
-
-            # Iterate over each block in the message:
-            for block in message.blocks:
-
-                # Check if the block is a document block:
-                if block.media is not None and isinstance(block.media, Document):
-
-                    # get document
-                    document: Document = block.media
-
-                    try:
-                        # Extract filename from URI:
-                        original_filename = document.get_filename()
-
-                        # Extract the file extension from URI:
-                        file_extension = document.get_extension()
-
-                        # Check if the file extension is in the exclude list:
-                        if exclude_extensions and file_extension in exclude_extensions:
-                            continue
-
-                        # Extract text from each page of the document:
-                        pages_text = document.extract_text_from_pages()
-
-                        # Extract images of each page of the document:
-                        pages_images = document.take_image_of_each_page()
-
-                        # Get the number of pages from both lists:
-                        num_pages = min(len(pages_text), len(pages_images))
-
-                        # Last block added:
-                        last_block_added = block
-
-                        # Log the text and images added for the callback:
-                        text_log: str = ""
-
-                        # Iterate over the pages:
-                        for page_index in range(num_pages):
-                            # Get the text of the page:
-                            page_text = pages_text[page_index]
-
-                            # Get the image of the page:
-                            page_image = pages_images[page_index]
-
-                            # Add markdown quotes around the text, and add the extension, for example: ```pdf for extension 'pdf':
-                            text: str = (
-                                f"\nText extracted from document '{original_filename}' page {page_index + 1}: \n'''{file_extension}\n{page_text}\n'''\nImage of the page:\n"
-                            )
-
-                            # Create text block:
-                            text_block = MessageBlock(Text(text))
-
-                            # Insert the text block after the document block:
-                            message.insert_block(
-                                text_block, block_before=last_block_added
-                            )
-                            last_block_added = text_block
-
-                            # Create an image block:
-                            image_block = MessageBlock(Image(page_image))
-
-                            # Insert image block right after the text block:
-                            message.insert_block(
-                                image_block, block_before=last_block_added
-                            )
-                            last_block_added = image_block
-
-                            # Add the text to the log:
-                            text_log += f"Page {page_index + 1}: {page_text}\n"
-
-                        # Call the callback manager:
-                        self.callback_manager.on_document_conversion(
-                            document_uri=document.uri, markdown=text_log
-                        )
-
-                        # Remove the document block:
-                        message.blocks.remove(block)
-
-                    except Exception as e:
-                        raise ValueError(
-                            f"Could not extract text from document: '{document}', error: {e}"
-                        )
-
-                elif block.media is not None and isinstance(block.media, Json):
-
-                    # Cast to JSON media:
-                    json_media: Json = block.media
-
-                    try:
-
-                        # Create a text block:
-                        text_block = MessageBlock(json_media.to_markdown_text_media())
-
-                        # Insert the text block after the JSON block:
-                        message.insert_block(text_block, block_before=block)
-
-                        # Remove the JSON block:
-                        message.blocks.remove(block)
-
-                    except Exception as e:
-                        raise ValueError(
-                            f"Could not convert JSON to markdown: '{json_media}', error: {e}"
-                        )
-                elif block.media is not None and isinstance(block.media, Object):
-
-                    # Get the object from the block:
-                    obj: Object = block.media
-
-                    try:
-                        # Convert the object to markdown text media:
-                        markdown: Text = obj.to_markdown_text_media()
-
-                        # Create a text block:
-                        text_block = MessageBlock(markdown)
-
-                        # Insert the text block after the object block:
-                        message.insert_block(text_block, block_before=block)
-
-                        # Remove the object block:
-                        message.blocks.remove(block)
-
-                    except Exception as e:
-                        raise ValueError(
-                            f"Could not convert object to markdown: '{obj}', error: {e}"
-                        )
-                elif block.media is not None and isinstance(block.media, Code):
-
-                    # Get the code:
-                    code: Code = block.media
-
-                    try:
-                        # Text block:
-                        text_block = MessageBlock(code.to_markdown_text_media())
-
-                        # Insert the text block after the code block:
-                        message.insert_block(text_block, block_before=block)
-
-                        # Remove the code block:
-                        message.blocks.remove(block)
-
-                    except Exception as e:
-                        raise ValueError(
-                            f"Could not convert code to markdown: '{code}', error: {e}"
-                        )
-                elif block.media is not None and isinstance(block.media, Table):
-
-                    # Getting the Table:
-                    table: Table = block.media
-
-                    try:
-                        # Create a text block:
-                        text_block = MessageBlock(Text(table.to_markdown()))
-
-                        # Insert the text block after the table block:
-                        message.insert_block(text_block, block_before=block)
-
-                        # Remove the table block:
-                        message.blocks.remove(block)
-
-                    except Exception as e:
-                        raise ValueError(
-                            f"Could not convert table to markdown: '{table}', error: {e}"
-                        )
-                elif block.media is not None and isinstance(block.media, Text):
-
-                    # Get the text:
-                    text: Text = block.media
-
-                    try:
-                        # get the string:
-                        text_str = text.text
-
-                        # Check if the text ends with at least one '\n' if not, then add it:
-                        if not text_str.endswith("\n"):
-                            text_str += "\n"
-
-                        # Set the block content to the text:
-                        text.text = text_str
-
-                    except Exception as e:
-                        raise ValueError(
-                            f"Could not convert text: '{block.media}', error: {e}"
-                        )
-
-                else:
-                    # Other block types go through unchanged...
-                    pass
-
-        return messages
-
-    def convert_videos_to_images_and_audio_in_messages(
-        self,
-        messages: Sequence[Message],
-        exclude_extensions: Optional[List[str]] = None,
-        model_name: Optional[str] = None,
-    ) -> Sequence[Message]:
-
-        # If model is not provided, get the best model:
-        if model_name is None:
-            model_name = self.get_best_model(features=[ModelFeatures.VideoConversion])
-
-        # Check if the model is None:
-        if model_name is None:
-            raise FeatureNotAvailableError("No model available for video conversion.")
-
-        # Check if the model is ffmpeg:
-        if model_name == "ffmpeg":
-            # Check if ffmpeg is available:
-            if not is_ffmpeg_available():
-                # This is redundant, but we check again:
-                raise FeatureNotAvailableError(
-                    "Video Conversion feature: ffmpeg is not available! \n Install with: pip install ffmpeg-python"
-                )
-
-        else:
-            raise NotImplementedError(f"Unknown video conversion model: {model_name}")
-
-        # Iterate over each message in the list:
-        for message in messages:
-
-            # Iterate over each block in the message:
-            for block in message.blocks:
-
-                # Check if the block is a video block:
-                if block.media is not None and isinstance(block.media, Video):
-
-                    video: Video = block.media
-
-                    # extract the file extension from the URI:
-                    file_extension = video.get_extension()
-
-                    # Check if the file extension is in the exclude list:
-                    if exclude_extensions and file_extension in exclude_extensions:
-                        continue
-
-                    # Append video frames and audio to the message:
-                    blocks = video.convert_to_frames_and_audio()
-
-                    # Insert this message -- al its blocks -- right after the video block:
-                    message.insert_blocks(blocks, block_before=block)
-
-                    # Remove the video block:
-                    message.blocks.remove(block)
-
-        return messages
 
     def generate_audio(
         self,
@@ -1098,7 +665,7 @@ class DefaultApi(BaseApi):
             # We can't find a text generation model that supports audio.
             # Instead, we use the best model that supports audio transcription:
             audio_transcription_model_name = self.get_best_model(
-                [ModelFeatures.AudioTranscription]
+                [ModelFeatures.AudioConversion]
             )
         else:
             audio_transcription_model_name = None
@@ -1277,6 +844,48 @@ class DefaultApi(BaseApi):
 
         # Return the video embeddings:
         return document_embeddings
+
+    def transcribe_audio(
+        self, audio_uri: str, model_name: Optional[str] = None, **model_kwargs
+    ) -> str:
+
+        # If model is not provided, get the best model:
+        if model_name is None:
+            model_name = self.get_best_model(
+                features=[ModelFeatures.AudioTranscription]
+            )
+
+        # Check if the model is None:
+        if model_name is None:
+            raise FeatureNotAvailableError(
+                "No model available for audio transcription."
+            )
+
+        # Check if the model is whisper-local:
+        if model_name == "whisper-local":
+            # Check if whisper is available:
+            if not is_local_whisper_available():
+                # This is redundant, but we check again:
+                raise FeatureNotAvailableError(
+                    "Audio Transcription feature: whisper is not available! \n Install with: pip install openai-whisper"
+                )
+
+            transcription = transcribe_audio_with_local_whisper(
+                audio_uri=audio_uri, **model_kwargs
+            )
+
+            # Set kwargs with other parameters:
+            kwargs = {"model_name": model_name, "model_kwargs": model_kwargs}
+
+            # Call the callback manager:
+            self.callback_manager.on_audio_transcription(
+                audio_uri=audio_uri, transcription=transcription, **kwargs
+            )
+
+            return transcription
+
+        else:
+            raise NotImplementedError(f"Unknown transcription model: '{model_name}'")
 
     def describe_image(
         self,
@@ -1639,6 +1248,7 @@ class DefaultApi(BaseApi):
                         aprint(response)
 
                     return response
+                return None
 
             except Exception as e:
                 # Log the error:
@@ -1754,6 +1364,7 @@ class DefaultApi(BaseApi):
                         aprint(response)
 
                     return response
+                return None
 
             except Exception as e:
                 # Log the error:

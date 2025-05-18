@@ -1,13 +1,9 @@
-import io
 from functools import lru_cache
-from typing import List, Tuple
-
-from arbol import aprint
+from typing import List, Tuple, Type
 
 from litemind.media.conversion.converters.base_converter import BaseConverter
 from litemind.media.media_base import MediaBase
 from litemind.media.types.media_document import Document
-from litemind.media.types.media_image import Image
 from litemind.media.types.media_text import Text
 from litemind.utils.file_types import classify_uri
 from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_path
@@ -19,6 +15,9 @@ class DocumentConverterDocling(BaseConverter):
 
     Converts Table media to Text media.
     """
+
+    def rule(self) -> List[Tuple[Type[MediaBase], List[Type[MediaBase]]]]:
+        return [(Document, [Text])]
 
     def can_convert(self, media: MediaBase) -> bool:
 
@@ -33,25 +32,25 @@ class DocumentConverterDocling(BaseConverter):
         extension = media.get_extension()
         file_type = classify_uri(media.uri)
 
-        if 'pdf' in file_type or 'pdf' in extension:
+        if "pdf" in file_type or "pdf" in extension:
             return True
 
-        if 'office' in file_type and 'docx' in extension:
+        if "office" in file_type and "docx" in extension:
             return True
 
-        if 'office' in file_type and 'xlsx' in extension:
+        if "office" in file_type and "xlsx" in extension:
             return True
 
-        if 'office' in file_type and 'pptx' in extension:
+        if "office" in file_type and "pptx" in extension:
             return True
 
-        if 'text' in file_type and 'md' in extension:
+        if "text" in file_type and "md" in extension:
             return True
 
-        if 'text' in file_type and 'adoc' in extension:
+        if "text" in file_type and "adoc" in extension:
             return True
 
-        if 'text' in file_type and ('html' in extension or 'xhtml' in extension):
+        if "text" in file_type and ("html" in extension or "xhtml" in extension):
             return True
 
         return False
@@ -81,16 +80,15 @@ class DocumentConverterDocling(BaseConverter):
         if len(pages_text) == 1:
             # If there is only one page, we can convert it to Text media:
 
-            converted_media.append(Text(preamble+pages_text[0]))
+            converted_media.append(Text(preamble + pages_text[0]))
 
         else:
             for page_text in pages_text:
-
                 # add preamble that specifies the page in markdown compatible format:
                 page_text = f"---\nPage {pages_text.index(page_text) + 1} of {len(pages_text)}\n---\n{page_text}"
 
                 # Append the converted media to the list:
-                converted_media.append(Text(preamble+page_text))
+                converted_media.append(Text(preamble + page_text))
 
         # Return the converted media:
         return converted_media
@@ -102,12 +100,11 @@ def is_docling_available() -> bool:
     try:
         import importlib.util
 
-        return (
-            importlib.util.find_spec("docling") is not None
-        )
+        return importlib.util.find_spec("docling") is not None
 
     except ImportError:
         return False
+
 
 def initialize_docling_converter():
     from docling.datamodel.base_models import InputFormat
@@ -142,10 +139,11 @@ def initialize_docling_converter():
 
     return converter
 
+
 __default_docling_converter = initialize_docling_converter()
 
-def convert_to_markdown(document_uri: str):
 
+def convert_to_markdown(document_uri: str):
     # Check if PyMuPDF is available, if not throw an error!
     if not is_docling_available():
         raise ImportError(

@@ -1,6 +1,5 @@
-import io
 from functools import lru_cache
-from typing import List, Tuple
+from typing import List, Tuple, Type
 
 from arbol import aprint
 
@@ -19,6 +18,9 @@ class DocumentConverterPymupdf(BaseConverter):
     Converts Document media to Text and Image media.
     """
 
+    def rule(self) -> List[Tuple[Type[MediaBase], List[Type[MediaBase]]]]:
+        return [(Document, [Text, Image])]
+
     def can_convert(self, media: MediaBase) -> bool:
 
         # Check is the media is None:
@@ -32,19 +34,19 @@ class DocumentConverterPymupdf(BaseConverter):
         extension = media.get_extension()
         file_type = classify_uri(media.uri)
 
-        if 'pdf' in file_type or 'pdf' in extension:
+        if "pdf" in file_type or "pdf" in extension:
             return True
 
-        if 'epub' in file_type or 'epub' in extension:
+        if "epub" in file_type or "epub" in extension:
             return True
 
-        if 'xps' in file_type or 'xps' in extension:
+        if "xps" in file_type or "xps" in extension:
             return True
 
-        if 'fb2' in file_type or 'fb2' in extension:
+        if "fb2" in file_type or "fb2" in extension:
             return True
 
-        if 'svg' in file_type or 'svg' in extension:
+        if "svg" in file_type or "svg" in extension:
             return True
 
         return False
@@ -157,7 +159,9 @@ def extract_text_and_image_from_document(
 
             except Exception as e:
                 aprint(f"Error processing page {page_number}: {e}")
-                pages_content.append((f"Page {page_number} could not be processed.", None))
+                pages_content.append(
+                    (f"Page {page_number} could not be processed.", None)
+                )
                 continue
 
         doc.close()
@@ -165,6 +169,4 @@ def extract_text_and_image_from_document(
     except Exception as e:
         raise RuntimeError(f"Failed to open document '{document_path}': {e}")
 
-
     return pages_content
-

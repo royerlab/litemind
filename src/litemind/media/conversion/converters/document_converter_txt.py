@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple, Type
 
 from litemind.media.conversion.converters.base_converter import BaseConverter
 from litemind.media.media_base import MediaBase
@@ -13,6 +13,9 @@ class DocumentConverterTxt(BaseConverter):
     Converter for text documents media types.
     Converts text documents media to Text media.
     """
+
+    def rule(self) -> List[Tuple[Type[MediaBase], List[Type[MediaBase]]]]:
+        return [(Document, [Text])]
 
     def can_convert(self, media: MediaBase) -> bool:
 
@@ -55,4 +58,3 @@ class DocumentConverterTxt(BaseConverter):
 
         # Return the converted media:
         return [text_media]
-

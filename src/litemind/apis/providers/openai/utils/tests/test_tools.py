@@ -1,7 +1,9 @@
 import pytest
 
 from litemind.agent.tools.toolset import ToolSet
-from litemind.apis.providers.openai.utils.check_availability import check_openai_api_availability
+from litemind.apis.providers.openai.utils.check_availability import (
+    check_openai_api_availability,
+)
 from litemind.apis.providers.openai.utils.format_tools import format_tools_for_openai
 
 

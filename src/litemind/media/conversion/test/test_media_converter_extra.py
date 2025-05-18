@@ -1,15 +1,17 @@
-from typing import Any
+from typing import Any, List, Tuple, Type
 
 from litemind.agent.messages.message import Message
 from litemind.agent.messages.message_block import MessageBlock
 from litemind.media.conversion.converters.base_converter import BaseConverter
-from litemind.media.conversion.media_converter import MessageConverter
+from litemind.media.conversion.media_converter import MediaConverter
+from litemind.media.media_base import MediaBase
 from litemind.media.media_default import MediaDefault
 from litemind.media.types.media_text import Text
 
 
 class UnsupportedMedia(MediaDefault):
     """Custom media type with no available converter."""
+
     def __init__(self, data):
         self.data = data
 
@@ -22,6 +24,7 @@ class UnsupportedMedia(MediaDefault):
 
 class IntermediateMedia(MediaDefault):
     """Media type that requires multiple conversion steps."""
+
     def __init__(self, data):
         self.data = data
 
@@ -34,6 +37,7 @@ class IntermediateMedia(MediaDefault):
 
 class FailingMedia(MediaDefault):
     """Media type that will trigger converter failure."""
+
     def __init__(self):
         pass
 
@@ -46,6 +50,10 @@ class FailingMedia(MediaDefault):
 
 class IntermediateConverter(BaseConverter):
     """Converter that converts UnsupportedMedia to IntermediateMedia."""
+
+    def rule(self) -> List[Tuple[Type[MediaBase], List[Type[MediaBase]]]]:
+        return [(UnsupportedMedia, [IntermediateMedia])]
+
     def can_convert(self, media):
         return isinstance(media, UnsupportedMedia)
 
@@ -55,6 +63,10 @@ class IntermediateConverter(BaseConverter):
 
 class IntermediateToTextConverter(BaseConverter):
     """Converter that converts IntermediateMedia to Text."""
+
+    def rule(self) -> List[Tuple[Type[MediaBase], List[Type[MediaBase]]]]:
+        return [(IntermediateMedia, [Text])]
+
     def can_convert(self, media):
         return isinstance(media, IntermediateMedia)
 
@@ -64,6 +76,10 @@ class IntermediateToTextConverter(BaseConverter):
 
 class FailingConverter(BaseConverter):
     """Converter that raises an exception during conversion."""
+
+    def rule(self) -> List[Tuple[Type[MediaBase], List[Type[MediaBase]]]]:
+        return [(Text, [Text])]
+
     def can_convert(self, media):
         return isinstance(media, FailingMedia)
 
@@ -75,7 +91,7 @@ class TestMessageConverterExtra:
 
     def setup_method(self):
         """Setup for each test."""
-        self.converter = MessageConverter()
+        self.converter = MediaConverter()
 
     def test_recursive_conversion(self):
         """Test recursive conversion of media types."""
@@ -99,7 +115,6 @@ class TestMessageConverterExtra:
         assert len(result) == 1
         assert isinstance(result[0][0].media, Text)
         assert "Final conversion: Converted from test_data" in result[0][0].media.text
-
 
     def test_unsupported_media_type(self):
         """Test handling of media types with no available converter."""
@@ -135,4 +150,4 @@ class TestMessageConverterExtra:
         assert isinstance(result[0][1].media, FailingMedia)
 
         # The converter should have attempted conversion but failed gracefully
-        assert message[0] == result[0][1] # Original message should be unchanged
+        assert message[0] == result[0][1]  # Original message should be unchanged

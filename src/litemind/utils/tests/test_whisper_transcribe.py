@@ -3,7 +3,10 @@ import os
 import pytest
 
 from litemind.ressources.media_resources import MediaResources
-from litemind.utils.whisper_transcribe_audio import transcribe_audio_with_local_whisper, is_local_whisper_available
+from litemind.utils.whisper_transcribe_audio import (
+    is_local_whisper_available,
+    transcribe_audio_with_local_whisper,
+)
 
 
 def test_transcribe_audio():

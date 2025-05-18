@@ -67,7 +67,7 @@ class TestBaseApiImplementationsGenerateMultimodal(MediaResources):
 
         # Transcribe the audio to check its contents:
         if api_instance.has_model_support_for(
-            model_name=audio_gen_model_name, features=ModelFeatures.AudioTranscription
+            model_name=audio_gen_model_name, features=ModelFeatures.AudioConversion
         ):
             # Transcribe audio:
             transcription = api_instance.transcribe_audio(generated_audio_uri)

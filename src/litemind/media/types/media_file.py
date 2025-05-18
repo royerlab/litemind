@@ -36,7 +36,7 @@ class File(MediaURI):
             The raw file content as bytes.
         """
         local_path = self.to_local_file_path()
-        with open(local_path, 'rb') as f:
+        with open(local_path, "rb") as f:
             self.data = f.read()
 
         return self.data
@@ -57,8 +57,8 @@ class File(MediaURI):
         List[Media]
             A list containing a single Text media with the file description.
         """
-        import os
         import binascii
+        import os
 
         # Return a local file path:
         local_file_path = self.to_local_file_path()
@@ -72,7 +72,10 @@ class File(MediaURI):
             abs_path = os.path.abspath(local_file_path)
             last_modified = os.path.getmtime(local_file_path)
             from datetime import datetime
-            last_modified_str = datetime.fromtimestamp(last_modified).strftime('%Y-%m-%d %H:%M:%S')
+
+            last_modified_str = datetime.fromtimestamp(last_modified).strftime(
+                "%Y-%m-%d %H:%M:%S"
+            )
 
             # Collect file metadata
             description = [
@@ -81,25 +84,27 @@ class File(MediaURI):
                 f"- File Size: {file_size} bytes ({file_size / 1024:.2f} KB)",
                 f"- Last Modified: {last_modified_str}",
                 f"- File Type: {file_info.get('file_type', 'Unknown')}",
-                f"- MIME Type: {file_info.get('mime_type', 'Unknown')}"
+                f"- MIME Type: {file_info.get('mime_type', 'Unknown')}",
             ]
 
             # Add any additional info from file_info that might be useful
             for key, value in file_info.items():
-                if key not in ['file_type', 'mime_type'] and value is not None:
+                if key not in ["file_type", "mime_type"] and value is not None:
                     description.append(f"- {key}: {value}")
 
             # Read beginning and end of file
-            with open(local_file_path, 'rb') as f:
+            with open(local_file_path, "rb") as f:
                 # If file is small, just read the whole thing
                 if file_size <= hex_dump_length * 2:
                     file_bytes = f.read()
-                    file_hex = binascii.hexlify(file_bytes).decode('ascii')
+                    file_hex = binascii.hexlify(file_bytes).decode("ascii")
 
                     description.append(f"\nEntire file content ({file_size} bytes):")
                     for i in range(0, len(file_hex), 32):
-                        hex_line = ' '.join(
-                            file_hex[i:i + 32][j:j + 2] for j in range(0, min(32, len(file_hex[i:i + 32])), 2))
+                        hex_line = " ".join(
+                            file_hex[i : i + 32][j : j + 2]
+                            for j in range(0, min(32, len(file_hex[i : i + 32])), 2)
+                        )
                         description.append(hex_line)
                 else:
                     # Read first bytes
@@ -110,20 +115,24 @@ class File(MediaURI):
                     end_bytes = f.read(hex_dump_length)
 
                     # Convert to hex representation with byte grouping
-                    start_hex = binascii.hexlify(start_bytes).decode('ascii')
-                    end_hex = binascii.hexlify(end_bytes).decode('ascii')
+                    start_hex = binascii.hexlify(start_bytes).decode("ascii")
+                    end_hex = binascii.hexlify(end_bytes).decode("ascii")
 
                     # Format hex dump in readable format (grouped by bytes)
                     description.append(f"\nFirst {hex_dump_length} bytes (hex):")
                     for i in range(0, len(start_hex), 32):
-                        hex_line = ' '.join(
-                            start_hex[i:i + 32][j:j + 2] for j in range(0, min(32, len(start_hex[i:i + 32])), 2))
+                        hex_line = " ".join(
+                            start_hex[i : i + 32][j : j + 2]
+                            for j in range(0, min(32, len(start_hex[i : i + 32])), 2)
+                        )
                         description.append(hex_line)
 
                     description.append(f"\nLast {hex_dump_length} bytes (hex):")
                     for i in range(0, len(end_hex), 32):
-                        hex_line = ' '.join(
-                            end_hex[i:i + 32][j:j + 2] for j in range(0, min(32, len(end_hex[i:i + 32])), 2))
+                        hex_line = " ".join(
+                            end_hex[i : i + 32][j : j + 2]
+                            for j in range(0, min(32, len(end_hex[i : i + 32])), 2)
+                        )
                         description.append(hex_line)
 
         except Exception as e:

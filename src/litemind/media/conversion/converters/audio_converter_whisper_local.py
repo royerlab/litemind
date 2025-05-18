@@ -1,16 +1,14 @@
-import os
-import tempfile
-from typing import List
+from typing import List, Tuple, Type
 
 from litemind.media.conversion.converters.base_converter import BaseConverter
 from litemind.media.media_base import MediaBase
 from litemind.media.types.media_audio import Audio
-from litemind.media.types.media_image import Image
 from litemind.media.types.media_text import Text
-from litemind.media.types.media_video import Video
-from litemind.utils.ffmpeg_utils import is_ffmpeg_available, extract_frames_and_audio, get_video_info
 from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_path
-from litemind.utils.whisper_transcribe_audio import is_local_whisper_available, transcribe_audio_with_local_whisper
+from litemind.utils.whisper_transcribe_audio import (
+    is_local_whisper_available,
+    transcribe_audio_with_local_whisper,
+)
 
 
 class AudioConverterWhisperLocal(BaseConverter):
@@ -18,6 +16,9 @@ class AudioConverterWhisperLocal(BaseConverter):
     Converter for Audio media type.
     Converts Audio media to Text media.
     """
+
+    def rule(self) -> List[Tuple[Type[MediaBase], List[Type[MediaBase]]]]:
+        return [(Audio, [Text])]
 
     def can_convert(self, media: MediaBase) -> bool:
 
@@ -30,7 +31,9 @@ class AudioConverterWhisperLocal(BaseConverter):
 
         # Check if Whisper is available:
         if not is_local_whisper_available():
-            raise RuntimeError("Whisper is not available. Please install Whisper to use this converter.")
+            raise RuntimeError(
+                "Whisper is not available. Please install Whisper to use this converter."
+            )
 
         # Get the media URI:
         media_uri = media.uri
@@ -46,7 +49,12 @@ class AudioConverterWhisperLocal(BaseConverter):
 
         media_list = []
 
-        media_list.append(Text(audio_info+"\n\nThe following is the transcription of the audio:\n"+transcription))
+        media_list.append(
+            Text(
+                audio_info
+                + "\n\nThe following is the transcription of the audio:\n"
+                + transcription
+            )
+        )
 
         return media_list
-

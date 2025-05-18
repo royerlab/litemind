@@ -1,6 +1,8 @@
 import pytest
 
-from litemind.apis.providers.openai.utils.check_availability import check_openai_api_availability
+from litemind.apis.providers.openai.utils.check_availability import (
+    check_openai_api_availability,
+)
 from litemind.apis.providers.openai.utils.vision import has_vision_support
 
 

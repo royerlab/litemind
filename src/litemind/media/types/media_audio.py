@@ -118,8 +118,7 @@ class Audio(MediaURI):
             file_size_mb = file_size / (1024 * 1024)
 
             # Create markdown string
-            markdown = \
-f"""
+            markdown = f"""
 ## Audio Information
 - **Filename**: {pathlib.Path(local_path).name}
 - **Duration**: {minutes}m {seconds:.2f}s

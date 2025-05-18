@@ -48,9 +48,9 @@ class Image(MediaURI):
         image = PILImage.fromarray(array)
 
         # Save image as PNG:
-        image_media = Image.from_PIL_image(image=image,
-                             filepath=filepath,
-                             format=format)
+        image_media = Image.from_PIL_image(
+            image=image, filepath=filepath, format=format
+        )
 
         image_media.array = array
 
@@ -59,12 +59,11 @@ class Image(MediaURI):
     @classmethod
     def from_PIL_image(
         cls,
-        image: 'PILImage',
+        image: "PILImage",
         filepath: Optional[str] = None,
         format: Optional[str] = None,
     ):
         # Create image using PIL
-        from PIL import Image as PILImage
 
         # Save image as PNG:
 
@@ -84,7 +83,6 @@ class Image(MediaURI):
         image = Image(uri=image_uri)
 
         return image
-
 
     def load_from_uri(self):
 

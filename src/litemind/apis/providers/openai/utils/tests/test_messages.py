@@ -1,7 +1,9 @@
 import pytest
 
 from litemind.agent.messages.message import Message
-from litemind.apis.providers.openai.utils.check_availability import check_openai_api_availability
+from litemind.apis.providers.openai.utils.check_availability import (
+    check_openai_api_availability,
+)
 from litemind.apis.providers.openai.utils.convert_messages import (
     convert_messages_for_openai,
 )

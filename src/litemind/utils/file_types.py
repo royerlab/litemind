@@ -106,7 +106,31 @@ _EXECUTABLE = {
     "application/x-mach-binary",
 }
 
-_SCRIPT_EXTS = {".py", ".js", ".sh", ".bat", ".ps1", ".rb", ".pl", ".php", ".go", ".java", ".c", ".cpp", ".h", ".cs", ".swift", ".rs", ".ts",  ".css", ".xml", ".json", ".yaml", ".yml", ".sql"}
+_SCRIPT_EXTS = {
+    ".py",
+    ".js",
+    ".sh",
+    ".bat",
+    ".ps1",
+    ".rb",
+    ".pl",
+    ".php",
+    ".go",
+    ".java",
+    ".c",
+    ".cpp",
+    ".h",
+    ".cs",
+    ".swift",
+    ".rs",
+    ".ts",
+    ".css",
+    ".xml",
+    ".json",
+    ".yaml",
+    ".yml",
+    ".sql",
+}
 
 _WEB_EXTS = {
     ".html",
@@ -128,6 +152,7 @@ def classify_uri(uri: str, read_bytes: int = 4096) -> str:
 
     local_path = uri_to_local_file_path(uri)
     return classify(local_path, read_bytes)
+
 
 @lru_cache()
 def classify(path: str, read_bytes: int = 4096) -> str:

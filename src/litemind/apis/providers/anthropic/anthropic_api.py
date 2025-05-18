@@ -29,6 +29,7 @@ from litemind.apis.providers.anthropic.utils.process_response import (
     process_response_from_anthropic,
 )
 from litemind.media.types.media_action import Action
+from litemind.media.types.media_image import Image
 from litemind.media.types.media_text import Text
 
 
@@ -456,7 +457,9 @@ class AnthropicApi(DefaultApi):
 
         # Preprocess the messages, we use non-system messages only:
         preprocessed_messages = self._preprocess_messages(
-            messages=non_system_messages, exclude_extensions=["pdf"]
+            messages=non_system_messages,
+            allowed_media_types={Text, Image},
+            exclude_extensions=["pdf"],
         )
 
         # Get max num of output tokens for model if not provided:

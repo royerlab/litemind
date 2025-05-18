@@ -1,7 +1,7 @@
 import os
 from typing import List, Optional, Sequence, Union
 
-from PIL import Image
+from PIL import Image as PilImage
 from pydantic import BaseModel
 
 from litemind.agent.messages.message import Message
@@ -27,7 +27,10 @@ from litemind.apis.providers.google.utils.process_response import (
 from litemind.apis.providers.google.utils.response_to_object import response_to_object
 from litemind.apis.tests.test_callback_manager import callback_manager
 from litemind.media.types.media_action import Action
+from litemind.media.types.media_audio import Audio
+from litemind.media.types.media_image import Image
 from litemind.media.types.media_text import Text
+from litemind.media.types.media_video import Video
 from litemind.utils.json_to_object import json_to_object
 
 
@@ -459,7 +462,8 @@ class GeminiApi(DefaultApi):
 
         # Convert user messages -> gemini format
         preprocessed_messages = self._preprocess_messages(
-            messages=messages, convert_videos=False
+            messages=messages,
+            allowed_media_types={Text, Image, Audio, Video},
         )
 
         # Get max num of output tokens for model if not provided:
@@ -598,7 +602,7 @@ class GeminiApi(DefaultApi):
         preserve_aspect_ratio: bool = True,
         allow_resizing: bool = True,
         **kwargs,
-    ) -> Image:
+    ) -> PilImage:
 
         if model_name is None:
             model_name = self.get_best_model(features=ModelFeatures.ImageGeneration)

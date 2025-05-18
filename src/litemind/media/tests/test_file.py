@@ -10,7 +10,7 @@ class TestFile:
     def test_initialization(self):
         """Test that the File class can be initialized with a valid URI."""
         # Create a temporary file since we need an actual file
-        with tempfile.NamedTemporaryFile(suffix='.txt') as temp:
+        with tempfile.NamedTemporaryFile(suffix=".txt") as temp:
             temp.write(b"test content")
             temp.flush()
             uri = f"file://{temp.name}"
@@ -20,7 +20,7 @@ class TestFile:
     def test_to_text_media_with_test_file(self):
         """Test to_text_media method with test file from resources."""
         # Create a temporary file to use for testing
-        with tempfile.NamedTemporaryFile(suffix='.dat', delete=False) as temp:
+        with tempfile.NamedTemporaryFile(suffix=".dat", delete=False) as temp:
             temp.write(b"Test binary data for file media")
             temp_path = temp.name
 
@@ -49,7 +49,7 @@ class TestFile:
 
     def test_to_text_media_small_file(self):
         """Test to_text_media method with a small file."""
-        with tempfile.NamedTemporaryFile(suffix='.bin', delete=False) as temp:
+        with tempfile.NamedTemporaryFile(suffix=".bin", delete=False) as temp:
             # Write 50 bytes of data
             content = bytes([i % 256 for i in range(50)])
             temp.write(content)
@@ -74,7 +74,7 @@ class TestFile:
             assert "Entire file content (50 bytes):" in text_content
 
             # Verify the hex content
-            expected_hex = binascii.hexlify(content).decode('ascii')
+            expected_hex = binascii.hexlify(content).decode("ascii")
             # Check for hex content (without spaces)
             assert expected_hex[:10] in text_content.replace(" ", "")
         finally:
@@ -85,7 +85,7 @@ class TestFile:
         """Test to_text_media method with a larger file."""
         hex_dump_length = 64  # Smaller value for testing
 
-        with tempfile.NamedTemporaryFile(suffix='.bin', delete=False) as temp:
+        with tempfile.NamedTemporaryFile(suffix=".bin", delete=False) as temp:
             # Write 300 bytes of data
             content = bytes([i % 256 for i in range(300)])
             temp.write(content)
@@ -96,7 +96,9 @@ class TestFile:
             file_media = File(uri=uri)
 
             # Get text media representation
-            text_media = file_media.to_markdown_text_media(hex_dump_length=hex_dump_length)
+            text_media = file_media.to_markdown_text_media(
+                hex_dump_length=hex_dump_length
+            )
 
             # Assertions
             assert isinstance(text_media, Text)
@@ -115,7 +117,7 @@ class TestFile:
 
     def test_to_text_media_empty_file(self):
         """Test to_text_media method with an empty file."""
-        with tempfile.NamedTemporaryFile(suffix='.bin', delete=False) as temp:
+        with tempfile.NamedTemporaryFile(suffix=".bin", delete=False) as temp:
             temp_path = temp.name
 
         try:
@@ -141,9 +143,11 @@ class TestFile:
 
     def test_to_text_media_binary_content(self):
         """Test to_text_media method with mixed binary content."""
-        with tempfile.NamedTemporaryFile(suffix='.bin', delete=False) as temp:
+        with tempfile.NamedTemporaryFile(suffix=".bin", delete=False) as temp:
             # Include null bytes and other non-printable characters
-            content = bytes([0, 255, 10, 13, 27, 7, 9] + [65 + i % 26 for i in range(20)])
+            content = bytes(
+                [0, 255, 10, 13, 27, 7, 9] + [65 + i % 26 for i in range(20)]
+            )
             temp.write(content)
             temp_path = temp.name
 
@@ -187,7 +191,7 @@ class TestFile:
 
     def test_load_from_uri(self):
         """Test the load_from_uri method."""
-        with tempfile.NamedTemporaryFile(suffix='.txt') as temp:
+        with tempfile.NamedTemporaryFile(suffix=".txt") as temp:
             test_content = b"test file content"
             temp.write(test_content)
             temp.flush()

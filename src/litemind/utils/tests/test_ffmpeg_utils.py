@@ -114,7 +114,7 @@ def test_load_video_as_array(test_video):
     """Test that load_video_as_array correctly loads a video into a numpy array."""
 
     # Skip test if ffmpeg is not available:
-    if not is_ffmpeg_available()  or test_video is None:
+    if not is_ffmpeg_available() or test_video is None:
         pytest.skip("ffmpeg is not available. Skipping test.")
 
     import numpy as np

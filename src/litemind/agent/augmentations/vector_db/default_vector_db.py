@@ -63,6 +63,7 @@ class DefaultVectorDatabase(AugmentationDefault, BaseVectorDatabase):
         if api is None:
             try:
                 from litemind import CombinedApi
+
                 api = CombinedApi()
             except ValueError:
                 raise ValueError(

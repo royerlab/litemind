@@ -12,9 +12,7 @@ def test_compare_images_with_separate_messages():
 
     # Skip test if Ollama is not available:
     if not api_instance.check_availability_and_credentials():
-        pytest.skip(
-            f"{OllamaApi.__name__} is not available. Skipping image tests."
-        )
+        pytest.skip(f"{OllamaApi.__name__} is not available. Skipping image tests.")
 
     # Get the best model for text generation and images:
     default_model_name = api_instance.get_best_model(

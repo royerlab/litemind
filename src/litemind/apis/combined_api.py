@@ -553,6 +553,37 @@ class CombinedApi(DefaultApi):
         # return the result:
         return embeddings
 
+    def embed_documents(
+        self,
+        document_uris: List[str],
+        model_name: Optional[str] = None,
+        dimensions: int = 512,
+        **kwargs,
+    ) -> Sequence[Sequence[float]]:
+
+        # if no model name is provided we return the best model as defined in the method above:
+        if model_name is None:
+            model_name = self.get_best_model(ModelFeatures.DocumentEmbeddings)
+
+        # if the model name is not in the model_to_api dictionary we raise an error:
+        if model_name not in self.model_to_api:
+            raise ValueError(f"Model '{model_name}' not found in any API.")
+
+        # we get the api object from the model_to_api dictionary:
+        api = self.model_to_api[model_name]
+
+        # we call the embed_documents method of the api object:
+        embeddings = api.embed_documents(document_uris, model_name, dimensions)
+
+        # Update kwargs with other parameters:
+        kwargs.update({"model_name": model_name, "dimensions": dimensions})
+
+        # Call the callback manager if available:
+        self.callback_manager.on_document_embedding(document_uris, embeddings, **kwargs)
+
+        # return the result:
+        return embeddings
+
     def describe_image(
         self,
         image_uri: str,
@@ -655,6 +686,36 @@ class CombinedApi(DefaultApi):
         # return the result:
         return desc
 
+    def transcribe_audio(
+        self, audio_uri: str, model_name: Optional[str] = None, **model_kwargs
+    ) -> str:
+        # if no model name is provided we return the best model as defined in the method above:
+        if model_name is None:
+            model_name = self.get_best_model(
+                features=[ModelFeatures.AudioTranscription]
+            )
+
+        # if the model name is not in the model_to_api dictionary we raise an error:
+        if model_name not in self.model_to_api:
+            raise ValueError(f"Model '{model_name}' not found in any API.")
+
+        # we get the api object from the model_to_api dictionary:
+        api = self.model_to_api[model_name]
+
+        # we call the transcribe_audio method of the api object:
+        transcription = api.transcribe_audio(
+            audio_uri=audio_uri, model_name=model_name, **model_kwargs
+        )
+
+        # Set kwargs with other parameters:
+        kwargs = {"model_name": model_name, "model_kwargs": model_kwargs}
+
+        # Call the callback manager if available:
+        self.callback_manager.on_audio_transcription(transcription, audio_uri, **kwargs)
+
+        # return the result:
+        return transcription
+
     def describe_video(
         self,
         video_uri: str,
@@ -702,6 +763,57 @@ class CombinedApi(DefaultApi):
 
         # Call the callback manager if available:
         self.callback_manager.on_video_description(video_uri, desc, **kwargs)
+
+        # return the result:
+        return desc
+
+    def describe_document(
+        self,
+        document_uri: str,
+        system: str = "You are a helpful AI assistant that can describe/analyse documents.",
+        query: str = "Here is a document file, please carefully describe it in detail.",
+        model_name: Optional[str] = None,
+        temperature: float = 0,
+        max_output_tokens: Optional[int] = None,
+        number_of_tries: int = 4,
+    ) -> str:
+
+        # if no model name is provided we return the best model as defined in the method above:
+        if model_name is None:
+            model_name = self.get_best_model(
+                features=[ModelFeatures.TextGeneration, ModelFeatures.Image]
+            )
+
+        # if the model name is not in the model_to_api dictionary we raise an error:
+        if model_name not in self.model_to_api:
+            raise ValueError(f"Model '{model_name}' not found in any API.")
+
+        # we get the api object from the model_to_api dictionary:
+        api = self.model_to_api[model_name]
+
+        # we call the describe_video method of the api object:
+        desc = api.describe_document(
+            document_uri,
+            system,
+            query,
+            model_name,
+            temperature,
+            max_output_tokens,
+            number_of_tries,
+        )
+
+        # Set kwargs with other parameters:
+        kwargs = {
+            "system": system,
+            "query": query,
+            "model_name": model_name,
+            "temperature": temperature,
+            "max_output_tokens": max_output_tokens,
+            "number_of_tries": number_of_tries,
+        }
+
+        # Call the callback manager if available:
+        self.callback_manager.on_document_description(document_uri, desc, **kwargs)
 
         # return the result:
         return desc

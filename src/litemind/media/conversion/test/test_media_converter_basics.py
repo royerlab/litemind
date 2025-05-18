@@ -1,7 +1,7 @@
 from litemind.agent.messages.message import Message
 from litemind.agent.messages.message_block import MessageBlock
 from litemind.media.conversion.converters.table_converter import TableConverter
-from litemind.media.conversion.media_converter import MessageConverter
+from litemind.media.conversion.media_converter import MediaConverter
 from litemind.media.types.media_document import Document
 from litemind.media.types.media_image import Image
 from litemind.media.types.media_json import Json
@@ -14,10 +14,10 @@ class TestMessageConverter:
 
     def setup_method(self):
         """Setup for each test."""
-        self.converter = MessageConverter()
+        self.converter = MediaConverter()
 
     def test_init(self):
-        """Test the initialization of MessageConverter."""
+        """Test the initialization of MediaConverter."""
         assert self.converter.media_converters == []
 
     def test_add_default_converters(self):
@@ -91,7 +91,9 @@ class TestMessageConverter:
         allowed_media_types = [Text]
 
         # Execute
-        result = self.converter.convert([message1, message2, message3], allowed_media_types)
+        result = self.converter.convert(
+            [message1, message2, message3], allowed_media_types
+        )
 
         # Verify all were converted to Text
         assert len(result) == 3
@@ -122,7 +124,10 @@ class TestMessageConverter:
         # Verify
         assert len(result) == 1
         assert len(result[0].blocks) == 12
-        assert all(isinstance(block.media, Text) or isinstance(block.media, Image) for block in result[0].blocks)
+        assert all(
+            isinstance(block.media, Text) or isinstance(block.media, Image)
+            for block in result[0].blocks
+        )
         # Original Text should remain unchanged
         assert result[0][0].media.text == "Original text"
 
@@ -139,7 +144,9 @@ class TestMessageConverter:
         table_uri = MediaResources.get_local_test_table_uri("spreadsheet.csv")
         table_media = Table(table_uri)
 
-        doc_uri = MediaResources.get_local_test_document_uri("low_discrepancy_sequence.pdf")
+        doc_uri = MediaResources.get_local_test_document_uri(
+            "low_discrepancy_sequence.pdf"
+        )
         doc_media = Document(doc_uri)
         json_media = Json({"name": "test", "value": 42})
         text_media = Text("Hello world")
@@ -160,7 +167,9 @@ class TestMessageConverter:
         allowed_media_types = [Text, Json]
 
         # Execute
-        result = self.converter.convert([message1, message2, message3, message4], allowed_media_types)
+        result = self.converter.convert(
+            [message1, message2, message3, message4], allowed_media_types
+        )
 
         # Verify
         assert len(result) == 4
@@ -184,7 +193,9 @@ class TestMessageConverter:
         table_uri = MediaResources.get_local_test_table_uri("spreadsheet.csv")
         table_media = Table(table_uri)
 
-        doc_uri = MediaResources.get_local_test_document_uri("low_discrepancy_sequence.pdf")
+        doc_uri = MediaResources.get_local_test_document_uri(
+            "low_discrepancy_sequence.pdf"
+        )
         doc_media = Document(doc_uri)
 
         message = Message(role="user")
@@ -235,7 +246,9 @@ class TestMessageConverter:
 
         # Document media
         message = Message(role="user")
-        doc_uri = MediaResources.get_local_test_document_uri("low_discrepancy_sequence.pdf")
+        doc_uri = MediaResources.get_local_test_document_uri(
+            "low_discrepancy_sequence.pdf"
+        )
         message.append_block(MessageBlock(Document(doc_uri)))
         test_messages.append(message)
 

@@ -1,5 +1,5 @@
 from functools import lru_cache
-from typing import Dict, List, Optional, Sequence, Union
+from typing import Dict, List, Optional, Sequence, Set, Type, Union
 
 from arbol import aprint
 
@@ -23,7 +23,9 @@ from litemind.apis.providers.ollama.utils.list_models import _get_ollama_models_
 from litemind.apis.providers.ollama.utils.process_response import (
     process_response_from_ollama,
 )
+from litemind.media.media_base import MediaBase
 from litemind.media.types.media_action import Action
+from litemind.media.types.media_image import Image
 from litemind.media.types.media_text import Text
 
 
@@ -399,8 +401,17 @@ class OllamaApi(DefaultApi):
             if model_name is None:
                 raise APIError(f"No suitable model with features: {features}")
 
+        # Initialize the allowed media types:
+        allowed_media_types: Set[Type[MediaBase]] = {Text}
+
+        # Check if the model supports images:
+        if self._has_image_support(model_name=model_name):
+            allowed_media_types.add(Image)
+
         # Preprocess the messages:
-        preprocessed_messages = self._preprocess_messages(messages=messages)
+        preprocessed_messages = self._preprocess_messages(
+            messages=messages, allowed_media_types=allowed_media_types
+        )
 
         # If this is a thinking model then we need to add a system message about thinking:
         if self._has_thinking_support(model_name):

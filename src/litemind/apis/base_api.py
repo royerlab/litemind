@@ -254,94 +254,6 @@ class BaseApi(ABC):
         pass
 
     @abstractmethod
-    def transcribe_audio(
-        self, audio_uri: str, model_name: Optional[str] = None, **kwargs
-    ) -> str:
-        """
-        Transcribe an audio file using the model.
-
-        Parameters
-        ----------
-        audio_uri: str
-            Can be: a path to an audio file, a URL to an audio file, or a base64 encoded audio.
-        model_name: Optional[str]
-            The name of the model to use.
-        kwargs: dict
-            Additional arguments to pass to the transcription function.
-
-        Returns
-        -------
-        str
-            The transcription of the audio.
-
-        """
-        pass
-
-    @abstractmethod
-    def convert_audio_in_messages(self, messages: List[Message]) -> List[Message]:
-        """
-        Convert audio in messages into text.
-
-        Parameters
-        ----------
-        messages: List[Message]
-            The list of Message objects to process.
-
-        Returns
-        -------
-        List[Message]
-            The list of Message objects with audio converted to text.
-
-        """
-
-    @abstractmethod
-    def convert_documents_to_markdown_in_messages(
-        self,
-        messages: List[Message],
-        exclude_extensions: Optional[List[str]] = None,
-        model_name: Optional[str] = None,
-    ) -> List[Message]:
-        """
-        Convert documents in messages into text in Markdown format.
-
-        Parameters
-        ----------
-        messages : List[Message]
-            The list of Message objects to process.
-        exclude_extensions : Optional[List[str]]
-            The list of file extensions to exclude from processing.
-        model_name : Optional[str]
-            The name of the model to use.
-
-
-        Returns
-        -------
-        List[Message]
-            The list of Message objects with documents converted to markdown.
-        """
-
-    pass
-
-    @abstractmethod
-    def convert_videos_to_images_and_audio_in_messages(
-        self, message: Sequence[Message]
-    ) -> List[Message]:
-        """
-        Convert videos in the message to images and audio blocks.
-
-        Parameters
-        ----------
-        message : Sequence[Message]
-            The message object containing video URIs.
-
-        Returns
-        -------
-        List[Message]
-            The message object with video URIs converted to images and audio blocks.
-        """
-        pass
-
-    @abstractmethod
     def generate_audio(
         self,
         text: str,
@@ -604,6 +516,30 @@ class BaseApi(ABC):
 
         """
 
+        pass
+
+    @abstractmethod
+    def transcribe_audio(
+        self, audio_uri: str, model_name: Optional[str] = None, **model_kwargs
+    ) -> str:
+        """
+        Transcribe an audio file using the model.
+
+        Parameters
+        ----------
+        audio_uri: str
+            Can be: a path to an audio file, a URL to an audio file, or a base64 encoded audio.
+        model_name: Optional[str]
+            The name of the model to use.
+        model_kwargs: dict
+            Additional arguments to pass to the transcription function.
+
+        Returns
+        -------
+        str
+            The transcription of the audio.
+
+        """
         pass
 
     @abstractmethod

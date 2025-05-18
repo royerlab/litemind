@@ -4,8 +4,6 @@ import tempfile
 from typing import List, Optional, Sequence, Union
 
 from openai import OpenAI
-from PIL import Image
-from PIL.Image import Resampling
 from pydantic import BaseModel
 
 from litemind.agent.messages.message import Message
@@ -33,6 +31,8 @@ from litemind.apis.providers.openai.utils.process_response import (
     process_response_from_openai,
 )
 from litemind.media.types.media_action import Action
+from litemind.media.types.media_image import Image
+from litemind.media.types.media_text import Text
 from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_path
 
 
@@ -280,6 +280,10 @@ class OpenAIApi(DefaultApi):
                 if not self._has_audio_support(model_name):
                     return False
 
+            elif feature == ModelFeatures.AudioTranscription:
+                if not self._has_audio_transcription_support(model_name):
+                    return False
+
             elif feature == ModelFeatures.Video:
                 if not self._has_video_support(model_name):
                     return False
@@ -350,7 +354,13 @@ class OpenAIApi(DefaultApi):
             return False
 
         # Then, we check if it is a vision model:
-        if "vision" in model_name or "gpt-4o" in model_name or "o1" in model_name:
+        if (
+            "vision" in model_name
+            or "gpt-4o" in model_name
+            or "o1" in model_name
+            or "o3" in model_name
+            or "gpt-4.5" in model_name
+        ):
             return True
 
         # Any other model is not a vision model:
@@ -369,10 +379,10 @@ class OpenAIApi(DefaultApi):
         ):
             return False
 
-        # Check if the model is a whisper model:
-        return "audio" in model_name or "whisper-1" in [
-            model.id for model in self._raw_model_list
-        ]
+        return False
+
+    def _has_audio_transcription_support(self, model_name: str) -> bool:
+        return "whisper" in model_name
 
     def _has_video_support(self, model_name: str) -> bool:
 
@@ -704,6 +714,7 @@ class OpenAIApi(DefaultApi):
         # Preprocess messages:
         preprocessed_messages = self._preprocess_messages(
             messages=preprocessed_messages,
+            allowed_media_types={Text, Image},
             deepcopy=False,  # We have already made a deepcopy
         )
 
@@ -1015,6 +1026,7 @@ class OpenAIApi(DefaultApi):
         from io import BytesIO
 
         from PIL import Image
+        from PIL.Image import Resampling
 
         image = Image.open(BytesIO(image_data))
 

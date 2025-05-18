@@ -1,11 +1,12 @@
-from typing import Optional, List, Union
+from typing import List, Optional, Union
 
 import numpy
 
 from litemind.media.media_uri import MediaURI
 from litemind.media.types.media_image import Image
-from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_path
 from litemind.media.types.media_text import Text
+from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_path
+
 
 class NdImage(MediaURI):
     """
@@ -38,11 +39,13 @@ class NdImage(MediaURI):
 
         try:
             # Handle numpy files directly
-            if local_file.lower().endswith('.npy'):
+            if local_file.lower().endswith(".npy"):
                 import numpy as np
+
                 self.array = np.load(local_file)
-            elif local_file.lower().endswith('.npz'):
+            elif local_file.lower().endswith(".npz"):
                 import numpy as np
+
                 # For .npz files, load the first array in the archive
                 with np.load(local_file) as data:
                     array_names = list(data.keys())
@@ -50,25 +53,35 @@ class NdImage(MediaURI):
                         raise Exception("NPZ file contains no arrays")
                     self.array = data[array_names[0]]
             # Handle tiff files with tifffile
-            elif local_file.lower().endswith(('.tif', '.tiff')):
+            elif local_file.lower().endswith((".tif", ".tiff")):
                 import tifffile
+
                 self.array = tifffile.imread(local_file)
             # For other formats use imageio
             else:
                 import imageio.v3 as iio
+
                 self.array = iio.imread(local_file)
 
             # Print debug info about loaded array
-            print(f"Loaded array with shape: {self.array.shape}, dtype: {self.array.dtype}")
+            print(
+                f"Loaded array with shape: {self.array.shape}, dtype: {self.array.dtype}"
+            )
 
             # Ensure we have at least 2D array
             if self.array.ndim < 2:
-                raise Exception(f"Image has only {self.array.ndim} dimensions, expected at least 2.")
+                raise Exception(
+                    f"Image has only {self.array.ndim} dimensions, expected at least 2."
+                )
 
         except Exception as e:
-            raise Exception(f"Could not open or decode nD image file: {self.uri}. Error: {e}")
+            raise Exception(
+                f"Could not open or decode nD image file: {self.uri}. Error: {e}"
+            )
 
-    def to_text_and_2d_projection_medias(self, channel_threshold=10) -> List[Union[Text, Image]]:
+    def to_text_and_2d_projection_medias(
+        self, channel_threshold=10
+    ) -> List[Union[Text, Image]]:
         """
         Creates a list of Text and Image media objects that describe the nD image
         for LLM ingestion purposes. Handles singleton dimensions and channel-like dimensions specially.
@@ -125,9 +138,14 @@ class NdImage(MediaURI):
 
         # Analyze dimensions
         singleton_dims = [i for i, size in enumerate(dimensions) if size == 1]
-        channel_like_dims = [i for i, size in enumerate(dimensions) if 1 < size <= channel_threshold]
-        spatial_dims = [i for i, size in enumerate(dimensions)
-                        if size > channel_threshold and i not in singleton_dims]
+        channel_like_dims = [
+            i for i, size in enumerate(dimensions) if 1 < size <= channel_threshold
+        ]
+        spatial_dims = [
+            i
+            for i, size in enumerate(dimensions)
+            if size > channel_threshold and i not in singleton_dims
+        ]
 
         # Add dimension analysis
         if singleton_dims:
@@ -141,7 +159,11 @@ class NdImage(MediaURI):
 
         # If we have less than 2 spatial dimensions, we can't create 2D projections
         if len(spatial_dims) < 2:
-            result.append(Text(text="**Note:** Not enough spatial dimensions to create 2D projections."))
+            result.append(
+                Text(
+                    text="**Note:** Not enough spatial dimensions to create 2D projections."
+                )
+            )
             return result
 
         # Create a common set of dimension labels
@@ -174,8 +196,14 @@ class NdImage(MediaURI):
                 # Create projections for this channel
                 for axis1, axis2 in spatial_pairs:
                     # Create the projection with specified channel indices
-                    self._add_projection_to_result(axis1, axis2, dim_labels, result, channel_dims=channel_like_dims,
-                                                   channel_indices=channel_idx)
+                    self._add_projection_to_result(
+                        axis1,
+                        axis2,
+                        dim_labels,
+                        result,
+                        channel_dims=channel_like_dims,
+                        channel_indices=channel_idx,
+                    )
         else:
             # No channel dimensions, just do projections for spatial dimensions
             for axis1, axis2 in spatial_pairs:
@@ -207,7 +235,9 @@ class NdImage(MediaURI):
         # Create all combinations of indices
         return list(itertools.product(*channel_values))
 
-    def _add_projection_to_result(self, axis1, axis2, dim_labels, result, channel_dims=None, channel_indices=None):
+    def _add_projection_to_result(
+        self, axis1, axis2, dim_labels, result, channel_dims=None, channel_indices=None
+    ):
         """
         Creates and adds a projection for the specified axes to the result list.
 
@@ -224,9 +254,10 @@ class NdImage(MediaURI):
         channel_indices : tuple, optional
             Index values for each channel dimension
         """
-        from litemind.media.types.media_text import Text
-        from litemind.media.types.media_image import Image
         import tempfile
+
+        from litemind.media.types.media_image import Image
+        from litemind.media.types.media_text import Text
 
         axis1_label = dim_labels[axis1]
         axis2_label = dim_labels[axis2]
@@ -241,20 +272,20 @@ class NdImage(MediaURI):
 
         # Create the projection image with channel information if provided
         projection = self._create_max_projection(
-            axis1, axis2,
-            channel_dims=channel_dims,
-            channel_indices=channel_indices
+            axis1, axis2, channel_dims=channel_dims, channel_indices=channel_indices
         )
 
         # Save as PNG and create Image media
-        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.png')
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
         temp_file.close()
 
         # Convert projection to Image media object
         proj_image = Image.from_data(projection, filepath=temp_file.name, format="PNG")
         result.append(proj_image)
 
-    def _create_max_projection(self, axis1, axis2, channel_dims=None, channel_indices=None):
+    def _create_max_projection(
+        self, axis1, axis2, channel_dims=None, channel_indices=None
+    ):
         """
         Creates a maximum intensity projection along two specified axes.
         """

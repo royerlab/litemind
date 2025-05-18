@@ -1,10 +1,9 @@
-from typing import List
+from typing import List, Tuple, Type
 
 from litemind.media.conversion.converters.base_converter import BaseConverter
 from litemind.media.media_base import MediaBase
 from litemind.media.types.media_code import Code
-from litemind.media.types.media_json import Json
-from litemind.media.types.media_table import Table
+from litemind.media.types.media_text import Text
 
 
 class CodeConverter(BaseConverter):
@@ -14,12 +13,13 @@ class CodeConverter(BaseConverter):
     Converts Code media to Text media.
     """
 
-    def can_convert(self, media: MediaBase) -> bool:
+    def rule(self) -> List[Tuple[Type[MediaBase], List[Type[MediaBase]]]]:
+        return [(Code, [Text])]
 
+    def can_convert(self, media: MediaBase) -> bool:
         return media is not None and isinstance(media, Code)
 
     def convert(self, media: MediaBase) -> List[MediaBase]:
-
         if not isinstance(media, Code):
             raise ValueError(f"Expected Json media, got {type(media)}")
 

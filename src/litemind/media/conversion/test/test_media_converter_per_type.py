@@ -1,13 +1,13 @@
-from numpy import float32
-from numpy.random import rand
 from pandas import DataFrame
 from pydantic import BaseModel
 
 from litemind.agent.messages.message import Message
 from litemind.agent.messages.message_block import MessageBlock
-from litemind.media.conversion.converters.table_converter import TableConverter
-from litemind.media.conversion.media_converter import MessageConverter
+from litemind.media.conversion.media_converter import MediaConverter
 from litemind.media.types.media_audio import Audio
+from litemind.media.types.media_code import (
+    Code,
+)  # Assuming this is the import path for Code media
 from litemind.media.types.media_document import Document
 from litemind.media.types.media_file import File
 from litemind.media.types.media_image import Image
@@ -17,7 +17,6 @@ from litemind.media.types.media_object import Object
 from litemind.media.types.media_table import Table
 from litemind.media.types.media_text import Text
 from litemind.media.types.media_video import Video
-from litemind.media.types.media_code import Code # Assuming this is the import path for Code media
 from litemind.ressources.media_resources import MediaResources
 
 
@@ -25,7 +24,7 @@ class TestMessageConverterPerType:
 
     def setup_method(self):
         """Setup for each test."""
-        self.converter = MessageConverter()
+        self.converter = MediaConverter()
 
     def test_convert_audio_media(self):
         """Test conversion of audio media."""
@@ -58,7 +57,6 @@ class TestMessageConverterPerType:
         assert "development" in transcription
         assert "zebrafish" in transcription
 
-
     def test_convert_code_media(self):
         """Test conversion of code media."""
         self.converter.add_default_converters()
@@ -70,10 +68,10 @@ class TestMessageConverterPerType:
         code_path = code_uri.replace("file://", "")
 
         # Get file contents:
-        with open(code_path, 'r') as file:
+        with open(code_path, "r") as file:
             code_content = file.read()
 
-        code_media = Code(code_content, lang='cpp') # Ensure Code class is imported
+        code_media = Code(code_content, lang="cpp")  # Ensure Code class is imported
 
         message = Message(role="user")
         message.append_block(MessageBlock(code_media))
@@ -325,7 +323,6 @@ class TestMessageConverterPerType:
         assert "### Maximum Intensity Projection: zt-plane" in ndimage_text
         assert "**Value range:** [0, 215]" in ndimage_text
 
-
     def test_convert_object_media(self):
         """Test conversion of Object media."""
         self.converter.add_default_converters()
@@ -372,74 +369,71 @@ class TestMessageConverterPerType:
         assert "This is a sample object for testing" in object_text
         assert ":123" in object_text
 
-
-
     def test_convert_table_media(self):
-            """Test conversion of Table media."""
-            self.converter.add_default_converters()
+        """Test conversion of Table media."""
+        self.converter.add_default_converters()
 
-            # Create message with Table media
-            data = {
-                "Name": ["Alice", "Bob", "Charlie"],
-                "Age": [30, 24, 35],
-                "City": ["New York", "San Francisco", "London"]
-            }
+        # Create message with Table media
+        data = {
+            "Name": ["Alice", "Bob", "Charlie"],
+            "Age": [30, 24, 35],
+            "City": ["New York", "San Francisco", "London"],
+        }
 
-            # Create a Table object
-            table_media = Table.from_dataframe(DataFrame(data))
+        # Create a Table object
+        table_media = Table.from_dataframe(DataFrame(data))
 
-            # Create a message and append the table media
-            message = Message(role="user")
-            message.append_block(MessageBlock(table_media))
+        # Create a message and append the table media
+        message = Message(role="user")
+        message.append_block(MessageBlock(table_media))
 
-            # Convert to Text
-            result = self.converter.convert([message], [Text])
+        # Convert to Text
+        result = self.converter.convert([message], [Text])
 
-            # Verify conversion results
-            assert len(result) == 1
-            assert isinstance(result[0][0].media, Text)
+        # Verify conversion results
+        assert len(result) == 1
+        assert isinstance(result[0][0].media, Text)
 
-            # Extract text:
-            table_text = result[0][0].media.text
+        # Extract text:
+        table_text = result[0][0].media.text
 
-            # Basic check that some content was extracted
-            assert isinstance(table_text, str)
-            assert len(table_text) > 0
+        # Basic check that some content was extracted
+        assert isinstance(table_text, str)
+        assert len(table_text) > 0
 
-            # Check for typical content in the textual representation of a Table (e.g., Markdown)
-            assert "Name" in table_text # Check if the table name is present
-            assert "Alice" in table_text # Check for header row
-            assert "24" in table_text # Check for markdown table separator
-            assert "San Francisco" in table_text # Check for data row 1
-
+        # Check for typical content in the textual representation of a Table (e.g., Markdown)
+        assert "Name" in table_text  # Check if the table name is present
+        assert "Alice" in table_text  # Check for header row
+        assert "24" in table_text  # Check for markdown table separator
+        assert "San Francisco" in table_text  # Check for data row 1
 
     def test_convert_text_media(self):
-            """Test conversion of Text media (identity conversion)."""
-            self.converter.add_default_converters()
+        """Test conversion of Text media (identity conversion)."""
+        self.converter.add_default_converters()
 
-            # Create message with Text media
-            original_text_content = "This is a sample text for testing conversion."
-            text_media = Text(text=original_text_content)
+        # Create message with Text media
+        original_text_content = "This is a sample text for testing conversion."
+        text_media = Text(text=original_text_content)
 
-            message = Message(role="user")
-            message.append_block(MessageBlock(text_media))
+        message = Message(role="user")
+        message.append_block(MessageBlock(text_media))
 
-            # Convert to Text (should be an identity conversion)
-            result = self.converter.convert([message], [Text])
+        # Convert to Text (should be an identity conversion)
+        result = self.converter.convert([message], [Text])
 
-            # Verify conversion results
-            assert len(result) == 1
-            assert isinstance(result[0][0].media, Text)
+        # Verify conversion results
+        assert len(result) == 1
+        assert isinstance(result[0][0].media, Text)
 
-            # Extract text:
-            converted_text = result[0][0].media.text
+        # Extract text:
+        converted_text = result[0][0].media.text
 
-            # Basic check that some content was extracted
-            assert isinstance(converted_text, str)
-            assert len(converted_text) > 0
+        # Basic check that some content was extracted
+        assert isinstance(converted_text, str)
+        assert len(converted_text) > 0
 
-            # Check that the text content is unchanged
-            assert converted_text == original_text_content
+        # Check that the text content is unchanged
+        assert converted_text == original_text_content
 
     def test_convert_video_media(self):
         """Test conversion of video media."""
@@ -464,7 +458,10 @@ class TestMessageConverterPerType:
         # First block is typically the metadat info:
         assert isinstance(result[0][0].media, Text)
         # All blocks should be either Text or Image:
-        assert all(isinstance(block.media, Text) or isinstance(block.media, Image) for block in result[0].blocks)
+        assert all(
+            isinstance(block.media, Text) or isinstance(block.media, Image)
+            for block in result[0].blocks
+        )
 
         # Extract transcript text:
         transcript = result[0][-1].media.text.lower()
@@ -473,4 +470,3 @@ class TestMessageConverterPerType:
         assert "job" in transcript
         assert "glimmer" in transcript
         assert "florida" in transcript
-

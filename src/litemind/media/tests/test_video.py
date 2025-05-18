@@ -6,6 +6,7 @@ from litemind.ressources.media_resources import MediaResources
 from litemind.utils.ffmpeg_utils import is_ffmpeg_available
 from litemind.utils.file_extensions import video_file_extensions
 
+
 @pytest.fixture(scope="class", autouse=True)
 def skip_if_ffmpeg_not_available(request):
     """Skip all tests in the class if ffmpeg is not available."""

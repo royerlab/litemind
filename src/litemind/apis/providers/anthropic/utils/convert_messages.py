@@ -52,7 +52,7 @@ def convert_messages_for_anthropic(
                 # Get Text's string:
                 text: str = block.get_content()
 
-                if block.is_thinking():
+                if block.is_redacted():
                     # if the block is redacted, add it as a redacted thinking block:
                     content.append({"type": "redacted_thinking", "data": text})
                 else:

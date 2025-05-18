@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import List, Optional, Union
+from typing import List, Optional, Set, Type, Union
 
 
 class ModelFeatures(Enum):
@@ -24,6 +24,8 @@ class ModelFeatures(Enum):
     Document = "Documents"
     Tools = "Tools"
     AudioTranscription = "AudioTranscription"
+    ImageConversion = "ImageConversion"
+    AudioConversion = "AudioConversion"
     VideoConversion = "VideoConversion"
     DocumentConversion = "DocumentConversion"
 
@@ -97,6 +99,51 @@ class ModelFeatures(Enum):
 
         # Return the normalised list of features
         return normalised_features
+
+    @staticmethod
+    def get_supported_media_classes(
+        features: Union[str, List[str], "ModelFeatures", List["ModelFeatures"]],
+    ) -> Set[Type["MediaBase"]]:
+        """
+        Get the list of MediaBase-derived classes that correspond to the media types
+        a model with the given features can ingest.
+
+        Parameters
+        ----------
+        features: Union[str, List[str], ModelFeatures, List[ModelFeatures]]
+            The model features to analyze.
+
+        Returns
+        -------
+        List[Type[MediaBase]]
+            List of MediaBase-derived classes representing media types the model can process.
+        """
+
+        # Map ModelFeatures to actual MediaBase-derived classes
+        from litemind.media.types.media_audio import Audio
+        from litemind.media.types.media_document import Document
+        from litemind.media.types.media_image import Image
+        from litemind.media.types.media_text import Text
+        from litemind.media.types.media_video import Video
+
+        media_type_set: Set[Type["MediaBase"]] = set()
+
+        if ModelFeatures.TextGeneration in features:
+            media_type_set.add(Text)
+
+        if ModelFeatures.Image in features:
+            media_type_set.add(Image)
+
+        if ModelFeatures.Audio in features:
+            media_type_set.add(Audio)
+
+        if ModelFeatures.Video in features:
+            media_type_set.add(Video)
+
+        if ModelFeatures.Document in features:
+            media_type_set.add(Document)
+
+        return media_type_set
 
     def __str__(self):
         return self.name

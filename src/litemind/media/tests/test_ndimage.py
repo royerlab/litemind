@@ -1,11 +1,12 @@
 import os
-import numpy as np
-import pytest
 import tempfile
 
+import numpy as np
+import pytest
+
+from litemind.media.types.media_image import Image
 from litemind.media.types.media_ndimage import NdImage
 from litemind.media.types.media_text import Text
-from litemind.media.types.media_image import Image
 from litemind.ressources.media_resources import MediaResources
 
 
@@ -83,10 +84,10 @@ class TestNdImage:
             assert isinstance(media_list[i], Text)
             assert "Maximum Intensity Projection" in media_list[i].text
 
-            if i+1 < len(media_list):
-                assert isinstance(media_list[i+1], Image)
+            if i + 1 < len(media_list):
+                assert isinstance(media_list[i + 1], Image)
                 # Check that Image has data
-                assert media_list[i+1].uri is not None
+                assert media_list[i + 1].uri is not None
 
     def test_to_text_and_2d_projections_tube(self):
         """Test projection with a multi-channel image."""
@@ -96,7 +97,9 @@ class TestNdImage:
 
         # Test with different channel thresholds
         media_list_default = ndimage_media.to_text_and_2d_projection_medias()
-        media_list_high_threshold = ndimage_media.to_text_and_2d_projection_medias(channel_threshold=1000)
+        media_list_high_threshold = ndimage_media.to_text_and_2d_projection_medias(
+            channel_threshold=1000
+        )
 
         # With high threshold, more dimensions should be considered "channel-like"
         default_text = media_list_default[0].text
@@ -111,7 +114,7 @@ class TestNdImage:
         array = np.zeros((50, 1, 100))
 
         # Save to temporary file
-        temp_file = tempfile.NamedTemporaryFile(suffix='.npy', delete=False)
+        temp_file = tempfile.NamedTemporaryFile(suffix=".npy", delete=False)
         temp_file.close()
         np.save(temp_file.name, array)
 
@@ -139,7 +142,7 @@ class TestNdImage:
         array = np.zeros((200, 3, 200))
 
         # Save to temporary file
-        temp_file = tempfile.NamedTemporaryFile(suffix='.npy', delete=False)
+        temp_file = tempfile.NamedTemporaryFile(suffix=".npy", delete=False)
         temp_file.close()
         np.save(temp_file.name, array)
 
@@ -155,8 +158,11 @@ class TestNdImage:
             assert "Channel-like dimensions" in media_list[0].text
 
             # Should have a channel header
-            channel_headers = [item for item in media_list
-                              if isinstance(item, Text) and "Channel:" in item.text]
+            channel_headers = [
+                item
+                for item in media_list
+                if isinstance(item, Text) and "Channel:" in item.text
+            ]
             assert len(channel_headers) > 0
         finally:
             # Clean up
@@ -168,7 +174,7 @@ class TestNdImage:
         array = np.zeros(200)
 
         # Save to temporary file
-        temp_file = tempfile.NamedTemporaryFile(suffix='.npy', delete=False)
+        temp_file = tempfile.NamedTemporaryFile(suffix=".npy", delete=False)
         temp_file.close()
         np.save(temp_file.name, array)
 
@@ -186,7 +192,6 @@ class TestNdImage:
         finally:
             # Clean up
             os.unlink(temp_file.name)
-
 
     def test_normalize_for_display(self):
         """Test normalization function with various arrays."""

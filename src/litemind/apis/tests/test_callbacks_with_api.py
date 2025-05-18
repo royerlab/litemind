@@ -170,12 +170,15 @@ def test_audio_transcription(api_class):
     audio_transcription_model_name = api_instance.get_best_model(
         ModelFeatures.AudioTranscription
     )
-    if audio_transcription_model_name:
-        audio_path = MediaResources.get_local_test_audio_uri("harvard.wav")
-        api_instance.transcribe_audio(
-            audio_path, model_name=audio_transcription_model_name
+
+    if audio_transcription_model_name is None:
+        pytest.skip(
+            f"{api_class.__name__} does not support audio transcription. Skipping audio transcription tests."
         )
-        assert "on_audio_transcription" in mock_callback.called_methods
+
+    audio_path = MediaResources.get_local_test_audio_uri("harvard.wav")
+    api_instance.transcribe_audio(audio_path, model_name=audio_transcription_model_name)
+    assert "on_audio_transcription" in mock_callback.called_methods
 
 
 @pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
@@ -189,18 +192,21 @@ def test_text_generation(api_class):
     text_generation_model_name = api_instance.get_best_model(
         [ModelFeatures.TextGeneration]
     )
-    if text_generation_model_name:
-        messages = [
-            Message(
-                role="system",
-                text="You are an omniscient all-knowing being called Ohmm",
-            ),
-            Message(role="user", text="What is the meaning of life?"),
-        ]
-        api_instance.generate_text(
-            model_name=text_generation_model_name, messages=messages
+
+    if text_generation_model_name is None:
+        pytest.skip(
+            f"{api_class.__name__} does not support text generation. Skipping text generation tests."
         )
-        assert "on_text_generation" in mock_callback.called_methods
+
+    messages = [
+        Message(
+            role="system",
+            text="You are an omniscient all-knowing being called Ohmm",
+        ),
+        Message(role="user", text="What is the meaning of life?"),
+    ]
+    api_instance.generate_text(model_name=text_generation_model_name, messages=messages)
+    assert "on_text_generation" in mock_callback.called_methods
 
 
 @pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
@@ -214,19 +220,20 @@ def test_text_generation_streaming(api_class):
     text_generation_model_name = api_instance.get_best_model(
         [ModelFeatures.TextGeneration]
     )
-    if text_generation_model_name:
-        messages = [
-            Message(
-                role="system",
-                text="You are an omniscient all-knowing being called Ohmm",
-            ),
-            Message(role="user", text="What is the meaning of life?"),
-        ]
-        api_instance.generate_text(
-            model_name=text_generation_model_name, messages=messages
+    if text_generation_model_name is None:
+        pytest.skip(
+            f"{api_class.__name__} does not support text generation. Skipping text generation tests."
         )
-        assert "on_text_streaming" in mock_callback.called_methods
-        assert "fragment=" in mock_callback.call_parameters_dump
+    messages = [
+        Message(
+            role="system",
+            text="You are an omniscient all-knowing being called Ohmm",
+        ),
+        Message(role="user", text="What is the meaning of life?"),
+    ]
+    api_instance.generate_text(model_name=text_generation_model_name, messages=messages)
+    assert "on_text_streaming" in mock_callback.called_methods
+    assert "fragment=" in mock_callback.call_parameters_dump
 
 
 @pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)

@@ -2,7 +2,6 @@ import time
 from typing import List, Union
 
 from arbol import aprint
-from PIL import Image as PILImageModule
 from PIL.Image import Image as PILImageType  # Correct type import
 
 from litemind.agent.messages.actions.action_base import ActionBase
@@ -63,14 +62,19 @@ def convert_messages_for_gemini(
                 audio: Audio = block.media
 
                 try:
-                    # Read the audio data:
-                    audio_data = audio.get_raw_data()
+                    # Convert the video URI to a local file path:
+                    local_path = audio.to_local_file_path()
 
-                    # Determine the MIME type:
-                    mime_type = audio.get_mime_type(mime_prefix="audio")
+                    # Upload the audio file to Gemini:
+                    genai_audio_file = genai.upload_file(local_path)
 
-                    # Append the audio data to the list of messages:
-                    gemini_messages.append({"mime_type": mime_type, "data": audio_data})
+                    # Wait for the file to finish processing:
+                    while genai_audio_file.state.name == "PROCESSING":
+                        time.sleep(0.1)
+                        genai_audio_file = genai.get_file(genai_audio_file.name)
+
+                    # Append the uploaded file to the list of messages:
+                    gemini_messages.append(genai_audio_file)
 
                 except Exception as e:
                     raise ValueError(f"Could not open audio '{audio.uri}': {e}")
@@ -127,7 +131,7 @@ def convert_messages_for_gemini(
                     )
 
             else:
-                raise ValueError(f"Unsupported block type: {block.block_type}")
+                raise ValueError(f"Unsupported block type: {block.get_type()}")
 
     return gemini_messages
 
