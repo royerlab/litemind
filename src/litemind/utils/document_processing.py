@@ -366,7 +366,7 @@ def extract_text_and_image_from_document(
                 image = Image.open(io.BytesIO(img_bytes))
                 pages_content.append((page_text, image))
             except Exception as e:
-                print(f"Error processing page {page_number}: {e}")
+                aprint(f"Error processing page {page_number}: {e}")
                 continue
 
         doc.close()

@@ -61,11 +61,12 @@ def get_openai_model_list(
                 "text-embedding",
                 "whisper",
                 "ada-002",
+                "tts",
             ]
 
         if excluded is None:
             # Exclude models that are not supported by the API:
-            excluded = ["ada-002", "o1-pro", "o3-pro"]
+            excluded = ["ada-002"]  # , "o1-pro", "o3-pro"]
 
         # Convert to list of model ids:
         models = [model.id for model in raw_model_list]

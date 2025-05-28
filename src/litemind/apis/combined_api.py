@@ -121,7 +121,7 @@ class CombinedApi(DefaultApi):
                         self.model_to_api[model] = api
                 self.apis.append(api)
             except Exception as e:
-                print(f"API {api.__class__.__name__} not added due to error: {e}")
+                aprint(f"API {api.__class__.__name__} not added due to error: {e}")
 
         # If no API is available, raise an error:
         if not self.apis:
@@ -212,7 +212,7 @@ class CombinedApi(DefaultApi):
                 # return the best model:
                 return best_model
             except Exception as e:
-                print(f"Error getting best model from {api.__class__.__name__}: {e}")
+                aprint(f"Error getting best model from {api.__class__.__name__}: {e}")
 
         # If no model is found, return None:
         return None

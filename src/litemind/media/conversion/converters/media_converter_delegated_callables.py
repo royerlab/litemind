@@ -34,11 +34,45 @@ class MediaConverterApi(BaseConverter):
 
     def rule(self) -> List[Tuple[Type[MediaBase], List[Type[MediaBase]]]]:
         # Define the conversion rules for each media type
-        return [(Image, [Text]), (Audio, [Text]), (Video, [Text]), (Document, [Text])]
+
+        rules = (
+            []
+        )  # [(Image, [Text]), (Audio, [Text]), (Video, [Text]), (Document, [Text])]
+
+        if self.api.has_model_support_for(ModelFeatures.Image):
+            rules.append((Image, [Text]))
+
+        if self.api.has_model_support_for(ModelFeatures.Audio):
+            rules.append((Audio, [Text]))
+
+        if self.api.has_model_support_for(ModelFeatures.Video):
+            rules.append((Video, [Text]))
+
+        if self.api.has_model_support_for(ModelFeatures.Document):
+            rules.append((Document, [Text]))
+
+        return rules
 
     def can_convert(self, media: MediaBase) -> bool:
         # Check if the media is one of the supported types
-        return media is not None and isinstance(media, (Image, Audio, Video, Document))
+        if isinstance(media, Image) and self.api.has_model_support_for(
+            ModelFeatures.Image
+        ):
+            return True
+        elif isinstance(media, Audio) and self.api.has_model_support_for(
+            ModelFeatures.Audio
+        ):
+            return True
+        elif isinstance(media, Video) and self.api.has_model_support_for(
+            ModelFeatures.Video
+        ):
+            return True
+        elif isinstance(media, Document) and self.api.has_model_support_for(
+            ModelFeatures.Document
+        ):
+            return True
+        else:
+            return False
 
     def convert(self, media: MediaBase) -> List[MediaBase]:
 

@@ -490,7 +490,7 @@ class BaseApi(ABC):
     @abstractmethod
     def embed_documents(
         self,
-        documents_uris: List[str],
+        document_uris: List[str],
         model_name: Optional[str] = None,
         dimensions: int = 512,
         **kwargs,
@@ -500,7 +500,7 @@ class BaseApi(ABC):
 
         Parameters
         ----------
-        documents_uris: List[str]
+        document_uris: List[str]
             List of document URIs.
         model_name: Optional[str]
             The name of the model to use.

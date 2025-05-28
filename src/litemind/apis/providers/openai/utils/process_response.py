@@ -18,8 +18,6 @@ def process_response_from_openai(
         The response from OpenAI API.
     response_format : Optional[BaseModel | str]
         The format of the response.
-    thinking_model : bool
-        Whether the model is a thinking model or not.
 
     Returns
     -------

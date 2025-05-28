@@ -294,5 +294,5 @@ def load_video_as_array(filename):
         process.wait()
         return array(video_array)
     except ffmpeg.Error as e:
-        print(f"FFmpeg error: {e.stderr.decode()}")
+        aprint(f"FFmpeg error: {e.stderr.decode()}")
         return None

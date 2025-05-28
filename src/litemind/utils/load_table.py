@@ -1,5 +1,6 @@
 from os import path
 
+from arbol import aprint
 from pandas import read_csv, read_excel
 
 from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_path
@@ -35,5 +36,5 @@ def load_table_from_uri(uri: str):
                 local_path, sep=None, engine="python", encoding=result["encoding"]
             )  # python engine will try to detect sep
     except Exception as e:
-        print(f"Error loading file {uri}: {str(e)}")
+        aprint(f"Error loading file {uri}: {str(e)}")
         return None

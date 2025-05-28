@@ -30,7 +30,7 @@ class MediaResources:
             current_dir, os.path.join(f"{filetype}/", image_name)
         )
         uri = "file://" + absolute_path
-        print(uri)
+        # print(uri)
         return uri
 
     @staticmethod

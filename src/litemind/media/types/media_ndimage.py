@@ -1,6 +1,7 @@
 from typing import List, Optional, Union
 
 import numpy
+from arbol import aprint
 
 from litemind.media.media_uri import MediaURI
 from litemind.media.types.media_image import Image
@@ -64,7 +65,7 @@ class NdImage(MediaURI):
                 self.array = iio.imread(local_file)
 
             # Print debug info about loaded array
-            print(
+            aprint(
                 f"Loaded array with shape: {self.array.shape}, dtype: {self.array.dtype}"
             )
 

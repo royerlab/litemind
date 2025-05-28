@@ -12,6 +12,7 @@ from litemind.apis.base_api import ModelFeatures
 from litemind.apis.callbacks.callback_manager import CallbackManager
 from litemind.apis.default_api import DefaultApi
 from litemind.apis.exceptions import APIError, APINotAvailableError
+from litemind.apis.feature_scanner import get_default_model_feature_scanner
 from litemind.apis.providers.openai.utils.check_availability import (
     check_openai_api_availability,
 )
@@ -117,6 +118,8 @@ class OpenAIApi(DefaultApi):
 
             traceback.print_exc()
             raise APINotAvailableError(f"Error initializing OpenAI client: {e}")
+
+        self.feature_scanner = get_default_model_feature_scanner()
 
     def check_availability_and_credentials(self, api_key: Optional[str] = None) -> bool:
 
@@ -230,232 +233,12 @@ class OpenAIApi(DefaultApi):
         if super().has_model_support_for(features=features, model_name=model_name):
             return True
 
-        # Check that the model has all the required features:
         for feature in features:
-
-            if feature == ModelFeatures.TextGeneration:
-                if not self._has_text_gen_support(model_name):
-                    return False
-
-            elif feature == ModelFeatures.Thinking:
-                if not self._has_thinking_support(model_name):
-                    return False
-
-            elif feature == ModelFeatures.AudioGeneration:
-                pass
-
-            elif feature == ModelFeatures.ImageGeneration:
-                if not self._has_image_gen_support(model_name):
-                    return False
-
-            elif feature == ModelFeatures.TextEmbeddings:
-                if not self._has_text_embed_support(model_name):
-                    return False
-
-            elif feature == ModelFeatures.ImageEmbeddings:
-
-                if not self._has_text_embed_support(
-                    model_name
-                ) or not self.has_model_support_for(ModelFeatures.Image):
-                    return False
-
-            elif feature == ModelFeatures.AudioEmbeddings:
-
-                if not self._has_text_embed_support(
-                    model_name
-                ) or not self.has_model_support_for(ModelFeatures.Audio):
-                    return False
-
-            elif feature == ModelFeatures.VideoEmbeddings:
-                if not self._has_text_embed_support(
-                    model_name
-                ) or not self.has_model_support_for(ModelFeatures.Video):
-                    return False
-
-            elif feature == ModelFeatures.Image:
-                if not self._has_image_support(model_name):
-                    return False
-
-            elif feature == ModelFeatures.Audio:
-                if not self._has_audio_support(model_name):
-                    return False
-
-            elif feature == ModelFeatures.AudioTranscription:
-                if not self._has_audio_transcription_support(model_name):
-                    return False
-
-            elif feature == ModelFeatures.Video:
-                if not self._has_video_support(model_name):
-                    return False
-
-            elif feature == ModelFeatures.Document:
-                if not self._has_document_support(model_name):
-                    return False
-
-            elif feature == ModelFeatures.StructuredTextGeneration:
-                if not self._has_structured_output_support(model_name):
-                    return False
-
-            elif feature == ModelFeatures.Tools:
-                if not self._has_tools_support(model_name):
-                    return False
-
-            else:
-                if not super().has_model_support_for(feature, model_name):
-                    return False
-
-        return True
-
-    def _has_text_gen_support(self, model_name: str) -> bool:
-        if (
-            "text-embedding" in model_name
-            or "dall-e" in model_name
-            or "realtime" in model_name
-            or "instruct" in model_name
-            or "audio" in model_name
-            or "transcribe" in model_name
-        ):
-            return False
-
-        if "gpt" in model_name or "o1" in model_name or "o3" in model_name:
-            return True
-
-        return False
-
-    def _has_image_gen_support(self, model_name: str) -> bool:
-        if "dall-e-" in model_name or "gpt-image-1" in model_name:
-            return True
-        return False
-
-    def _has_thinking_support(self, model_name: str) -> bool:
-
-        if "o1" in model_name or "o3" in model_name:
-            return True
-
-        return False
-
-    def _has_text_embed_support(self, model_name: str) -> bool:
-        if "text-embedding" not in model_name:
-            return False
-        return True
-
-    def _has_image_support(self, model_name: str) -> bool:
-
-        # First, we check if it is a text-embedding model or image generation model:
-        if (
-            "text-embedding" in model_name
-            or "dall-e" in model_name
-            or "audio" in model_name
-            or "gpt-3.5" in model_name
-            or "realtime" in model_name
-            or "o3-mini" in model_name
-            or "o3-preview" in model_name
-        ):
-            return False
-
-        # Then, we check if it is a vision model:
-        if (
-            "vision" in model_name
-            or "gpt-4o" in model_name
-            or "o1" in model_name
-            or "o3" in model_name
-            or "gpt-4.5" in model_name
-        ):
-            return True
-
-        # Any other model is not a vision model:
-        return False
-
-    def _has_audio_support(self, model_name: str) -> bool:
-
-        if (
-            "text-embedding" in model_name
-            or "dall-e" in model_name
-            or "gpt-3.5" in model_name
-            or "gpt-4" in model_name
-            or "realtime" in model_name
-            or "o3-mini" in model_name
-            or "o3-preview" in model_name
-        ):
-            return False
-
-        return False
-
-    def _has_audio_transcription_support(self, model_name: str) -> bool:
-        return "whisper" in model_name
-
-    def _has_video_support(self, model_name: str) -> bool:
-
-        # First, we check if it is a text-embedding model or image generation model:
-        if "text-embedding" in model_name or "dall-e" in model_name:
-            return False
-
-        # Then, we check if it is an audio model:
-        if not (
-            self._has_image_support(model_name)
-            and self._has_text_gen_support(model_name)
-        ) or not super().has_model_support_for(ModelFeatures.VideoConversion):
-            return False
-
-        return True
-
-    def _has_document_support(self, model_name: str) -> bool:
-
-        # Check if the model supports documents:
-        if (
-            not self._has_image_support(model_name)
-            or not self._has_text_gen_support(model_name)
-            or not super().has_model_support_for(ModelFeatures.DocumentConversion)
-        ):
-            # If the model does not support text gen and images, and there is no model in api that supports document conversion, we return False:
-            return False
-
-        return True
-
-    def _has_structured_output_support(self, model_name: str) -> bool:
-        # Check if the model supports structured output:
-        if not self._has_text_gen_support(model_name):
-            return False
-
-        if (
-            "dall-e" in model_name
-            or "text-embedding" in model_name
-            or "realtime" in model_name
-            or "instruct" in model_name
-            or "audio" in model_name
-            or "chatgpt" in model_name
-            or "gpt-3.5" in model_name
-        ):
-            return False
-
-        if (
-            "o1" in model_name
-            or "o3" in model_name
-            or "gpt-4o-mini" in model_name
-            or "gpt-4o" in model_name
-        ):
-            return True
-
-        if "gpt-3.5" in model_name or "gpt-4" in model_name:
-            return False
-
-        return True
-
-    def _has_tools_support(self, model_name: str) -> bool:
-
-        # Check if the model supports text gen which is a pre-requisite:
-        if not self._has_text_gen_support(model_name):
-            return False
-
-        if (
-            "gpt-3.5" in model_name
-            or "dall-e" in model_name
-            or "text-embedding" in model_name
-            or "realtime" in model_name
-            or "chatgpt" in model_name
-            or "o1" in model_name
-        ):
-            return False
+            if not self.feature_scanner.supports_feature(
+                self.__class__, model_name, feature
+            ):
+                # If the model does not support the feature, we return False:
+                return False
 
         return True
 
@@ -736,13 +519,16 @@ class OpenAIApi(DefaultApi):
         openai_tools = format_tools_for_openai(toolset) if toolset else NotGiven()
 
         # Reasoning effort:
-        if self._has_thinking_support(model_name):
-            # get what is after the last '-' in the name:
-            reasoning_effort = model_name.split("-")[-1]
+        # get what is after the last '-' in the name:
+        reasoning_effort = model_name.split("-")[-1]
+
+        # Check if it is a valid reasoning effort:
+        if reasoning_effort not in ["low", "medium", "high"]:
+            # If not, we set it to NotGiven:
+            reasoning_effort = NotGiven()
+        else:
             # Remove that postfix from the name:
             model_name = model_name.replace(f"-{reasoning_effort}", "")
-        else:
-            reasoning_effort = NotGiven()
 
         # Make sure that reponse_format is NotGiven if not set:
         if response_format is None:
@@ -883,6 +669,24 @@ class OpenAIApi(DefaultApi):
         **kwargs,
     ) -> str:
 
+        # If no model name is provided, use the best model:
+        if model_name is None:
+            model_name = self.get_best_model(features=ModelFeatures.AudioGeneration)
+
+        # If no model is available then we raise an error:
+        if model_name is None:
+            raise APIError("No model available for audio generation.")
+
+        # If the model is provided by the super class then delegate transcription to it:
+        if model_name in super().list_models():
+            return super().generate_audio(
+                text=text,
+                voice=voice,
+                audio_format=audio_format,
+                model_name=model_name,
+                **kwargs,
+            )
+
         # If no voice is provided, use the default voice:
         if voice is None:
             voice = "onyx"
@@ -893,7 +697,7 @@ class OpenAIApi(DefaultApi):
 
         # Call the OpenAI API to generate audio:
         response = self.client.audio.speech.create(
-            model="tts-1-hd",
+            model=model_name,
             voice=voice,
             response_format=audio_format,
             input=text,

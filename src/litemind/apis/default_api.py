@@ -224,6 +224,7 @@ class DefaultApi(BaseApi):
                     return False
 
             elif feature == ModelFeatures.ImageConversion:
+
                 if not self.media_converter.can_convert_within(
                     source_media_type=Image, allowed_media_types={Text}
                 ):
@@ -236,14 +237,48 @@ class DefaultApi(BaseApi):
                     return False
 
             elif feature == ModelFeatures.DocumentConversion:
-                if not self.media_converter.can_convert_within(
-                    source_media_type=Document, allowed_media_types={Text, Image}
+                if not (
+                    (
+                        self.media_converter.can_convert_within(
+                            source_media_type=Document,
+                            allowed_media_types={Text, Image},
+                        )
+                        and self.has_model_support_for(ModelFeatures.Image)
+                    )
+                    or self.media_converter.can_convert_within(
+                        source_media_type=Document, allowed_media_types={Text}
+                    )
                 ):
                     return False
 
             elif feature == ModelFeatures.VideoConversion:
-                if not self.media_converter.can_convert_within(
-                    source_media_type=Video, allowed_media_types={Text, Image, Audio}
+                if not (
+                    (
+                        self.media_converter.can_convert_within(
+                            source_media_type=Video,
+                            allowed_media_types={Text, Image, Audio},
+                        )
+                        and self.has_model_support_for(
+                            [ModelFeatures.Image, ModelFeatures.Audio]
+                        )
+                    )
+                    or (
+                        self.media_converter.can_convert_within(
+                            source_media_type=Video, allowed_media_types={Text, Image}
+                        )
+                        and self.has_model_support_for([ModelFeatures.Image])
+                    )
+                    or (
+                        self.media_converter.can_convert_within(
+                            source_media_type=Video, allowed_media_types={Text, Audio}
+                        )
+                        and self.has_model_support_for([ModelFeatures.Audio])
+                    )
+                    or (
+                        self.media_converter.can_convert_within(
+                            source_media_type=Video, allowed_media_types={Text}
+                        )
+                    )
                 ):
                     return False
 
@@ -599,10 +634,16 @@ class DefaultApi(BaseApi):
             [ModelFeatures.Image, ModelFeatures.TextGeneration]
         )
 
+        # If that failed we consider models that support image conversion:
+        if not image_text_model_name:
+            image_text_model_name = self.get_best_model(
+                [ModelFeatures.ImageConversion, ModelFeatures.TextGeneration]
+            )
+
         # Check model is not None:
         if not image_text_model_name:
             raise FeatureNotAvailableError(
-                "Can't find a text generation model that supports images."
+                "Can't find a text generation model that supports images or image conversion."
             )
 
         # List to store image descriptions:
@@ -659,6 +700,12 @@ class DefaultApi(BaseApi):
         audio_text_model_name = self.get_best_model(
             [ModelFeatures.Audio, ModelFeatures.TextGeneration]
         )
+
+        # If that fails, we consider models that support audio conversion:
+        if not audio_text_model_name:
+            audio_text_model_name = self.get_best_model(
+                [ModelFeatures.AudioConversion, ModelFeatures.TextGeneration]
+            )
 
         # Check model is not None:
         if not audio_text_model_name:
@@ -739,6 +786,12 @@ class DefaultApi(BaseApi):
         video_text_model_name = self.get_best_model(
             [ModelFeatures.Video, ModelFeatures.TextGeneration]
         )
+
+        # If that fails, we consider models that support video conversion:
+        if not video_text_model_name:
+            video_text_model_name = self.get_best_model(
+                [ModelFeatures.VideoConversion, ModelFeatures.TextGeneration]
+            )
 
         # Check model is not None:
         if not video_text_model_name:

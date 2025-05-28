@@ -18,9 +18,9 @@ API_IMPLEMENTATIONS = [
     DefaultApi,
     OpenAIApi,
     # OllamaApi,
-    AnthropicApi,
-    GeminiApi,
-    CombinedApi,
+    # AnthropicApi,
+    # GeminiApi,
+    # CombinedApi,
 ]
 
 # Check availability of each API and remove it from the list if it is not available:

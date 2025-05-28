@@ -87,7 +87,7 @@ class PrintCallbacks(BaseCallbacks):
         self, transcription: str, audio_uri: str, **kwargs
     ) -> None:
         if self.print_audio_transcription:
-            print(f"Audio Transcription: {transcription}, Audio URI: {audio_uri}")
+            aprint(f"Audio Transcription: {transcription}, Audio URI: {audio_uri}")
             if kwargs:
                 aprint(f"Additional arguments: {pformat(kwargs)}")
 
