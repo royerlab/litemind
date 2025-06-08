@@ -325,7 +325,7 @@ class OllamaApi(DefaultApi):
         allowed_media_types: Set[Type[MediaBase]] = {Text}
 
         # Check if the model supports images:
-        # TODO: add way to force image support so that the scanner can figure out if models really suport images
+        # TODO: add way to force image support so that the scanner can figure out if models really support images
         if self.has_model_support_for(
             model_name=model_name, features=ModelFeatures.Image
         ):
