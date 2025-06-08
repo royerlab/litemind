@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Sequence, Union
+from typing import Dict, List, Optional, Sequence, Type, Union
 
 from arbol import aprint
 from PIL.Image import Image
@@ -11,6 +11,7 @@ from litemind.apis.callbacks.callback_manager import CallbackManager
 from litemind.apis.default_api import DefaultApi
 from litemind.apis.exceptions import APIError
 from litemind.apis.model_features import ModelFeatures
+from litemind.media.media_base import MediaBase
 
 
 class CombinedApi(DefaultApi):
@@ -148,6 +149,7 @@ class CombinedApi(DefaultApi):
         non_features: Optional[
             Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
         ] = None,
+        media_types: Optional[Sequence[Type[MediaBase]]] = None,
     ) -> List[str]:
 
         try:
@@ -164,7 +166,10 @@ class CombinedApi(DefaultApi):
             # Filter the models based on the features:
             if features:
                 model_list = self._filter_models(
-                    model_list, features=features, non_features=non_features
+                    model_list,
+                    features=features,
+                    non_features=non_features,
+                    media_types=media_types,
                 )
 
             # Call _callbacks:
@@ -184,6 +189,7 @@ class CombinedApi(DefaultApi):
         non_features: Optional[
             Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
         ] = None,
+        media_types: Optional[Sequence[Type[MediaBase]]] = None,
         exclusion_filters: Optional[List[str]] = None,
     ) -> Optional[str]:
 
@@ -194,6 +200,7 @@ class CombinedApi(DefaultApi):
                 best_model = api.get_best_model(
                     features=features,
                     non_features=non_features,
+                    media_types=media_types,
                     exclusion_filters=exclusion_filters,
                 )
 
@@ -220,6 +227,7 @@ class CombinedApi(DefaultApi):
     def has_model_support_for(
         self,
         features: Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]],
+        media_types: Optional[Sequence[Type[MediaBase]]] = None,
         model_name: Optional[str] = None,
     ) -> bool:
 
@@ -228,14 +236,16 @@ class CombinedApi(DefaultApi):
 
         # if no model name is provided we return the best model as defined in the method above:
         if model_name is None:
-            model_name = self.get_best_model(features=features)
+            model_name = self.get_best_model(features=features, media_types=media_types)
 
         # If model_name is None then we return False:
         if model_name is None:
             return False
 
         # We check if the superclass says that the model supports the features:
-        if super().has_model_support_for(features=features, model_name=model_name):
+        if super().has_model_support_for(
+            features=features, media_types=media_types, model_name=model_name
+        ):
             return True
 
         # if the model name is not in the model_to_api dictionary we raise an error:
@@ -247,7 +257,9 @@ class CombinedApi(DefaultApi):
 
         # we call the has_model_support_for method of the api object,
         # and check if the model supports the features:
-        has_support = api.has_model_support_for(features, model_name)
+        has_support = api.has_model_support_for(
+            features=features, media_types=media_types, model_name=model_name
+        )
 
         # return the result:
         return has_support

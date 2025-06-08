@@ -4,7 +4,6 @@ import pytest
 from litemind.media.types.media_video import Video
 from litemind.ressources.media_resources import MediaResources
 from litemind.utils.ffmpeg_utils import is_ffmpeg_available
-from litemind.utils.file_extensions import video_file_extensions
 
 
 @pytest.fixture(scope="class", autouse=True)
@@ -105,10 +104,3 @@ class TestVideo:
             and "duration" in info
             and "resolution" in info
         )
-
-    def test_file_extensions(self):
-        """Test that the video file extensions are properly validated."""
-        for ext in video_file_extensions:
-            fake_uri = f"file:///path/to/video.{ext}"
-            # This should not raise an exception
-            Video(uri=fake_uri)

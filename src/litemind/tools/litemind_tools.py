@@ -1,6 +1,9 @@
 import argparse
 import os
+from typing import List, Type
 
+from litemind import API_IMPLEMENTATIONS, DefaultApi
+from litemind.apis.base_api import BaseApi
 from litemind.apis.combined_api import CombinedApi
 from litemind.apis.providers.anthropic.anthropic_api import AnthropicApi
 from litemind.apis.providers.google.google_api import GeminiApi
@@ -25,21 +28,28 @@ def main():
 
     # Codegen subcommand
     codegen_parser = subparsers.add_parser(
-        "codegen", help="Generate a README.md file for a Python repository."
+        "codegen", help="Generate files (such as a README.md) for a Python repository."
     )
     codegen_parser.add_argument(
-        "model",
+        "api",
         choices=["gemini", "openai", "claude", "ollama", "combined"],
         default="combined",
         nargs="?",
-        help="The model to use for generating the README. Default is 'combined'.",
+        help="The api to use for generating the files. Default is 'combined'.",
+    )
+
+    codegen_parser.add_argument(
+        "-m",
+        "--model",
+        help="The specific model name to use. If not provided, the API's default model will be used.",
+        default=None,
     )
 
     # Add the new argument to the codegen subcommand
     codegen_parser.add_argument(
         "-f",
         "--file",
-        help="The specific file to generate. If not provided, all files will be generated.",
+        help="The specific file name to generate (no extension). If not provided, all files will be generated.",
         default=None,
     )
 
@@ -82,10 +92,10 @@ def main():
     )
     scan_parser.add_argument(
         "api",
-        choices=["gemini", "openai", "claude", "ollama"],
-        default="openai",
-        nargs="?",
-        help="The API to scan models from. Default is 'openai'.",
+        choices=["gemini", "openai", "claude", "ollama", "all"],
+        default="all",
+        nargs="+",
+        help="The API(s) to scan models from. Can specify multiple APIs (gemini, openai, claude, ollama, all). Default is 'all'.",
     )
     scan_parser.add_argument(
         "-m",
@@ -104,14 +114,15 @@ def main():
     args = parser.parse_args()
 
     if args.command == "codegen":
+
         # Initialize the API based on the chosen model
-        if args.model == "gemini":
+        if args.api == "gemini":
             api = GeminiApi()
-        elif args.model == "openai":
+        elif args.api == "openai":
             api = OpenAIApi()
-        elif args.model == "claude":
+        elif args.api == "claude":
             api = AnthropicApi()
-        elif args.model == "ollama":
+        elif args.api == "ollama":
             api = OllamaApi()
         else:
             api = CombinedApi()
@@ -119,8 +130,11 @@ def main():
         # By default the folder path is the current directory:
         folder_path = os.getcwd()
 
+        # Get the model name from the command line arguments, if provided:
+        model_name = args.model if args.model else None
+
         # Generate the files:
-        codegen(folder_path, api=api, file_selection=args.file)
+        codegen(folder_path, api=api, model_name=model_name, file_selection=args.file)
 
     elif args.command == "export":
         export_repo(
@@ -131,20 +145,30 @@ def main():
         )
 
     elif args.command == "scan":
-        # Select the appropriate API class based on the command argument
-        if args.api == "gemini":
-            api_class = GeminiApi
-        elif args.api == "openai":
-            api_class = OpenAIApi
-        elif args.api == "claude":
-            api_class = AnthropicApi
-        elif args.api == "ollama":
-            api_class = OllamaApi
+        api_classes: List[Type[BaseApi]] = []
+
+        # If 'all' is in the list, use all available APIs
+        if "all" in args.api:
+            api_classes = list(API_IMPLEMENTATIONS)
+            # Remove special API classes from the list:
+            if CombinedApi in api_classes:
+                api_classes.remove(CombinedApi)
+            if DefaultApi in api_classes:
+                api_classes.remove(DefaultApi)
+
         else:
-            # Notify of unrecognized API and return:
-            print(
-                f"Unrecognized API: {args.api}. Please choose from 'gemini', 'openai', 'claude', or 'ollama'."
-            )
+            # Process each requested API
+            for api_name in args.api:
+                if api_name == "gemini":
+                    api_classes.append(GeminiApi)
+                elif api_name == "openai":
+                    api_classes.append(OpenAIApi)
+                elif api_name == "claude":
+                    api_classes.append(AnthropicApi)
+                elif api_name == "ollama":
+                    api_classes.append(OllamaApi)
+                else:
+                    print(f"Unrecognized API: {api_name}. Skipping.")
 
         # Run the scan command with the API class, not an instance
-        scan(api=api_class, model_names=args.models, output_dir=args.output_dir)
+        scan(apis=api_classes, model_names=args.models, output_dir=args.output_dir)

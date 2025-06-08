@@ -30,6 +30,11 @@ def process_response_from_anthropic(
     # Initialize the processed response:
     processed_reponse = Message(role="assistant")
 
+    # Check the stop reason:
+    if anthropic_response.stop_reason == "refusal":
+        # If the stop reason is refusal, return a message indicating refusal:
+        processed_reponse.append_text("I cannot assist with that request (refusal).")
+
     # Text content:
     text_content = ""
 

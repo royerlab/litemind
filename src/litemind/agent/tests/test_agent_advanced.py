@@ -7,7 +7,7 @@ from litemind.agent.agent import Agent
 from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.model_features import ModelFeatures
 
-# Take API_IMPLEMENTATIONS and remove OllamaApi isf present:
+# Take API_IMPLEMENTATIONS and remove OllamaApi if present:
 # Ollama is a bit slow and the tests take for ever...
 API_IMPLEMENTATIONS_ADV_AGENT_TESTS = [
     api for api in API_IMPLEMENTATIONS if api.__name__ != "OllamaApi"
@@ -45,7 +45,7 @@ def get_day_of_week(year: int, month: int, day: int) -> str:
     return date.strftime("%A")
 
 
-@pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS_ADV_AGENT_TESTS)
+@pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
 def test_agent_single_tool(api_class):
     # Initialize API
     api = api_class()

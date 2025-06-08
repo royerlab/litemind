@@ -24,7 +24,43 @@ def _get_anthropic_models_list(client, max_num_models: int = 100) -> List[str]:
             model_list.index(claude_3_7_model), claude_3_7_model + "-thinking-mid"
         )
         model_list.insert(
-            model_list.index(claude_3_7_model), claude_3_7_model + "-thinking_low"
+            model_list.index(claude_3_7_model), claude_3_7_model + "-thinking-low"
+        )
+
+    # If claude-opus-4 is available, then add reasoning variants:
+    if any("claude-opus-4" in m for m in model_list):
+        # get the model with claude-4 in its name from the list:
+        claude_opus_4_model = [m for m in model_list if "claude-opus-4" in m][0]
+
+        # Insert claude-opus-4-thinking in place of claude-4, pushing the rest of the list down:
+        model_list.insert(
+            model_list.index(claude_opus_4_model),
+            claude_opus_4_model + "-thinking-high",
+        )
+        model_list.insert(
+            model_list.index(claude_opus_4_model), claude_opus_4_model + "-thinking-mid"
+        )
+        model_list.insert(
+            model_list.index(claude_opus_4_model), claude_opus_4_model + "-thinking-low"
+        )
+
+    # If claude-sonnet-4 is available, then add reasoning variants:
+    if any("claude-sonnet-4" in m for m in model_list):
+        # get the model with claude-sonnet-4 in its name from the list:
+        claude_sonnet_4_model = [m for m in model_list if "claude-sonnet-4" in m][0]
+
+        # Insert claude-sonnet-4-thinking in place of claude-sonnet-4, pushing the rest of the list down:
+        model_list.insert(
+            model_list.index(claude_sonnet_4_model),
+            claude_sonnet_4_model + "-thinking-high",
+        )
+        model_list.insert(
+            model_list.index(claude_sonnet_4_model),
+            claude_sonnet_4_model + "-thinking-mid",
+        )
+        model_list.insert(
+            model_list.index(claude_sonnet_4_model),
+            claude_sonnet_4_model + "-thinking-low",
         )
 
     # Return model list:

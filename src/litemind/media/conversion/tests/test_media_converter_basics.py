@@ -123,7 +123,7 @@ class TestMessageConverter:
 
         # Verify
         assert len(result) == 1
-        assert len(result[0].blocks) == 12
+        assert len(result[0].blocks) == 13
         assert all(
             isinstance(block.media, Text) or isinstance(block.media, Image)
             for block in result[0].blocks
@@ -212,14 +212,17 @@ class TestMessageConverter:
 
         # Verify
         assert len(result) == 1
-        assert len(result[0].blocks) == 19
+        assert len(result[0].blocks) == 20
         # Text and Json should remain the same
         assert isinstance(result[0][0].media, Text)
         assert isinstance(result[0][1].media, Json)
         # Table and Document should be converted to Text
         assert isinstance(result[0][2].media, Text)
         assert isinstance(result[0][3].media, Text)
-        assert isinstance(result[0][4].media, Image)
+        assert isinstance(result[0][4].media, Text)
+        assert isinstance(result[0][5].media, Image)
+        assert isinstance(result[0][6].media, Text)
+        assert isinstance(result[0][7].media, Image)
 
     def test_all_media_types_conversion(self):
         """Test conversion of all available media types to Text."""
@@ -280,3 +283,52 @@ class TestMessageConverter:
         assert isinstance(result[0][1].media, Json)
         assert isinstance(result[0][2].media, Table)
         assert isinstance(result[0][3].media, Document)
+
+    def test_get_convertible_media_types(self):
+        """Test getting media types that can be converted to allowed media types."""
+        self.converter.add_default_converters()
+
+        # Define some allowed media types
+        allowed_types = {Text}
+
+        # Get convertable media types
+        convertible_types = self.converter.get_convertible_media_types(allowed_types)
+
+        # Ensure we got a set of media types
+        assert isinstance(convertible_types, set)
+
+        # Verify that Text itself is in the convertable types
+        assert Text in convertible_types
+
+        # Verify that Json is also convertable to Text
+        assert Json in convertible_types
+
+        # Test with multiple allowed types
+        allowed_types = {Text, Json}
+        convertible_types = self.converter.get_convertible_media_types(allowed_types)
+
+        # Both Text and Json should be in the result
+        assert Text in convertible_types
+        assert Json in convertible_types
+
+        # Table should also be convertable to either Text or Json
+        assert Table in convertible_types
+
+    def test_get_convertable_media_types_empty_converters(self):
+        """Test getting convertable media types with no converters."""
+        # Ensure no converters are present
+        self.converter.media_converters = []
+
+        # Only the allowed types themselves should be convertable
+        allowed_types = {Text}
+        convertable_types = self.converter.get_convertible_media_types(allowed_types)
+
+        # Only Text should be in the result
+        assert convertable_types == {Text}
+
+        # Test with multiple allowed types
+        allowed_types = {Text, Json}
+        convertable_types = self.converter.get_convertible_media_types(allowed_types)
+
+        # Only Text and Json should be in the result
+        assert convertable_types == {Text, Json}

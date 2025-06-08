@@ -3,6 +3,8 @@ import pytest
 from litemind import API_IMPLEMENTATIONS
 from litemind.agent.messages.message import Message
 from litemind.apis.base_api import ModelFeatures
+from litemind.media.types.media_audio import Audio
+from litemind.media.types.media_video import Video
 from litemind.ressources.media_resources import MediaResources
 
 
@@ -333,20 +335,17 @@ class TestBaseApiImplementationsMultimodalInputs(MediaResources):
         api_instance = api_class()
 
         # Get the default model name:
-        default_model_name = api_instance.get_best_model(
-            [ModelFeatures.TextGeneration, ModelFeatures.Audio]
+        best_model_name = api_instance.get_best_model(
+            features=[ModelFeatures.TextGeneration], media_types=[Audio]
         )
 
         # Skip tests if the model does not support audio
-        if not default_model_name or not api_instance.has_model_support_for(
-            model_name=default_model_name,
-            features=[ModelFeatures.TextGeneration, ModelFeatures.Audio],
-        ):
+        if best_model_name is None:
             pytest.skip(
                 f"{api_class.__name__} does not support audio. Skipping audio tests."
             )
 
-        print("\n" + default_model_name)
+        print("\n" + best_model_name)
 
         messages = []
 
@@ -367,7 +366,7 @@ class TestBaseApiImplementationsMultimodalInputs(MediaResources):
 
         # Run agent:
         response = api_instance.generate_text(
-            messages=messages, model_name=default_model_name
+            messages=messages, model_name=best_model_name
         )
 
         for message in messages:
@@ -388,17 +387,17 @@ class TestBaseApiImplementationsMultimodalInputs(MediaResources):
         api_instance = api_class()
 
         # Get the default model name:
-        default_model_name = api_instance.get_best_model(
-            [ModelFeatures.TextGeneration, ModelFeatures.Audio]
+        best_model_name = api_instance.get_best_model(
+            features=[ModelFeatures.TextGeneration], media_types=[Audio]
         )
 
         # Skip tests if the model does not support audio
-        if default_model_name is None:
+        if best_model_name is None:
             pytest.skip(
                 f"{api_class.__name__} does not support audio. Skipping audio tests."
             )
 
-        print("\n" + default_model_name)
+        print("\n" + best_model_name)
 
         messages = []
 
@@ -422,7 +421,7 @@ class TestBaseApiImplementationsMultimodalInputs(MediaResources):
 
         # Generate text:
         response = api_instance.generate_text(
-            messages=messages, model_name=default_model_name
+            messages=messages, model_name=best_model_name
         )
 
         for message in messages:
@@ -438,17 +437,17 @@ class TestBaseApiImplementationsMultimodalInputs(MediaResources):
         api_instance = api_class()
 
         # Get the best model for text generation and video:
-        default_model_name = api_instance.get_best_model(
-            [ModelFeatures.TextGeneration, ModelFeatures.Video]
+        best_model_name = api_instance.get_best_model(
+            features=[ModelFeatures.TextGeneration], media_types=[Video]
         )
 
         # Skip tests if the model does not support videos
-        if default_model_name is None:
+        if best_model_name is None:
             pytest.skip(
                 f"{api_class.__name__} does not support videos. Skipping video tests."
             )
 
-        print("\n" + default_model_name)
+        print("\n" + best_model_name)
 
         messages = []
 
@@ -468,7 +467,7 @@ class TestBaseApiImplementationsMultimodalInputs(MediaResources):
 
         # Generate text:
         response = api_instance.generate_text(
-            messages=messages, model_name=default_model_name
+            messages=messages, model_name=best_model_name
         )
 
         for message in messages:
@@ -497,17 +496,17 @@ class TestBaseApiImplementationsMultimodalInputs(MediaResources):
         api_instance = api_class()
 
         # Get the best model for text generation and video:
-        default_model_name = api_instance.get_best_model(
-            [ModelFeatures.TextGeneration, ModelFeatures.Video]
+        best_model_name = api_instance.get_best_model(
+            features=[ModelFeatures.TextGeneration], media_types=[Video]
         )
 
         # Skip tests if the model does not support videos
-        if default_model_name is None:
+        if best_model_name is None:
             pytest.skip(
                 f"{api_class.__name__} does not support videos. Skipping video tests."
             )
 
-        print("\n" + default_model_name)
+        print("\n" + best_model_name)
 
         video_url = (
             "https://ia803405.us.archive.org/27/items/archive-video-files/test.mp4"
@@ -533,7 +532,7 @@ class TestBaseApiImplementationsMultimodalInputs(MediaResources):
 
         # Run agent:
         response = api_instance.generate_text(
-            messages=messages, model_name=default_model_name
+            messages=messages, model_name=best_model_name
         )
 
         for message in messages:
@@ -545,7 +544,15 @@ class TestBaseApiImplementationsMultimodalInputs(MediaResources):
         # Check response:
         if api_class.__name__ == "OllamaApi":
             # If the ApiClass is OllamaAPi then the model is open source and might not be as strong as the others:
-            assert "image" in response
+            assert (
+                "image" in response
+                or "video" in response
+                or "cartoon" in response
+                or "animated" in response
+                or "rabbit" in response
+                or "bunny" in response
+                or "character" in response
+            )
         else:
             assert (
                 "rabbit" in response

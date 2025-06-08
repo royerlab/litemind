@@ -12,60 +12,60 @@ readme = "README.md"
 requires-python = ">=3.9"
 keywords = ["llm", "ai", "agents", "wrapper"]
 classifiers = [
-  "Development Status :: 4 - Beta",
-  "Intended Audience :: Developers",
-  "License :: OSI Approved :: BSD License",
-  "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.9",
-  "Programming Language :: Python :: 3.10",
-  "Programming Language :: Python :: 3.11",
-  "Programming Language :: Python :: 3.12",
-  "Programming Language :: Python :: 3.13",
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: BSD License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
-  "openai",
-  "ollama",
-  "anthropic",
-  "google-generativeai",
-  "pillow",
-  "arbol",
-  "ansicolors",
-  "json-repair",
-  "tiktoken",
-  "pydantic",
-  "pandas",
-  "numpy",
-  "chardet",
-  "pyyaml",
-  "absl-py",
-  "scipy",
-  "filetype",
-  "python-magic",
+    "openai",
+    "ollama",
+    "anthropic",
+    "google-generativeai",
+    "pillow",
+    "arbol",
+    "ansicolors",
+    "json-repair",
+    "tiktoken",
+    "pydantic",
+    "pandas",
+    "numpy",
+    "chardet",
+    "pyyaml",
+    "absl-py",
+    "scipy",
+    "filetype",
+    "python-magic",
 ]
 
 [project.optional-dependencies]
 dev = [
-  "hatch",
-  "pytest",
-  "pytest-html",
-  "pytest-cov",
-  "pytest-md-report",
-  "black[jupyter]",
-  "flake8",
-  "mypy",
-  "isort",
-  "pypdf",
+    "hatch",
+    "pytest",
+    "pytest-html",
+    "pytest-cov",
+    "pytest-md-report",
+    "black[jupyter]",
+    "flake8",
+    "mypy",
+    "isort",
+    "pypdf",
 ]
 rag = ["fastembed", "chromadb", "qdrant-client"]
 whisper = ["openai-whisper"]
-documents = ["pymupdf", "pymupdf4llm", "openpyxl", "docling"]
+documents = ["pymupdf", "pymupdf4llm", "openpyxl", "docling", "python-minifier"]
 tables = ["tabulate"]
 videos = ["ffmpeg-python", "imageio[ffmpeg]"]
-audio  = ["soundfile"]
+audio = ["soundfile"]
 
 [project.urls]
 Homepage = "https://github.com/royerlab/litemind"
-Issues   = "https://github.com/royerlab/litemind/issues"
+Issues = "https://github.com/royerlab/litemind/issues"
 
 [tool.hatch.version]
 path = "src/litemind/__init__.py"
@@ -75,11 +75,11 @@ path = "src/litemind/__init__.py"
 ignore-vcs = true
 include = ["**", "README.md", "LICENSE"]
 exclude = [
-  "**/tests/**",
-  "**/.DS_Store",
-  "*.egg-info",
-  "**/sandbox/**",
-  "src/litemind/ressources/**",
+    "**/tests/**",
+    "**/.DS_Store",
+    "*.egg-info",
+    "**/sandbox/**",
+    "src/litemind/ressources/**",
 ]
 
 # Wheel-only file selection
@@ -90,13 +90,14 @@ packages = ["src/litemind"]
 litemind = "litemind.tools.litemind_tools:main"
 
 [tool.hatch.envs.hatch-test]
+addopts = "--html=reports/report.html --self-contained-html --cov=src --cov-report=html:reports/coverage --md-report=reports/report.md"
 default-args = ["src/"]
 exclude = ["sandbox"]
 extra-dependencies = [
-  "qdrant-client", "chromadb", "openai-whisper", "pymupdf",
-  "pymupdf4llm", "openpyxl", "docling", "pandas", "numpy",
-  "chardet", "tabulate", "fastembed", "ffmpeg-python",
-  "imageio[ffmpeg]", "pytest-html", "pytest-cov",
-  "pytest-md-report", "pypdf", "soundfile", "filetype",
-  "python-magic",
+    "qdrant-client", "chromadb", "openai-whisper", "pymupdf",
+    "pymupdf4llm", "openpyxl", "docling", "pandas", "numpy",
+    "chardet", "tabulate", "fastembed", "ffmpeg-python",
+    "imageio[ffmpeg]", "pytest-html", "pytest-cov",
+    "pytest-md-report", "pypdf", "soundfile", "filetype",
+    "python-magic", "python-minifier"
 ]

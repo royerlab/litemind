@@ -23,5 +23,7 @@ class FileConverter(BaseConverter):
         if not isinstance(media, File):
             raise ValueError(f"Expected File media, got {type(media)}")
 
+        file: File = media
+
         # Use the Table's built-in method to convert to Text
-        return [media.to_markdown_text_media()]
+        return [file.to_markdown_text_media()]

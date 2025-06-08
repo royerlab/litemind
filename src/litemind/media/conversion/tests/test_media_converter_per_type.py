@@ -118,7 +118,7 @@ class TestMessageConverterPerType:
         assert isinstance(result[0][0].media, Text)
 
         # Extract text:
-        docx_text = result[0][0].media.text.lower()
+        docx_text = str(result).lower()
 
         # Verify basic content characteristics - adjust based on your sample docx
         assert "skills" in docx_text
@@ -148,7 +148,7 @@ class TestMessageConverterPerType:
         assert len(result[0][0].media.text) > 0
 
         # Extract text:
-        html_text = result[0][0].media.text.lower()
+        html_text = str(result).lower()
 
         # Look for typical HTML to markdown conversion artifacts
         assert "---" in html_text  # From the file metadata header
@@ -179,7 +179,7 @@ class TestMessageConverterPerType:
         assert isinstance(result[0][0].media, Text)
 
         # Extract text:
-        pdf_text = result[0][0].media.text.lower()
+        pdf_text = str(result[0])
 
         # Basic check that some content was extracted
         assert isinstance(pdf_text, str)

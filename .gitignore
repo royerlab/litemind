@@ -184,3 +184,5 @@ cython_debug/
 /whole_repo.txt
 /exported.txt
 /src/litemind/sandbox/
+/debug_prompt.txt
+/src/litemind/apis/scan_results/_old/

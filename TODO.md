@@ -11,10 +11,12 @@
 - [x] Use specialised libraries for document type identification
 - [x] Cleanup the document conversion code.
 - [x] Add support for adding nD images to messages.
-- [ ] Automatic feature support discovery for models (which models support images as input, reasoning, etc...)
-- [ ] RAG ingestion code for arbitrary digital objects: folders, pdf, images, urls, etc...
+- [x] Automatic feature support discovery for models (which models support images as input, reasoning, etc...)
 - [ ] Add support for OpenAI's new 'Response' API.
 - [ ] Add support for MCP protocol.
+- [ ] Add webui functionality for agents using Reflex.
+- [ ] Video conversion temporal sampling should adapt to the video length, short videos should have more frames...
+- [ ] RAG ingestion code for arbitrary digital objects: folders, pdf, images, urls, etc...
 - [ ] Use the faster pybase64 for base64 encoding/decoding.
 - [ ] Deal with message sizes in tokens sent to models
 - [ ] Improve vendor api robustness features such as retry call when server errors, etc...

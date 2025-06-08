@@ -18,6 +18,7 @@ class Agent:
     def __init__(
         self,
         api: BaseApi,
+        name: str = "Agent",
         model_name: Optional[str] = None,
         model_features: Optional[
             Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
@@ -27,7 +28,7 @@ class Agent:
         augmentation_set: Optional[AugmentationSet] = None,
         augmentation_k: int = 5,
         augmentation_context_position: str = "before_query",
-        name: str = "Agent",
+        messages_stdout_enabled: bool = False,
         **kwargs,
     ):
         """
@@ -37,6 +38,8 @@ class Agent:
         ----------
         api: BaseApi
             The API to use.
+        name: str
+            The name of the agent.
         model_name: str
             The name of the model to use.
         model_features: Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
@@ -55,8 +58,8 @@ class Agent:
             Where to place the retrieved context. Options are:
             - "before_query": Add context right before the user query
             - "system": Add context as a system message
-        name: str
-            The name of the agent.
+        messages_stdout_enabled: bool
+            If True, messages will be printed to stdout.
         kwargs: Any
             Additional keyword arguments to pass to the API.
         """
@@ -124,6 +127,8 @@ class Agent:
 
         # Initialise conversation:
         self.conversation = Conversation()
+
+        self.messages_stdout_enabled = messages_stdout_enabled
 
     def append_system_message(self, message: Union[str, Message]):
         """
@@ -344,12 +349,13 @@ class Agent:
                 aprint(f"API: {self.api.__class__.__name__}")
                 aprint(f"Model: {self.model}")
 
-            with asection("Available tools"):
-                if len(self.toolset) > 0:
-                    for tool in self.toolset:
-                        aprint(tool.pretty_string())
-                else:
-                    aprint("No tools available")
+            if self.toolset:
+                with asection("Available tools"):
+                    if len(self.toolset) > 0:
+                        for tool in self.toolset:
+                            aprint(tool.pretty_string())
+                    else:
+                        aprint("No tools available")
 
             with asection("Available augmentations"):
                 augmentations = self.augmentation_set.list_augmentations()
@@ -359,8 +365,17 @@ class Agent:
                 else:
                     aprint("No augmentations available")
 
-            with asection("Last message in conversation:"):
-                aprint(last_message)
+            # Quick report of the conversation (just number of messages):
+            if self.conversation:
+                with asection(f"Conversation report:"):
+                    aprint(
+                        f"Number of messages currently in conversation: {len(self.conversation)}"
+                    )
+
+            # Print the last message in conversation if enabled
+            if self.messages_stdout_enabled:
+                with asection("Last message in conversation:"):
+                    aprint(last_message)
 
             # Process augmentations if we have any and there's a query message
             if len(self.augmentation_set) > 0 and last_message:
@@ -382,9 +397,20 @@ class Agent:
                 **kwargs,
             )
 
-            with asection("Reponse:"):
-                for message in response:
-                    aprint(message)
+            # Quick report of the response:
+            with asection(f"Response:"):
+                if response is None:
+                    aprint(
+                        "No response received from the API. Probably an error occurred."
+                    )
+                else:
+                    aprint(f"Number of messages in response: {len(response)}")
+
+            # Print response messages to stdout if enabled:
+            if self.messages_stdout_enabled:
+                with asection("Reponse:"):
+                    for message in response:
+                        aprint(message)
 
         # Append response messages to conversation:
         self.conversation.extend(response)

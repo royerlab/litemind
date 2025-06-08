@@ -25,9 +25,7 @@ class TestBaseApiImplementationsEmbeddings(MediaResources):
         embedding_model_name = api_instance.get_best_model(ModelFeatures.TextEmbeddings)
 
         # Skip tests if the model does not support embeddings:
-        if not embedding_model_name or not api_instance.has_model_support_for(
-            model_name=embedding_model_name, features=ModelFeatures.TextEmbeddings
-        ):
+        if embedding_model_name is None:
             pytest.skip(
                 f"{api_class.__name__} does not support embeddings. Skipping tests."
             )
@@ -80,9 +78,7 @@ class TestBaseApiImplementationsEmbeddings(MediaResources):
         )
 
         # Skip tests if the model does not support embeddings:
-        if not embedding_model_name or not api_instance.has_model_support_for(
-            model_name=embedding_model_name, features=ModelFeatures.AudioEmbeddings
-        ):
+        if embedding_model_name is None:
             pytest.skip(
                 f"{api_class.__name__} does not support audio embeddings. Skipping tests."
             )
@@ -132,9 +128,7 @@ class TestBaseApiImplementationsEmbeddings(MediaResources):
         )
 
         # Skip tests if the model does not support embeddings:
-        if not embedding_model_name or not api_instance.has_model_support_for(
-            model_name=embedding_model_name, features=ModelFeatures.VideoEmbeddings
-        ):
+        if embedding_model_name is None:
             pytest.skip(
                 f"{api_class.__name__} does not support video embeddings. Skipping tests."
             )
@@ -187,9 +181,7 @@ class TestBaseApiImplementationsEmbeddings(MediaResources):
         )
 
         # Skip tests if the model does not support embeddings:
-        if not embedding_model_name or not api_instance.has_model_support_for(
-            model_name=embedding_model_name, features=ModelFeatures.DocumentEmbeddings
-        ):
+        if embedding_model_name is None:
             pytest.skip(
                 f"{api_class.__name__} does not support document embeddings. Skipping tests."
             )

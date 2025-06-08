@@ -53,7 +53,7 @@ class TestDocument:
         uri = "example.sdse"
         with pytest.raises(
             ValueError,
-            match="Invalid document URI",
+            match="Invalid URI or local file path: 'example.sdse'.",
         ):
             Document(uri=uri)
 
@@ -69,7 +69,7 @@ class TestDocument:
         uri = "EXAMPLE.PDF"  # Assuming 'example.pdf' exists in the same directory
         with pytest.raises(
             ValueError,
-            match="Invalid document URI: 'EXAMPLE.PDF' \(must have a valid document file extension\)",
+            match="Invalid URI or local file path: 'EXAMPLE.PDF'.",
         ):
             Document(uri=uri)
 
@@ -78,7 +78,7 @@ class TestDocument:
         uri = "ExAmPlE.pDf"  # Assuming 'example.pdf' exists in the same directory
         with pytest.raises(
             ValueError,
-            match="Invalid document URI",
+            match="Invalid URI or local file path: 'ExAmPlE.pDf'.",
         ):
             Document(uri=uri)
 

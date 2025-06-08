@@ -13,7 +13,6 @@ def sample_tool_function(order_id: str) -> str:
 
 
 def test_format_tools_for_openai():
-
     # Check if OpenAI API key is available:
     if not check_openai_api_availability():
         # Skip the test if the API key is not available:

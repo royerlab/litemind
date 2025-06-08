@@ -10,14 +10,14 @@ folder:
     - .tests
     - .html
   excluded:
-    - litemind.egg-info
-    - dist
-    - build
-    - .git
-    - .github
-    - .codegen
-    - sandbox
-    - exported.txt
+    - 'litemind.egg-info'
+    - 'dist'
+    - 'build'
+    - '.git'
+    - '.github'
+    - '.codegen'
+    - 'sandbox'
+    - 'exported.txt'
 prompt: |
   You are a senior software architect with deep expertise in Software Engineering, Python best practices, and Open Source project development. 
   You have extensive knowledge of cutting-edge AI and LLM architectures, training methodologies, optimization techniques, and practical implementation strategies in Python.

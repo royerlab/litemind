@@ -22,6 +22,7 @@ def get_openai_model_list(
     included: Optional[List[str]] = None,
     excluded: Optional[List[str]] = None,
     exclude_dated_models: bool = True,
+    allow_prohibitively_expensive_models: bool = False,
     verbose: bool = False,
 ) -> List[str]:
     """
@@ -39,6 +40,8 @@ def get_openai_model_list(
         Models must not contain any of the excluded models to be included in the list.
     exclude_dated_models: bool
         If True, remove models with a date in the model id. This is useful to keep only the most recent version of each model.
+    allow_prohibitively_expensive_models: bool
+        If True, allow models that are prohibitively expensive to use, such as o1-pro.
     verbose : bool
         Verbosity flag.
 
@@ -66,7 +69,11 @@ def get_openai_model_list(
 
         if excluded is None:
             # Exclude models that are not supported by the API:
-            excluded = ["ada-002"]  # , "o1-pro", "o3-pro"]
+            excluded = ["ada-002"]
+
+        if not allow_prohibitively_expensive_models:
+            # Exclude prohibitively expensive models:
+            excluded += ["o1-pro", "o3-pro"]
 
         # Convert to list of model ids:
         models = [model.id for model in raw_model_list]

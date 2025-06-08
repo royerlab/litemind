@@ -1,5 +1,6 @@
 import copy
 import json
+from functools import lru_cache
 from typing import List, Optional, Sequence, Set, Type, Union
 
 from arbol import aprint, asection
@@ -40,17 +41,41 @@ class DefaultApi(BaseApi):
     """
 
     # constructor:
-    def __init__(self, callback_manager: Optional[CallbackManager] = None):
+    def __init__(
+        self,
+        allow_media_conversions: bool = True,
+        allow_media_conversions_with_models: bool = True,
+        callback_manager: Optional[CallbackManager] = None,
+    ):
+        """
+        Initialize the DefaultApi with the given parameters.
+
+        Parameters
+        ----------
+        allow_media_conversions: bool
+            If True, the API will allow media conversions using the default media converter.
+        allow_media_conversions_with_models: bool
+            If True, the API will allow media conversions using models that support the required features in addition to the default media converter.
+            To use this the allow_media_conversions parameter must be True.
+        callback_manager: Optional[CallbackManager]
+            The callback manager to use for callbacks. If None, no callbacks will be used.
+        """
 
         super().__init__(callback_manager=callback_manager)
+
+        # Set allow_conversions flag:
+        self.allow_media_conversions = allow_media_conversions
 
         # Instantiate the media converter:
         self.media_converter = MediaConverter()
 
-        # Add the media converter supporting APIs:
-        media_converter_api = MediaConverterApi(api=self)
-        self.media_converter.add_default_converters()
-        self.media_converter.add_media_converter(media_converter_api)
+        # Add the media converter supporting APIs. This converter can use any model from the API that supports the required features.
+        if allow_media_conversions:
+            self.media_converter.add_default_converters()
+
+            if allow_media_conversions_with_models:
+                media_converter_api = MediaConverterApi(api=self)
+                self.media_converter.add_media_converter(media_converter_api)
 
     def check_availability_and_credentials(
         self, api_key: Optional[str] = None
@@ -70,6 +95,7 @@ class DefaultApi(BaseApi):
         non_features: Optional[
             Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
         ] = None,
+        media_types: Optional[Sequence[Type[MediaBase]]] = None,
     ) -> List[str]:
 
         # Normalise the features:
@@ -107,10 +133,11 @@ class DefaultApi(BaseApi):
         non_features: Optional[
             Union[List[str], ModelFeatures, Sequence[ModelFeatures]]
         ] = None,
+        media_types: Optional[Sequence[Type[MediaBase]]] = None,
         exclusion_filters: Optional[List[str]] = None,
     ) -> Optional[str]:
 
-        # Normalise the features:
+        # Normalise the features, non-features, and media types:
         features = ModelFeatures.normalise(features)
         non_features = ModelFeatures.normalise(non_features)
 
@@ -122,6 +149,7 @@ class DefaultApi(BaseApi):
             model_list,
             features=features,
             non_features=non_features,
+            media_types=media_types,
             exclusion_filters=exclusion_filters,
         )
 
@@ -147,6 +175,7 @@ class DefaultApi(BaseApi):
         non_features: Optional[
             Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
         ] = None,
+        media_types: Optional[Sequence[Type[MediaBase]]] = None,
         exclusion_filters: Optional[Union[str, List[str]]] = None,
     ) -> List[str]:
         """
@@ -159,6 +188,8 @@ class DefaultApi(BaseApi):
             List of features to filter on.
         non_features: Optional[Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]]
             List of features to exclude.
+        media_types: Optional[Sequence[Type[MediaBase]]]
+            Set of media types that the models must support
         exclusion_filters: Optional[Union[str,List[str]]]
             List of strings that if found in the model name exclude it.
 
@@ -188,7 +219,7 @@ class DefaultApi(BaseApi):
             if exclusion_filters and any([f in model for f in exclusion_filters]):
                 continue
 
-            # exclude models that have the non features:
+            # exclude models that have the non-features:
             if non_features and any(
                 [
                     self.has_model_support_for(model_name=model, features=nf)
@@ -197,8 +228,10 @@ class DefaultApi(BaseApi):
             ):
                 continue
 
-            # Append models that support the given features:
-            if self.has_model_support_for(model_name=model, features=features):
+            # Append models that support the given features and media types:
+            if self.has_model_support_for(
+                model_name=model, features=features, media_types=media_types
+            ):
                 filtered_model_list.append(model)
 
         return filtered_model_list
@@ -206,8 +239,67 @@ class DefaultApi(BaseApi):
     def has_model_support_for(
         self,
         features: Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]],
+        media_types: Optional[Sequence[Type[MediaBase]]] = None,
         model_name: Optional[str] = None,
     ) -> bool:
+
+        # Get the features required for the given media types:
+        if media_types is not None:
+
+            # We get the features needed for the media types:
+            features_for_media = ModelFeatures.get_features_needed_for_media_types(
+                media_types=media_types
+            )
+
+            # For each convertible media type we need to check if the model supports the media directly OR via conversion:
+            if ModelFeatures.Image in features_for_media:
+                # First we remove the Image feature from the list of features:
+                features_for_media.remove(ModelFeatures.Image)
+                # The we check recursively whether the model supports Images or ImageConversion:
+                if not self.has_model_support_for(
+                    features=ModelFeatures.Image,
+                    model_name=model_name,
+                ) and not self.has_model_support_for(
+                    features=ModelFeatures.ImageConversion,
+                    model_name=model_name,
+                ):
+                    return False
+            if ModelFeatures.Audio in features_for_media:
+                # First we remove the Audio feature from the list of features:
+                features_for_media.remove(ModelFeatures.Audio)
+                # The we check recursively whether the model supports Audio or AudioConversion:
+                if not self.has_model_support_for(
+                    features=ModelFeatures.Audio,
+                    model_name=model_name,
+                ) and not self.has_model_support_for(
+                    features=ModelFeatures.AudioConversion,
+                    model_name=model_name,
+                ):
+                    return False
+            if ModelFeatures.Video in features_for_media:
+                # First we remove the Video feature from the list of features:
+                features_for_media.remove(ModelFeatures.Video)
+                # The we check recursively whether the model supports Video or VideoConversion:
+                if not self.has_model_support_for(
+                    features=ModelFeatures.Video,
+                    model_name=model_name,
+                ) and not self.has_model_support_for(
+                    features=ModelFeatures.VideoConversion,
+                    model_name=model_name,
+                ):
+                    return False
+            if ModelFeatures.Document in features_for_media:
+                # First we remove the Document feature from the list of features:
+                features_for_media.remove(ModelFeatures.Document)
+                # The we check recursively whether the model supports Document or DocumentConversion:
+                if not self.has_model_support_for(
+                    features=ModelFeatures.Document,
+                    model_name=model_name,
+                ) and not self.has_model_support_for(
+                    features=ModelFeatures.DocumentConversion,
+                    model_name=model_name,
+                ):
+                    return False
 
         # Normalise the features:
         features = ModelFeatures.normalise(features)
@@ -304,25 +396,33 @@ class DefaultApi(BaseApi):
                 # Check if there is a model that supports the corresponding modality:
                 if (
                     feature == ModelFeatures.ImageEmbeddings
-                    and not self.has_model_support_for(ModelFeatures.Image)
+                    and not self.has_model_support_for(
+                        features=ModelFeatures.TextGeneration, media_types=[Image]
+                    )
                 ):
                     aprint("Image Embeddings feature: model does not support images!")
                     return False
                 elif (
                     feature == ModelFeatures.AudioEmbeddings
-                    and not self.has_model_support_for(ModelFeatures.Audio)
+                    and not self.has_model_support_for(
+                        features=ModelFeatures.TextGeneration, media_types=[Audio]
+                    )
                 ):
                     aprint("Audio Embeddings feature: model does not support audio!")
                     return False
                 elif (
                     feature == ModelFeatures.VideoEmbeddings
-                    and not self.has_model_support_for(ModelFeatures.Video)
+                    and not self.has_model_support_for(
+                        features=ModelFeatures.TextGeneration, media_types=[Video]
+                    )
                 ):
                     aprint("Video Embeddings feature: model does not support video!")
                     return False
                 elif (
                     feature == ModelFeatures.DocumentEmbeddings
-                    and not self.has_model_support_for(ModelFeatures.Image)
+                    and not self.has_model_support_for(
+                        features=ModelFeatures.TextGeneration, media_types=[Document]
+                    )
                 ):
                     aprint(
                         "Document Embeddings feature: model does not support documents!"
@@ -346,6 +446,30 @@ class DefaultApi(BaseApi):
 
         return model_features
 
+    @lru_cache
+    def _get_allowed_media_types_for_text_generation(
+        self, model_name: str
+    ) -> Set[Type[MediaBase]]:
+        """
+        Get the allowed media types for text generation.
+
+        Returns
+        -------
+        Set[Type[MediaBase]]
+            Set of allowed media types for text generation.
+        """
+
+        # Get the model features for the given model name:
+        features = self.get_model_features(model_name)
+
+        # Get the supported media types based on the model features:
+        allowed_media_types = ModelFeatures.get_supported_media_types(features)
+
+        # Normalise to set:
+        allowed_media_types = set(allowed_media_types)
+
+        return allowed_media_types
+
     def max_num_input_tokens(self, model_name: Optional[str] = None) -> int:
         # TODO: we need to figure out what to do here:
         return 1000
@@ -360,29 +484,6 @@ class DefaultApi(BaseApi):
         # Use the following conversion from word to token: 1 word to 1.33 tokens
         # (based on GPT-3.5 model, but should be similar for other models):
         return int(len(text.split()) * 1.33)
-
-        # # use Tiktoken to count tokens by default:
-        # import tiktoken
-        #
-        # # If model is not provided, get the best model:
-        # if model_name not in self.list_models(features=[ModelFeatures.TextGeneration]):
-        #     # We pick the best model as default, could be very wrong but we need a default!
-        #     model_name = self.get_best_model(features=[ModelFeatures.TextGeneration])
-        #
-        # # Choose the appropriate encoding:
-        # try:
-        #     encoding = tiktoken.encoding_for_model(model_name)
-        # except KeyError as e:
-        #     aprint(
-        #         f"Model '{model_name}' not found. Error: {e}. Using default encoding."
-        #     )
-        #     encoding = tiktoken.encoding_for_model("gpt-4o")
-        #
-        # # Encode:
-        # tokens = encoding.encode(text)
-        #
-        # # Return the token count:
-        # return len(tokens)
 
     def generate_text(
         self,
@@ -418,8 +519,8 @@ class DefaultApi(BaseApi):
     def _preprocess_messages(
         self,
         messages: List[Message],
-        allowed_media_types: Optional[Set[Type[MediaBase]]] = None,
-        exclude_extensions: Optional[List[str]] = None,
+        allowed_media_types: Optional[Sequence[Type[MediaBase]]] = None,
+        exclude_extensions: Optional[Sequence[str]] = None,
         deepcopy: bool = True,
     ) -> List[Message]:
 
@@ -434,6 +535,32 @@ class DefaultApi(BaseApi):
         )
 
         return messages
+
+    def _get_best_model_for_text_generation(self, messages, toolset, response_format):
+        # We Require the minimum features for text generation:
+        features = [ModelFeatures.TextGeneration]
+        # If tools are provided, we also require tools:
+        if toolset:
+            features.append(ModelFeatures.Tools)
+
+        # if a response format is provided, we also require the response format:
+        if response_format:
+            features.append(ModelFeatures.StructuredTextGeneration)
+
+        # If the messages contain media, we require the appropriate features:
+
+        # get the list of media types in the messages:
+        media_types = Message.list_media_types_in(messages)
+
+        # Get the best model with the required features:
+        model_name = self.get_best_model(features=features, media_types=media_types)
+
+        # If no model is found, raise an error:
+        if model_name is None:
+            raise FeatureNotAvailableError(
+                f"No suitable model with features: {features}"
+            )
+        return model_name
 
     def _process_tool_calls(
         self,
@@ -631,14 +758,8 @@ class DefaultApi(BaseApi):
 
         # Get best image model name:
         image_text_model_name = self.get_best_model(
-            [ModelFeatures.Image, ModelFeatures.TextGeneration]
+            features=[ModelFeatures.TextGeneration], media_types=[Image]
         )
-
-        # If that failed we consider models that support image conversion:
-        if not image_text_model_name:
-            image_text_model_name = self.get_best_model(
-                [ModelFeatures.ImageConversion, ModelFeatures.TextGeneration]
-            )
 
         # Check model is not None:
         if not image_text_model_name:
@@ -698,14 +819,8 @@ class DefaultApi(BaseApi):
 
         # Get the best audio text gen model:
         audio_text_model_name = self.get_best_model(
-            [ModelFeatures.Audio, ModelFeatures.TextGeneration]
+            features=[ModelFeatures.TextGeneration], media_types=[Audio]
         )
-
-        # If that fails, we consider models that support audio conversion:
-        if not audio_text_model_name:
-            audio_text_model_name = self.get_best_model(
-                [ModelFeatures.AudioConversion, ModelFeatures.TextGeneration]
-            )
 
         # Check model is not None:
         if not audio_text_model_name:
@@ -784,14 +899,8 @@ class DefaultApi(BaseApi):
 
         # Get best image model name:
         video_text_model_name = self.get_best_model(
-            [ModelFeatures.Video, ModelFeatures.TextGeneration]
+            features=[ModelFeatures.TextGeneration], media_types=[Video]
         )
-
-        # If that fails, we consider models that support video conversion:
-        if not video_text_model_name:
-            video_text_model_name = self.get_best_model(
-                [ModelFeatures.VideoConversion, ModelFeatures.TextGeneration]
-            )
 
         # Check model is not None:
         if not video_text_model_name:
@@ -851,7 +960,7 @@ class DefaultApi(BaseApi):
 
         # Get best image model name:
         document_text_model_name = self.get_best_model(
-            [ModelFeatures.Document, ModelFeatures.TextGeneration]
+            features=[ModelFeatures.TextGeneration], media_types=[Document]
         )
 
         # Check model is not None:
@@ -965,10 +1074,7 @@ class DefaultApi(BaseApi):
                 )
 
             # If the model does not support vision, return an error:
-            if not self.has_model_support_for(
-                model_name=model_name,
-                features=[ModelFeatures.TextGeneration, ModelFeatures.Image],
-            ):
+            if model_name is None:
                 raise FeatureNotAvailableError(
                     f"Model '{model_name}' does not support images."
                 )
@@ -1099,14 +1205,12 @@ class DefaultApi(BaseApi):
             # If no model is passed get a default model with image support:
             if model_name is None:
                 model_name = self.get_best_model(
-                    features=[ModelFeatures.TextGeneration, ModelFeatures.Audio]
+                    features=[ModelFeatures.TextGeneration],
+                    media_types=[Audio],
                 )
 
             # If the model does not support audio, return an error:
-            if not self.has_model_support_for(
-                model_name=model_name,
-                features=[ModelFeatures.TextGeneration, ModelFeatures.Audio],
-            ):
+            if model_name is None:
                 raise FeatureNotAvailableError(
                     f"Model '{model_name}' does not support audio."
                 )
@@ -1221,10 +1325,7 @@ class DefaultApi(BaseApi):
                 )
 
             # If the model does not support video, return an error:
-            if not self.has_model_support_for(
-                model_name=model_name,
-                features=[ModelFeatures.TextGeneration, ModelFeatures.Video],
-            ):
+            if model_name is None:
                 raise FeatureNotAvailableError(
                     f"Model '{model_name}' does not support video."
                 )
@@ -1337,10 +1438,7 @@ class DefaultApi(BaseApi):
                 )
 
             # If the model does not support documents, return an error:
-            if not self.has_model_support_for(
-                model_name=model_name,
-                features=[ModelFeatures.TextGeneration, ModelFeatures.Document],
-            ):
+            if model_name is None:
                 raise FeatureNotAvailableError(
                     f"Model '{model_name}' does not support documents."
                 )

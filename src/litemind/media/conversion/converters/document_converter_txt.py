@@ -4,7 +4,7 @@ from litemind.media.conversion.converters.base_converter import BaseConverter
 from litemind.media.media_base import MediaBase
 from litemind.media.types.media_document import Document
 from litemind.media.types.media_text import Text
-from litemind.utils.file_types import classify_uri
+from litemind.utils.file_types.file_types import classify_uri
 from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_path
 
 
@@ -29,7 +29,7 @@ class DocumentConverterTxt(BaseConverter):
 
         # Check if the file is a PDF:
         file_type = classify_uri(media.uri)
-        if file_type != "text":
+        if file_type not in {"text", "code", "script"}:
             return False
 
         # By default, we can convert the media, unless the previous checks failed:
@@ -43,6 +43,9 @@ class DocumentConverterTxt(BaseConverter):
         # Normalise uri to local path:
         document_path = uri_to_local_file_path(media.uri)
 
+        # get filename:
+        filename = media.get_filename()
+
         # Get the file extension:
         extension = media.get_extension()
 
@@ -51,7 +54,7 @@ class DocumentConverterTxt(BaseConverter):
             text_content = file.read()
 
         # Wrap file in markdown quotes and give filename:
-        text_content = f"```{extension}\n{document_path}\n{text_content}\n```"
+        text_content = f"{filename}\n```{extension}\n{text_content}\n```"
 
         # Create a Text media object:
         text_media = Text(text_content)

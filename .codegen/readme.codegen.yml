@@ -9,16 +9,26 @@ folder:
     - LICENSE
     - .tests
     - .html
+    - .ipynb
   excluded:
-    - litemind.egg-info
-    - dist
-    - build
-    - README.md
-    - .git
-    - .github
-    - .codegen
-    - sandbox
-    - exported.txt
+    - 'litemind.egg-info'
+    - 'dist'
+    - 'build'
+    - 'README.md'
+    - '.git'
+    - '.github'
+    - '.codegen'
+    - 'sandbox'
+    - 'exported.txt'
+    - 'utils'
+    - 'scan_results'
+    - 'archives'
+    - 'documents'
+    - 'others'
+    - 'tables'
+    - 'debug_prompt.txt'
+    - '*.scan.md'
+    - '*.scan.yaml'
 prompt: |
   You are a helpful assistant with deep expertise in Software Engineering and best practices for Open Source projects.
   You know how to write complete, compelling and informative README files for Python repositories.
@@ -76,6 +86,7 @@ prompt: |
   - Explain that logging is done with Arbol (http://github.com/royerlab/arbol) and it can be deactivated by setting Arbol.passthrough to True.
   - Avoid hallucinating things that are not in the repository.
   - Litemind _does_ _not_ have an agent class called ReActAgent, or anything 'react' related. The Agent class itself is has all the features of the ReAct framework.
+  - Important: If you don't know something for sure, don't make it up. If you don't know, ignore, or just say that you don't know.
   
   # Task:
   Your task is to follow the instructions above and generate a README.md file for the Python repository provided below:

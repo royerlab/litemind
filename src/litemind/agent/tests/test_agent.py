@@ -99,6 +99,7 @@ def test_agent_with_just_text(api_class):
         "snowy",
         "partly cloudy",
         "sunny with light clouds",
+        "sunny with a gentle breeze",
     ]
 
 

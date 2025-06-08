@@ -73,7 +73,7 @@ class MediaURI(MediaDefault):
 
     def get_extension(self):
         """
-        Get the extension of the media.
+        Get the extension of the media, without the dot
         """
         return self.extension or self.uri.split(".")[-1].lower()
 

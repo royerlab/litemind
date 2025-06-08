@@ -7,7 +7,8 @@ from litemind.utils.ffmpeg_utils import (
     get_video_info,
     load_video_as_array,
 )
-from litemind.utils.file_extensions import video_file_extensions
+from litemind.utils.file_types.file_extensions import VIDEO_EXTS
+from litemind.utils.file_types.file_types import is_video_file
 from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_path
 
 
@@ -31,13 +32,13 @@ class Video(MediaURI):
         """
 
         # Check that  the file extension is valid:
-        if not any(uri.endswith(ext) for ext in video_file_extensions):
+        if not is_video_file(uri):
             raise ValueError(
                 f"Invalid video URI: '{uri}' (must have a valid video file extension)"
             )
 
         if extension is not None:
-            if extension not in video_file_extensions:
+            if "." + extension not in VIDEO_EXTS:
                 raise ValueError(f"Invalid video extension: {extension}")
 
         super().__init__(uri=uri, extension=extension, **kwargs)

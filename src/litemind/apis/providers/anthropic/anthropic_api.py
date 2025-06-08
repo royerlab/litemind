@@ -1,5 +1,5 @@
 import os
-from typing import List, Optional, Sequence, Union
+from typing import List, Optional, Sequence, Type, Union
 
 from pydantic import BaseModel
 
@@ -8,11 +8,8 @@ from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.base_api import ModelFeatures
 from litemind.apis.callbacks.callback_manager import CallbackManager
 from litemind.apis.default_api import DefaultApi
-from litemind.apis.exceptions import (
-    APIError,
-    APINotAvailableError,
-    FeatureNotAvailableError,
-)
+from litemind.apis.exceptions import APIError, APINotAvailableError
+from litemind.apis.feature_scanner import get_default_model_feature_scanner
 from litemind.apis.providers.anthropic.utils.check_availability import (
     check_anthropic_api_availability,
 )
@@ -28,9 +25,21 @@ from litemind.apis.providers.anthropic.utils.list_models import (
 from litemind.apis.providers.anthropic.utils.process_response import (
     process_response_from_anthropic,
 )
+from litemind.media.media_base import MediaBase
 from litemind.media.types.media_action import Action
-from litemind.media.types.media_image import Image
 from litemind.media.types.media_text import Text
+
+# ------------------------------- #
+#   CONSTANTS (docs 2025-06-08)   #
+# ------------------------------- #
+_CTX_200K = 200_000
+_CTX_100K = 100_000
+
+_OUT_64K = 64_000
+_OUT_32K = 32_000
+_OUT_8K = 8_192
+_OUT_4K = 4_096
+_OUT_128K = 128_000  # beta header for Claude-3.7-Sonnet only
 
 
 class AnthropicApi(DefaultApi):
@@ -50,8 +59,10 @@ class AnthropicApi(DefaultApi):
         self,
         api_key: Optional[str] = None,
         base_url: Optional[str] = None,
+        allow_media_conversions: bool = True,
+        allow_media_conversions_with_models: bool = True,
         callback_manager: Optional[CallbackManager] = None,
-        **kwargs,
+        **anthropic_api_kwargs,
     ):
         """
         Initialize the Anthropic client.
@@ -60,11 +71,20 @@ class AnthropicApi(DefaultApi):
         ----------
         api_key : Optional[str]
             The API key for Anthropic. If not provided, we'll read from ANTHROPIC_API_KEY env var.
-        kwargs : dict
+        allow_media_conversions: bool
+            If True, the API will allow media conversions using the default media converter.
+        allow_media_conversions_with_models: bool
+            If True, the API will allow media conversions using models that support the required features in addition to the default media converter.
+            To use this the allow_media_conversions parameter must be True.
+        anthropic_api_kwargs : dict
             Additional options (e.g. `timeout=...`, `max_retries=...`) passed to `Anthropic(...)`.
         """
 
-        super().__init__(callback_manager=callback_manager)
+        super().__init__(
+            allow_media_conversions=allow_media_conversions,
+            allow_media_conversions_with_models=allow_media_conversions_with_models,
+            callback_manager=callback_manager,
+        )
 
         # Get the API key from the environment if not provided:
         if api_key is None:
@@ -84,14 +104,18 @@ class AnthropicApi(DefaultApi):
         self.base_url = base_url
 
         # Save additional kwargs:
-        self.kwargs = kwargs
+        self.anthropic_api_kwargs = anthropic_api_kwargs
 
         try:
+
+            # Initialize the feature scanner:
+            self.feature_scanner = get_default_model_feature_scanner()
+
             # Create the Anthropic client
             from anthropic import Anthropic
 
             self.client = Anthropic(
-                api_key=self.api_key, base_url=self.base_url, **kwargs
+                api_key=self.api_key, base_url=self.base_url, **anthropic_api_kwargs
             )
 
             # Fetch the raw model list:
@@ -110,7 +134,9 @@ class AnthropicApi(DefaultApi):
         if api_key is not None:
             from anthropic import Anthropic
 
-            client = Anthropic(api_key=api_key, base_url=self.base_url, **self.kwargs)
+            client = Anthropic(
+                api_key=api_key, base_url=self.base_url, **self.anthropic_api_kwargs
+            )
         else:
             client = self.client
 
@@ -137,6 +163,7 @@ class AnthropicApi(DefaultApi):
         non_features: Optional[
             Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
         ] = None,
+        media_types: Optional[Sequence[Type[MediaBase]]] = None,
     ) -> List[str]:
 
         try:
@@ -153,7 +180,10 @@ class AnthropicApi(DefaultApi):
             # Filter the models based on the features:
             if features:
                 model_list = self._filter_models(
-                    model_list, features=features, non_features=non_features
+                    model_list,
+                    features=features,
+                    non_features=non_features,
+                    media_types=media_types,
                 )
 
             # Call _callbacks:
@@ -172,6 +202,7 @@ class AnthropicApi(DefaultApi):
         non_features: Optional[
             Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
         ] = None,
+        media_types: Optional[Sequence[Type[MediaBase]]] = None,
         exclusion_filters: Optional[Union[str, List[str]]] = None,
     ) -> Optional[str]:
 
@@ -188,6 +219,7 @@ class AnthropicApi(DefaultApi):
             model_list,
             features=features,
             non_features=non_features,
+            media_types=media_types,
             exclusion_filters=exclusion_filters,
         )
 
@@ -205,6 +237,7 @@ class AnthropicApi(DefaultApi):
     def has_model_support_for(
         self,
         features: Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]],
+        media_types: Optional[Sequence[Type[MediaBase]]] = None,
         model_name: Optional[str] = None,
     ) -> bool:
 
@@ -213,189 +246,100 @@ class AnthropicApi(DefaultApi):
 
         # Get the best model if not provided:
         if model_name is None:
-            model_name = self.get_best_model(features=features)
+            model_name = self.get_best_model(features=features, media_types=media_types)
 
         # If model_name is None then we return False:
         if model_name is None:
             return False
 
         # We check if the superclass says that the model supports the features:
-        if super().has_model_support_for(features=features, model_name=model_name):
-            return True
-
-        # Check that the model has all the required features:
-        for feature in features:
-
-            if feature == ModelFeatures.TextGeneration:
-                if not self._has_text_gen_support(model_name):
-                    return False
-
-            elif feature == ModelFeatures.ImageGeneration:
-                return False
-
-            elif feature == ModelFeatures.Thinking:
-                if not self._has_thinking_support(model_name):
-                    return False
-
-            elif feature == ModelFeatures.Image:
-                if not self._has_image_support(model_name):
-                    return False
-
-            elif feature == ModelFeatures.Audio:
-                if not self._has_audio_support(model_name):
-                    return False
-
-            elif feature == ModelFeatures.Video:
-                if not self._has_image_support(model_name):
-                    return False
-
-            elif feature == ModelFeatures.Document:
-                if not self._has_document_support(model_name):
-                    return False
-
-            elif feature == ModelFeatures.Tools:
-                if not self._has_tool_support(model_name):
-                    return False
-
-            elif feature == ModelFeatures.StructuredTextGeneration:
-                if not self._has_structured_output_support(model_name):
-                    return False
-
-            else:
-                if not super().has_model_support_for(feature, model_name):
-                    return False
-
-        return True
-
-    def _has_text_gen_support(self, model_name: str) -> bool:
-        if not "claude" in model_name.lower():
-            return False
-        return True
-
-    def _has_thinking_support(self, model_name: str) -> bool:
-        if not "thinking" in model_name.lower():
-            return False
-        return True
-
-    def _has_image_support(self, model_name: str) -> bool:
-        if "claude-2.0" in model_name or "haiku" in model_name:
-            return False
-        if (
-            "3-5" in model_name
-            or "3-7" in model_name
-            or "sonnet" in model_name
-            or "vision" in model_name
+        if super().has_model_support_for(
+            features=features, media_types=media_types, model_name=model_name
         ):
             return True
-        return False
 
-    def _has_audio_support(self, model_name: Optional[str] = None) -> bool:
+        # General case we pull info from the scanner:
+        for feature in features:
+            if not self.feature_scanner.supports_feature(
+                self.__class__, model_name, feature
+            ):
+                # If the model does not support the feature, we return False:
+                return False
 
-        # No Anthropic models currently support Audio, but we use local whisper as a fallback:
-        return False
-
-    def _has_document_support(self, model_name: str) -> bool:
-        return self.has_model_support_for(
-            [ModelFeatures.Image, ModelFeatures.TextGeneration], model_name
-        ) and self.has_model_support_for(ModelFeatures.VideoConversion)
-
-    def _has_tool_support(self, model_name: str) -> bool:
-
-        return "claude-3-5" in model_name or "claude-3-7" in model_name
-
-    def _has_structured_output_support(self, model_name: Optional[str] = None) -> bool:
-
-        return "claude-3" in model_name
+        return True
 
     def _has_cache_support(self, model_name: str) -> bool:
         if "sonnet" in model_name or "claude-2.0" in model_name:
             return False
         return True
 
+    # ------------------------------- #
     def max_num_input_tokens(self, model_name: Optional[str] = None) -> int:
         """
-        Return the maximum *input tokens* (context window) for an Anthropic Claude model.
-
-        If model_name is unrecognized, fallback = 100_000 (safe guess).
+        Maximum *total* context (input + output) tokens for an Anthropic Claude model.
+        Falls back to 100 K for unknown models.
         """
-
         if model_name is None:
             model_name = self.get_best_model()
-
         name = model_name.lower()
 
-        # Claude 3.7 Sonnet => 200k
-        if "claude-3-7-sonnet" in name:
-            return 200_000
+        # ---- Claude 4 ----
+        if "opus-4" in name or "sonnet-4" in name:
+            return _CTX_200K
 
-        # Claude 3.5 Sonnet/Haiku => 200k
-        if "claude-3-5-sonnet" in name or "claude-3-5-haiku" in name:
-            return 200_000
+        # ---- Claude 3.7 / 3.5 / 3 ----
+        if "claude-3" in name:
+            return _CTX_200K
 
-        # Claude 3 (Opus, Sonnet, Haiku) => 200k
-        if (
-            "claude-3-opus" in name
-            or "claude-3-sonnet" in name
-            or "claude-3-haiku" in name
-        ):
-            return 200_000
-
-        # Claude 2.1 => 200k
+        # ---- Claude 2.1 ----
         if "claude-2.1" in name:
-            return 200_000
+            return _CTX_200K
 
-        # Claude 2 => 100k
-        if "claude-2.0" in name or "claude-2" in name:
-            return 100_000
+        # ---- Claude 2 / Instant 1.x ----
+        if "claude-2.0" in name or "claude-2" in name or "instant-1" in name:
+            return _CTX_100K
 
-        # Claude Instant 1.2 => 100k
-        if "claude-instant-1.2" in name:
-            return 100_000
-
-        # Fallback
-        return 100_000
+        # ---- Fallback ----
+        return _CTX_100K
 
     def max_num_output_tokens(self, model_name: Optional[str] = None) -> int:
         """
-        Return the maximum *output tokens* that can be generated by a given Anthropic Claude model.
-
-        If model_name is unrecognized, fallback = 4096.
+        Documented *maximum* tokens Claude may generate in one response.
+        Returns the highest published cap (may require beta header, see notes).
+        Falls back to 4 096 for unknown models.
         """
         if model_name is None:
             model_name = self.get_best_model()
-
         name = model_name.lower()
 
-        # Claude 3.7 Sonnet => 8192
-        if "claude-3-7-sonnet" in name:
-            return 8192
+        # ---- Claude 4 ----
+        if "opus-4" in name:
+            return _OUT_32K
+        if "sonnet-4" in name:
+            return _OUT_64K
 
-        # Claude 3.5 Sonnet/Haiku => 8192
-        if "claude-3-5-sonnet" in name or "claude-3-5-haiku" in name:
-            return 8192
+        # ---- Claude 3.7 Sonnet ----
+        if "3-7-sonnet" in name:
+            return _OUT_128K  # requires `output-128k-2025-02-19` header
 
-        # Claude 3 Opus/Sonnet/Haiku => 4096
-        if (
-            "claude-3-opus" in name
-            or "claude-3-sonnet" in name
-            or "claude-3-haiku" in name
-        ):
-            return 4096
+        # ---- Claude 3.5 family ----
+        if "3-5-sonnet" in name or "3-5-haiku" in name:
+            return _OUT_8K
 
-        # Claude 2.1 => 4096
+        # ---- Claude 3 base ----
+        if "3-opus" in name or "3-sonnet" in name or "3-haiku" in name:
+            return _OUT_4K
+
+        # ---- Claude 2.1 ----
         if "claude-2.1" in name:
-            return 4096
+            return _OUT_4K
 
-        # Claude 2 => 4096
-        if "claude-2.0" in name or "claude-2" in name:
-            return 4096
+        # ---- Claude 2 / Instant 1.x ----
+        if "claude-2.0" in name or "claude-2" in name or "instant-1" in name:
+            return _OUT_4K
 
-        # Claude Instant 1.2 => 4096
-        if "claude-instant-1.2" in name:
-            return 4096
-
-        # Fallback
-        return 4096
+        # ---- Fallback ----
+        return _OUT_4K
 
     def generate_text(
         self,
@@ -426,19 +370,9 @@ class AnthropicApi(DefaultApi):
 
         # Set default model if not provided
         if model_name is None:
-            # We Require the minimum features for text generation:
-            features = [ModelFeatures.TextGeneration]
-            # If tools are provided, we also require tools:
-            if toolset:
-                features.append(ModelFeatures.Tools)
-            # If the messages contain media, we require the appropriate features:
-            # TODO: implement
-            model_name = self.get_best_model(features=features)
-
-            if model_name is None:
-                raise FeatureNotAvailableError(
-                    f"No suitable model with features: {features}"
-                )
+            model_name = self._get_best_model_for_text_generation(
+                messages, toolset if use_tools else None, response_format
+            )
 
         # Specific to Anthropic: extract system message if present
         system_messages = ""
@@ -458,7 +392,9 @@ class AnthropicApi(DefaultApi):
         # Preprocess the messages, we use non-system messages only:
         preprocessed_messages = self._preprocess_messages(
             messages=non_system_messages,
-            allowed_media_types={Text, Image},
+            allowed_media_types=self._get_allowed_media_types_for_text_generation(
+                model_name=model_name
+            ),
             exclude_extensions=["pdf"],
         )
 
@@ -500,6 +436,7 @@ class AnthropicApi(DefaultApi):
                     preprocessed_messages,
                     response_format=response_format,
                     cache_support=self._has_cache_support(model_name),
+                    media_converter=self.media_converter,
                 )
 
                 # Call the Anthropic API:
@@ -565,6 +502,11 @@ class AnthropicApi(DefaultApi):
             )
 
         except Exception as e:
+            # print stacktrace:
+            import traceback
+
+            traceback.print_exc()
+            # Raise an APIError with the exception message:
             raise APIError(f"Anthropic generate text error: {e}")
 
         return new_messages

@@ -10,7 +10,6 @@ from litemind.apis.providers.openai.utils.convert_messages import (
 
 
 def test_convert_text_only_message():
-
     # Check if OpenAI API key is available:
     if not check_openai_api_availability():
         # Skip the test if the API key is not available:
@@ -31,7 +30,6 @@ def test_convert_text_only_message():
 
 
 def test_convert_image_only_message():
-
     # Check if OpenAI API key is available:
     if not check_openai_api_availability():
         # Skip the test if the API key is not available:
@@ -54,7 +52,6 @@ def test_convert_image_only_message():
 
 
 def test_convert_text_and_image_message():
-
     # Check if OpenAI API key is available:
     if not check_openai_api_availability():
         # Skip the test if the API key is not available:
@@ -79,7 +76,6 @@ def test_convert_text_and_image_message():
 
 
 def test_convert_multiple_images_message():
-
     # Check if OpenAI API key is available:
     if not check_openai_api_availability():
         # Skip the test if the API key is not available:
@@ -106,7 +102,6 @@ def test_convert_multiple_images_message():
 
 
 def test_convert_empty_message():
-
     # Check if OpenAI API key is available:
     if not check_openai_api_availability():
         # Skip the test if the API key is not available:
@@ -126,7 +121,6 @@ def test_convert_empty_message():
 
 
 def test_convert_multiple_messages():
-
     # Check if OpenAI API key is available:
     if not check_openai_api_availability():
         # Skip the test if the API key is not available:

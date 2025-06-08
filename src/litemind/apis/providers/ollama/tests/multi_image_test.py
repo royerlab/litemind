@@ -7,7 +7,6 @@ from litemind.ressources.media_resources import MediaResources
 
 
 def test_compare_images_with_separate_messages():
-
     api_instance = OllamaApi()
 
     # Skip test if Ollama is not available:

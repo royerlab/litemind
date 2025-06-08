@@ -1,7 +1,7 @@
 import os
 import traceback
 from datetime import datetime
-from typing import Dict, List, Optional, Type
+from typing import Dict, List, Optional, Type, Union
 
 import yaml
 from arbol import Arbol, acapture, aprint, asection
@@ -9,7 +9,10 @@ from pydantic import BaseModel
 
 from litemind.agent.messages.message import Message
 from litemind.agent.tools.toolset import ToolSet
-from litemind.apis.base_api import BaseApi, ModelFeatures
+from litemind.apis.base_api import BaseApi
+from litemind.apis.model_features import ModelFeatures
+from litemind.apis.providers.google.utils.is_reasoning import is_gemini_reasoning_model
+from litemind.apis.providers.openai.utils.is_reasoning import is_openai_reasoning_model
 from litemind.ressources.media_resources import MediaResources
 
 # Instantiate a global ModelFeatureScanner instance for use in the project:
@@ -43,7 +46,9 @@ class ModelFeatureScanner(MediaResources):
     it supports, storing and retrieving this information in YAML files.
     """
 
-    def __init__(self, output_dir: str = None):
+    def __init__(
+        self, output_dir: str = None, print_exception_stacktraces: bool = False
+    ):
         """
         Initialize the scanner.
 
@@ -51,12 +56,17 @@ class ModelFeatureScanner(MediaResources):
         ----------
         output_dir: str, optional
             Directory to store scan results. Defaults to current directory.
+        print_exception_stacktraces: bool, optional
+            Whether to print exception stack traces during scanning. Defaults to False.
         """
 
         # Set the output directory for scan results
         self.output_dir = output_dir or os.path.join(
             os.path.dirname(__file__), "scan_results"
         )
+
+        # Set whether to print exception stack traces
+        self.print_exception_stacktraces = print_exception_stacktraces
 
         # Ensure the output directory exists
         os.makedirs(self.output_dir, exist_ok=True)
@@ -146,7 +156,7 @@ class ModelFeatureScanner(MediaResources):
         ]
 
     def supports_feature(
-        self, api_class: type, model_name: str, feature: ModelFeatures
+        self, api_class: Type[BaseApi], model_name: str, feature: ModelFeatures
     ) -> bool:
         """
         Return True if the given model of the API class supports the feature.
@@ -158,9 +168,24 @@ class ModelFeatureScanner(MediaResources):
             return False
         return self.scan_results[api_class][model_name].get(feature, False)
 
+    def supports_any_feature(self, api_class: type, model_name: str) -> bool:
+        """
+        Return True if the given model of the API class supports any feature.
+        """
+
+        # Check if the API class and model name exist in the scan results:
+        if (
+            api_class not in self.scan_results
+            or model_name not in self.scan_results[api_class]
+        ):
+            return False
+
+        # Check if any feature is supported for the given model:
+        return any(self.scan_results[api_class][model_name].values())
+
     def scan_apis(
         self,
-        api_classes: List[type],
+        api_classes: List[Type[BaseApi]],
         model_names: Optional[List[str]] = None,
         models_per_api: int = None,
     ) -> Dict[type, Dict[str, Dict[ModelFeatures, bool]]]:
@@ -189,7 +214,7 @@ class ModelFeatureScanner(MediaResources):
 
             for api_class in api_classes:
                 try:
-                    api_instance = api_class()
+                    api_instance = api_class(allow_media_conversions=False)
 
                     # Check if the API is available
                     if not api_instance.check_availability_and_credentials():
@@ -226,10 +251,11 @@ class ModelFeatureScanner(MediaResources):
 
                     # Scan each model
                     self.scan_results[api_class] = {}
-                    for model_name in models:
+                    for i, model_name in enumerate(models, start=1):
                         self.scan_results[api_class][model_name] = (
                             self.scan_model_features(api_instance, model_name)
                         )
+                        aprint(f"Done scanning model {i}/{len(models)}: {model_name}")
 
                 except Exception as e:
                     aprint(f"Error scanning {api_class.__name__}: {e}")
@@ -239,7 +265,7 @@ class ModelFeatureScanner(MediaResources):
 
     def scan_model_features(
         self, api: BaseApi, model_name: str
-    ) -> Dict[ModelFeatures, bool]:
+    ) -> dict[ModelFeatures, bool]:
         """
         Scan a specific model for all supported features.
 
@@ -255,7 +281,7 @@ class ModelFeatureScanner(MediaResources):
         Dict[ModelFeatures, bool]
             Dictionary mapping feature to boolean indicating support
         """
-        results = {}
+        results: Dict[ModelFeatures, bool] = {}
 
         with asection(
             f"Scanning model: {model_name} from API: {api.__class__.__name__}"
@@ -264,6 +290,11 @@ class ModelFeatureScanner(MediaResources):
             # Test each feature in the ModelFeatures enum
             for feature in ModelFeatures:
                 feature_name = feature.name
+
+                # Skip Conversion features as they are not directly testable:
+                if "conversion" in feature_name.lower():
+                    continue
+
                 method_name = f"test_{self._snake_case(feature_name)}"
                 # aprint(f"    Testing feature: {feature_name}")
 
@@ -283,40 +314,89 @@ class ModelFeatureScanner(MediaResources):
                         Arbol.enable_output = arbol_state
                         aprint(f"      ❌ {feature_name} (Error: {e})")
                         results[feature] = False
-                    finally:
-                        Arbol.enable_output = arbol_state
+
+                        if self.print_exception_stacktraces:
+                            # Print the stack trace if configured to do so:
+                            aprint("Stack trace:")
+                            with acapture():
+                                traceback.print_exc()
+
+                    Arbol.enable_output = arbol_state
                 else:
-                    # Fallback method if no specific test is implemented
-                    results[feature] = self.test_generic_feature(
-                        api, model_name, feature
-                    )
+                    # By default if no specific test method is found, assume the feature is not supported:
+                    aprint(f"      ❌ {feature_name} (No test method found!! Check!!)")
+                    results[feature] = False
 
         return results
 
-    def test_generic_feature(
-        self, api: BaseApi, model_name: str, feature: ModelFeatures
-    ) -> bool:
+    def test_feature(
+        self,
+        api_class: Type[BaseApi],
+        model_name: str,
+        feature: ModelFeatures,
+        return_error_info: bool = False,
+        disable_output: bool = False,
+        allow_media_conversions: bool = False,
+    ) -> Union[bool, Dict[str, Union[bool, str]]]:
         """
-        Generic feature test using the has_model_support_for method.
+        Test a single feature for a specific API and model.
 
         Parameters
         ----------
-        api: BaseApi
-            API instance to use for testing
+        api_class: Type[BaseApi]
+            The API class to use for testing
         model_name: str
             Name of the model to test
         feature: ModelFeatures
-            Feature to test for
+            The feature to test
+        return_error_info: bool
+            If True, returns a dict with result and error information
+        disable_output: bool
+            If True, disables Arbol output during feature testing. Default is True.
 
         Returns
         -------
-        bool
-            True if the feature is supported, False otherwise
+        Union[bool, Dict[str, Union[bool, str]]]
+            If return_error_info=False: True if feature is supported, False otherwise
+            If return_error_info=True: Dict with 'result' (bool) and 'error' (str) keys
         """
-        try:
-            return api.has_model_support_for(model_name=model_name, features=feature)
-        except Exception:
-            return False
+        feature_name = feature.name
+
+        # Skip Conversion features as they're not directly testable
+        if "conversion" in feature_name.lower():
+            result = False
+            error = "Conversion features are not directly testable"
+            return {"result": result, "error": error} if return_error_info else result
+
+        # Get the appropriate test method for the feature
+        method_name = f"test_{self._snake_case(feature_name)}"
+        test_method = getattr(self, method_name, None)
+
+        if test_method:
+            try:
+                arbol_state = Arbol.enable_output
+                if disable_output:
+                    Arbol.enable_output = False
+
+                with acapture():
+                    api_instance = api_class(
+                        allow_media_conversions=allow_media_conversions
+                    )
+                    result = test_method(api_instance, model_name)
+
+                if disable_output:
+                    Arbol.enable_output = arbol_state
+
+                return {"result": result, "error": ""} if return_error_info else result
+            except Exception as e:
+                if disable_output:
+                    Arbol.enable_output = arbol_state
+
+                error = str(e)
+                return {"result": False, "error": error} if return_error_info else False
+        else:
+            error = f"No test method found for feature: {feature_name}"
+            return {"result": False, "error": error} if return_error_info else False
 
     def test_text_generation(self, api: BaseApi, model_name: str) -> bool:
         """Test if model supports text generation."""
@@ -419,28 +499,23 @@ class ModelFeatureScanner(MediaResources):
     def test_thinking(self, api: BaseApi, model_name: str) -> bool:
         """Test if model supports thinking feature."""
         try:
-            messages = [
-                Message(role="system", text="You are a helpful assistant."),
-                Message(
-                    role="user", text="Calculate 123 * 456. Are you a reasoning model?"
-                ),
-            ]
+            # we need to reason per API as this is unfortunately, and in general, tricky:
 
-            response = api.generate_text(
-                model_name=model_name, messages=messages, temperature=0.0
-            )
+            # First we check if the API is the Anthropic API:
+            if api.__class__.__name__.lower() == "anthropicapi":
+                # We just check if 'thinlking' is in the name:
+                has_thinking = "thinking" in model_name.lower()
+            elif api.__class__.__name__.lower() == "ollamaapi":
+                # For Ollama, we check if the model name contains 'thinking':
+                has_thinking = "thinking" in model_name.lower()
+            elif api.__class__.__name__.lower() == "geminiapi":
+                # For Gemini, we check if the model name contains 'thinking':
+                has_thinking = is_gemini_reasoning_model(model_name)
+            elif api.__class__.__name__.lower() == "openaiapi":
+                # For OpenAI, we know which models support thinking by their names. For example
+                has_thinking = is_openai_reasoning_model(model_name)
 
-            # Check for thinking blocks
-            if not response or len(response) < 1:
-                return False
-
-            response_msg = response[0]
-            response_text = str(response_msg).lower()
-
-            # Check if the response contains a thinking block:
-            has_thinking_block = any(block.is_thinking for block in response_msg.blocks)
-
-            return has_thinking_block
+            return has_thinking
 
         except Exception as e:
             aprint(f"Error in test_thinking: {e}")
@@ -521,7 +596,9 @@ class ModelFeatureScanner(MediaResources):
     def test_document_embeddings(self, api: BaseApi, model_name: str) -> bool:
         """Test if model supports document embeddings."""
         try:
-            document_uri = self.get_local_test_document_uri("noise2self_paper.pdf")
+            document_uri = self.get_local_test_document_uri(
+                "noise2self_paper_page4.pdf"
+            )
             embeddings = api.embed_documents(
                 document_uris=[document_uri], model_name=model_name, dimensions=512
             )
@@ -639,7 +716,9 @@ class ModelFeatureScanner(MediaResources):
         """Test if model supports document understanding."""
         try:
             # Test document description capability
-            document_path = self.get_local_test_document_uri("noise2self_paper.pdf")
+            document_path = self.get_local_test_document_uri(
+                "noise2self_paper_page4.pdf"
+            )
 
             messages = [
                 Message(role="system", text="You are a helpful assistant."),
@@ -730,23 +809,23 @@ class ModelFeatureScanner(MediaResources):
             aprint(f"Error in test_audio_transcription: {e}")
             return False
 
-    def test_image_conversion(self, api: BaseApi, model_name: str) -> bool:
-        """This feature would require a specialized test that depends on model_name."""
-        return self.test_generic_feature(api, model_name, ModelFeatures.ImageConversion)
-
-    def test_audio_conversion(self, api: BaseApi, model_name: str) -> bool:
-        """This feature would require a specialized test that depends on model_name."""
-        return self.test_generic_feature(api, model_name, ModelFeatures.AudioConversion)
-
-    def test_video_conversion(self, api: BaseApi, model_name: str) -> bool:
-        """This feature would require a specialized test that depends on model_name."""
-        return self.test_generic_feature(api, model_name, ModelFeatures.VideoConversion)
-
-    def test_document_conversion(self, api: BaseApi, model_name: str) -> bool:
-        """This feature would require a specialized test that depends on model_name."""
-        return self.test_generic_feature(
-            api, model_name, ModelFeatures.DocumentConversion
-        )
+    # def test_image_conversion(self, api: BaseApi, model_name: str) -> bool:
+    #     """This feature would require a specialized test that depends on model_name."""
+    #     return self.test_generic_feature(api, model_name, ModelFeatures.ImageConversion)
+    #
+    # def test_audio_conversion(self, api: BaseApi, model_name: str) -> bool:
+    #     """This feature would require a specialized test that depends on model_name."""
+    #     return self.test_generic_feature(api, model_name, ModelFeatures.AudioConversion)
+    #
+    # def test_video_conversion(self, api: BaseApi, model_name: str) -> bool:
+    #     """This feature would require a specialized test that depends on model_name."""
+    #     return self.test_generic_feature(api, model_name, ModelFeatures.VideoConversion)
+    #
+    # def test_document_conversion(self, api: BaseApi, model_name: str) -> bool:
+    #     """This feature would require a specialized test that depends on model_name."""
+    #     return self.test_generic_feature(
+    #         api, model_name, ModelFeatures.DocumentConversion
+    #     )
 
     def save_results(self, folder: str = None) -> List[str]:
         """
@@ -772,7 +851,7 @@ class ModelFeatureScanner(MediaResources):
         # Save each API's results to a YAML file
         for api_class, api_results in self.scan_results.items():
             api_name = self._api_class_to_name(api_class)
-            filename = f"model_feature_scan_{api_name}_{timestamp}.yaml"
+            filename = f"model_features_{api_name}_{timestamp}.scan.yaml"
             filepath = os.path.join(save_dir, filename)
             # Convert ModelFeatures keys to names for YAML
             results_serializable = {
@@ -796,7 +875,7 @@ class ModelFeatureScanner(MediaResources):
         if self.scan_results:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             report_content = self.generate_markdown_report()
-            report_filepath = os.path.join(save_dir, f"report_{timestamp}.md")
+            report_filepath = os.path.join(save_dir, f"report_{timestamp}.scan.md")
             with open(report_filepath, "w") as report_file:
                 report_file.write(report_content)
             aprint(f"Comprehensive Markdown report saved to {report_filepath}")
@@ -1054,5 +1133,12 @@ class ModelFeatureScanner(MediaResources):
             if i < len(sorted_apis) - 1:
                 md_lines.append("\n---")  # Separator between APIs
             md_lines.append("")  # Add a blank line for spacing
+
+        # Add mention at the end of the document that explains that the report is auto-generated and that features are
+        # not supported either because the model does not support them or because litemind can't interface with these features,
+        # or finally because of a bug in lietmind:
+        md_lines.append(
+            "_This report is auto-generated by Litemind. Some features may not be supported due to model limitations, API restrictions, or potential bugs in Litemind._"
+        )
 
         return "\n".join(md_lines)

@@ -1,8 +1,10 @@
 import copy
+import fnmatch
 import os
 from abc import ABC
-from typing import Any, List, Optional, Sequence, Type, Union
+from typing import Any, List, Optional, Sequence, Set, Type, Union
 
+from arbol import aprint
 from pydantic import BaseModel
 
 from litemind.agent.messages.actions.tool_call import ToolCall
@@ -13,6 +15,7 @@ from litemind.media.types.media_action import Action
 from litemind.media.types.media_audio import Audio
 from litemind.media.types.media_code import Code
 from litemind.media.types.media_document import Document
+from litemind.media.types.media_file import File
 from litemind.media.types.media_image import Image
 from litemind.media.types.media_json import Json
 from litemind.media.types.media_object import Object
@@ -20,20 +23,22 @@ from litemind.media.types.media_table import Table
 from litemind.media.types.media_text import Text
 from litemind.media.types.media_video import Video
 from litemind.utils.extract_archive import extract_archive
-from litemind.utils.file_extensions import (
-    archive_file_extensions,
-    audio_file_extensions,
-    document_file_extensions,
-    image_file_extensions,
-    video_file_extensions,
+from litemind.utils.file_types.file_extensions import OTHER_BINARY_EXTS
+from litemind.utils.file_types.file_types import (
+    has_extension,
+    is_archive_file,
+    is_audio_file,
+    is_document_file,
+    is_executable_file,
+    is_image_file,
+    is_prog_code_file,
+    is_script_file,
+    is_text_file,
+    is_video_file,
+    is_web_file,
 )
-from litemind.utils.file_types import is_text_file
-from litemind.utils.folder_description import (
-    file_info_header,
-    generate_tree_structure,
-    read_binary_file_info,
-    read_file_content,
-)
+from litemind.utils.folder_description import file_info_header, generate_tree_structure
+from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_path
 from litemind.utils.uri_utils import is_uri
 
 
@@ -460,14 +465,46 @@ class Message(ABC):
         # Append the table block:
         return self.append_block(block)
 
+    def append_file(self, file_uri: str, source: Optional[str] = None) -> MessageBlock:
+        """
+        Append a file to the message.
+
+        Parameters
+        ----------
+        file_uri : str
+            The file to append.
+        source : Optional[str]
+            The source of the file (e.g., file path or url).
+        """
+
+        # Check that the file is a local file:
+        if not file_uri.startswith("file://"):
+            # Raise an exception if the file URI is not a local file:
+            raise ValueError(
+                f"File URI must be a local file URI that starts with 'file://', not '{file_uri}'"
+            )
+
+        # Remove the 'file://' prefix to get the local file path:
+        file_uri_no_prefix = file_uri[7:]  # Remove 'file://' prefix
+
+        # Check that the file URI is valid:
+        if not os.path.exists(file_uri_no_prefix):
+            raise ValueError(f"File '{file_uri_no_prefix}' does not exist.")
+
+        # Append the file block:
+        return self.append_block(MessageBlock(media=File(uri=file_uri), source=source))
+
     def append_folder(
         self,
         folder: str,
-        depth: int = None,
+        depth: Optional[int] = None,
         allowed_extensions: List[str] = None,
         excluded_files: List[str] = None,
         all_archive_files: bool = False,
         include_hidden_files: bool = False,
+        append_tree_structure: bool = True,
+        date_and_times: bool = False,
+        file_sizes: bool = True,
     ):
         """
         Append a folder to the message.
@@ -488,7 +525,20 @@ class Message(ABC):
             disregarding the depth of files in the archives (default: False).
         include_hidden_files: bool
             Whether to include hidden files (starting with '.') (default: False).
+        append_tree_structure: bool
+            Whether to append the tree structure of the folder to the message (default: True).
+        date_and_times: bool
+            Whether to include date and time information in the file info header (default: False).
+        file_sizes: bool
+            Whether to include file sizes in the file info header (default: True).
         """
+
+        # if depth is zero, then we do not traverse the folder:
+        if depth == 0:
+            self.append_text(
+                f"Folder '{folder}' is not traversed because depth is set to 0."
+            )
+            return
 
         # Expand folder string into an absolute path:
         folder = os.path.abspath(folder)
@@ -499,142 +549,273 @@ class Message(ABC):
             return
 
         # if folder is empty (does not contain any files or folders) then append a message that explains that:
-        if not os.listdir(folder):
+        if os.path.isdir(folder) and not os.listdir(folder):
             self.append_text(f"Folder '{folder}' is empty.")
             return
 
         # If folder is a file, then append the file:
         if os.path.isfile(folder):
-            # Get the file path and URI
-            file_path = folder
-            file_uri = "file://" + file_path
-
             # Append the file to the message:
             self.append_text(f"File '{folder}' is not a folder.")
             return
 
-        # 1) Generate and append the directory tree (with sizes, no timestamps).
-        tree_structure = generate_tree_structure(
-            folder,
-            allowed_extensions=allowed_extensions,
-            excluded_files=excluded_files,
-            include_hidden_files=include_hidden_files,
-        )
+        if append_tree_structure:
+            # 1) Generate and append the directory tree (with sizes, no timestamps).
+            tree_structure = generate_tree_structure(
+                folder,
+                allowed_extensions=allowed_extensions,
+                excluded_files=excluded_files,
+                include_hidden_files=include_hidden_files,
+                depth=depth,
+            )
 
-        # Append the tree structure to the message:
-        self.append_text(f"Directory structure:\n{tree_structure}")
+            # Append the tree structure to the message:
+            self.append_text(f"Directory structure:\n{tree_structure}")
 
-        # 2) Recursively traverse folder to process each file
-        for root, dirs, files in os.walk(folder):
+        # 2) Get immediate contents of the folder
+        try:
+            folder_contents = os.listdir(folder)
+            files = []
+            dirs = []
 
-            # Get the folder name without the path:
-            folder_name = os.path.basename(root)
+            # Separate files and directories
+            for item in folder_contents:
+                item_path = os.path.join(folder, item)
+                if os.path.isfile(item_path):
+                    files.append(item)
+                elif os.path.isdir(item_path):
+                    dirs.append(item)
 
-            # Skip hidden files if include_hidden_files is False
-            if not include_hidden_files and (
-                folder_name.startswith(".") or folder_name.startswith("__")
-            ):
-                continue
-
-            # Skip folders that are excluded:
-            if excluded_files and folder_name in excluded_files:
-                continue
-
-            for file in files:
-
+            # Process files
+            for file_name in sorted(files):
                 # Skip hidden files if include_hidden_files is False
                 if not include_hidden_files and (
-                    file.startswith(".") or file.startswith("__")
+                    file_name.startswith(".") or file_name.startswith("__")
                 ):
                     continue
 
                 # Skip files that are excluded:
-                if excluded_files and file in excluded_files:
+                if excluded_files and any(
+                    fnmatch.fnmatch(file_name, p) for p in excluded_files
+                ):
+                    aprint(f"File '{file_name}' is excluded.")
                     continue
 
                 # Only keep files with allowed extensions:
                 if allowed_extensions and not any(
-                    file.endswith(ext) for ext in allowed_extensions
+                    file_name.endswith(ext) for ext in allowed_extensions
                 ):
+                    aprint(
+                        f"File '{file_name}' is not allowed by the extensions filter."
+                    )
                     continue
 
                 # Get the file path and URI
-                file_path = os.path.join(root, file)
+                file_path = os.path.join(folder, file_name)
                 file_uri = "file://" + file_path
 
                 # if file is empty then just append 'Empty file' message:
                 if os.stat(file_path).st_size == 0:
-                    header = file_info_header(file_path, "Empty")
+                    header = file_info_header(
+                        file_path,
+                        "Empty",
+                        date_and_times=date_and_times,
+                        file_sizes=file_sizes,
+                    )
                     self.append_text(header + "\n")
-                elif is_text_file(file_path):
-                    header = file_info_header(file_path, "Text")
-                    content = read_file_content(file_path)
-                    self.append_text(header + content + "\n")
-                elif any(file.endswith(ext) for ext in image_file_extensions):
-                    header = file_info_header(file_path, "Image")
-                    self.append_text(header)
-                    self.append_image(file_uri, source=file_path)
-                elif any(file.endswith(ext) for ext in audio_file_extensions):
-                    header = file_info_header(file_path, "Audio")
-                    self.append_text(header)
-                    self.append_audio(file_uri, source=file_path)
-                elif any(file.endswith(ext) for ext in video_file_extensions):
-                    header = file_info_header(file_path, "Video")
-                    self.append_text(header)
-                    self.append_video(file_uri, source=file_path)
-                elif any(file.endswith(ext) for ext in document_file_extensions):
-                    header = file_info_header(file_path, "Document")
-                    self.append_text(header)
+                elif is_prog_code_file(file_path):
+                    self.append_text(
+                        file_info_header(
+                            file_path,
+                            "Prog. Lang. Code",
+                            date_and_times=date_and_times,
+                            file_sizes=file_sizes,
+                        )
+                    )
                     self.append_document(file_uri, source=file_path)
-                elif any(file.endswith(ext) for ext in archive_file_extensions):
-                    header = file_info_header(file_path, "Compressed Archive")
-                    self.append_text(header)
+                elif is_script_file(file_path):
+                    self.append_text(
+                        file_info_header(
+                            file_path,
+                            "Script",
+                            date_and_times=date_and_times,
+                            file_sizes=file_sizes,
+                        )
+                    )
+                    self.append_document(file_uri, source=file_path)
+                elif is_web_file(file_path):
+                    self.append_text(
+                        file_info_header(
+                            file_path,
+                            "Web",
+                            date_and_times=date_and_times,
+                            file_sizes=file_sizes,
+                        )
+                    )
+                    self.append_document(file_uri, source=file_path)
+                elif is_text_file(file_path):
+                    self.append_text(
+                        file_info_header(
+                            file_path,
+                            "Text",
+                            date_and_times=date_and_times,
+                            file_sizes=file_sizes,
+                        )
+                    )
+                    self.append_document(file_uri, source=file_path)
+                elif is_image_file(file_path):
+                    self.append_text(
+                        file_info_header(
+                            file_path,
+                            "Image",
+                            date_and_times=date_and_times,
+                            file_sizes=file_sizes,
+                        )
+                    )
+                    self.append_image(file_uri, source=file_path)
+                elif is_audio_file(file_path):
+                    self.append_text(
+                        file_info_header(
+                            file_path,
+                            "Audio",
+                            date_and_times=date_and_times,
+                            file_sizes=file_sizes,
+                        )
+                    )
+                    self.append_audio(file_uri, source=file_path)
+                elif is_video_file(file_path):
+                    self.append_text(
+                        file_info_header(
+                            file_path,
+                            "Video",
+                            date_and_times=date_and_times,
+                            file_sizes=file_sizes,
+                        )
+                    )
+                    self.append_video(file_uri, source=file_path)
+                elif is_document_file(file_path):
+                    self.append_text(
+                        file_info_header(
+                            file_path,
+                            "Document",
+                            date_and_times=date_and_times,
+                            file_sizes=file_sizes,
+                        )
+                    )
+                    self.append_document(file_uri, source=file_path)
+                elif is_archive_file(file_path):
+                    self.append_text(
+                        file_info_header(
+                            file_path,
+                            "Archive (depth={depth})",
+                            date_and_times=date_and_times,
+                            file_sizes=file_sizes,
+                        )
+                    )
                     next_depth = None if all_archive_files or not depth else depth - 1
                     self.append_archive(file_uri, next_depth)
+                elif is_executable_file(file_path):
+                    self.append_text(
+                        file_info_header(
+                            file_path,
+                            "Executable",
+                            date_and_times=date_and_times,
+                            file_sizes=file_sizes,
+                        )
+                    )
+                    self.append_file(file_uri, source=file_path)
+                elif has_extension(file_path, OTHER_BINARY_EXTS):
+                    self.append_text(
+                        file_info_header(
+                            file_path,
+                            "Binary",
+                            date_and_times=date_and_times,
+                            file_sizes=file_sizes,
+                        )
+                    )
+                    self.append_file(file_path, source=file_path)
                 else:
-                    header = file_info_header(file_path, "Binary")
-                    size, hex_content = read_binary_file_info(file_path)
-                    binary_body = f"First 100 bytes (hex): {hex_content}\n"
-                    self.append_text(header + binary_body)
+                    self.append_text(
+                        file_info_header(
+                            file_path,
+                            "Other",
+                            date_and_times=date_and_times,
+                            file_sizes=file_sizes,
+                        )
+                    )
+                    self.append_file(file_path, source=file_path)
 
-            # If a depth limit is set, only recurse deeper if depth >= 1
-            if depth is not None and depth >= 1:
-                for d in dirs:
-                    self.append_text(f"\n###### Sub-folder: {d}\n")
+            # Process subdirectories if depth allows
+            if depth is None or depth > 0:
+                next_depth = None if depth is None else depth - 1
+                for folder_name in sorted(dirs):
+                    # Skip hidden directories if include_hidden_files is False
+                    if not include_hidden_files and (
+                        folder_name.startswith(".") or folder_name.startswith("__")
+                    ):
+                        continue
+
+                    # Skip directories that are excluded
+                    if excluded_files and any(
+                        fnmatch.fnmatch(folder_name, p) for p in excluded_files
+                    ):
+                        aprint(f"Folder '{folder_name}' is excluded.")
+                        continue
+
+                    self.append_text(f"\n###### Sub-folder: {folder_name}\n")
                     self.append_folder(
-                        folder=os.path.join(root, d),
-                        depth=depth - 1,
+                        folder=os.path.join(folder, folder_name),
+                        depth=next_depth,
                         allowed_extensions=allowed_extensions,
                         excluded_files=excluded_files,
                         all_archive_files=all_archive_files,
                         include_hidden_files=include_hidden_files,
+                        append_tree_structure=False,
                     )
+        except Exception as e:
+            # print stack trace for debugging:
+            import traceback
 
-    def append_archive(self, archive: str, depth: int = 1):
+            traceback.print_exc()
+            # If there is an error accessing the folder, append an error message:
+            self.append_text(f"Error accessing folder '{folder}': {str(e)}")
+
+    def append_archive(self, archive_uri: str, depth: int = -1):
         """
         Append an archive to the message.
         Parameters
         ----------
-        archive: str
-            The archive to append.
+        archive_uri: str
+            The archive's uri to append.
         depth: int
-            The depth to traverse the archive (default: 1).
+            The depth to traverse the archive (default: -1).
 
 
         """
 
-        # extract archive to temporary folder:
-        temp_folder = extract_archive(archive)
+        try:
+            # Normalize the archive URI:
+            archive_local_path = uri_to_local_file_path(archive_uri)
 
-        # append the extracted folder to the message:
-        self.append_text(
-            f"\n##### Contents of archive: {archive} decompressed into folder: "
-            + temp_folder
-            + "\n"
-        )
+            # extract archive to temporary folder:
+            temp_folder = extract_archive(archive_local_path)
 
-        # append the extracted folder to the message:
-        self.append_folder(temp_folder, depth)
+            # append the extracted folder to the message:
+            self.append_text(
+                f"\n##### Contents of archive: {archive_uri} decompressed into folder: "
+                + temp_folder
+                + "\n"
+            )
+
+            # append the extracted folder to the message:
+            self.append_folder(temp_folder, depth)
+        except Exception as e:
+            # If there is an error extracting the archive, append an error message:
+            self.append_text(
+                f"Error while attempting to extract files from archive '{archive_uri}': {str(e)}"
+            )
+            self.append_file(archive_uri, source=archive_uri)
+            return
 
     def append_tool_call(
         self, tool_name: str, arguments: dict, id: str
@@ -744,6 +925,132 @@ class Message(ABC):
 
         return markdown_blocks
 
+    def list_media_types(self) -> Sequence[Type[MediaBase]]:
+        """
+        List the media classes present in the message blocks.
+
+        Returns
+        -------
+        Sequence[Type[MediaBase]]
+            A list of media classes present in the message blocks.
+        """
+        media_classes: Set[Type[MediaBase]] = set()
+        for block in self.blocks:
+            if isinstance(block.media, MediaBase):
+                media_classes.add(type(block.media))
+        return list(media_classes)
+
+    @staticmethod
+    def list_media_types_in(messages: Sequence["Message"]) -> Sequence[Type[MediaBase]]:
+        """
+        List the media classes present in the given messages.
+
+        Parameters
+        ----------
+        messages : Sequence[Message]
+            The messages to analyze.
+
+        Returns
+        -------
+        Sequence[Type[MediaBase]]
+            A list of media classes present in the messages.
+        """
+        media_classes: Set[Type[MediaBase]] = set()
+        message: Message
+        for message in messages:
+            media_type: Type[MediaBase]
+            for media_type in message.list_media_types():
+                media_classes.add(media_type)
+        return list(media_classes)
+
+    def convert_media(
+        self,
+        allowed_media_types: Optional[List[Type[MediaBase]]] = None,
+        media_converter: Optional["MediaConverter"] = None,
+    ) -> "Message":
+        """
+        Convert the media in the message blocks to the allowed media types.
+
+        Parameters
+        ----------
+        allowed_media_types : Optional[List[Type[MediaBase]]]
+            The list of allowed media types to convert to. If None, only text media types are allowed.
+        media_converter: Optional[MediaConverter]
+            The media converter to use for conversion. If None, a default media converter is used.
+
+        Returns
+        -------
+        Message
+            A new message with the converted media blocks.
+        """
+
+        if allowed_media_types is None:
+            # If no allowed media types are provided, default to text media type:
+            allowed_media_types = [Text]
+
+        # If no media converter is provided, instantiate a default one:
+        if media_converter is None:
+            from litemind.media.conversion.media_converter import MediaConverter
+
+            # Instantiate the media converter:
+            media_converter = MediaConverter()
+
+            # Add the media converter supporting APIs. This converter can use any model from the API that supports the required features.
+            media_converter.add_default_converters()
+
+        # Convert the message using the media converter:
+        converted_messages = media_converter.convert(
+            [self], allowed_media_types=allowed_media_types
+        )
+
+        # Get the converted message:
+        converted_message = converted_messages[0]
+
+        return converted_message
+
+    def compress_text(
+        self, text_compressor: Optional["TextCompressor"] = None
+    ) -> "Message":
+        """
+        Compress the text in the message blocks by using TextCompressor
+        to reduce the size of the text blocks.
+
+        Parameters
+        ----------
+        text_compressor: Optional[TextCompressor]
+            The text compressor to use for compression. If None, a default text compressor is used.
+
+        Returns
+        -------
+        Message
+            A new message with the compressed text blocks.
+        """
+
+        # Create a new message to hold the compressed text blocks:
+        compressed_message = Message(role=self.role)
+
+        # Create a text compressor:
+        if text_compressor is None:
+            # If no text compressor is provided, instantiate a default one:
+            from litemind.utils.text_compressor import TextCompressor
+
+            text_compressor = TextCompressor()
+
+        # Iterate over the blocks in the message:
+        for block in self.blocks:
+            if isinstance(block.media, Text):
+                # Compress the text block:
+                compressed_text = text_compressor.compress(block.media.text)
+
+                if len(compressed_text) > 0:
+                    # Append the compressed text block to the compressed message:
+                    compressed_message.append_text(compressed_text, **block.attributes)
+            else:
+                # Append the block as is if it is not a text block:
+                compressed_message.append_block(block)
+
+        return compressed_message
+
     def __getitem__(self, index: int) -> Union[MessageBlock, None]:
         """
         Get the message block at the given index.
@@ -846,6 +1153,154 @@ class Message(ABC):
         for block in self.blocks:
             plain_text += str(block.media) + "\n"
         return plain_text
+
+    def to_markdown(self, media_converter: Optional["MediaConverter"] = None):
+
+        if media_converter is None:
+            # If no media converter is provided, instantiate a default one:
+            from litemind.media.conversion.media_converter import MediaConverter
+
+            # Instantiate the media converter:
+            media_converter = MediaConverter()
+
+            # Add the media converter supporting APIs. This converter can use any model from the API that supports the required features.
+            media_converter.add_default_converters()
+
+        # Convert the document to markdown:
+        from litemind.media.types.media_text import Text
+
+        markdown_text = media_converter.convert(
+            messages=[self], allowed_media_types=[Text]
+        )
+
+        # Get the converted message:
+        converted_message = markdown_text[0]
+
+        # Get the markdown string from the converted message blocks:
+        markdown_string = converted_message.to_plain_text()
+
+        return markdown_string
+
+    def report(self, as_string=True) -> Union[dict, str]:
+        """
+        Generate a report with statistics about the message blocks.
+
+        Parameters
+        ----------
+        as_string : bool
+            Whether to return the report as a formatted string (True) or a dictionary (False).
+
+        Returns
+        -------
+        Union[dict, str]
+            A report containing statistics about the message blocks.
+        """
+        # Initialize report data
+        report_data = {
+            "total_blocks": len(self.blocks),
+            "blocks_by_type": {},
+            "longest_blocks": {},
+            "average_block_size": 0,
+            "average_by_type": {},
+            "total_characters": 0,
+            "role": self.role,
+        }
+
+        # Collect data for each block
+        block_lengths = []
+        lengths_by_type = {}
+
+        for block in self.blocks:
+            # Get media type name
+            media_type = type(block.media).__name__
+
+            # Count blocks by type
+            if media_type not in report_data["blocks_by_type"]:
+                report_data["blocks_by_type"][media_type] = 0
+                lengths_by_type[media_type] = []
+
+            report_data["blocks_by_type"][media_type] += 1
+
+            # Calculate block length (character count)
+            block_str = str(block)
+            block_length = len(block_str)
+            block_lengths.append(block_length)
+            lengths_by_type[media_type].append(block_length)
+
+            report_data["total_characters"] += block_length
+
+            # Check if this is the longest block of its type
+            if (
+                media_type not in report_data["longest_blocks"]
+                or block_length > report_data["longest_blocks"][media_type]["length"]
+            ):
+                # Preview the content of the block:
+                preview_block_str = (
+                    block_str[:100] if len(block_str) > 100 else block_str
+                )
+
+                # Replace newlines with emoji characters that look line new lines for better preview:
+                preview_block_str = preview_block_str.replace("\n", "↩️")
+
+                report_data["longest_blocks"][media_type] = {
+                    "length": block_length,
+                    "content_preview": preview_block_str + "...",
+                }
+
+        # Calculate averages
+        if report_data["total_blocks"] > 0:
+            report_data["average_block_size"] = (
+                report_data["total_characters"] / report_data["total_blocks"]
+            )
+
+        # Calculate average by type
+        for media_type, lengths in lengths_by_type.items():
+            if lengths:
+                report_data["average_by_type"][media_type] = sum(lengths) / len(lengths)
+
+        # Add additional statistics
+        if block_lengths:
+            report_data["min_block_size"] = min(block_lengths)
+            report_data["max_block_size"] = max(block_lengths)
+            report_data["median_block_size"] = sorted(block_lengths)[
+                len(block_lengths) // 2
+            ]
+
+        if not as_string:
+            return report_data
+
+        # Format report as string
+        report_str = f"Message Report (Role: {self.role})\n"
+        report_str += f"Total blocks: {report_data['total_blocks']}\n"
+        report_str += f"Total characters: {report_data['total_characters']}\n\n"
+
+        report_str += "Blocks by type:\n"
+        for media_type, count in sorted(report_data["blocks_by_type"].items()):
+            report_str += f"  {media_type}: {count} blocks\n"
+
+        report_str += f"\nAverage block size: {report_data['average_block_size']:.2f} characters\n"
+
+        report_str += "\nAverage size by type:\n"
+        for media_type, avg in sorted(report_data["average_by_type"].items()):
+            report_str += f"  {media_type}: {avg:.2f} characters\n"
+
+        report_str += "\nLongest blocks by type:\n"
+        for media_type, info in sorted(report_data["longest_blocks"].items()):
+            report_str += f"  {media_type}: {info['length']} characters\n"
+            report_str += f"    Preview: {info['content_preview']}\n"
+
+        if "min_block_size" in report_data:
+            report_str += (
+                f"\nMin block size: {report_data['min_block_size']} characters\n"
+            )
+            report_str += (
+                f"Max block size: {report_data['max_block_size']} characters\n"
+            )
+            report_str += (
+                f"Median block size: {report_data['median_block_size']} characters\n"
+            )
+
+        return report_str
 
     def __repr__(self) -> str:
         """

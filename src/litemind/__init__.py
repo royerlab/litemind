@@ -1,4 +1,4 @@
-__version__ = "2025.5.2"
+__version__ = "2025.6.8"
 
 from arbol import aprint
 
@@ -17,10 +17,10 @@ from litemind.apis.providers.openai.openai_api import OpenAIApi
 API_IMPLEMENTATIONS = [
     DefaultApi,
     OpenAIApi,
-    # OllamaApi,
-    # AnthropicApi,
-    # GeminiApi,
-    # CombinedApi,
+    OllamaApi,
+    AnthropicApi,
+    GeminiApi,
+    CombinedApi,
 ]
 
 # Check availability of each API and remove it from the list if it is not available:
@@ -83,7 +83,6 @@ if len(API_IMPLEMENTATIONS) == 0 and QdrantVectorDatabase in VECDB_IMPLEMENTATIO
         "No API implementations available. Removing QdrantVectorDatabase from the list of implementations."
     )
     VECDB_IMPLEMENTATIONS.remove(QdrantVectorDatabase)
-
 
 # Initialize and silence the Abseil logging system:
 import absl.logging

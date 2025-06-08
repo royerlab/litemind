@@ -1,11 +1,11 @@
 from functools import lru_cache
-from typing import List, Tuple, Type
+from typing import List, Optional, Tuple, Type
 
 from litemind.media.conversion.converters.base_converter import BaseConverter
 from litemind.media.media_base import MediaBase
 from litemind.media.types.media_document import Document
 from litemind.media.types.media_text import Text
-from litemind.utils.file_types import classify_uri
+from litemind.utils.file_types.file_types import classify_uri
 from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_path
 
 
@@ -66,21 +66,19 @@ class DocumentConverterDocling(BaseConverter):
         # Create a list to hold the converted media:
         converted_media = []
 
-        # Introduce the file name and the number of pages:
-        # Get the file name:
-        file_name = media.get_filename()
-        # Get the file extension:
-        file_extension = media.get_extension()
-        # Get the file type:
-        file_type = classify_uri(media.uri)
-        # Make a premable for all pages that gives the file name and the number of pages:
-        preamble = f"---\nFile: {file_name}\nType: {file_type}\nExtension: {file_extension}\nNumber of pages: {len(pages_text)}\n---\n"
+        # Number of pages:
+        num_pages = len(pages_text)
+
+        # Get the preamble for the document, we use the same method as in DocumentConverterDocling for consistency:
+        preamble = DocumentConverterDocling.get_preamble(media, num_pages)
+
+        # Add a header for the document:
+        converted_media.append(Text(preamble))
 
         # Convert the pages into Text media:
         if len(pages_text) == 1:
-            # If there is only one page, we can convert it to Text media:
-
-            converted_media.append(Text(preamble + pages_text[0]))
+            # If there is only one page, we append it:
+            converted_media.append(Text(pages_text[0]))
 
         else:
             for page_text in pages_text:
@@ -88,10 +86,31 @@ class DocumentConverterDocling(BaseConverter):
                 page_text = f"---\nPage {pages_text.index(page_text) + 1} of {len(pages_text)}\n---\n{page_text}"
 
                 # Append the converted media to the list:
-                converted_media.append(Text(preamble + page_text))
+                converted_media.append(Text(page_text))
 
         # Return the converted media:
         return converted_media
+
+    @staticmethod
+    def get_preamble(media, num_pages: Optional[int] = None):
+        # Introduce the file name and the number of pages:
+        # Get the file name:
+        file_name = media.get_filename()
+        # Get the file extension:
+        file_extension = media.get_extension()
+        # Get the file type:
+        file_type = classify_uri(media.uri)
+
+        # Deal with the number of pages is not available:
+        if num_pages is None:
+            num_pages = "unknown"
+        else:
+            num_pages = int(num_pages)
+
+        # Make a premable for all pages that gives the file name and the number of pages:
+        preamble = f"\nDocument: {file_name}\nType: {file_type}\nExtension: {file_extension}\nNumber of pages: {num_pages} \n "
+
+        return preamble
 
 
 @lru_cache()

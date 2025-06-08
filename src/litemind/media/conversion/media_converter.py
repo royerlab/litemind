@@ -6,6 +6,8 @@ from litemind.agent.messages.message import Message
 from litemind.agent.messages.message_block import MessageBlock
 from litemind.media.conversion.converters.base_converter import BaseConverter
 from litemind.media.media_base import MediaBase
+from litemind.media.types.media_action import Action
+from litemind.media.types.media_types import all_media_types
 
 
 class MediaConverter:
@@ -109,7 +111,7 @@ class MediaConverter:
             # This converter is only available if docling is installed
             default_converters.append(DocumentConverterDocling())
 
-        if is_local_whisper_available():
+        if convert_audio and is_local_whisper_available():
             from litemind.media.conversion.converters.audio_converter_whisper_local import (
                 AudioConverterWhisperLocal,
             )
@@ -230,10 +232,38 @@ class MediaConverter:
         # If we get here, all conversions are within allowed types
         return True
 
+    def get_convertible_media_types(
+        self, allowed_media_types: Set[Type[MediaBase]]
+    ) -> Set[Type[MediaBase]]:
+        """
+        Get the set of media types that can be converted to the allowed media types.
+
+        Parameters
+        ----------
+        allowed_media_types: Set[Type[MediaBase]]
+            The set of allowed media types that conversions should be limited to.
+
+        Returns
+        -------
+        Set[Type[MediaBase]]
+            The set of media types that can be converted to the allowed media types.
+        """
+        convertable_media_types = set()
+
+        # iterate through all media types that derive from MediaBase:
+        for media_type in all_media_types():
+
+            # Check if the converter can convert this media type:
+            if self.can_convert_within(media_type, allowed_media_types):
+                # If it can, add it to the set of convertable media types
+                convertable_media_types.add(media_type)
+
+        return convertable_media_types
+
     def convert(
         self,
         messages: List[Message],
-        allowed_media_types: Set[Type[MediaBase]],
+        allowed_media_types: Sequence[Type[MediaBase]],
         exclude_extensions: Optional[Sequence[str]] = None,
         recursive: bool = True,
     ) -> List[Message]:
@@ -244,9 +274,9 @@ class MediaConverter:
 
         Parameters
         ----------
-        messages: List[Message]
+        messages: Sequence[Message]
             The list of messages to convert.
-        allowed_media_types: Set[MediaBase]
+        allowed_media_types: Sequence[MediaBase]
             The list of allowed media types. The media types are defined in the MediaBase class.
         exclude_extensions: Optional[Sequence[str]]
             The list of file extensions to exclude from the conversion.
@@ -331,11 +361,18 @@ class MediaConverter:
                                 MessageBlock(media=media, attributes=attributes)
                             )
                     else:
-                        # If no converter is found, keep the original media
-                        aprint(
-                            "Warning: No converter found for media type:", type(media)
-                        )
+                        # If no converter is found, keep the original media:
                         new_message.append_block(block)
+
+                        # if the original media is not allowed, log a warning:
+                        if not any(
+                            isinstance(media, allowed_type)
+                            for allowed_type in allowed_media_types
+                        ) and not isinstance(media, Action):
+                            aprint(
+                                f"Warning: No converter found for non-allowed media of type: {type(media)}"
+                            )
+
             converted_messages.append(new_message)
 
         # If conversion happened, call convert recursively

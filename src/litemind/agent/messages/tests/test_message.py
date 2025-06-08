@@ -321,8 +321,13 @@ def test_message_folder():
     assert any(block.has_type(Document) for block in user_message.blocks)
     assert any(block.has_type(Image) for block in user_message.blocks)
 
-    # Check that sentence 'This is a random sentence.' is in the message:
-    assert "This is a random sentence." in str(user_message)
+    # Check that the files are correctly represented in the message:
+    assert "Image File: image.png" in str(user_message)
+    assert "Document File: document.pdf" in str(user_message)
+    assert "Empty File: empty_file.txt" in str(user_message)
+    assert "Text File: file.txt" in str(user_message)
+    assert "Text File: file2.txt" in str(user_message)
+    assert "Text File: file3.txt" in str(user_message)
 
 
 def test_message_contains():
@@ -390,3 +395,23 @@ def test_extract_markdown_block():
     assert len(markdown_blocks) == 2
     assert markdown_blocks[0].get_content() == "# Header\nSome content\n"
     assert markdown_blocks[1].get_content() == "# Another Header\nMore content\n"
+
+
+def test_list_present_media_types():
+    # Create a message and add some blocks
+    user_message = Message(role="user")
+    user_message.append_text("This is a text block")
+    user_message.append_image("https://example.com/image.jpg")
+    user_message.append_audio("https://example.com/audio.mp3")
+    user_message.append_video("https://example.com/video.mp4")
+    user_message.append_document("https://example.com/document.pdf")
+
+    # List present media types
+    media_types = user_message.list_media_types()
+
+    # Verify that the media types are correct
+    assert Text in media_types
+    assert Video in media_types
+    assert Audio in media_types
+    assert Image in media_types
+    assert Document in media_types

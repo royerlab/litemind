@@ -2,6 +2,10 @@ import pytest
 
 from litemind import API_IMPLEMENTATIONS
 from litemind.apis.base_api import ModelFeatures
+from litemind.media.types.media_audio import Audio
+from litemind.media.types.media_document import Document
+from litemind.media.types.media_image import Image
+from litemind.media.types.media_video import Video
 from litemind.ressources.media_resources import MediaResources
 
 
@@ -22,7 +26,8 @@ class TestBaseApiImplementationsDescribe(MediaResources):
 
         # Get the best model for the requested features:
         default_model_name = api_instance.get_best_model(
-            [ModelFeatures.TextGeneration, ModelFeatures.Image]
+            features=[ModelFeatures.TextGeneration],
+            media_types=[Image],
         )
 
         # If no model is found, we skip the test:
@@ -75,7 +80,8 @@ class TestBaseApiImplementationsDescribe(MediaResources):
 
         # Get the best model for the requested features:
         default_model_name = api_instance.get_best_model(
-            [ModelFeatures.TextGeneration, ModelFeatures.Audio]
+            features=[ModelFeatures.TextGeneration],
+            media_types=[Audio],
         )
 
         # If no model is found, we skip the test:
@@ -131,7 +137,8 @@ class TestBaseApiImplementationsDescribe(MediaResources):
 
         # Get the best model for the requested features:
         default_model_name = api_instance.get_best_model(
-            [ModelFeatures.TextGeneration, ModelFeatures.Video]
+            features=[ModelFeatures.TextGeneration],
+            media_types=[Video],
         )
 
         # If no model is found, we skip the test:
@@ -198,7 +205,8 @@ class TestBaseApiImplementationsDescribe(MediaResources):
 
         # Get the best model for the requested features:
         default_model_name = api_instance.get_best_model(
-            [ModelFeatures.TextGeneration, ModelFeatures.Document]
+            features=[ModelFeatures.TextGeneration],
+            media_types=[Document],
         )
 
         # If no model is found, we skip the test:

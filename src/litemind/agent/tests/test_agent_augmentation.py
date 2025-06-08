@@ -216,7 +216,8 @@ def test_agent_with_video_document_augmentation(api_class):
 
     # Check that a model with video understanding is available
     if not api.has_model_support_for(
-        features=[ModelFeatures.TextGeneration, ModelFeatures.Video]
+        features=ModelFeatures.TextGeneration,
+        media_types=[Video],
     ):
         # skip test using pytest feature:
         pytest.skip(
@@ -262,7 +263,8 @@ def test_agent_with_pdf_document_augmentation(api_class):
 
     # Check that a model with document analysis is available
     if not api.has_model_support_for(
-        features=[ModelFeatures.TextGeneration, ModelFeatures.Document]
+        features=ModelFeatures.TextGeneration,
+        media_types=[Document],
     ):
         # skip test using pytest feature:
         pytest.skip(
@@ -363,7 +365,10 @@ def test_agent_with_code_document_augmentation(api_class):
     api = api_class()
 
     # Check that a model with text generation is available
-    if not api.has_model_support_for(features=ModelFeatures.TextGeneration):
+    if not api.has_model_support_for(
+        features=ModelFeatures.TextGeneration,
+        media_types=[Code],
+    ):
         # skip test using pytest feature:
         pytest.skip(
             f"Skipping test for {api_class.__name__} as no text model is available."
@@ -412,7 +417,8 @@ def test_agent_with_object_document_augmentation(api_class):
 
     # Check that a model with text generation is available
     if not api.has_model_support_for(
-        features=[ModelFeatures.TextGeneration, ModelFeatures.Document]
+        features=[ModelFeatures.TextGeneration],
+        media_types=[Object],
     ):
         # skip test using pytest feature:
         pytest.skip(
@@ -465,7 +471,8 @@ def test_agent_with_audio_document_augmentation(api_class):
 
     # Check that a model with audio understanding is available
     if not api.has_model_support_for(
-        features=[ModelFeatures.TextGeneration, ModelFeatures.Audio]
+        features=[ModelFeatures.TextGeneration],
+        media_types=[Audio],
     ):
         # skip test using pytest feature:
         pytest.skip(
@@ -511,7 +518,8 @@ def test_agent_with_table_document_augmentation(api_class):
 
     # Check that a model with text generation is available
     if not api.has_model_support_for(
-        features=[ModelFeatures.TextGeneration, ModelFeatures.Document]
+        features=[ModelFeatures.TextGeneration],
+        media_types=[Table],
     ):
         # skip test using pytest feature:
         pytest.skip(

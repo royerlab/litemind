@@ -7,27 +7,35 @@ class ModelFeatures(Enum):
     Enum class to define the features supported by the models.
     """
 
-    TextGeneration = "TextGeneration"
-    StructuredTextGeneration = "StructuredTextGeneration"
-    ImageGeneration = "ImageGeneration"
-    AudioGeneration = "AudioGeneration"
-    VideoGeneration = "VideoGeneration"
-    Thinking = ("Thinking",)
-    TextEmbeddings = "TextEmbeddings"
-    ImageEmbeddings = "ImageEmbeddings"
-    AudioEmbeddings = "AudioEmbeddings"
-    VideoEmbeddings = "VideoEmbeddings"
-    DocumentEmbeddings = "DocumentEmbeddings"
-    Image = "Image"
-    Audio = "Audio"
-    Video = "Video"
-    Document = "Documents"
-    Tools = "Tools"
-    AudioTranscription = "AudioTranscription"
-    ImageConversion = "ImageConversion"
-    AudioConversion = "AudioConversion"
-    VideoConversion = "VideoConversion"
-    DocumentConversion = "DocumentConversion"
+    TextGeneration = "TextGeneration"  # Text generation feature
+    StructuredTextGeneration = (
+        "StructuredTextGeneration"  # Structured text generation feature
+    )
+    ImageGeneration = "ImageGeneration"  # Image generation feature
+    AudioGeneration = "AudioGeneration"  # Audio generation feature
+    VideoGeneration = "VideoGeneration"  # Video generation feature
+    Thinking = "Thinking"  # Thinking feature, used for models that can think
+    TextEmbeddings = "TextEmbeddings"  # Text embeddings feature
+    ImageEmbeddings = "ImageEmbeddings"  # Image embeddings feature
+    AudioEmbeddings = "AudioEmbeddings"  # Audio embeddings feature
+    VideoEmbeddings = "VideoEmbeddings"  # Video embeddings feature
+    DocumentEmbeddings = "DocumentEmbeddings"  # Document embeddings feature
+    Image = (
+        "Image"  # Model supports images _natively_ (not just as a conversion feature)
+    )
+    Audio = (
+        "Audio"  # Model supports audio _natively_ (not just as a conversion feature)
+    )
+    Video = (
+        "Video"  # Model supports video _natively_ (not just as a conversion feature)
+    )
+    Document = "Documents"  # Model supports (some) documents _natively_ (not just as a conversion feature)
+    Tools = "Tools"  # Model supports tools
+    AudioTranscription = "AudioTranscription"  # Model supports audio transcription
+    ImageConversion = "ImageConversion"  # Model supports image media conversion to simpler media, e.g to text
+    AudioConversion = "AudioConversion"  # Model supports audio conversion to simpler media, e.g to text
+    VideoConversion = "VideoConversion"  # Model supports video conversion to simpler media, e.g to text, audio and/or images
+    DocumentConversion = "DocumentConversion"  # Model supports document conversion to simpler media, e.g to text and/or images
 
     # Method that takes a single strings, a list of strings, a single ModelFeatures enum or a list of ModelFeatures and normalises to a list of enums of this class, finds the right enums independently of case:
     @staticmethod
@@ -101,7 +109,7 @@ class ModelFeatures(Enum):
         return normalised_features
 
     @staticmethod
-    def get_supported_media_classes(
+    def get_supported_media_types(
         features: Union[str, List[str], "ModelFeatures", List["ModelFeatures"]],
     ) -> Set[Type["MediaBase"]]:
         """
@@ -119,14 +127,18 @@ class ModelFeatures(Enum):
             List of MediaBase-derived classes representing media types the model can process.
         """
 
+        # Normalize the input features to a list of ModelFeatures enums
+        features = ModelFeatures.normalise(features)
+
         # Map ModelFeatures to actual MediaBase-derived classes
+        from litemind.media.media_base import MediaBase
         from litemind.media.types.media_audio import Audio
         from litemind.media.types.media_document import Document
         from litemind.media.types.media_image import Image
         from litemind.media.types.media_text import Text
         from litemind.media.types.media_video import Video
 
-        media_type_set: Set[Type["MediaBase"]] = set()
+        media_type_set: Set[Type[MediaBase]] = set()
 
         if ModelFeatures.TextGeneration in features:
             media_type_set.add(Text)
@@ -144,6 +156,46 @@ class ModelFeatures(Enum):
             media_type_set.add(Document)
 
         return media_type_set
+
+    @staticmethod
+    def get_features_needed_for_media_types(
+        media_types: Set[Type["MediaBase"]],
+    ) -> Set["ModelFeatures"]:
+        """
+        Get the set of ModelFeatures needed to process the given media types.
+        Importanyt note: This does not return Conversion features, only features that reflect native model capabilities.
+
+        Parameters
+        ----------
+        media_types: List[Type[MediaBase]]
+            The media types to analyze.
+
+        Returns
+        -------
+        Set[ModelFeatures]
+            Set of ModelFeatures needed for the given media types.
+        """
+        features_needed = set()
+
+        for media_type in media_types:
+            from litemind.media.types.media_audio import Audio
+            from litemind.media.types.media_document import Document
+            from litemind.media.types.media_image import Image
+            from litemind.media.types.media_text import Text
+            from litemind.media.types.media_video import Video
+
+            if issubclass(media_type, Text):
+                features_needed.add(ModelFeatures.TextGeneration)
+            elif issubclass(media_type, Image):
+                features_needed.add(ModelFeatures.Image)
+            elif issubclass(media_type, Audio):
+                features_needed.add(ModelFeatures.Audio)
+            elif issubclass(media_type, Video):
+                features_needed.add(ModelFeatures.Video)
+            elif issubclass(media_type, Document):
+                features_needed.add(ModelFeatures.Document)
+
+        return features_needed
 
     def __str__(self):
         return self.name

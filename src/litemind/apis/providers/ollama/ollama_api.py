@@ -9,6 +9,7 @@ from litemind.apis.base_api import ModelFeatures
 from litemind.apis.callbacks.callback_manager import CallbackManager
 from litemind.apis.default_api import DefaultApi
 from litemind.apis.exceptions import APIError, APINotAvailableError
+from litemind.apis.feature_scanner import get_default_model_feature_scanner
 from litemind.apis.providers.ollama.utils.aggregate_chat_responses import (
     aggregate_chat_responses,
 )
@@ -46,6 +47,8 @@ class OllamaApi(DefaultApi):
         self,
         host: Optional[str] = None,
         headers: Optional[Dict[str, str]] = None,
+        allow_media_conversions: bool = True,
+        allow_media_conversions_with_models: bool = True,
         callback_manager: Optional[CallbackManager] = None,
         **kwargs,
     ):
@@ -58,16 +61,28 @@ class OllamaApi(DefaultApi):
             The host for the Ollama client (default is `http://localhost:11434`).
         headers:
             Additional headers to pass to the client.
+        allow_media_conversions: bool
+            If True, the API will allow media conversions using the default media converter.
+        allow_media_conversions_with_models: bool
+            If True, the API will allow media conversions using models that support the required features in addition to the default media converter.
+            To use this the allow_media_conversions parameter must be True.
         kwargs:
             Additional options passed to the `Client(...)`.
         """
 
-        super().__init__(callback_manager=callback_manager)
+        super().__init__(
+            allow_media_conversions=allow_media_conversions,
+            allow_media_conversions_with_models=allow_media_conversions_with_models,
+            callback_manager=callback_manager,
+        )
 
         try:
-            from ollama import Client
+            # Initialize the feature scanner:
+            self.feature_scanner = get_default_model_feature_scanner()
 
             # Connect to Ollama server:
+            from ollama import Client
+
             self.client = Client(host=host, headers=headers, **kwargs)
 
             # Save some fields:
@@ -103,6 +118,7 @@ class OllamaApi(DefaultApi):
         non_features: Optional[
             Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
         ] = None,
+        media_types: Optional[Sequence[Type[MediaBase]]] = None,
     ) -> List[str]:
 
         try:
@@ -119,7 +135,10 @@ class OllamaApi(DefaultApi):
             # Filter the models based on the features:
             if features:
                 model_list = self._filter_models(
-                    model_list, features=features, non_features=non_features
+                    model_list,
+                    features=features,
+                    non_features=non_features,
+                    media_types=media_types,
                 )
 
             # Call _callbacks:
@@ -137,6 +156,7 @@ class OllamaApi(DefaultApi):
         non_features: Optional[
             Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
         ] = None,
+        media_types: Optional[Sequence[Type[MediaBase]]] = None,
         exclusion_filters: Optional[Union[str, List[str]]] = None,
     ) -> Optional[str]:
 
@@ -152,6 +172,7 @@ class OllamaApi(DefaultApi):
             model_list,
             features=features,
             non_features=non_features,
+            media_types=media_types,
             exclusion_filters=exclusion_filters,
         )
 
@@ -169,6 +190,7 @@ class OllamaApi(DefaultApi):
     def has_model_support_for(
         self,
         features: Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]],
+        media_types: Optional[Sequence[Type[MediaBase]]] = None,
         model_name: Optional[str] = None,
     ) -> bool:
 
@@ -177,121 +199,34 @@ class OllamaApi(DefaultApi):
 
         # Get the best model if not provided:
         if model_name is None:
-            model_name = self.get_best_model(features=features)
+            model_name = self.get_best_model(features=features, media_types=media_types)
 
         # If model_name is None then we return False:
         if model_name is None:
             return False
 
         # We check if the superclass says that the model supports the features:
-        if super().has_model_support_for(features=features, model_name=model_name):
+        if super().has_model_support_for(
+            features=features, media_types=media_types, model_name=model_name
+        ):
             return True
 
-        # Check that the model has all the required features:
         for feature in features:
-
-            if feature == ModelFeatures.TextGeneration:
-                if not self._has_text_generation_support(model_name):
-                    return False
-
-            elif feature == ModelFeatures.Thinking:
-                if not self._has_thinking_support(model_name):
-                    return False
-
-            elif feature == ModelFeatures.TextEmbeddings:
-                if not self._is_ollama_model(model_name):
-                    # All Ollama models support text generation and contain ':'
-                    return False
-
-            elif feature == ModelFeatures.ImageEmbeddings:
-                if not self.has_model_support_for(
-                    [ModelFeatures.Image, ModelFeatures.TextEmbeddings], model_name
-                ):
-                    return False
-
-            elif feature == ModelFeatures.AudioEmbeddings:
-                if not self.has_model_support_for(
-                    [ModelFeatures.Audio, ModelFeatures.TextEmbeddings], model_name
-                ):
-                    return False
-
-            elif feature == ModelFeatures.VideoEmbeddings:
-                if not self.has_model_support_for(
-                    [ModelFeatures.Video, ModelFeatures.TextEmbeddings], model_name
-                ):
-                    return False
-
-            elif feature == ModelFeatures.Image:
-                if not self._has_image_support(model_name):
-                    return False
-
-            elif feature == ModelFeatures.Audio:
-                if not self._has_audio_support(model_name):
-                    return False
-
-            elif feature == ModelFeatures.Video:
-                if not self._has_image_support(model_name):
-                    return False
-
-            elif feature == ModelFeatures.Document:
-                if not self._has_document_support(model_name):
-                    return False
-
-            elif feature == ModelFeatures.Tools:
-                if not self._has_tool_support(model_name):
-                    return False
-
-            elif feature == ModelFeatures.StructuredTextGeneration:
-                if not self._has_structured_output_support(model_name):
-                    return False
-
-            else:
-                if not super().has_model_support_for(feature, model_name):
-                    return False
+            if not self.feature_scanner.supports_feature(
+                self.__class__, model_name, feature
+            ):
+                # If the model does not support the feature, we return False:
+                return False
 
         return True
 
     def _is_ollama_model(self, model_name: str) -> bool:
         return ":" in model_name
 
-    def _has_text_generation_support(self, model_name: str) -> bool:
-        if not self._is_ollama_model(model_name):
-            # All Ollama models support text generation and contain ':'
-            return False
-        return True
-
     def _has_thinking_support(self, model_name: str) -> bool:
         if model_name.endswith("-thinking"):
             return True
         return False
-
-    @lru_cache
-    def _has_image_support(self, model_name: str) -> bool:
-
-        if not self._is_ollama_model(model_name):
-            # All Ollama models support text generation and contain ':'
-            return False
-
-        if "vision" in model_name:
-            return True
-
-        try:
-            model_details_families = self.client.show(model_name).details.families
-            return model_details_families and (
-                "clip" in model_details_families or "mllama" in model_details_families
-            )
-        except:
-            return False
-
-    def _has_audio_support(self, model_name: Optional[str] = None) -> bool:
-
-        # No Ollama models currently support Audio:
-        return False
-
-    def _has_document_support(self, model_name: str) -> bool:
-        return self.has_model_support_for(
-            [ModelFeatures.Image, ModelFeatures.TextGeneration], model_name
-        ) and self.has_model_support_for(ModelFeatures.VideoConversion)
 
     @lru_cache
     def _has_tool_support(self, model_name: str) -> bool:
@@ -304,13 +239,6 @@ class OllamaApi(DefaultApi):
             return ".Tools" in model_template
         except:
             return False
-
-    def _has_structured_output_support(self, model_name: str) -> bool:
-        if not self._is_ollama_model(model_name):
-            # All Ollama models support text generation and contain ':'
-            return False
-
-        return True
 
     @lru_cache
     def max_num_input_tokens(self, model_name: Optional[str] = None) -> int:
@@ -389,28 +317,26 @@ class OllamaApi(DefaultApi):
 
         # Set default model if not provided
         if model_name is None:
-            # We Require the minimum features for text generation:
-            features = [ModelFeatures.TextGeneration]
-            # If tools are provided, we also require tools:
-            if toolset:
-                features.append(ModelFeatures.Tools)
-            # If the messages contain media, we require the appropriate features:
-            # TODO: implement
-            model_name = self.get_best_model(features=features)
-
-            if model_name is None:
-                raise APIError(f"No suitable model with features: {features}")
+            model_name = self._get_best_model_for_text_generation(
+                messages, toolset if use_tools else None, response_format
+            )
 
         # Initialize the allowed media types:
         allowed_media_types: Set[Type[MediaBase]] = {Text}
 
         # Check if the model supports images:
-        if self._has_image_support(model_name=model_name):
+        # TODO: add way to force image support so that the scanner can figure out if models really suport images
+        if self.has_model_support_for(
+            model_name=model_name, features=ModelFeatures.Image
+        ):
             allowed_media_types.add(Image)
 
         # Preprocess the messages:
         preprocessed_messages = self._preprocess_messages(
-            messages=messages, allowed_media_types=allowed_media_types
+            messages=messages,
+            allowed_media_types=self._get_allowed_media_types_for_text_generation(
+                model_name=model_name
+            ),
         )
 
         # If this is a thinking model then we need to add a system message about thinking:

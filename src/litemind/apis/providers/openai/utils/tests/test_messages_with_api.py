@@ -16,7 +16,6 @@ __url2 = "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsi
 
 
 def test_openai_api_text_only_message():
-
     # Check if OpenAI API key is available:
     if not check_openai_api_availability():
         # Skip the test if the API key is not available:
@@ -45,7 +44,6 @@ def test_openai_api_text_only_message():
 
 
 def test_openai_api_text_and_image_message():
-
     # Check if OpenAI API key is available:
     if not check_openai_api_availability():
         # Skip the test if the API key is not available:
@@ -77,7 +75,6 @@ def test_openai_api_text_and_image_message():
 
 
 def test_openai_api_multiple_images():
-
     # Check if OpenAI API key is available:
     if not check_openai_api_availability():
         # Skip the test if the API key is not available:
@@ -108,7 +105,6 @@ def test_openai_api_multiple_images():
 
 
 def test_openai_api_multiple_messages():
-
     # Check if OpenAI API key is available:
     if not check_openai_api_availability():
         # Skip the test if the API key is not available:

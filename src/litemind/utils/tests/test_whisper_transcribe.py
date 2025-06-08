@@ -10,7 +10,6 @@ from litemind.utils.whisper_transcribe_audio import (
 
 
 def test_transcribe_audio():
-
     # If local whisper is not available, skip the test:
     if not is_local_whisper_available():
         pytest.skip("Local Whisper is not available. Skipping test.")

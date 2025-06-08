@@ -5,6 +5,8 @@ import pytest
 from litemind import API_IMPLEMENTATIONS
 from litemind.agent.messages.message import Message
 from litemind.apis.base_api import ModelFeatures
+from litemind.media.types.media_document import Document
+from litemind.media.types.media_image import Image
 from litemind.ressources.media_resources import MediaResources
 
 
@@ -28,24 +30,18 @@ class TestBaseApiImplementationsDocuments(MediaResources):
         api_instance = api_class()
 
         # Get the best model for text generation:
-        default_model_name = api_instance.get_best_model(
-            [ModelFeatures.TextGeneration, ModelFeatures.Document, ModelFeatures.Image]
+        best_model_name = api_instance.get_best_model(
+            features=[ModelFeatures.TextGeneration],
+            media_types=[Image, Document],
         )
 
         # Skip tests if the model does not support text generation:
-        if not default_model_name or not api_instance.has_model_support_for(
-            model_name=default_model_name,
-            features=[
-                ModelFeatures.TextGeneration,
-                ModelFeatures.Document,
-                ModelFeatures.Image,
-            ],
-        ):
+        if best_model_name is None:
             pytest.skip(
                 f"{api_class.__name__} does not support documents. Skipping documents tests."
             )
 
-        print("\n" + default_model_name)
+        print("\n" + best_model_name)
 
         messages = []
 
@@ -68,7 +64,7 @@ class TestBaseApiImplementationsDocuments(MediaResources):
 
         # Run agent:
         response = api_instance.generate_text(
-            messages=messages, model_name=default_model_name
+            messages=messages, model_name=best_model_name
         )
 
         print("\n" + str(response))
@@ -108,49 +104,37 @@ class TestBaseApiImplementationsDocuments(MediaResources):
         api_instance = api_class()
 
         # Get the best model for text generation:
-        default_model_name = api_instance.get_best_model(
-            [ModelFeatures.TextGeneration, ModelFeatures.Document, ModelFeatures.Image]
+        best_model_name = api_instance.get_best_model(
+            features=[ModelFeatures.TextGeneration],
+            media_types=[Image, Document],
         )
 
         # Skip tests if the model does not support text generation:
-        if not default_model_name or not api_instance.has_model_support_for(
-            model_name=default_model_name,
-            features=[
-                ModelFeatures.TextGeneration,
-                ModelFeatures.Document,
-                ModelFeatures.Image,
-            ],
-        ):
+        if best_model_name is None:
             pytest.skip(
                 f"{api_class.__name__} does not support documents. Skipping documents tests."
             )
 
-        print("\n" + default_model_name)
+        print("\n" + best_model_name)
 
         messages = []
 
         # System message:
         system_message = Message(role="system")
-        system_message.append_text(
-            "You are a highly qualified recruiter in the biotech sector."
-        )
+        system_message.append_text("You are a very very helpfull assistant.")
         messages.append(system_message)
 
         # User message:
         user_message = Message(role="user")
-        user_message.append_text(
-            "Can you write a review for the following candidate? Please provide a well structured and detailed report of the candidate's profile, including their strengths and weaknesses. Please also provide a list of all documents provided."
-        )
-        doc1_path = self.get_local_test_document_uri("job_ad.pdf")
-        doc2_path = self.get_local_test_document_uri("maya_takahashi_cv.docx")
-        user_message.append_document(doc1_path)
-        user_message.append_document(doc2_path)
+        user_message.append_text("Please summarise this document.")
+        doc_path = self.get_local_test_document_uri("cartographers_of_life.docx")
+        user_message.append_document(doc_path)
 
         messages.append(user_message)
 
         # Run agent:
         response = api_instance.generate_text(
-            messages=messages, model_name=default_model_name
+            messages=messages, model_name=best_model_name
         )
 
         print("\n" + str(response))
@@ -190,24 +174,18 @@ class TestBaseApiImplementationsDocuments(MediaResources):
         api_instance = api_class()
 
         # Get the best model for text generation:
-        default_model_name = api_instance.get_best_model(
-            [ModelFeatures.TextGeneration, ModelFeatures.Document, ModelFeatures.Image]
+        best_model_name = api_instance.get_best_model(
+            features=[ModelFeatures.TextGeneration],
+            media_types=[Image, Document],
         )
 
         # Skip tests if the model does not support text generation:
-        if not default_model_name or not api_instance.has_model_support_for(
-            model_name=default_model_name,
-            features=[
-                ModelFeatures.TextGeneration,
-                ModelFeatures.Document,
-                ModelFeatures.Image,
-            ],
-        ):
+        if best_model_name is None:
             pytest.skip(
                 f"{api_class.__name__} does not support documents. Skipping documents tests."
             )
 
-        print("\n" + default_model_name)
+        print("\n" + best_model_name)
 
         messages = []
 
@@ -229,7 +207,7 @@ class TestBaseApiImplementationsDocuments(MediaResources):
 
         # Run agent:
         response = api_instance.generate_text(
-            messages=messages, model_name=default_model_name
+            messages=messages, model_name=best_model_name
         )
 
         print("\n" + str(response))
@@ -250,17 +228,15 @@ class TestBaseApiImplementationsDocuments(MediaResources):
         api_instance = api_class()
 
         # Get the best model for text generation:
-        default_model_name = api_instance.get_best_model(ModelFeatures.TextGeneration)
+        best_model_name = api_instance.get_best_model(ModelFeatures.TextGeneration)
 
         # Skip tests if the model does not support text generation:
-        if not default_model_name or not api_instance.has_model_support_for(
-            model_name=default_model_name, features=ModelFeatures.TextGeneration
-        ):
+        if best_model_name is None:
             pytest.skip(
                 f"{api_class.__name__} does not support text generation. Skipping tests."
             )
 
-        print("\n" + default_model_name)
+        print("\n" + best_model_name)
 
         messages = []
 
@@ -292,7 +268,7 @@ class TestBaseApiImplementationsDocuments(MediaResources):
 
         # Run agent:
         response = api_instance.generate_text(
-            messages=messages, model_name=default_model_name
+            messages=messages, model_name=best_model_name
         )
 
         print("\n" + str(response))
@@ -319,15 +295,15 @@ class TestBaseApiImplementationsDocuments(MediaResources):
         api_instance = api_class()
 
         # Get the best model for text generation:
-        default_model_name = api_instance.get_best_model(ModelFeatures.TextGeneration)
+        best_model_name = api_instance.get_best_model(ModelFeatures.TextGeneration)
 
         # Skip tests if the model does not support text generation:
-        if default_model_name is None:
+        if best_model_name is None:
             pytest.skip(
                 f"{api_class.__name__} does not support text generation. Skipping tests."
             )
 
-        print("\n" + default_model_name)
+        print("\n" + best_model_name)
 
         messages = []
 
@@ -361,7 +337,7 @@ class TestBaseApiImplementationsDocuments(MediaResources):
 
         # Run agent:
         response = api_instance.generate_text(
-            messages=messages, model_name=default_model_name
+            messages=messages, model_name=best_model_name
         )
 
         print("\n" + str(response))
@@ -382,15 +358,15 @@ class TestBaseApiImplementationsDocuments(MediaResources):
         api_instance = api_class()
 
         # Get the best model for text generation:
-        default_model_name = api_instance.get_best_model(ModelFeatures.TextGeneration)
+        best_model_name = api_instance.get_best_model(ModelFeatures.TextGeneration)
 
         # Skip tests if the model does not support text generation:
-        if default_model_name is None:
+        if best_model_name is None:
             pytest.skip(
                 f"{api_class.__name__} does not support text generation. Skipping tests."
             )
 
-        print("\n" + default_model_name)
+        print("\n" + best_model_name)
 
         messages = []
 
@@ -412,7 +388,7 @@ class TestBaseApiImplementationsDocuments(MediaResources):
 
         # Run agent:
         response = api_instance.generate_text(
-            messages=messages, model_name=default_model_name
+            messages=messages, model_name=best_model_name
         )
 
         print("\n" + str(response))
@@ -440,17 +416,18 @@ class TestBaseApiImplementationsDocuments(MediaResources):
         api_instance = api_class()
 
         # Get the best model for text generation:
-        default_model_name = api_instance.get_best_model(
-            [ModelFeatures.TextGeneration, ModelFeatures.Document, ModelFeatures.Image]
+        best_model_name = api_instance.get_best_model(
+            features=[ModelFeatures.TextGeneration],
+            media_types=[Image, Document],
         )
 
         # Skip tests if the model does not support text generation:
-        if default_model_name is None:
+        if best_model_name is None:
             pytest.skip(
                 f"{api_class.__name__} does not support text generation. Skipping tests."
             )
 
-        print("\n" + default_model_name)
+        print("\n" + best_model_name)
 
         messages = []
 
@@ -462,19 +439,19 @@ class TestBaseApiImplementationsDocuments(MediaResources):
         messages.append(system_message)
 
         # _get_local_test_archive_uri
-        archive_path = self.get_local_test_archive_uri("alexander.zip")
+        archive_uri = self.get_local_test_archive_uri("alexander.zip")
 
         # User message:
         user_message = Message(role="user")
         user_message.append_text(
             "Make a one paragraph summary of the provided material, plus a list of all documents provided."
         )
-        user_message.append_archive(archive_path)
+        user_message.append_archive(archive_uri)
         messages.append(user_message)
 
         # Run agent:
         response = api_instance.generate_text(
-            messages=messages, model_name=default_model_name
+            messages=messages, model_name=best_model_name
         )
 
         print("\n" + str(response))
@@ -501,17 +478,18 @@ class TestBaseApiImplementationsDocuments(MediaResources):
         api_instance = api_class()
 
         # Get the best model for text generation:
-        default_model_name = api_instance.get_best_model(
-            [ModelFeatures.TextGeneration, ModelFeatures.Document, ModelFeatures.Image]
+        best_model_name = api_instance.get_best_model(
+            [ModelFeatures.TextGeneration],
+            media_types=[Image, Document],
         )
 
         # Skip tests if the model does not support text generation:
-        if default_model_name is None:
+        if best_model_name is None:
             pytest.skip(
                 f"{api_class.__name__} does not support text generation. Skipping tests."
             )
 
-        print("\n" + default_model_name)
+        print("\n" + best_model_name)
 
         messages = []
 
@@ -535,7 +513,7 @@ class TestBaseApiImplementationsDocuments(MediaResources):
 
         # Run agent:
         response = api_instance.generate_text(
-            messages=messages, model_name=default_model_name
+            messages=messages, model_name=best_model_name
         )
 
         print("\n" + str(response))

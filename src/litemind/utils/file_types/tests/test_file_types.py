@@ -16,7 +16,7 @@ import zipfile
 import pytest
 
 from litemind.ressources.media_resources import MediaResources
-from litemind.utils.file_types import classify, is_text_file, probe
+from litemind.utils.file_types.file_types import classify, is_text_file, probe
 from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_path
 
 
@@ -90,9 +90,9 @@ def test_png_file_is_detected(tmp_path):
 
 
 def test_binary_file_is_detected(tmp_path):
-    p = tmp_path / "raw.bin"
+    p = tmp_path / "raw.xzyst"
     # Null-bytes will trigger the binary heuristic
-    f = _write_bytes(p, b"\x00\x01\x02\x03RandomBinary\x00\xff")
+    f = _write_bytes(p, b"\xff\xfe\xfd\xfc\x00\x01\x02\x03RandomBinary\x00\xff")
     meta = probe(f)
     assert meta["is_text"] is False
     assert classify(f) == "binary"

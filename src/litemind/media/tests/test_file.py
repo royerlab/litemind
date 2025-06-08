@@ -136,7 +136,7 @@ class TestFile:
             assert "Description of file:" in text_content
             assert f"- Absolute Path: {os.path.abspath(temp_path)}" in text_content
             assert "- File Size: 0 bytes" in text_content
-            assert "Entire file content (0 bytes):" in text_content
+            assert "File is empty." in text_content
         finally:
             if os.path.exists(temp_path):
                 os.remove(temp_path)

@@ -1,5 +1,5 @@
 import os
-from typing import List, Optional, Sequence, Union
+from typing import List, Optional, Sequence, Set, Type, Union
 
 from PIL import Image as PilImage
 from pydantic import BaseModel
@@ -10,6 +10,7 @@ from litemind.apis.base_api import ModelFeatures
 from litemind.apis.callbacks.callback_manager import CallbackManager
 from litemind.apis.default_api import DefaultApi
 from litemind.apis.exceptions import APIError, APINotAvailableError
+from litemind.apis.feature_scanner import get_default_model_feature_scanner
 from litemind.apis.providers.google.utils.aggegate_chat_response import (
     aggregate_chat_response,
 )
@@ -26,11 +27,9 @@ from litemind.apis.providers.google.utils.process_response import (
 )
 from litemind.apis.providers.google.utils.response_to_object import response_to_object
 from litemind.apis.tests.test_callback_manager import callback_manager
+from litemind.media.media_base import MediaBase
 from litemind.media.types.media_action import Action
-from litemind.media.types.media_audio import Audio
-from litemind.media.types.media_image import Image
 from litemind.media.types.media_text import Text
-from litemind.media.types.media_video import Video
 from litemind.utils.json_to_object import json_to_object
 
 
@@ -54,6 +53,8 @@ class GeminiApi(DefaultApi):
     def __init__(
         self,
         api_key: Optional[str] = None,
+        allow_media_conversions: bool = True,
+        allow_media_conversions_with_models: bool = True,
         callback_manager: Optional[CallbackManager] = None,
         **kwargs,
     ):
@@ -64,11 +65,20 @@ class GeminiApi(DefaultApi):
         ----------
         api_key : Optional[str]
             The API key for Google GenAI. If not provided, reads from GOOGLE_API_KEY.
+        allow_media_conversions: bool
+            If True, the API will allow media conversions using the default media converter.
+        allow_media_conversions_with_models: bool
+            If True, the API will allow media conversions using models that support the required features in addition to the default media converter.
+            To use this the allow_media_conversions parameter must be True.
         kwargs : dict
             Additional parameters (unused here, but accepted for consistency).
         """
 
-        super().__init__(callback_manager=callback_manager)
+        super().__init__(
+            allow_media_conversions=allow_media_conversions,
+            allow_media_conversions_with_models=allow_media_conversions_with_models,
+            callback_manager=callback_manager,
+        )
 
         if api_key is None:
             api_key = os.environ.get("GOOGLE_GEMINI_API_KEY")
@@ -82,6 +92,9 @@ class GeminiApi(DefaultApi):
         self.kwargs = kwargs
 
         try:
+            # Initialize the feature scanner:
+            self.feature_scanner = get_default_model_feature_scanner()
+
             # google.generativeai references
             import google.generativeai as genai
 
@@ -122,6 +135,7 @@ class GeminiApi(DefaultApi):
         non_features: Optional[
             Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
         ] = None,
+        media_types: Optional[Set[Type[MediaBase]]] = None,
     ) -> List[str]:
 
         try:
@@ -141,7 +155,10 @@ class GeminiApi(DefaultApi):
             # Filter the models based on the features:
             if features:
                 model_list = self._filter_models(
-                    model_list, features=features, non_features=non_features
+                    model_list,
+                    features=features,
+                    non_features=non_features,
+                    media_types=media_types,
                 )
 
             # Call _callbacks:
@@ -160,6 +177,7 @@ class GeminiApi(DefaultApi):
         non_features: Optional[
             Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
         ] = None,
+        media_types: Optional[Sequence[Type[MediaBase]]] = None,
         exclusion_filters: Optional[Union[str, List[str]]] = None,
     ) -> Optional[str]:
 
@@ -175,6 +193,7 @@ class GeminiApi(DefaultApi):
             model_list,
             features=features,
             non_features=non_features,
+            media_types=media_types,
             exclusion_filters=exclusion_filters,
         )
 
@@ -192,6 +211,7 @@ class GeminiApi(DefaultApi):
     def has_model_support_for(
         self,
         features: Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]],
+        media_types: Optional[Sequence[Type[MediaBase]]] = None,
         model_name: Optional[str] = None,
     ) -> bool:
 
@@ -200,83 +220,25 @@ class GeminiApi(DefaultApi):
 
         # Get the best model if not provided:
         if model_name is None:
-            model_name = self.get_best_model(features=features)
+            model_name = self.get_best_model(features=features, media_types=media_types)
 
         # If model_name is None then we return False:
         if model_name is None:
             return False
 
         # We check if the superclass says that the model supports the features:
-        if super().has_model_support_for(features=features, model_name=model_name):
+        if super().has_model_support_for(
+            features=features, media_types=media_types, model_name=model_name
+        ):
             return True
 
-        # Check that the model has all the required features:
         for feature in features:
+            if not self.feature_scanner.supports_feature(
+                self.__class__, model_name, feature
+            ):
+                # If the model does not support the feature, we return False:
+                return False
 
-            if feature == ModelFeatures.TextGeneration:
-                if not self._has_text_generation_support(model_name):
-                    return False
-
-            elif feature == ModelFeatures.ImageGeneration:
-                if not self._has_image_gen_support(model_name):
-                    return False
-
-            elif feature == ModelFeatures.Thinking:
-                if not self._has_thinking_support(model_name):
-                    return False
-
-            elif feature == ModelFeatures.TextEmbeddings:
-                if "embedding" not in model_name.lower():
-                    return False
-
-            elif feature == ModelFeatures.ImageEmbeddings:
-                if "text-embedding" not in model_name.lower():
-                    return False
-
-            elif feature == ModelFeatures.AudioEmbeddings:
-                if "text-embedding" not in model_name.lower():
-                    return False
-
-            elif feature == ModelFeatures.VideoEmbeddings:
-                if "text-embedding" not in model_name.lower():
-                    return False
-
-            elif feature == ModelFeatures.Image:
-                if not self._has_image_support(model_name):
-                    return False
-
-            elif feature == ModelFeatures.Audio:
-                if not self._has_audio_support(model_name):
-                    return False
-
-            elif feature == ModelFeatures.Video:
-                if not self._has_image_support(model_name):
-                    return False
-
-            elif feature == ModelFeatures.Document:
-                if not self._has_document_support(model_name):
-                    return False
-
-            elif feature == ModelFeatures.Tools:
-                if not self._has_tool_support(model_name):
-                    return False
-
-            elif feature == ModelFeatures.StructuredTextGeneration:
-                if not self._has_structured_output_support(model_name):
-                    return False
-
-            else:
-                if not super().has_model_support_for(feature, model_name):
-                    return False
-
-        return True
-
-    def _has_text_generation_support(self, model_name: str) -> bool:
-        if (
-            "models/gemini" not in model_name.lower()
-            or "embedding" in model_name.lower()
-        ):
-            return False
         return True
 
     def _has_thinking_support(self, model_name: str) -> bool:
@@ -286,74 +248,6 @@ class GeminiApi(DefaultApi):
         ):
             return False
         return True
-
-    def _has_image_gen_support(self, model_name: str) -> bool:
-        # FIXME: We need to figure out how to call the video generation API, not working right now.
-        return False
-        # if 'imagen' not in model_name.lower():
-        #     return False
-
-    def _has_image_support(self, model_name: Optional[str] = None) -> bool:
-
-        if not model_name:
-            model_name = self.get_best_model()
-        return "gemini-1.5" in model_name.lower() or "gemini-2.0" in model_name.lower()
-
-    def _has_audio_support(self, model_name: Optional[str] = None) -> bool:
-
-        if model_name is None:
-            model_name = self.get_best_model()
-        # Current assumption: Gemini models support audio if they are multimodal:
-        return self._has_image_support(model_name=model_name)
-
-    def _has_video_support(self, model_name: Optional[str] = None) -> bool:
-
-        if model_name is None:
-            model_name = self.get_best_model()
-        # Current assumption: Gemini models support video if they are multimodal:
-        return self._has_image_support(model_name) and "thinking" not in model_name
-
-    def _has_document_support(self, model_name: Optional[str] = None) -> bool:
-        return self.has_model_support_for(
-            [ModelFeatures.Image, ModelFeatures.TextGeneration], model_name
-        ) and self.has_model_support_for(ModelFeatures.DocumentConversion)
-
-    def _has_tool_support(self, model_name: Optional[str] = None) -> bool:
-
-        if not model_name:
-            model_name = self.get_best_model()
-
-        model_name = model_name.lower()
-
-        # Experimental models are tricky and typically don't support tools:
-        if "exp" in model_name:
-            return False
-
-        # Check for specific models that support tools:
-        return (
-            "gemini-1.5-flash" in model_name
-            or "gemini-1.5-pro" in model_name
-            or "gemini-1.0-pro" in model_name
-            or "gemini-2.0" in model_name
-        )
-
-    def _has_structured_output_support(self, model_name: Optional[str] = None) -> bool:
-        if not model_name:
-            model_name = self.get_best_model()
-
-        model_name = model_name.lower()
-
-        # Experimental models are tricky and typically don't support structured output:
-        if "exp" in model_name:
-            return False
-
-        # Check for specific models that support structured output:
-        return (
-            "gemini-1.5-flash" in model_name
-            or "gemini-1.5-pro" in model_name
-            or "gemini-1.0-pro" in model_name
-            or "gemini-2.0" in model_name
-        )
 
     def max_num_input_tokens(self, model_name: Optional[str] = None) -> int:
 
@@ -432,17 +326,9 @@ class GeminiApi(DefaultApi):
 
         # Set default model if not provided
         if model_name is None:
-            # We Require the minimum features for text generation:
-            features = [ModelFeatures.TextGeneration]
-            # If tools are provided, we also require tools:
-            if toolset:
-                features.append(ModelFeatures.Tools)
-            # If the messages contain media, we require the appropriate features:
-            # TODO: implement
-            model_name = self.get_best_model(features=features)
-
-            if model_name is None:
-                raise APIError(f"No suitable model with features: {features}")
+            model_name = self._get_best_model_for_text_generation(
+                messages, toolset if use_tools else None, response_format
+            )
 
         # Get system instruction from messages:
         system_instruction = ""
@@ -463,7 +349,9 @@ class GeminiApi(DefaultApi):
         # Convert user messages -> gemini format
         preprocessed_messages = self._preprocess_messages(
             messages=messages,
-            allowed_media_types={Text, Image, Audio, Video},
+            allowed_media_types=self._get_allowed_media_types_for_text_generation(
+                model_name=model_name
+            ),
         )
 
         # Get max num of output tokens for model if not provided:

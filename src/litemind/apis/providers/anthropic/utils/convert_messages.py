@@ -17,6 +17,7 @@ def convert_messages_for_anthropic(
     messages: List[Message],
     response_format: Optional[BaseModel] = None,
     cache_support: bool = True,
+    media_converter: Optional["MediaConverter"] = None,
 ) -> List["MessageParam"]:
     """
     Convert litemind Messages into Anthropic's MessageParam format:
@@ -110,28 +111,39 @@ def convert_messages_for_anthropic(
                     }
                 )
 
-            elif block.has_type(Document) and block.media.has_extension("pdf"):
+            elif block.has_type(Document):
 
                 # Get Document:
                 document: Document = block.media
 
-                # Get media type
-                media_type = document.get_media_type()
+                if document.has_extension("pdf"):
 
-                # get base64 data:
-                base64_data = document.to_base64_data()
+                    # Get media type
+                    media_type = document.get_media_type()
 
-                # Add the document to the content:
-                content.append(
-                    {
-                        "type": "document",
-                        "source": {
-                            "type": "base64",
-                            "media_type": media_type,
-                            "data": base64_data,
-                        },
-                    }
-                )
+                    # get base64 data:
+                    base64_data = document.to_base64_data()
+
+                    # Add the document to the content:
+                    content.append(
+                        {
+                            "type": "document",
+                            "source": {
+                                "type": "base64",
+                                "media_type": media_type,
+                                "data": base64_data,
+                            },
+                        }
+                    )
+                else:
+                    # Convert Document to text:
+                    markdown: str = document.to_markdown(
+                        media_converter=media_converter
+                    )
+
+                    # Add the document text to the content:
+                    content.append({"type": "text", "text": markdown})
+
             elif block.has_type(Action):
 
                 tool_action: ActionBase = block.get_content()
@@ -177,7 +189,9 @@ def convert_messages_for_anthropic(
                     )
 
             else:
-                raise ValueError(f"Unsupported block type: {type(block).__name__}")
+                raise ValueError(
+                    f"Unsupported block type: {type(block.media).__name__}"
+                )
 
         anthropic_messages.append(
             {

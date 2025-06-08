@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Optional, Sequence, Union
+from typing import List, Optional, Sequence, Type, Union
 
 from PIL.Image import Image
 from pydantic import BaseModel
@@ -8,6 +8,7 @@ from litemind.agent.messages.message import Message
 from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.callbacks.callback_manager import CallbackManager
 from litemind.apis.model_features import ModelFeatures
+from litemind.media.media_base import MediaBase
 from litemind.utils.random_projector import DeterministicRandomProjector
 
 
@@ -17,7 +18,7 @@ class BaseApi(ABC):
     """
 
     # constructor:
-    def __init__(self, callback_manager: Optional[CallbackManager] = None):
+    def __init__(self, callback_manager: Optional[CallbackManager] = None, **kwargs):
 
         if callback_manager is not None:
             self.callback_manager = callback_manager
@@ -55,9 +56,13 @@ class BaseApi(ABC):
         non_features: Optional[
             Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
         ] = None,
+        media_types: Optional[Sequence[Type[MediaBase]]] = None,
     ) -> List[str]:
         """
-        Get the list of models available that satisfy a given set of included and excluded features.
+        Get the list of models available that satisfy a set of capability requirements:
+        - The model must support the given features.
+        - The model must not support any of the non-features.
+        - The model must support the given media types.
 
         Parameters
         ----------
@@ -65,6 +70,8 @@ class BaseApi(ABC):
             The feature(s) to filter on.
         non_features: Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
             The feature(s) to exclude from the list.
+        media_types: Optional[Sequence[Type[MediaBase]]]
+            The media types (e.g. Text, Image, Audio, Video, Document) that the model must support.
 
         Returns
         -------
@@ -83,10 +90,14 @@ class BaseApi(ABC):
         non_features: Optional[
             Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
         ] = None,
+        media_types: Optional[Sequence[Type[MediaBase]]] = None,
         exclusion_filters: Optional[List[str]] = None,
     ) -> Optional[str]:
         """
-        Get the name of the best possible model that satisfies a set of capability requirements.
+        Get the name of the best possible model that satisfies a set of capability requirements:
+        - The model must support the given features.
+        - The model must not support any of the non-features.
+        - The model must support the given media types.
 
         Parameters
         ----------
@@ -94,6 +105,9 @@ class BaseApi(ABC):
             List of features to filter on.
         non_features: Sequence[ModelFeatures], or ModelFeatures, or str, or List[str]
             List of features to exclude from the list.
+        media_types: Optional[Sequence[Type[MediaBase]]] = None,
+            List of media types (Text, Image", Audio, Video, Document) that the model must support.
+            For example, requiring Audio means requiring either ModelFeatures.Audio or ModelFeatures.AudioConversion.
         exclusion_filters: Optional[List[str]]
             List of strings that if found in the model name exclude it.
 
@@ -111,16 +125,29 @@ class BaseApi(ABC):
     def has_model_support_for(
         self,
         features: Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]],
+        media_types: Optional[Sequence[Type[MediaBase]]] = None,
         model_name: Optional[str] = None,
     ) -> bool:
         """
-        Check if the given model supports the given features.
+        Check if the given model supports the given features and media types.
         If no model is provided the default, and ideally, best model, is used.
+        In that case this function returns True if any model supports the given features and media types.
+
+        Note: The difference between requesting a model that supports the feature Audio versus requesting a model
+        that can receive an Audio media is subtle but important: the AUdio feature means that the model supports
+        audio _natively_. However, litemind's auto media conversion feature can hadnle audio file that carry voice,
+        for example using audio transcription (e.g. via Whisper).
+        In that case, the model can carry Audio media in messages, but it does not support the Audio feature,
+        because it does not support audio natively... You can check if a model sup[ports audio _conversion_
+        by checking for the ModelFeatures.AudioConversion feature.
+
 
         Parameters
         ----------
         features: Sequence[ModelFeatures] or ModelFeatures, or str, or List[str]
             The feature(s) to check for.
+        media_types: Optional[Sequence[Type[MediaBase]]]
+            The media types (e.g. Text, Image, Audio, Video, Document) that the model must support.
         model_name: Optional[str]
             The name of the model to use.
 

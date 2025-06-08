@@ -1,10 +1,9 @@
 import tempfile
 from datetime import datetime  # Added import
-from typing import Type
 
 import pytest
 
-from litemind import OpenAIApi
+from litemind import AnthropicApi, GeminiApi, OpenAIApi
 from litemind.apis.base_api import BaseApi, ModelFeatures
 from litemind.apis.feature_scanner import ModelFeatureScanner
 
@@ -25,13 +24,15 @@ class DummyApi(BaseApi):
     def check_availability_and_credentials(self, api_key=None):
         return True
 
-    def list_models(self, features=None, non_features=None):
+    def list_models(self, features=None, non_features=None, media_type=None):
         return self._models
 
-    def get_best_model(self, features=None, non_features=None, exclusion_filters=None):
+    def get_best_model(
+        self, features=None, non_features=None, media_types=None, exclusion_filters=None
+    ):
         return self._models[0]
 
-    def has_model_support_for(self, features, model_name=None):
+    def has_model_support_for(self, features, media_types=None, model_name=None):
         if not model_name:
             model_name = self._models[0]
         features = ModelFeatures.normalise(features)
@@ -101,7 +102,7 @@ class DummyApi(BaseApi):
 
 @pytest.fixture
 def scanner():
-    return ModelFeatureScanner()
+    return ModelFeatureScanner(print_exception_stacktraces=True)
 
 
 def test_scan_apis_and_query(scanner):
@@ -297,50 +298,7 @@ def test_generate_markdown_report(scanner):
             assert "## API: DummyApi" in file_content
 
 
-def test_scan_api_check_specifics(scanner):
-
-    # Query supported features for a specific model
-    model_feature_map = {
-        "gpt-4o": [
-            ModelFeatures.TextGeneration,
-            ModelFeatures.Image,
-            ModelFeatures.Audio,
-            ModelFeatures.Video,
-            ModelFeatures.Document,
-            ModelFeatures.Tools,
-        ],
-    }
-
-    _check_features(scanner, model_feature_map)
-
-
-def _check_features(scanner, api: Type[BaseApi], model_feature_map):
-    for model_name, expected_features in model_feature_map.items():
-        # Check if the model is available
-        if model_name not in OpenAIApi.list_models():
-            pytest.skip(f"Model {model_name} not available in OpenAI API.")
-
-        # Scan OpenAIAPI:
-        scanner.scan_apis([api], model_names=[model_name])
-
-        # Should have OpenAIAPI in results
-        assert OpenAIApi in scanner.scan_results
-
-        # Should have all models
-        assert len(scanner.scan_results[api]) > 0
-
-        # Get supported features for the model:
-        features = scanner.get_supported_features(api, model_name)
-
-        # Check for expected features:
-        for feature in expected_features:
-            assert (
-                feature in features
-            ), f"Expected feature {feature} not found in {model_name} features: {features}"
-
-
-def test_scan_for_debug(scanner):
-
+def test_scan_openai_for_debug(scanner):
     # Query supported features for a specific model
     model_name = "o3-mini-high"
 
@@ -355,6 +313,48 @@ def test_scan_for_debug(scanner):
 
     # Get supported features for the model:
     features = scanner.get_supported_features(OpenAIApi, model_name)
+
+    # Check for specific features:
+    assert ModelFeatures.TextGeneration in features
+    assert ModelFeatures.Image not in features
+
+
+def test_scan_gemini_for_debug(scanner):
+    # Query supported features for a specific model
+    model_name = "models/gemini-1.5-pro"
+
+    # Scan GeminiApi:
+    scanner.scan_apis([GeminiApi], model_names=[model_name])
+
+    # Should have GeminiApi in results
+    assert GeminiApi in scanner.scan_results
+
+    # Should have all models
+    assert len(scanner.scan_results[GeminiApi]) > 0
+
+    # Get supported features for the model:
+    features = scanner.get_supported_features(GeminiApi, model_name)
+
+    # Check for specific features:
+    assert ModelFeatures.TextGeneration in features
+    assert ModelFeatures.Image in features
+
+
+def test_scan_claude_for_debug(scanner):
+    # Query supported features for a specific model
+    model_name = "claude-opus-4-20250514"
+
+    # Scan AnthropicApi:
+    scanner.scan_apis([AnthropicApi], model_names=[model_name])
+
+    # Should have AnthropicApi in results
+    assert AnthropicApi in scanner.scan_results
+
+    # Should have all models
+    assert len(scanner.scan_results[AnthropicApi]) > 0
+
+    # Get supported features for the model:
+    features = scanner.get_supported_features(AnthropicApi, model_name)
 
     # Check for specific features:
     assert ModelFeatures.TextGeneration in features

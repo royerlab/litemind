@@ -1,7 +1,7 @@
 import base64
 import os
 import tempfile
-from typing import List, Optional, Sequence, Union
+from typing import List, Optional, Sequence, Type, Union
 
 from openai import OpenAI
 from pydantic import BaseModel
@@ -31,10 +31,17 @@ from litemind.apis.providers.openai.utils.preprocess_messages import (
 from litemind.apis.providers.openai.utils.process_response import (
     process_response_from_openai,
 )
+from litemind.media.media_base import MediaBase
 from litemind.media.types.media_action import Action
 from litemind.media.types.media_image import Image
-from litemind.media.types.media_text import Text
 from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_path
+
+# ------------------------------------------------------------------ #
+#  Constants
+# ------------------------------------------------------------------ #
+_1M_TOKENS = 1_048_576  # 1 Mi tokens = 1024 × 1024
+_O_SERIES_CTX = 200_000
+_O_SERIES_OUT = 100_000
 
 
 class OpenAIApi(DefaultApi):
@@ -60,6 +67,8 @@ class OpenAIApi(DefaultApi):
         self,
         api_key: Optional[str] = None,
         base_url: Optional[str] = None,
+        allow_media_conversions: bool = True,
+        allow_media_conversions_with_models: bool = True,
         callback_manager: Optional[CallbackManager] = None,
         **kwargs,
     ):
@@ -71,13 +80,20 @@ class OpenAIApi(DefaultApi):
             The API key for OpenAI. If not provided, we'll read from OPENAI_API_KEY env var.
         base_url: Optional[str]
             The base URL for the OpenAI or compatible API.
-        use_whisper_for_audio_if_needed: bool
-            If True, use whisper to transcribe audio if the model does not support audio.
+        allow_media_conversions: bool
+            If True, the API will allow media conversions using the default media converter.
+        allow_media_conversions_with_models: bool
+            If True, the API will allow media conversions using models that support the required features in addition to the default media converter.
+            To use this the allow_media_conversions parameter must be True.
         kwargs: dict
             Additional options (e.g. `timeout=...`, `max_retries=...`) passed to `OpenAI(...)`.
         """
 
-        super().__init__(callback_manager=callback_manager)
+        super().__init__(
+            allow_media_conversions=allow_media_conversions,
+            allow_media_conversions_with_models=allow_media_conversions_with_models,
+            callback_manager=callback_manager,
+        )
 
         # get key from environmental variables:
         if api_key is None:
@@ -99,6 +115,9 @@ class OpenAIApi(DefaultApi):
         self.kwargs = kwargs
 
         try:
+            # Initialize the feature scanner:
+            self.feature_scanner = get_default_model_feature_scanner()
+
             # Create an OpenAI client:
             from openai import OpenAI
 
@@ -118,8 +137,6 @@ class OpenAIApi(DefaultApi):
 
             traceback.print_exc()
             raise APINotAvailableError(f"Error initializing OpenAI client: {e}")
-
-        self.feature_scanner = get_default_model_feature_scanner()
 
     def check_availability_and_credentials(self, api_key: Optional[str] = None) -> bool:
 
@@ -146,6 +163,7 @@ class OpenAIApi(DefaultApi):
         non_features: Optional[
             Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
         ] = None,
+        media_types: Optional[Sequence[Type[MediaBase]]] = None,
     ) -> List[str]:
 
         try:
@@ -162,7 +180,10 @@ class OpenAIApi(DefaultApi):
             # Filter the models based on the features:
             if features:
                 model_list = self._filter_models(
-                    model_list, features=features, non_features=non_features
+                    model_list,
+                    features=features,
+                    non_features=non_features,
+                    media_types=media_types,
                 )
 
             # Call _callbacks:
@@ -181,6 +202,7 @@ class OpenAIApi(DefaultApi):
         non_features: Optional[
             Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
         ] = None,
+        media_types: Optional[Sequence[Type[MediaBase]]] = None,
         exclusion_filters: Optional[Union[str, List[str]]] = None,
     ) -> Optional[str]:
 
@@ -196,6 +218,7 @@ class OpenAIApi(DefaultApi):
             model_list,
             features=features,
             non_features=non_features,
+            media_types=media_types,
             exclusion_filters=exclusion_filters,
         )
 
@@ -215,6 +238,7 @@ class OpenAIApi(DefaultApi):
     def has_model_support_for(
         self,
         features: Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]],
+        media_types: Optional[Sequence[Type[MediaBase]]] = None,
         model_name: Optional[str] = None,
     ) -> bool:
 
@@ -223,14 +247,16 @@ class OpenAIApi(DefaultApi):
 
         # Get the best model if not provided:
         if model_name is None:
-            model_name = self.get_best_model(features=features)
+            model_name = self.get_best_model(features=features, media_types=media_types)
 
         # If model_name is None then we return False:
         if model_name is None:
             return False
 
         # We check if the superclass says that the model supports the features:
-        if super().has_model_support_for(features=features, model_name=model_name):
+        if super().has_model_support_for(
+            features=features, media_types=media_types, model_name=model_name
+        ):
             return True
 
         for feature in features:
@@ -242,208 +268,109 @@ class OpenAIApi(DefaultApi):
 
         return True
 
-    def max_num_input_tokens(self, model_name: Optional[str] = None) -> int:
-        """
-        Return the maximum context window (in tokens) for a given model,
-        based on the current OpenAI model documentation.
-        (Despite the function name, this is the total token capacity — input + output.)
-
-        If model_name is None, this uses the default model name as a fallback.
-        """
-        if model_name is None:
-            model_name = self.get_best_model()
-
-        name = model_name.lower()
-
-        # ============================
-        # o1 family
-        # ============================
-        # o1: 200k token context
-        # o1-mini: 128k token context
-        # o1-preview: 128k token context
-
-        if "o1-mini" in name:
-            return 128000
-
-        if "o1-preview" in name:
-            return 128000
-
-        if "o1" in name or "o3" in name:
-            # e.g. "o1-2024-12-17"
-            return 200000
-
-        # ============================
-        # GPT-4o family (omni)
-        # ============================
-        # GPT-4o, GPT-4o-mini, GPT-4o-audio, etc.
-        # All standard GPT-4o versions: 128k token context
-
-        if "gpt-4.5" in name:
-            # gpt-4.5:
-            return 128000
-
-        if "gpt-4o-mini-realtime" in name:
-            # Realtime previews do not change the total context limit
-            # (still 128k context overall).
-            return 128000
-
-        if "gpt-4o-realtime" in name:
-            return 128000
-
-        if "gpt-4o-audio" in name:
-            return 128000
-
-        if "gpt-4o-mini" in name:
-            return 128000
-
-        if "chatgpt-4o-latest" in name:
-            return 128000
-
-        if "gpt-4o" in name:
-            return 128000
-
-        # ============================
-        # GPT-4 Turbo
-        # ============================
-        # GPT-4 Turbo (and previews) have a 128k token context
-
-        if "gpt-4-turbo" in name:
-            return 128000
-
-        # GPT-4 older previews sometimes end with “-preview”:
-        # gpt-4-0125-preview, gpt-4-1106-preview => 128k tokens
-        if "gpt-4-1106-preview" in name or "gpt-4-0125-preview" in name:
-            return 128000
-
-        # ============================
-        # GPT-4 (Standard)
-        # ============================
-        # The standard GPT-4: 8,192 tokens
-
-        if "gpt-4" in name:
-            return 8192
-
-        # ============================
-        # GPT-3.5 Turbo
-        # ============================
-        # GPT-3.5 turbo-based models: 16,385 tokens
-
-        if "gpt-3.5-turbo-instruct" in name:
-            # Special case: gpt-3.5-turbo-instruct has a 4k context
-            return 4096
-
-        if "gpt-3.5-turbo" in name:
-            return 16385
-
-        # ============================
-        # GPT base families
-        # ============================
-        # The newer GPT base models have a 16k context
-        # e.g. babbage-002, davinci-002
-        if "babbage-002" in name or "davinci-002" in name:
-            return 16384
-
-        # ============================
-        # Default / Fallback
-        # ============================
-        # For any unknown model, return a safe 4k context
-        return 4096
-
     from typing import Optional
 
-    def max_num_output_tokens(self, model_name: Optional[str] = None) -> int:
-        """
-        Return the model's 'Max output tokens' as defined in OpenAI's documentation.
-
-        Note: This is distinct from the context window. The 'Max output tokens' refers
-        to how many tokens can be generated by the model in its response (beyond inputs
-        and any chain-of-thought tokens). The actual limit in practice may vary based
-        on your request parameters (e.g., 'max_tokens', 'messages', etc.), but this
-        function returns the documented cap for each model.
-
-        If model_name is None, this uses get_default_openai_model_name() as a fallback.
-        """
-
+    # ------------------------------------------------------------------ #
+    def max_num_input_tokens(self, model_name: Optional[str] = None) -> int:
         if model_name is None:
             model_name = self.get_best_model()
-
         name = model_name.lower()
 
-        # -----------------------------------
-        # o1 and o1-mini
-        # -----------------------------------
-        #  • o1 => 200,000 tokens context, up to 100,000 for output
-        #  • o1-mini => 128,000 context, up to 65,536 for output
-        #  • o1-preview => 128,000 context, up to 32,768 for output
-        if "o1-mini" in name:
-            return 65536
-        if "o1-preview" in name:
-            return 32768
-        if "o1" in name or "o3" in name:
-            return 100000
+        # ---------- 4.1 family ----------
+        if "gpt-4.1" in name:
+            return _1M_TOKENS
 
-        # -----------------------------------
-        # GPT-4o (omni) family
-        # -----------------------------------
-        #  • gpt-4o => 128k context, 16,384 max output
-        #  • gpt-4o-mini => 128k context, 16,384 max output
-        #  • gpt-4o-realtime-preview => 128k context, 4,096 max output
-        #  • gpt-4o-mini-realtime-preview => 128k context, 4,096 max output
-        #  • gpt-4o-audio-preview => 128k context, 16,384 max output
-        #  • chatgpt-4o-latest => 128k context, 16,384 max output
-        if "gpt-4o-mini-realtime" in name:
-            return 4096
-        if "gpt-4o-realtime" in name:
-            return 4096
-        if "gpt-4o-audio" in name:
-            return 16384
-        if "gpt-4o-mini" in name:
-            return 16384
-        if "chatgpt-4o-latest" in name:
-            return 16384
+        # ---------- o-series ----------
+        if any(tag in name for tag in ("o4-mini", "o3", "o1")):
+            if "o1-mini" in name or "o1-preview" in name:
+                return 128_000
+            return _O_SERIES_CTX
+
+        # ---------- GPT-4o ----------
         if "gpt-4o" in name:
-            return 16384
+            return 128_000
 
-        # -----------------------------------
-        # GPT-4 Turbo and older GPT-4 previews
-        # -----------------------------------
-        #  • gpt-4-turbo => 128k context, 4,096 max output
-        #  • gpt-4-0125-preview, gpt-4-1106-preview => 128k context, 4,096 max output
-        if "gpt-4-turbo" in name:
-            return 4096
-        if "gpt-4-1106-preview" in name or "gpt-4-0125-preview" in name:
-            return 4096
+        # ---------- GPT-4 turbo & other 128 K previews ----------
+        if "gpt-4-turbo" in name or "-preview" in name:
+            return 128_000
 
-        # -----------------------------------
-        # GPT-4.5 family
-        # -----------------------------------
+        # ---------- GPT-4.5 (check **before** plain gpt-4!) ----------
         if "gpt-4.5" in name:
-            # gpt-4.5:
-            return 16384
+            return 128_000
 
-        # -----------------------------------
-        # GPT-4 (standard)
-        # -----------------------------------
-        #  • gpt-4 => 8,192 context, 8,192 max output
+        # ---------- GPT-4 standard ----------
+        if "gpt-4-32k" in name:
+            return 32_768
         if "gpt-4" in name:
-            return 8192
+            return 8_192
 
-        # -----------------------------------
-        # GPT-3.5 Turbo family
-        # -----------------------------------
-        #  • gpt-3.5-turbo => 16,385 context, 4,096 max output
-        #  • gpt-3.5-turbo-1106 => same
-        #  • gpt-3.5-turbo-instruct => 4,096 context, 4,096 max output
+        # ---------- GPT-3.5 ----------
         if "gpt-3.5-turbo-instruct" in name:
-            return 4096
+            return 4_097
         if "gpt-3.5-turbo" in name:
-            return 4096
+            return 16_385
 
-        # -----------------------------------
-        # Fallback
-        # -----------------------------------
-        # If a model isn't recognized, return a safe default (4k).
-        return 4096
+        # ---------- Base GPT completions ----------
+        if "babbage-002" in name or "davinci-002" in name:
+            return 16_384
+
+        return 4_096
+
+    # ------------------------------------------------------------------ #
+    def max_num_output_tokens(self, model_name: Optional[str] = None) -> int:
+        if model_name is None:
+            model_name = self.get_best_model()
+        name = model_name.lower()
+
+        # ---------- 4.1 family ----------
+        if "gpt-4.1" in name:
+            return 32_768
+
+        # ---------- o-series ----------
+        if "o4-mini" in name or "o3" in name:
+            return _O_SERIES_OUT
+        if "o1-mini" in name:
+            return 65_536
+        if "o1-preview" in name:
+            return 32_768
+        if "o1" in name:
+            return _O_SERIES_OUT
+
+        # ---------- GPT-4o snaps ----------
+        if any(tag in name for tag in ("-realtime", "-audio")):
+            return 4_096
+        if "2024-05-13" in name:
+            return 4_096
+        if "gpt-4o-mini" in name or "chatgpt-4o-latest" in name:
+            return 16_384
+        if "gpt-4o" in name:
+            return 16_384  # ≥ 2024-08-06 snapshots
+
+        # ---------- GPT-4 turbo & previews ----------
+        if "gpt-4-turbo" in name or "-preview" in name:
+            return 4_096
+
+        # ---------- GPT-4.5 ----------
+        if "gpt-4.5" in name:
+            return 16_384
+
+        # ---------- GPT-4 standard ----------
+        if "gpt-4-32k" in name:
+            return 32_768
+        if "gpt-4" in name:
+            return 8_192
+
+        # ---------- GPT-3.5 ----------
+        if "gpt-3.5-turbo-instruct" in name:
+            return 4_097
+        if "gpt-3.5-turbo" in name:
+            return 4_096
+
+        # ---------- Base completions ----------
+        if "babbage-002" in name or "davinci-002" in name:
+            return 16_384
+
+        return 4_096
 
     def generate_text(
         self,
@@ -473,20 +400,12 @@ class OpenAIApi(DefaultApi):
 
         # Set default model if not provided
         if model_name is None:
-            # We Require the minimum features for text generation:
-            features = [ModelFeatures.TextGeneration]
-            # If tools are provided, we also require tools:
-            if toolset:
-                features.append(ModelFeatures.Tools)
-            # If the messages contain media, we require the appropriate features:
-            # TODO: implement
-            model_name = self.get_best_model(features=features)
-
-            if model_name is None:
-                raise APIError(f"No suitable model with features: {features}")
+            model_name = self._get_best_model_for_text_generation(
+                messages, toolset if use_tools else None, response_format
+            )
 
         if "o1" in model_name or "o3" in model_name:
-            # ox models do not support any temperature except the default 1:
+            # 'ox' models do not support any temperature except the default 1:
             temperature = 1.0
 
         # OpenAI specific preprocessing:
@@ -497,7 +416,9 @@ class OpenAIApi(DefaultApi):
         # Preprocess messages:
         preprocessed_messages = self._preprocess_messages(
             messages=preprocessed_messages,
-            allowed_media_types={Text, Image},
+            allowed_media_types=self._get_allowed_media_types_for_text_generation(
+                model_name=model_name
+            ),
             deepcopy=False,  # We have already made a deepcopy
         )
 

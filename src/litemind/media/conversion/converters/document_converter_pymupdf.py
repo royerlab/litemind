@@ -4,11 +4,14 @@ from typing import List, Tuple, Type
 from arbol import aprint
 
 from litemind.media.conversion.converters.base_converter import BaseConverter
+from litemind.media.conversion.converters.document_converter_docling import (
+    DocumentConverterDocling,
+)
 from litemind.media.media_base import MediaBase
 from litemind.media.types.media_document import Document
 from litemind.media.types.media_image import Image
 from litemind.media.types.media_text import Text
-from litemind.utils.file_types import classify_uri
+from litemind.utils.file_types.file_types import classify_uri
 from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_path
 
 
@@ -62,19 +65,23 @@ class DocumentConverterPymupdf(BaseConverter):
         # Convert these into Text and Image media:
         # Create a list to hold the converted media:
         converted_media = []
+
+        # Get the preamble for the document, we use the same method as in DocumentConverterDocling for consistency:
+        preamble = DocumentConverterDocling.get_preamble(media, None)
+
+        # Add a header for the document:
+        converted_media.append(Text(preamble))
+
         for text_media, image_media in text_and_images:
             # Check if the text media is None:
             if text_media is None:
                 continue
 
-            # Check if the image media is None:
-            if image_media is None:
-                converted_media.append(text_media)
-                continue
-
             # Append the converted media to the list:
             converted_media.append(text_media)
-            converted_media.append(image_media)
+
+            if image_media is not None:
+                converted_media.append(image_media)
 
         # Return the converted media:
         return converted_media
@@ -146,6 +153,9 @@ def extract_text_and_image_from_document(
                 # Load the page and extract text
                 page = doc.load_page(page_number)
                 page_text = page.get_text("text")
+
+                # Wrap the page's text in markdown quotes:
+                page_text = f"Page {page_number + 1}:\n```text\n{page_text}\n```"
 
                 # Make Text media:
                 text_media = Text(page_text)
