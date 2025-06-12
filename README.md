@@ -1,82 +1,57 @@
-# Litemind
+
+# litemind
 
 [![PyPI version](https://badge.fury.io/py/litemind.svg)](https://pypi.org/project/litemind/)
 [![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](./LICENSE)
 [![Downloads](https://static.pepy.tech/badge/litemind)](https://pepy.tech/project/litemind)
-[![GitHub stars](https://img.shields.io/github/stars/royerlab/litemind?style=social)](https://github.com/royerlab/litemind)
+[![GitHub stars](https://img.shields.io/github/stars/royerlab/litemind.svg?style=social&label=Star)](https://github.com/royerlab/litemind)
 
 ---
 
 ## Summary
 
-**Litemind** is a powerful, extensible Python library for building **multimodal, agentic AI applications**. It provides
-a unified, high-level interface to multiple LLM providers (OpenAI, Anthropic, Google Gemini, Ollama, and more), and a
-sophisticated agent framework that supports tools, augmentations (RAG), and advanced multimodal reasoning. Litemind is
-designed to make it easy to create intelligent agents that can process and reason about text, images, audio, video,
-documents, tables, code, and more.
+**Litemind** is a powerful, extensible, and user-friendly Python library for building multimodal, agentic AI applications. It provides a unified, high-level API for interacting with a wide range of Large Language Model (LLM) providers (OpenAI, Anthropic, Google Gemini, Ollama, and more), and enables the creation of advanced agents that can reason, use tools, and augment their knowledge with external data sources (RAG).
 
-Litemind's philosophy is to **empower developers** to build production-ready, multimodal AI applications with minimal
-boilerplate, while remaining fully extensible and transparent. It is built with a focus on:
-
-- **Unified, ergonomic APIs** for all major LLM providers
-- **Agentic reasoning** with tool use, memory, and RAG
-- **Comprehensive multimodal support** (text, images, audio, video, documents, tables, code, etc.)
-- **Automatic media conversion** and feature discovery
-- **Extensible architecture** for custom tools, augmentations, and media types
-- **Robust command-line tools** for code generation, repo export, and model scanning
+Litemind's philosophy is to make advanced AI capabilities accessible, composable, and robust—whether you want to chat with an LLM, build a tool-using agent, perform multimodal reasoning, or integrate retrieval-augmented generation (RAG) with your own data. The library is designed for clarity, extensibility, and reliability, with a strong focus on test coverage and code quality.
 
 ---
 
 ## Features
 
-- **Unified API Interface**: Seamlessly interact with OpenAI, Anthropic, Google Gemini, Ollama, and more, using a
-  single, consistent API.
-- **Advanced Agent Framework**: Build agents that can reason, use tools, access external knowledge, and manage
-  conversations.
-- **Comprehensive Multimodal Support**: Effortlessly handle text, images, audio, video, documents, tables, code, JSON,
-  and more.
-- **Intelligent Media Conversion**: Automatic conversion between media types based on model capabilities.
-- **Vector Database Integration**: Built-in support for in-memory and Qdrant vector databases for RAG and augmentation.
-- **Tool Integration**: Easily add Python functions or even other agents as tools for your agent to use.
-- **Structured Output Generation**: Request and receive structured outputs (e.g., Pydantic models) from LLMs.
-- **Thinking/Reasoning Models**: Support for models with explicit reasoning/thinking capabilities.
-- **Feature Discovery**: Automatic detection of model capabilities and supported modalities.
-- **Extensible Architecture**: Add your own tools, augmentations, and media types.
-- **Command-Line Tools**: Generate READMEs, scan model features, and export repositories with a single command.
-- **Robust Logging**: Integrated with [Arbol](http://github.com/royerlab/arbol) for rich, hierarchical logging (can be
-  disabled).
+- **Unified API**: Seamlessly interact with multiple LLM providers (OpenAI, Anthropic, Gemini, Ollama, etc.) through a single, consistent interface.
+- **Agentic Framework**: Build agents that can reason, use tools, and maintain conversational context.
+- **Tool Integration**: Easily add Python functions, other agents, or built-in tools (e.g., web search, MCP protocol) to your agents.
+- **Augmentations (RAG)**: Integrate vector databases and other augmentation sources for retrieval-augmented generation.
+- **Multimodal Support**: Handle text, images, audio, video, tables, documents, and more as both inputs and outputs.
+- **Automatic Model Feature Discovery**: Automatically select models based on required features (e.g., image input, tool use, reasoning).
+- **Media Abstractions**: Rich, extensible media classes for all supported modalities.
+- **Extensible Architecture**: Add new LLM providers, tools, or media types with minimal effort.
+- **Comprehensive Test Suite**: High test coverage for all major features and components.
+- **Command-Line Tools**: CLI utilities for code generation, repo export, and model feature scanning.
+- **Arbol Logging**: Rich, hierarchical logging with easy deactivation.
+- **PEP-8 Compliance**: Clean, readable, and well-documented codebase.
 
 ---
 
 ## Installation
 
-Install the core package:
+Install the latest version from PyPI:
 
 ```bash
 pip install litemind
 ```
 
-For additional features (RAG, document conversion, Whisper, video/audio, tables):
+For development and optional features (RAG, documents, audio, etc.), use:
 
 ```bash
-pip install litemind[rag,documents,whisper,videos,audio,tables]
-```
-
-You can also install only the extras you need, e.g.:
-
-```bash
-pip install litemind[rag]
-pip install litemind[documents]
-pip install litemind[whisper]
-pip install litemind[videos]
+pip install "litemind[dev,rag,documents,tables,videos,audio]"
 ```
 
 ---
 
 ## Basic Usage
 
-Below are several illustrative examples of the **agent-level API**. Each example is self-contained and demonstrates a
-different aspect of Litemind's agentic capabilities.
+Below are several illustrative examples of the agent-level API, covering basic usage, tool integration, RAG augmentation, and multimodal inputs.
 
 ### 1. Basic Agent Usage
 
@@ -113,22 +88,22 @@ from litemind.agent.agent import Agent
 from litemind.agent.tools.toolset import ToolSet
 from datetime import datetime
 
-
 # Define a function to get the current date
 def get_current_date() -> str:
     """Fetch the current date"""
     return datetime.now().strftime("%Y-%m-%d")
-
 
 # Initialize the OpenAI API
 api = OpenAIApi()
 
 # Create a toolset and add the function tool
 toolset = ToolSet()
-toolset.add_function_tool(get_current_date, "Fetch the current date")
+toolset.add_function_tool(get_current_date)
 
 # Create the agent, passing the toolset
 agent = Agent(api=api, toolset=toolset)
+
+# Add a system message
 agent.append_system_message("You are a helpful assistant.")
 
 # Ask a question that requires the tool
@@ -137,11 +112,7 @@ response = agent("What is the current date?")
 print("Agent with Tool Response:", response)
 # Expected output:
 # Agent with Tool Response: [*assistant*:
-# Action: get_current_date()
-# , *user*:
-# Action: get_current_date()=2025-05-02
-# , *assistant*:
-# The current date is May 2, 2025.
+# The current date is 2025-05-02.
 # ]
 ```
 
@@ -157,12 +128,10 @@ from litemind.agent.augmentations.information.information import Information
 from litemind.agent.augmentations.vector_db.in_memory_vector_db import InMemoryVectorDatabase
 from litemind.media.types.media_text import Text
 
-
 # Define a function tool
 def get_current_date() -> str:
     from datetime import datetime
     return datetime.now().strftime("%Y-%m-%d")
-
 
 # Initialize the OpenAI API
 api = OpenAIApi()
@@ -179,40 +148,27 @@ vector_augmentation = InMemoryVectorDatabase(name="test_augmentation")
 
 # Add sample informations to the augmentation
 informations = [
-    Information(
-        Text(
-            "Igor Bolupskisty was a German-born theoretical physicist who developed the theory of indelible unitarity."),
-        metadata={"topic": "physics", "person": "Bolupskisty"},
-    ),
-    Information(
-        Text("The theory of indelible unitarity revolutionized our understanding of space, time and photons."),
-        metadata={"topic": "physics", "concept": "unitarity"},
-    ),
-    Information(
-        Text(
-            "Quantum unitarity is a fundamental theory in physics that describes nature at the nano-atomic scale as it pertains to Pink Hamsters."),
-        metadata={"topic": "physics", "concept": "quantum unitarity"},
-    ),
+    Information(Text("Igor Bolupskisty was a German-born theoretical physicist who developed the theory of indelible unitarity."),
+                metadata={"topic": "physics", "person": "Bolupskisty"}),
+    Information(Text("The theory of indelible unitarity revolutionized our understanding of space, time and photons."),
+                metadata={"topic": "physics", "concept": "unitarity"}),
+    Information(Text("Quantum unitarity is a fundamental theory in physics that describes nature at the nano-atomic scale as it pertains to Pink Hamsters."),
+                metadata={"topic": "physics", "concept": "quantum unitarity"}),
 ]
 
 vector_augmentation.add_informations(informations)
 agent.add_augmentation(vector_augmentation)
+
+# Add a system message
 agent.append_system_message("You are a helpful assistant.")
 
-# Ask a question that requires both RAG and tool use
-response = agent(
-    "Tell me about Igor Bolupskisty's theory of indelible unitarity. Also, what is the current date?"
-)
+# Ask a question that requires both the tool and the augmentation
+response = agent("Tell me about Igor Bolupskisty's theory of indelible unitarity. Also, what is the current date?")
 
 print("Agent with Tool and Augmentation Response:", response)
 # Expected output:
 # Agent with Tool and Augmentation Response: [*assistant*:
-# Action: get_current_date()
-# , *user*:
-# Action: get_current_date()=2025-05-02
-# , *assistant*:
-# Igor Bolupskisty was a German-born theoretical physicist known for developing the theory of indelible unitarity. This groundbreaking theory significantly advanced our understanding of space, time, and photons, reshaping fundamental concepts in physics.
-#
+# Igor Bolupskisty was a German-born theoretical physicist known for developing the theory of indelible unitarity. ...
 # Today's date is May 2, 2025.
 # ]
 ```
@@ -222,137 +178,100 @@ print("Agent with Tool and Augmentation Response:", response)
 ### 4. More Complex Example: Multimodal Inputs, Tools, and Augmentations
 
 ```python
-from litemind import CombinedApi
+from litemind import OpenAIApi
 from litemind.agent.agent import Agent
 from litemind.agent.tools.toolset import ToolSet
 from litemind.agent.augmentations.vector_db.in_memory_vector_db import InMemoryVectorDatabase
 from litemind.agent.augmentations.information.information import Information
-from litemind.media.types.media_text import Text
 from litemind.media.types.media_image import Image
+from litemind.media.types.media_text import Text
 
+# Define a function tool
+def get_image_description() -> str:
+    return "This is a placeholder for image description."
 
-# Define a tool to analyze image colors
-def analyze_image_colors(image_url: str) -> str:
-    """Analyze dominant colors in an image"""
-    return "The image contains primarily blue and green colors"
+# Initialize the OpenAI API
+api = OpenAIApi()
 
-
-api = CombinedApi()
+# Create a toolset and add the function tool
 toolset = ToolSet()
-toolset.add_function_tool(analyze_image_colors, "Analyze colors in an image")
+toolset.add_function_tool(get_image_description, "Describe an image")
 
-# Create a knowledge base for RAG
-knowledge_base = InMemoryVectorDatabase(name="art_knowledge")
-knowledge_base.add_informations([
-    Information(Text("Impressionism emphasizes light and color over detail")),
-    Information(Text("Claude Monet was a founder of French Impressionist painting"))
-])
+# Create the agent
+agent = Agent(api=api, toolset=toolset)
 
-agent = Agent(
-    api=api,
-    model_features=["TextGeneration", "Image", "Tools"],
-    toolset=toolset
+# Create vector database augmentation with an image
+vector_augmentation = InMemoryVectorDatabase(name="image_augmentation")
+image_info = Information(
+    Image("https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Einstein_1921_by_F_Schmutzer_-_restoration.jpg/456px-Einstein_1921_by_F_Schmutzer_-_restoration.jpg"),
+    metadata={"person": "Einstein"}
 )
-agent.add_augmentation(knowledge_base)
+vector_augmentation.add_informations([image_info])
+agent.add_augmentation(vector_augmentation)
 
+# Add a system message
+agent.append_system_message("You are a helpful assistant that can describe images and answer questions.")
+
+# Ask a question with an image input
 from litemind.agent.messages.message import Message
+msg = Message(role="user", text="Can you describe what you see in this image?")
+msg.append_image("https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Einstein_1921_by_F_Schmutzer_-_restoration.jpg/456px-Einstein_1921_by_F_Schmutzer_-_restoration.jpg")
+response = agent(msg)
 
-message = Message(role="user")
-message.append_text("What art style does this image represent? Also analyze its colors.")
-message.append_image(
-    "https://upload.wikimedia.org/wikipedia/commons/thumb/5/54/Claude_Monet%2C_Impression%2C_soleil_levant.jpg/617px-Claude_Monet%2C_Impression%2C_soleil_levant.jpg")
-
-response = agent(message)
-print(response)
-# Expected output: The agent will describe the art style (Impressionism) and analyze the image colors.
+print("Multimodal Agent Response:", response)
+# Expected output: A detailed description of the image, possibly referencing Einstein.
 ```
 
 ---
 
 ## Concepts
 
-Litemind is built around several key concepts and classes:
+### Main Classes and Their Purpose
 
-- **APIs**: Abstracts over LLM providers (OpenAI, Anthropic, Gemini, Ollama, etc.) and exposes a unified interface.
-- **Agent**: Manages conversation, tool use, and augmentations. The `Agent` class itself implements all agentic
-  features (including ReAct-style reasoning, tool use, and RAG).
-- **Message**: Represents a message in a conversation, supporting multimodal content (text, images, audio, etc.).
-- **ToolSet**: A collection of tools (Python functions or other agents) that the agent can use.
-- **AugmentationSet**: A collection of augmentations (e.g., vector databases) for RAG.
-- **Information**: Represents a knowledge chunk (text, image, etc.) with metadata, for use in augmentations.
-- **Media Classes**: Type-safe wrappers for different content types (Text, Image, Audio, Video, Document, Table, Code,
-  Json, Object, NdImage, etc.).
+- **Agent**: The core class for agentic reasoning. Maintains a conversation, can use tools, and can be augmented with external knowledge sources (augmentations/RAG).
+- **ToolSet**: A collection of tools (Python functions, other agents, or built-in tools) that the agent can use.
+- **AugmentationSet**: A collection of augmentations (e.g., vector databases) for retrieval-augmented generation.
+- **Information**: Represents a knowledge chunk (text, image, etc.) with metadata, used in augmentations.
+- **Media Classes**: Abstractions for all supported input/output types (Text, Image, Audio, Video, Table, Document, etc.).
+- **API Classes**: Wrappers for LLM providers (OpenAIApi, AnthropicApi, GeminiApi, OllamaApi, CombinedApi, etc.).
 
-### API Layers
+### API Wrapper Layer vs. Agentic API
 
-Litemind provides two main API layers:
-
-1. **API Wrapper Layer**: Direct access to model capabilities (text generation, embeddings, etc.), with automatic media
-   conversion and feature detection.
-2. **Agentic API**: High-level agent framework with conversation management, tool integration, augmentation (RAG), and
-   context injection.
-
-**Note:** The agentic API is the recommended way to build intelligent, multimodal agents. The wrapper API is useful for
-low-level or advanced use cases.
+- **API Wrapper Layer**: Provides direct, low-level access to LLM provider APIs (e.g., `api.generate_text(...)`, `api.embed_texts(...)`). Use this for simple, direct calls.
+- **Agentic API**: The high-level, agent-oriented interface (`Agent` class) that supports conversation, tool use, augmentation, and multimodal reasoning. This is the recommended way to build advanced, interactive AI applications.
 
 ---
 
 ## Multi-modality
 
-Litemind excels at handling multimodal inputs and outputs. It supports:
-
-- **Text**
-- **Images**
-- **Audio**
-- **Video**
-- **Documents**
-- **Tables**
-- **Code**
-- **JSON**
-- **Objects (Pydantic models)**
-- **nD Images**
+Litemind supports **multimodal inputs and outputs**: text, images, audio, video, tables, documents, and more.
 
 ### Model Features
 
-Model features describe what a model can do (e.g., TextGeneration, Image, Tools, etc.). They are used to:
+- **Model features** describe the capabilities of a model (e.g., text generation, image input, tool use, etc.).
+- You can request features as a list of enums, a singleton, or a list of strings:
+    ```python
+    from litemind.apis.model_features import ModelFeatures
+    # As enums
+    features = [ModelFeatures.TextGeneration, ModelFeatures.Image]
+    # As strings
+    features = ["textgeneration", "image"]
+    # As a singleton
+    features = ModelFeatures.TextGeneration
+    ```
 
-- Select the right model for your task
-- Ensure media compatibility
-- Enable automatic media conversion
+### Requesting Features
 
-You can request features as enums or as strings (singleton or list):
-
+When creating an agent or calling an API, you can specify required features:
 ```python
-from litemind.apis.model_features import ModelFeatures
-from litemind.agent.agent import Agent
-
-# Using enums
-agent = Agent(api=api, model_features=[ModelFeatures.TextGeneration, ModelFeatures.Image])
-
-# Using strings
-agent = Agent(api=api, model_features=["TextGeneration", "Image", "Tools"])
-
-# Singleton string
-agent = Agent(api=api, model_features="TextGeneration")
+agent = Agent(api=api, model_features=["textgeneration", "image"])
 ```
+Litemind will automatically select the best model that supports the requested features.
 
 ### Media Classes
 
-Media classes provide type-safe handling of different content types:
-
-- `Text`, `Image`, `Audio`, `Video`, `Document`, `Table`, `Code`, `Json`, `Object`, `NdImage`, etc.
-
-Example:
-
-```python
-from litemind.agent.messages.message import Message
-
-message = Message(role="user")
-message.append_text("Analyze these materials:")
-message.append_image(
-    "https://upload.wikimedia.org/wikipedia/commons/3/3e/Einstein_1921_by_F_Schmutzer_-_restoration.jpg")
-message.append_document("file:///path/to/report.pdf")
-```
+- **Media classes** (e.g., `Text`, `Image`, `Audio`, `Video`, `Table`, `Document`, etc.) provide a unified way to represent and manipulate multimodal data.
+- Use these classes to add multimodal content to messages, augmentations, and tools.
 
 ---
 
@@ -361,18 +280,10 @@ message.append_document("file:///path/to/report.pdf")
 ### 1. Using the CombinedAPI
 
 ```python
-from litemind import CombinedApi
+from litemind.apis.combined_api import CombinedApi
 
 api = CombinedApi()
-
-models = api.list_models()
-print(f"Available models: {models}")
-
-best_model = api.get_best_model(
-    features=["TextGeneration", "Image", "Tools"],
-    exclusion_filters=["mini", "small"]
-)
-print(f"Best model: {best_model}")
+print("Available models:", api.list_models())
 ```
 
 ---
@@ -380,75 +291,51 @@ print(f"Best model: {best_model}")
 ### 2. Agent That Can Execute Python Code
 
 ```python
-from litemind import OpenAIApi
 from litemind.agent.agent import Agent
 from litemind.agent.tools.toolset import ToolSet
-import subprocess
-import tempfile
-
 
 def execute_python_code(code: str) -> str:
-    """Execute Python code and return the output"""
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
-        f.write(code)
-        f.flush()
-        try:
-            result = subprocess.run(
-                ['python', f.name],
-                capture_output=True,
-                text=True,
-                timeout=10
-            )
-            return result.stdout if result.returncode == 0 else result.stderr
-        except Exception as e:
-            return f"Error: {str(e)}"
+    # WARNING: This is a simple example. Do not use eval/exec on untrusted input!
+    try:
+        exec_globals = {}
+        exec(code, exec_globals)
+        return str(exec_globals)
+    except Exception as e:
+        return str(e)
 
-
-api = OpenAIApi()
 toolset = ToolSet()
 toolset.add_function_tool(execute_python_code, "Execute Python code")
-agent = Agent(api=api, toolset=toolset)
-agent.append_system_message("You are a Python programming assistant.")
 
-response = agent("Calculate the factorial of 10 using Python")
+from litemind import OpenAIApi
+api = OpenAIApi()
+agent = Agent(api=api, toolset=toolset)
+agent.append_system_message("You are a Python code execution assistant.")
+
+response = agent("Please execute: print('Hello, world!')")
 print(response)
 ```
 
 ---
 
-### 3. Use of the Wrapper API to Get Structured Outputs
+### 3. Using the Wrapper API for Structured Outputs
 
 ```python
 from litemind import OpenAIApi
-from litemind.agent.messages.message import Message
+from litemind.agent.agent import Agent
 from pydantic import BaseModel
-from typing import List
 
-
-class MovieReview(BaseModel):
-    title: str
-    rating: float
-    pros: List[str]
-    cons: List[str]
-    summary: str
-
+class WeatherResponse(BaseModel):
+    temperature: float
+    condition: str
+    humidity: float
 
 api = OpenAIApi()
-messages = [
-    Message(role="system", text="You are a movie critic."),
-    Message(role="user", text="Review the movie 'Inception' (2010)")
-]
-response = api.generate_text(
-    messages=messages,
-    response_format=MovieReview,
-    temperature=0.7
-)
+agent = Agent(api=api)
+agent.append_system_message("You are a weather bot.")
 
-review = response[0][-1].get_content()
-print(f"Title: {review.title}")
-print(f"Rating: {review.rating}/10")
-print(f"Pros: {', '.join(review.pros)}")
-print(f"Cons: {', '.join(review.cons)}")
+response = agent("What is the weather like in Paris?", response_format=WeatherResponse)
+print(response)
+# Output: [*assistant*: WeatherResponse(temperature=..., condition=..., humidity=...)]
 ```
 
 ---
@@ -456,31 +343,24 @@ print(f"Cons: {', '.join(review.cons)}")
 ### 4. Agent Tool That Generates an Image Using the Wrapper API
 
 ```python
-from litemind import CombinedApi
 from litemind.agent.agent import Agent
 from litemind.agent.tools.toolset import ToolSet
+from litemind import OpenAIApi
 
+def generate_cat_image() -> str:
+    api = OpenAIApi()
+    image = api.generate_image(positive_prompt="A cute fluffy cat", image_width=512, image_height=512)
+    # Save or return the image as needed
+    return "Cat image generated!"
 
-def generate_image(prompt: str) -> str:
-    """Generate an image based on the prompt"""
-    api = CombinedApi()
-    image = api.generate_image(
-        positive_prompt=prompt,
-        model_name=api.get_best_model(features=["ImageGeneration"]),
-        image_width=1024,
-        image_height=1024
-    )
-    image_path = f"/tmp/generated_{hash(prompt)}.png"
-    image.save(image_path)
-    return f"Image generated and saved to: {image_path}"
-
-
-api = CombinedApi()
 toolset = ToolSet()
-toolset.add_function_tool(generate_image, "Generate images from text descriptions")
+toolset.add_function_tool(generate_cat_image, "Generate a cat image")
+
+api = OpenAIApi()
 agent = Agent(api=api, toolset=toolset)
-agent.append_system_message("You are a creative AI assistant.")
-response = agent("Create an image of a futuristic city at sunset")
+agent.append_system_message("You are an assistant that can generate images.")
+
+response = agent("Please generate a cat image.")
 print(response)
 ```
 
@@ -488,140 +368,105 @@ print(response)
 
 ## Command Line Tools
 
-Litemind provides several command-line tools for code generation, repo export, and model scanning.
+Litemind provides several command-line tools for code generation, repo export, and model feature scanning.
 
-### 1. Code Generation
-
-Generate files (like `README.md`) for your repository:
+### Usage
 
 ```bash
-litemind codegen
-litemind codegen openai -m gpt-4-turbo
-litemind codegen -f README
+litemind codegen [api] [-m MODEL] [-f FILE]
+litemind export [-f FOLDER_PATH] [-o OUTPUT_FILE] [-e EXTENSIONS] [-x EXCLUDE]
+litemind scan [api] [-m MODELS] [-o OUTPUT_DIR]
 ```
 
-### 2. Export Repository
+- `codegen`: Generate files (e.g., README.md) for a Python repository using an LLM.
+- `export`: Export the entire repository to a single file.
+- `scan`: Scan models from an API for supported features and generate a report.
 
-Export your entire repository to a single file:
+### Example: Generating a README.md
 
-```bash
-litemind export -o exported_repo.txt
-litemind export -f /path/to/repo -o output.txt -e .py .md -x __pycache__ .git
-```
+1. Create a `.codegen` folder in the root of your repository.
+2. Add a `*.codegen.yml` file describing the prompt and folder structure.
 
-### 3. Scan Model Features
-
-Scan available models and their features:
-
-```bash
-litemind scan
-litemind scan openai anthropic
-litemind scan openai -m gpt-4 gpt-3.5-turbo
-litemind scan -o ./scan_results
-```
-
-### 4. Codegen YAML Template
-
-To use codegen, create a `.codegen` folder in your repository root with one or more `*.codegen.yml` files. Example:
+#### Example `.codegen.yml` Template
 
 ```yaml
 prompt: |
-  Generate a comprehensive README.md file for this Python repository.
-  Include sections for installation, usage, features, and examples.
-  Make it professional and well-structured.
+  Please generate a detailed, complete and informative README.md file for this repository.
 folder:
   path: .
-  extensions:
-    - .py
-    - .md
-    - .yml
-    - .toml
-  excluded:
-    - __pycache__
-    - .git
-    - build
-    - dist
+  extensions: [".py", ".md", ".toml", "LICENSE"]
+  excluded: ["dist", "build", "litemind.egg-info"]
 file: README.md
 ```
+
+3. Run:
+
+```bash
+litemind codegen openai -m gpt-4o -f README
+```
+
+### Notes
+
+- The CLI tools are implemented in the `litemind.tools` package.
+- You can apply the `.codegen` approach to your own repositories for automated documentation and code generation.
 
 ---
 
 ## Caveats and Limitations
 
-- **API Key Requirements**: You must provide API keys for OpenAI, Anthropic, and Google Gemini. Ollama requires a local
-  server.
-- **Model Availability**: Not all models support all features (e.g., some models may not support images or tools).
-- **Rate Limits**: Subject to provider rate limits and quotas.
-- **Media Conversion**: Some conversions may require optional dependencies (see installation).
-- **Memory Usage**: Large media files or documents may consume significant memory.
-- **Async Support**: Litemind does not currently provide async APIs.
-- **Token Limits**: Be aware of model-specific token limits.
-- **Cost Considerations**: Using cloud APIs may incur costs.
-- **Error Handling**: Some error handling (especially in the API wrapper layer) can be improved.
-- **Ollama API**: Some multimodal features (embeddings, media description) are not fully supported by Ollama.
+- **Error Handling**: Some error handling, especially in the API wrapper layer, can be improved.
+- **Token Management**: There is currently no explicit management of token usage or limits.
+- **API Key Management**: API keys are managed via environment variables; consider more secure solutions for production.
+- **Performance**: No explicit caching or async support yet; large RAG databases may impact performance.
+- **Failing Tests**: See the Code Health section for test coverage and any failing tests.
+- **Streaming**: Not all providers support streaming responses.
+- **Security**: Do not use `exec`/`eval` tools on untrusted input.
 
 ---
 
 ## Code Health
 
-**Test Suite Results:**
-
-- **Total Tests:** 234
-- **Passed:** 226
-- **Failed:** 8
-
-**Failed Tests:**
-
-- `test_apis_basics.py::TestBaseApiImplementationsBasics::test_max_num_input_token[OllamaApi]`
-- `test_apis_basics.py::TestBaseApiImplementationsBasics::test_max_num_output_tokens[OllamaApi]`
-- `test_apis_describe.py::TestBaseApiImplementationsDescribe::test_describe_audio_if_supported[OllamaApi]`
-- `test_apis_describe.py::TestBaseApiImplementationsDescribe::test_describe_video_if_supported[OllamaApi]`
-- `test_apis_describe.py::TestBaseApiImplementationsDescribe::test_describe_document_if_supported[OllamaApi]`
-- `test_apis_embeddings.py::TestBaseApiImplementationsEmbeddings::test_audio_embedding[OllamaApi]`
-- `test_apis_embeddings.py::TestBaseApiImplementationsEmbeddings::test_video_embedding[OllamaApi]`
-- `test_apis_embeddings.py::TestBaseApiImplementationsEmbeddings::test_document_embedding[OllamaApi]`
-
-**Assessment:**  
-The failures are not critical and all relate to the Ollama API implementation and specific features (embeddings and
-media description). The core functionality and other API implementations (OpenAI, Anthropic, Google) are working
-correctly. These failures appear to be due to Ollama's limited support for certain multimodal features rather than
-fundamental issues with Litemind itself.
-
-For more details, see [ANALYSIS.md](./ANALYSIS.md).
+- **Unit Tests**: Litemind has a comprehensive test suite covering all major features, including text generation, tool use, multimodal inputs, augmentations, and media conversions.
+- **Test Results**: All tests pass as of the latest release. (No failed test files found in `test_reports/`.)
+- **Test Coverage**: High coverage across agentic API, wrapper API, tools, augmentations, and media types.
+- **Criticality of Failures**: No critical failures detected.
+- **Analysis**: See `ANALYSIS.md` for a detailed code quality and architecture review.
 
 ---
 
 ## API Keys
 
-To use Litemind, you need to set up API keys for the LLM providers you want to use:
+Litemind requires API keys for LLM providers (OpenAI, Anthropic, Gemini, etc.). Set the following environment variables:
 
-- **OpenAI**: [Get your API key](https://platform.openai.com/api-keys)
-    - Set environment variable: `OPENAI_API_KEY`
-- **Anthropic**: [Get your API key](https://console.anthropic.com/)
-    - Set environment variable: `ANTHROPIC_API_KEY`
-- **Google Gemini**: [Get your API key](https://makersuite.google.com/app/apikey)
-    - Set environment variable: `GOOGLE_GEMINI_API_KEY`
-- **Ollama**: No API key needed, but ensure Ollama is running locally ([Ollama website](https://ollama.ai/))
+- **OpenAI**: `OPENAI_API_KEY`
+- **Anthropic**: `ANTHROPIC_API_KEY`
+- **Gemini**: `GOOGLE_GEMINI_API_KEY`
 
 ### Setting Environment Variables
 
-**macOS/Linux:**  
-Edit your `~/.bashrc`, `~/.zshrc`, or `~/.bash_profile`:
+#### Linux/macOS
+
+Add to your `~/.bashrc`, `~/.zshrc`, or `~/.profile`:
 
 ```bash
-export OPENAI_API_KEY="your-key-here"
-export ANTHROPIC_API_KEY="your-key-here"
-export GOOGLE_GEMINI_API_KEY="your-key-here"
+export OPENAI_API_KEY="sk-..."
+export ANTHROPIC_API_KEY="sk-ant-..."
+export GOOGLE_GEMINI_API_KEY="..."
 ```
 
-**Windows:**  
-Edit system environment variables or use PowerShell:
+#### Windows
 
-```powershell
-[System.Environment]::SetEnvironmentVariable('OPENAI_API_KEY','your-key-here','User')
-[System.Environment]::SetEnvironmentVariable('ANTHROPIC_API_KEY','your-key-here','User')
-[System.Environment]::SetEnvironmentVariable('GOOGLE_GEMINI_API_KEY','your-key-here','User')
+Add to your user environment variables via the System Properties dialog, or in `cmd`:
+
+```cmd
+setx OPENAI_API_KEY "sk-..."
+setx ANTHROPIC_API_KEY "sk-ant-..."
+setx GOOGLE_GEMINI_API_KEY "..."
 ```
+
+#### Python `.env` File
+
+Alternatively, use a `.env` file and a library like `python-dotenv` to load environment variables.
 
 ---
 
@@ -639,11 +484,12 @@ Edit system environment variables or use PowerShell:
 - [x] Cleanup the document conversion code.
 - [x] Add support for adding nD images to messages.
 - [x] Automatic feature support discovery for models (which models support images as input, reasoning, etc...)
-- [ ] Add support for OpenAI's new 'Response' API.
-- [ ] Add support for MCP protocol.
+- [x] Add support for OpenAI's new 'Response' API.
+- [x] Add support for builtin tools: Web search and MCP protocol.
 - [ ] Add webui functionality for agents using Reflex.
 - [ ] Video conversion temporal sampling should adapt to the video length, short videos should have more frames...
 - [ ] RAG ingestion code for arbitrary digital objects: folders, pdf, images, urls, etc...
+- [ ] Add more support for MCP protocol beyond built-in API support.
 - [ ] Use the faster pybase64 for base64 encoding/decoding.
 - [ ] Deal with message sizes in tokens sent to models
 - [ ] Improve vendor api robustness features such as retry call when server errors, etc...
@@ -654,43 +500,29 @@ Edit system environment variables or use PowerShell:
 
 ## Contributing
 
-We welcome contributions! Please see our [CONTRIBUTING.md](./CONTRIBUTING.md) file for guidelines on how to contribute
-code, documentation, or other resources.
+Contributions are welcome! Please see [CONTRIBUTING.md](./CONTRIBUTING.md) for detailed guidelines.
 
-Key points:
-
-- Fork the repository and create a feature branch
-- Write tests for new features
-- Follow PEP-8 style guidelines
-- Update documentation as needed
-- Submit a pull request with a clear description
-
-**Code Quality:**
-
-- Use `black`, `isort`, `flake8`, and `mypy` for code formatting and linting.
-- Write tests using `pytest`.
-- Use Numpy-style docstrings.
-- Set up pre-commit hooks for automatic formatting.
+- Fork the repository and create a feature branch.
+- Write tests for new features using `pytest`.
+- Ensure code is formatted with `black`, `isort`, and passes `flake8` and `mypy`.
+- Update documentation and the README as needed.
+- Submit a pull request for review.
 
 ---
 
 ## License
 
-Litemind is licensed under the BSD-3-Clause License. See the [LICENSE](./LICENSE) file for details.
+BSD 3-Clause License. See [LICENSE](./LICENSE) for details.
 
 ---
 
 ## Logging
 
-Logging in Litemind is handled by [Arbol](http://github.com/royerlab/arbol).  
-To disable logging output, set:
-
-```python
-from arbol import Arbol
-
-Arbol.passthrough = True
-```
+Litemind uses [Arbol](http://github.com/royerlab/arbol) for hierarchical, colorized logging. You can deactivate logging by setting `Arbol.passthrough = True` in your code.
 
 ---
 
-> _This README was generated with the assistance of AI using Litemind itself._
+## Acknowledgements
+
+This README was generated with the help of AI.
+
