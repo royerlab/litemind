@@ -1,6 +1,6 @@
-__version__ = "2025.6.8"
+__version__ = "2025.6.12"
 
-from arbol import aprint
+from arbol import aprint, asection
 
 from litemind.agent.augmentations.vector_db.in_memory_vector_db import (
     InMemoryVectorDatabase,
@@ -26,18 +26,23 @@ API_IMPLEMENTATIONS = [
 # Check availability of each API and remove it from the list if it is not available:
 for api_class in API_IMPLEMENTATIONS:
     try:
-        # Trying to instantiate the API class:
-        api_instance = api_class()
+        with asection(f"Checking availability of: {api_class.__name__}"):
+            # Trying to instantiate the API class:
+            api_instance = api_class()
 
-        # Checking if the API is available and credentials are correct:
-        if (
-            not api_instance.check_availability_and_credentials()
-            or len(api_instance.list_models()) == 0
-        ):
-            aprint(
-                f"API {api_class.__name__} is not available. Removing it from the list."
-            )
-            API_IMPLEMENTATIONS.remove(api_class)
+            # Checking if the API is available and credentials are correct:
+            if (
+                not api_instance.check_availability_and_credentials()
+                or len(api_instance.list_models()) == 0
+            ):
+                aprint(
+                    f"API {api_class.__name__} is not available. Removing it from the list."
+                )
+                API_IMPLEMENTATIONS.remove(api_class)
+            else:
+                aprint(
+                    f"API {api_class.__name__} is available and has {len(api_instance.list_models())} models."
+                )
 
     except Exception as e:
         # If an exception is raised, remove the API from the list:

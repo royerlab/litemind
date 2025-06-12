@@ -217,6 +217,15 @@ class TestBaseApiImplementationsTextGeneration(MediaResources):
             object_block.get_content(), Order
         ), f"{api_class.__name__} completion should return an object of type Order."
 
+        # Check the content of the object:
+        order_info = object_block.get_content()
+        assert order_info.buyer == "NAZA"
+        assert order_info.contractor == "HeedLock Parthin"
+        assert order_info.sum_in_dollars == 247500000
+        assert "X-15" in order_info.item_type
+
+        print(order_info)
+
     def test_text_generation_with_simple_parameterless_tool(self, api_class):
         """
         Test that the completion method can interact with a simple toolset.
@@ -426,6 +435,17 @@ class TestBaseApiImplementationsTextGeneration(MediaResources):
         assert isinstance(
             object_block.get_content(), OrderInfo
         ), f"The response of {api_class.__name__} should be of type OrderInfo."
+
+        # Check the content of the object:
+        order_info = object_block.get_content()
+        # Print the order info:
+        print(order_info)
+        # Check the order info:
+        assert order_info.order_id == "order_12345"
+        assert order_info.delivery_date == "2024-11-15"
+
+        # Print the order info:
+        print(order_info)
 
     def test_text_generation_with_complex_toolset(self, api_class):
         """

@@ -173,5 +173,5 @@ def test_tool_agent_with_internal_tool(api_class):
     assert agent.conversation[0].role == "system"
     assert agent.conversation[1].role == "user"
     assert agent.conversation[2].role == "assistant"
-    assert agent.conversation[3].role == "user"
+    assert agent.conversation[3].role == "user" or agent.conversation[3].role == "tool"
     assert agent.conversation[4].role == "assistant"

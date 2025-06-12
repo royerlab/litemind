@@ -55,7 +55,7 @@ class TestBaseApiImplementationsDocuments(MediaResources):
         # User message:
         user_message = Message(role="user")
         user_message.append_text(
-            "Can you write a review for the provided paper? Please break down your comments into major and minor comments."
+            "Can you write a review for the provided paper below? Please break down your comments into major and minor comments."
         )
         doc_path = self.get_local_test_document_uri("intracktive_preprint.pdf")
         user_message.append_document(doc_path)

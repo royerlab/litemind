@@ -3,7 +3,7 @@ Here's a comprehensive CONTRIBUTING.md that follows best practices for open sour
 ```markdown
 # Contributing to LiteMind
 
-First off, thank you for considering contributing to LiteMind! 
+First off, thank you for considering contributing to LiteMind!
 
 ## Development Process
 
@@ -17,6 +17,7 @@ First off, thank you for considering contributing to LiteMind!
 ## Setting Up Development Environment
 
 1. Clone your fork:
+
 ```bash
 git clone https://github.com/royerlab/litemind.git
 cd litemind

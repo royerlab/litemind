@@ -74,7 +74,9 @@ def test_agent_with_just_text(api_class):
     agent = Agent(api=api)
 
     # Add system message:
-    agent.append_system_message("You are a weather bot.")
+    agent.append_system_message(
+        "You are a weather bot. Weather conditions must be: sunny, rainy, cloudy, snowy, or partly cloudy."
+    )
 
     # Run agent, you can pass a string directly to the agent:
     response = agent(
@@ -98,8 +100,6 @@ def test_agent_with_just_text(api_class):
         "cloudy",
         "snowy",
         "partly cloudy",
-        "sunny with light clouds",
-        "sunny with a gentle breeze",
     ]
 
 

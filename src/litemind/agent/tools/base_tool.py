@@ -24,6 +24,19 @@ class BaseTool(ABC):
     def __str__(self):
         return self.__repr__()
 
+    def is_builtin(self) -> bool:
+        """
+        Check if the tool is a built-in tool.
+
+        Returns
+        -------
+        bool
+            True if the tool is a built-in tool, False otherwise.
+        """
+        from litemind.agent.tools.builtin_tools.builtin_tool import BuiltinTool
+
+        return isinstance(self, BuiltinTool)
+
     @abstractmethod
     def pretty_string(self):
         """

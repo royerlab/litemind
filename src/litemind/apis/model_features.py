@@ -31,6 +31,8 @@ class ModelFeatures(Enum):
     )
     Document = "Documents"  # Model supports (some) documents _natively_ (not just as a conversion feature)
     Tools = "Tools"  # Model supports tools
+    WebSearchTool = "WebSearchTool"  # Model supports built-in web search tool
+    MCPTool = "MCPTool"  # Model supports built-in MCP tool
     AudioTranscription = "AudioTranscription"  # Model supports audio transcription
     ImageConversion = "ImageConversion"  # Model supports image media conversion to simpler media, e.g to text
     AudioConversion = "AudioConversion"  # Model supports audio conversion to simpler media, e.g to text

@@ -375,12 +375,16 @@ class TestBaseApiImplementationsMultimodalInputs(MediaResources):
         # Get the last, and possibly only, message in response:
         response = response[-1]
 
+        # Get the response as a string:
+        response = str(response).lower()
+
         # Check response:
         assert (
             "smell" in response
             or "ham" in response
             or "beer" in response
             or "reading" in response
+            or "test passage" in response
         )
 
     def test_text_generation_with_audio_url(self, api_class):

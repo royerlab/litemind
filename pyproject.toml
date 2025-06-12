@@ -23,9 +23,9 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
-    "openai",
-    "ollama",
-    "anthropic",
+    "openai>=1.86.0",
+    "ollama>=0.5.1",
+    "anthropic>=0.53.0",
     "google-generativeai",
     "pillow",
     "arbol",

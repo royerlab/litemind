@@ -33,8 +33,11 @@ def convert_messages_for_ollama(
 
             if block.has_type(Text) and not block.is_thinking():
 
+                # Get the Text media from the block:
+                text_media: Text = block.media
+
                 # Get Text's string:
-                text: str = block.media.text
+                text: str = text_media.text
 
                 if text.strip():
                     # Append the text content to the message dictionary:

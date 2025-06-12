@@ -1,7 +1,7 @@
 metadata:
   api: OpenAIApi
   scan_version: '1.0'
-  timestamp: '2025-06-05T00:31:55.602304'
+  timestamp: '2025-06-12T07:37:10.297955'
 results:
   chatgpt-4o-latest:
     Audio: false
@@ -13,7 +13,8 @@ results:
     Image: true
     ImageEmbeddings: false
     ImageGeneration: false
-    StructuredTextGeneration: false
+    MCPTool: true
+    StructuredTextGeneration: true
     TextEmbeddings: false
     TextGeneration: true
     Thinking: false
@@ -21,6 +22,7 @@ results:
     Video: false
     VideoEmbeddings: false
     VideoGeneration: false
+    WebSearchTool: false
   dall-e-2:
     Audio: false
     AudioEmbeddings: false
@@ -31,6 +33,7 @@ results:
     Image: false
     ImageEmbeddings: false
     ImageGeneration: true
+    MCPTool: false
     StructuredTextGeneration: false
     TextEmbeddings: false
     TextGeneration: false
@@ -39,6 +42,7 @@ results:
     Video: false
     VideoEmbeddings: false
     VideoGeneration: false
+    WebSearchTool: false
   dall-e-3:
     Audio: false
     AudioEmbeddings: false
@@ -49,6 +53,7 @@ results:
     Image: false
     ImageEmbeddings: false
     ImageGeneration: true
+    MCPTool: false
     StructuredTextGeneration: false
     TextEmbeddings: false
     TextGeneration: false
@@ -57,6 +62,7 @@ results:
     Video: false
     VideoEmbeddings: false
     VideoGeneration: false
+    WebSearchTool: false
   fastembed:
     Audio: false
     AudioEmbeddings: true
@@ -67,6 +73,7 @@ results:
     Image: false
     ImageEmbeddings: true
     ImageGeneration: false
+    MCPTool: false
     StructuredTextGeneration: false
     TextEmbeddings: true
     TextGeneration: false
@@ -75,6 +82,7 @@ results:
     Video: false
     VideoEmbeddings: true
     VideoGeneration: false
+    WebSearchTool: false
   gpt-3.5-turbo:
     Audio: false
     AudioEmbeddings: false
@@ -85,6 +93,7 @@ results:
     Image: false
     ImageEmbeddings: false
     ImageGeneration: false
+    MCPTool: true
     StructuredTextGeneration: false
     TextEmbeddings: false
     TextGeneration: true
@@ -93,6 +102,7 @@ results:
     Video: false
     VideoEmbeddings: false
     VideoGeneration: false
+    WebSearchTool: false
   gpt-3.5-turbo-16k:
     Audio: false
     AudioEmbeddings: false
@@ -103,14 +113,16 @@ results:
     Image: false
     ImageEmbeddings: false
     ImageGeneration: false
+    MCPTool: false
     StructuredTextGeneration: false
     TextEmbeddings: false
-    TextGeneration: true
+    TextGeneration: false
     Thinking: false
-    Tools: true
+    Tools: false
     Video: false
     VideoEmbeddings: false
     VideoGeneration: false
+    WebSearchTool: false
   gpt-3.5-turbo-instruct:
     Audio: false
     AudioEmbeddings: false
@@ -121,6 +133,7 @@ results:
     Image: false
     ImageEmbeddings: false
     ImageGeneration: false
+    MCPTool: false
     StructuredTextGeneration: false
     TextEmbeddings: false
     TextGeneration: false
@@ -129,6 +142,7 @@ results:
     Video: false
     VideoEmbeddings: false
     VideoGeneration: false
+    WebSearchTool: false
   gpt-4:
     Audio: false
     AudioEmbeddings: false
@@ -139,24 +153,7 @@ results:
     Image: false
     ImageEmbeddings: false
     ImageGeneration: false
-    StructuredTextGeneration: false
-    TextEmbeddings: false
-    TextGeneration: true
-    Thinking: false
-    Tools: false
-    Video: false
-    VideoEmbeddings: false
-    VideoGeneration: false
-  gpt-4-32k:
-    Audio: false
-    AudioEmbeddings: false
-    AudioGeneration: false
-    AudioTranscription: false
-    Document: false
-    DocumentEmbeddings: false
-    Image: false
-    ImageEmbeddings: false
-    ImageGeneration: false
+    MCPTool: true
     StructuredTextGeneration: false
     TextEmbeddings: false
     TextGeneration: true
@@ -165,6 +162,7 @@ results:
     Video: false
     VideoEmbeddings: false
     VideoGeneration: false
+    WebSearchTool: false
   gpt-4-turbo:
     Audio: false
     AudioEmbeddings: false
@@ -175,6 +173,7 @@ results:
     Image: true
     ImageEmbeddings: false
     ImageGeneration: false
+    MCPTool: true
     StructuredTextGeneration: false
     TextEmbeddings: false
     TextGeneration: true
@@ -183,6 +182,7 @@ results:
     Video: false
     VideoEmbeddings: false
     VideoGeneration: false
+    WebSearchTool: false
   gpt-4-turbo-preview:
     Audio: false
     AudioEmbeddings: false
@@ -193,6 +193,7 @@ results:
     Image: false
     ImageEmbeddings: false
     ImageGeneration: false
+    MCPTool: true
     StructuredTextGeneration: false
     TextEmbeddings: false
     TextGeneration: true
@@ -201,6 +202,7 @@ results:
     Video: false
     VideoEmbeddings: false
     VideoGeneration: false
+    WebSearchTool: false
   gpt-4.1:
     Audio: false
     AudioEmbeddings: false
@@ -211,6 +213,7 @@ results:
     Image: true
     ImageEmbeddings: false
     ImageGeneration: false
+    MCPTool: true
     StructuredTextGeneration: true
     TextEmbeddings: false
     TextGeneration: true
@@ -219,6 +222,7 @@ results:
     Video: false
     VideoEmbeddings: false
     VideoGeneration: false
+    WebSearchTool: true
   gpt-4.1-mini:
     Audio: false
     AudioEmbeddings: false
@@ -229,6 +233,7 @@ results:
     Image: true
     ImageEmbeddings: false
     ImageGeneration: false
+    MCPTool: true
     StructuredTextGeneration: true
     TextEmbeddings: false
     TextGeneration: true
@@ -237,6 +242,7 @@ results:
     Video: false
     VideoEmbeddings: false
     VideoGeneration: false
+    WebSearchTool: true
   gpt-4.1-nano:
     Audio: false
     AudioEmbeddings: false
@@ -247,6 +253,7 @@ results:
     Image: true
     ImageEmbeddings: false
     ImageGeneration: false
+    MCPTool: true
     StructuredTextGeneration: true
     TextEmbeddings: false
     TextGeneration: true
@@ -255,24 +262,7 @@ results:
     Video: false
     VideoEmbeddings: false
     VideoGeneration: false
-  gpt-4.5-preview:
-    Audio: false
-    AudioEmbeddings: false
-    AudioGeneration: false
-    AudioTranscription: false
-    Document: false
-    DocumentEmbeddings: false
-    Image: true
-    ImageEmbeddings: false
-    ImageGeneration: false
-    StructuredTextGeneration: true
-    TextEmbeddings: false
-    TextGeneration: true
-    Thinking: false
-    Tools: true
-    Video: false
-    VideoEmbeddings: false
-    VideoGeneration: false
+    WebSearchTool: false
   gpt-4o:
     Audio: false
     AudioEmbeddings: false
@@ -283,6 +273,7 @@ results:
     Image: true
     ImageEmbeddings: false
     ImageGeneration: false
+    MCPTool: true
     StructuredTextGeneration: true
     TextEmbeddings: false
     TextGeneration: true
@@ -291,6 +282,7 @@ results:
     Video: false
     VideoEmbeddings: false
     VideoGeneration: false
+    WebSearchTool: true
   gpt-4o-audio-preview:
     Audio: false
     AudioEmbeddings: false
@@ -301,6 +293,7 @@ results:
     Image: false
     ImageEmbeddings: false
     ImageGeneration: false
+    MCPTool: false
     StructuredTextGeneration: false
     TextEmbeddings: false
     TextGeneration: false
@@ -309,6 +302,7 @@ results:
     Video: false
     VideoEmbeddings: false
     VideoGeneration: false
+    WebSearchTool: false
   gpt-4o-mini:
     Audio: false
     AudioEmbeddings: false
@@ -319,6 +313,7 @@ results:
     Image: true
     ImageEmbeddings: false
     ImageGeneration: false
+    MCPTool: true
     StructuredTextGeneration: true
     TextEmbeddings: false
     TextGeneration: true
@@ -327,6 +322,7 @@ results:
     Video: false
     VideoEmbeddings: false
     VideoGeneration: false
+    WebSearchTool: true
   gpt-4o-mini-audio-preview:
     Audio: false
     AudioEmbeddings: false
@@ -337,6 +333,7 @@ results:
     Image: false
     ImageEmbeddings: false
     ImageGeneration: false
+    MCPTool: false
     StructuredTextGeneration: false
     TextEmbeddings: false
     TextGeneration: false
@@ -345,6 +342,7 @@ results:
     Video: false
     VideoEmbeddings: false
     VideoGeneration: false
+    WebSearchTool: false
   gpt-4o-mini-realtime-preview:
     Audio: false
     AudioEmbeddings: false
@@ -355,6 +353,7 @@ results:
     Image: false
     ImageEmbeddings: false
     ImageGeneration: false
+    MCPTool: false
     StructuredTextGeneration: false
     TextEmbeddings: false
     TextGeneration: false
@@ -363,6 +362,7 @@ results:
     Video: false
     VideoEmbeddings: false
     VideoGeneration: false
+    WebSearchTool: false
   gpt-4o-mini-search-preview:
     Audio: false
     AudioEmbeddings: false
@@ -373,6 +373,7 @@ results:
     Image: false
     ImageEmbeddings: false
     ImageGeneration: false
+    MCPTool: false
     StructuredTextGeneration: false
     TextEmbeddings: false
     TextGeneration: false
@@ -381,6 +382,7 @@ results:
     Video: false
     VideoEmbeddings: false
     VideoGeneration: false
+    WebSearchTool: false
   gpt-4o-mini-transcribe:
     Audio: false
     AudioEmbeddings: false
@@ -391,6 +393,7 @@ results:
     Image: false
     ImageEmbeddings: false
     ImageGeneration: false
+    MCPTool: false
     StructuredTextGeneration: false
     TextEmbeddings: false
     TextGeneration: false
@@ -399,6 +402,7 @@ results:
     Video: false
     VideoEmbeddings: false
     VideoGeneration: false
+    WebSearchTool: false
   gpt-4o-mini-tts:
     Audio: false
     AudioEmbeddings: false
@@ -409,6 +413,7 @@ results:
     Image: false
     ImageEmbeddings: false
     ImageGeneration: false
+    MCPTool: false
     StructuredTextGeneration: false
     TextEmbeddings: false
     TextGeneration: false
@@ -417,6 +422,7 @@ results:
     Video: false
     VideoEmbeddings: false
     VideoGeneration: false
+    WebSearchTool: false
   gpt-4o-realtime-preview:
     Audio: false
     AudioEmbeddings: false
@@ -427,6 +433,7 @@ results:
     Image: false
     ImageEmbeddings: false
     ImageGeneration: false
+    MCPTool: false
     StructuredTextGeneration: false
     TextEmbeddings: false
     TextGeneration: false
@@ -435,6 +442,7 @@ results:
     Video: false
     VideoEmbeddings: false
     VideoGeneration: false
+    WebSearchTool: false
   gpt-4o-search-preview:
     Audio: false
     AudioEmbeddings: false
@@ -445,6 +453,7 @@ results:
     Image: false
     ImageEmbeddings: false
     ImageGeneration: false
+    MCPTool: false
     StructuredTextGeneration: false
     TextEmbeddings: false
     TextGeneration: false
@@ -453,6 +462,7 @@ results:
     Video: false
     VideoEmbeddings: false
     VideoGeneration: false
+    WebSearchTool: false
   gpt-4o-transcribe:
     Audio: false
     AudioEmbeddings: false
@@ -463,6 +473,7 @@ results:
     Image: false
     ImageEmbeddings: false
     ImageGeneration: false
+    MCPTool: false
     StructuredTextGeneration: false
     TextEmbeddings: false
     TextGeneration: false
@@ -471,6 +482,7 @@ results:
     Video: false
     VideoEmbeddings: false
     VideoGeneration: false
+    WebSearchTool: false
   gpt-image-1:
     Audio: false
     AudioEmbeddings: false
@@ -481,6 +493,7 @@ results:
     Image: false
     ImageEmbeddings: false
     ImageGeneration: true
+    MCPTool: false
     StructuredTextGeneration: false
     TextEmbeddings: false
     TextGeneration: false
@@ -489,6 +502,7 @@ results:
     Video: false
     VideoEmbeddings: false
     VideoGeneration: false
+    WebSearchTool: false
   o1-high:
     Audio: false
     AudioEmbeddings: false
@@ -499,6 +513,7 @@ results:
     Image: true
     ImageEmbeddings: false
     ImageGeneration: false
+    MCPTool: true
     StructuredTextGeneration: true
     TextEmbeddings: false
     TextGeneration: true
@@ -507,6 +522,7 @@ results:
     Video: false
     VideoEmbeddings: false
     VideoGeneration: false
+    WebSearchTool: false
   o1-low:
     Audio: false
     AudioEmbeddings: false
@@ -517,6 +533,7 @@ results:
     Image: true
     ImageEmbeddings: false
     ImageGeneration: false
+    MCPTool: true
     StructuredTextGeneration: true
     TextEmbeddings: false
     TextGeneration: true
@@ -525,6 +542,7 @@ results:
     Video: false
     VideoEmbeddings: false
     VideoGeneration: false
+    WebSearchTool: false
   o1-medium:
     Audio: false
     AudioEmbeddings: false
@@ -535,6 +553,7 @@ results:
     Image: true
     ImageEmbeddings: false
     ImageGeneration: false
+    MCPTool: true
     StructuredTextGeneration: true
     TextEmbeddings: false
     TextGeneration: true
@@ -543,78 +562,7 @@ results:
     Video: false
     VideoEmbeddings: false
     VideoGeneration: false
-  o1-mini-high:
-    Audio: false
-    AudioEmbeddings: false
-    AudioGeneration: false
-    AudioTranscription: false
-    Document: false
-    DocumentEmbeddings: false
-    Image: false
-    ImageEmbeddings: false
-    ImageGeneration: false
-    StructuredTextGeneration: false
-    TextEmbeddings: false
-    TextGeneration: false
-    Thinking: true
-    Tools: false
-    Video: false
-    VideoEmbeddings: false
-    VideoGeneration: false
-  o1-mini-low:
-    Audio: false
-    AudioEmbeddings: false
-    AudioGeneration: false
-    AudioTranscription: false
-    Document: false
-    DocumentEmbeddings: false
-    Image: false
-    ImageEmbeddings: false
-    ImageGeneration: false
-    StructuredTextGeneration: false
-    TextEmbeddings: false
-    TextGeneration: false
-    Thinking: true
-    Tools: false
-    Video: false
-    VideoEmbeddings: false
-    VideoGeneration: false
-  o1-mini-medium:
-    Audio: false
-    AudioEmbeddings: false
-    AudioGeneration: false
-    AudioTranscription: false
-    Document: false
-    DocumentEmbeddings: false
-    Image: false
-    ImageEmbeddings: false
-    ImageGeneration: false
-    StructuredTextGeneration: false
-    TextEmbeddings: false
-    TextGeneration: false
-    Thinking: true
-    Tools: false
-    Video: false
-    VideoEmbeddings: false
-    VideoGeneration: false
-  o1-preview:
-    Audio: false
-    AudioEmbeddings: false
-    AudioGeneration: false
-    AudioTranscription: false
-    Document: false
-    DocumentEmbeddings: false
-    Image: false
-    ImageEmbeddings: false
-    ImageGeneration: false
-    StructuredTextGeneration: false
-    TextEmbeddings: false
-    TextGeneration: true
-    Thinking: true
-    Tools: false
-    Video: false
-    VideoEmbeddings: false
-    VideoGeneration: false
+    WebSearchTool: false
   o3-high:
     Audio: false
     AudioEmbeddings: false
@@ -625,6 +573,7 @@ results:
     Image: true
     ImageEmbeddings: false
     ImageGeneration: false
+    MCPTool: true
     StructuredTextGeneration: true
     TextEmbeddings: false
     TextGeneration: true
@@ -633,6 +582,7 @@ results:
     Video: false
     VideoEmbeddings: false
     VideoGeneration: false
+    WebSearchTool: false
   o3-low:
     Audio: false
     AudioEmbeddings: false
@@ -643,6 +593,7 @@ results:
     Image: true
     ImageEmbeddings: false
     ImageGeneration: false
+    MCPTool: true
     StructuredTextGeneration: true
     TextEmbeddings: false
     TextGeneration: true
@@ -651,6 +602,7 @@ results:
     Video: false
     VideoEmbeddings: false
     VideoGeneration: false
+    WebSearchTool: false
   o3-medium:
     Audio: false
     AudioEmbeddings: false
@@ -661,6 +613,7 @@ results:
     Image: true
     ImageEmbeddings: false
     ImageGeneration: false
+    MCPTool: true
     StructuredTextGeneration: true
     TextEmbeddings: false
     TextGeneration: true
@@ -669,6 +622,7 @@ results:
     Video: false
     VideoEmbeddings: false
     VideoGeneration: false
+    WebSearchTool: false
   o3-mini-high:
     Audio: false
     AudioEmbeddings: false
@@ -679,6 +633,7 @@ results:
     Image: false
     ImageEmbeddings: false
     ImageGeneration: false
+    MCPTool: true
     StructuredTextGeneration: true
     TextEmbeddings: false
     TextGeneration: true
@@ -687,6 +642,7 @@ results:
     Video: false
     VideoEmbeddings: false
     VideoGeneration: false
+    WebSearchTool: false
   o3-mini-low:
     Audio: false
     AudioEmbeddings: false
@@ -697,6 +653,7 @@ results:
     Image: false
     ImageEmbeddings: false
     ImageGeneration: false
+    MCPTool: true
     StructuredTextGeneration: true
     TextEmbeddings: false
     TextGeneration: true
@@ -705,6 +662,7 @@ results:
     Video: false
     VideoEmbeddings: false
     VideoGeneration: false
+    WebSearchTool: false
   o3-mini-medium:
     Audio: false
     AudioEmbeddings: false
@@ -715,6 +673,7 @@ results:
     Image: false
     ImageEmbeddings: false
     ImageGeneration: false
+    MCPTool: true
     StructuredTextGeneration: true
     TextEmbeddings: false
     TextGeneration: true
@@ -723,6 +682,7 @@ results:
     Video: false
     VideoEmbeddings: false
     VideoGeneration: false
+    WebSearchTool: false
   text-embedding-3-large:
     Audio: false
     AudioEmbeddings: true
@@ -733,6 +693,7 @@ results:
     Image: false
     ImageEmbeddings: true
     ImageGeneration: false
+    MCPTool: false
     StructuredTextGeneration: false
     TextEmbeddings: true
     TextGeneration: false
@@ -741,6 +702,7 @@ results:
     Video: false
     VideoEmbeddings: true
     VideoGeneration: false
+    WebSearchTool: false
   text-embedding-3-small:
     Audio: false
     AudioEmbeddings: true
@@ -751,6 +713,7 @@ results:
     Image: false
     ImageEmbeddings: true
     ImageGeneration: false
+    MCPTool: false
     StructuredTextGeneration: false
     TextEmbeddings: true
     TextGeneration: false
@@ -759,6 +722,7 @@ results:
     Video: false
     VideoEmbeddings: true
     VideoGeneration: false
+    WebSearchTool: false
   tts-1:
     Audio: false
     AudioEmbeddings: false
@@ -769,6 +733,7 @@ results:
     Image: false
     ImageEmbeddings: false
     ImageGeneration: false
+    MCPTool: false
     StructuredTextGeneration: false
     TextEmbeddings: false
     TextGeneration: false
@@ -777,6 +742,7 @@ results:
     Video: false
     VideoEmbeddings: false
     VideoGeneration: false
+    WebSearchTool: false
   tts-1-hd:
     Audio: false
     AudioEmbeddings: false
@@ -787,6 +753,7 @@ results:
     Image: false
     ImageEmbeddings: false
     ImageGeneration: false
+    MCPTool: false
     StructuredTextGeneration: false
     TextEmbeddings: false
     TextGeneration: false
@@ -795,6 +762,7 @@ results:
     Video: false
     VideoEmbeddings: false
     VideoGeneration: false
+    WebSearchTool: false
   whisper-1:
     Audio: false
     AudioEmbeddings: false
@@ -805,6 +773,7 @@ results:
     Image: false
     ImageEmbeddings: false
     ImageGeneration: false
+    MCPTool: false
     StructuredTextGeneration: false
     TextEmbeddings: false
     TextGeneration: false
@@ -813,6 +782,7 @@ results:
     Video: false
     VideoEmbeddings: false
     VideoGeneration: false
+    WebSearchTool: false
   whisper-local:
     Audio: false
     AudioEmbeddings: false
@@ -823,6 +793,7 @@ results:
     Image: false
     ImageEmbeddings: false
     ImageGeneration: false
+    MCPTool: false
     StructuredTextGeneration: false
     TextEmbeddings: false
     TextGeneration: false
@@ -831,3 +802,4 @@ results:
     Video: false
     VideoEmbeddings: false
     VideoGeneration: false
+    WebSearchTool: false

@@ -231,7 +231,12 @@ def test_text_generation_streaming(api_class):
         ),
         Message(role="user", text="What is the meaning of life?"),
     ]
-    api_instance.generate_text(model_name=text_generation_model_name, messages=messages)
+    response = api_instance.generate_text(
+        model_name=text_generation_model_name, messages=messages
+    )
+
+    print(str(response))
+
     assert "on_text_streaming" in mock_callback.called_methods
     assert "fragment=" in mock_callback.call_parameters_dump
 

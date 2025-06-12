@@ -33,7 +33,7 @@ def check_ollama_api_availability(client):
 
         # If we get here, the API is available:
         result = True
-    except Exception:
+    except Exception as e:
         # If we get an error, we assume it's because Ollama is not running:
         aprint(f"Error while trying to check availability of Ollama API: {e}")
 

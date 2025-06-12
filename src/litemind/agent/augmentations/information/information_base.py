@@ -32,6 +32,19 @@ class InformationBase(ABC):
         """
         pass
 
+    @property
+    @abstractmethod
+    def metadata(self) -> dict:
+        """
+        Metadata associated with the information.
+
+        Returns
+        -------
+        dict
+            A dictionary containing metadata about the information.
+        """
+        pass
+
     @abstractmethod
     def has_type(self, media_type: Type[MediaBase]) -> bool:
         """

@@ -88,7 +88,7 @@ class Information(InformationBase, PickleSerializable):
         self.media = media
         self.children = children if children is not None else []
         self.summary = summary
-        self.metadata = metadata if metadata is not None else {}
+        self._metadata = metadata if metadata is not None else {}
         self._id = id or str(uuid.uuid4())
         self._score = score
         self.embedding = None
@@ -108,6 +108,10 @@ class Information(InformationBase, PickleSerializable):
     @property
     def content(self) -> Any:
         return self.media.get_content()
+
+    @property
+    def metadata(self) -> dict:
+        return self._metadata
 
     @property
     def id(self) -> str:

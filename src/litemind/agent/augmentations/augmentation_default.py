@@ -30,6 +30,8 @@ class AugmentationDefault(AugmentationBase):
         ----------
         query: Union[str, BaseModel, MediaBase, Information]
             The query to normalize.
+
+        Returns
         -------
         MediaBase
             The query normalized to a media object.

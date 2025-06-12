@@ -11,6 +11,10 @@ def _get_anthropic_models_list(client, max_num_models: int = 100) -> List[str]:
     # Extract model IDs
     model_list: List[str] = list([str(info.id) for info in models_info])
 
+    # remove deprecated models: claude-3-sonnet-20240229
+    if "claude-3-sonnet-20240229" in model_list:
+        model_list.remove("claude-3-sonnet-20240229")
+
     # IF claude 3.7 is available, then add reasoning variant:
     if any("claude-3-7" in m for m in model_list):
         # get the model with claude-3-7 in its name from the list:

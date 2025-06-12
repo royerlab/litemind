@@ -3,6 +3,62 @@ from typing import Any, List, Optional
 
 from arbol import aprint
 
+deprecated_models = [
+    # 2025 – latest wave
+    "text-moderation-007",
+    "text-moderation-stable",
+    "text-moderation-latest",
+    "o1-preview",
+    "o1-mini",
+    "gpt-4.5-preview",
+    # 2024 – vision & large-context models
+    "gpt-4-32k",
+    "gpt-4-32k-0613",
+    "gpt-4-32k-0314",
+    "gpt-4-vision-preview",
+    "gpt-4-1106-vision-preview",
+    "gpt-3.5-turbo-0613",
+    "gpt-3.5-turbo-16k-0613",
+    "gpt-3.5-turbo-0301",
+    # 2023-24 chat & snapshot models
+    "gpt-4-0314",
+    # GPT-3 / InstructGPT retirement (Jan 2024)
+    "text-ada-001",
+    "text-babbage-001",
+    "text-curie-001",
+    "text-davinci-001",
+    "text-davinci-002",
+    "text-davinci-003",
+    "ada",
+    "babbage",
+    "curie",
+    "davinci",
+    "code-davinci-002",
+    "code-davinci-001",
+    "text-davinci-edit-001",
+    "code-davinci-edit-001",
+    # First-generation embedding & search models
+    "text-similarity-ada-001",
+    "text-search-ada-doc-001",
+    "text-search-ada-query-001",
+    "code-search-ada-code-001",
+    "code-search-ada-text-001",
+    "text-similarity-babbage-001",
+    "text-search-babbage-doc-001",
+    "text-search-babbage-query-001",
+    "code-search-babbage-code-001",
+    "code-search-babbage-text-001",
+    "text-similarity-curie-001",
+    "text-search-curie-doc-001",
+    "text-search-curie-query-001",
+    "text-similarity-davinci-001",
+    "text-search-davinci-doc-001",
+    "text-search-davinci-query-001",
+    # Codex family sunset (Mar 2023)
+    "code-cushman-002",
+    "code-cushman-001",
+]
+
 
 def _get_raw_openai_model_list(client: "OpenAI"):
     from openai import OpenAI
@@ -98,6 +154,12 @@ def get_openai_model_list(
                 model_list.remove(model)
                 if verbose:
                     aprint(f"Excluded: {model}")
+
+            # Remove deprecated models:
+            if model in deprecated_models:
+                model_list.remove(model)
+                if verbose:
+                    aprint(f"Deprecated: {model}")
 
         # Remove duplicates:
         model_list = list(set(model_list))

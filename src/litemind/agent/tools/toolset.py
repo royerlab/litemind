@@ -1,4 +1,4 @@
-from typing import Callable, List, Optional
+from typing import Callable, List, Optional, Type, Union
 
 from litemind.agent.tools.base_tool import BaseTool
 
@@ -80,21 +80,132 @@ class ToolSet:
         # Return the tool agent:
         return tool_agent
 
-    def get_tool(self, name: str) -> Optional[BaseTool]:
+    def add_builtin_web_search_tool(self) -> "BuiltinWebSearchTool":
+        """
+        Add a built-in web search tool.
+
+        Returns
+        -------
+        BuiltinWebSearchTool
+            The builtin web search tool.
+        """
+
+        # Create the web search tool:
+        from litemind.agent.tools.builtin_tools.web_search_tool import (
+            BuiltinWebSearchTool,
+        )
+
+        builtin_web_search_tool = BuiltinWebSearchTool()
+
+        # Add the tool to the tool set:
+        self.tools.append(builtin_web_search_tool)
+
+        # Return the web search tool:
+        return builtin_web_search_tool
+
+    def add_builtin_mcp_tool(
+        self,
+        server_name: str,
+        server_url: str,
+        headers: Optional[dict] = None,
+        allowed_tools: Optional[List[str]] = None,
+    ) -> "BuiltinMCPTool":
+        """
+        Add a built-in MCP tool.
+
+        Parameters
+        ----------
+        server_name : str
+            The name of the MCP server.
+        server_url : str
+            The URL of the MCP server.
+        headers : Optional[dict]
+            Optional headers to include in requests to the MCP server.
+        allowed_tools : Optional[List[str]]
+            A list of allowed tools that can be used with this MCP server. If None, all tools are allowed.
+
+        Returns
+        -------
+        BuiltinMCPTool
+            The builtin MCP tool.
+        """
+
+        # Create the MCP tool:
+        from litemind.agent.tools.builtin_tools.mcp_tool import BuiltinMCPTool
+
+        builtin_mcp_tool = BuiltinMCPTool(
+            server_name, server_url, headers, allowed_tools
+        )
+
+        # Add the tool to the tool set:
+        self.tools.append(builtin_mcp_tool)
+
+        # Return the MCP tool:
+        return builtin_mcp_tool
+
+    def remove_tool(self, tool: BaseTool):
+        """
+        Remove a tool.
+
+        Parameters
+        ----------
+        tool : BaseTool
+            The tool to remove.
+
+        """
+        # Remove the tool from the tools list:
+        self.tools.remove(tool)
+
+    def has_tool(self, tool: Union[str, BaseTool, Type[BaseTool]]) -> bool:
+        """
+        Check if a tool is present in the tool set.
+
+        Parameters
+        ----------
+        tool : Union[str, BaseTool, Type[BaseTool]]
+            The tool to check for. Can be a string (tool name), a BaseTool instance, or a type of BaseTool.
+
+        Returns
+        -------
+        bool
+            True if the tool is present, False otherwise.
+        """
+
+        # If the tool is a string, check by name:
+        if isinstance(tool, str):
+            return any(t.name == tool for t in self.tools)
+
+        # If the tool is a BaseTool instance, check by instance:
+        elif isinstance(tool, BaseTool):
+            return tool in self.tools
+
+        # If the tool is a type of BaseTool, check by type:
+        elif isinstance(tool, type) and issubclass(tool, BaseTool):
+            return any(isinstance(t, tool) for t in self.tools)
+
+        # If none of the above, return False:
+        return False
+
+    def get_tool(self, name: Union[str, Type[BaseTool]]) -> Optional[BaseTool]:
         """
         Retrieve a tool by its name.
 
         Parameters
         ----------
 
-        name : str
-            The name of the tool to retrieve.
+        name : Union[str, Type[BaseTool]]
+            The name of the tool to retrieve, or the type (class) of the tool.
 
         Returns
         -------
         Optional[BaseTool]
             The tool, if found, or None.
         """
+
+        # if the name is a type, return the first tool of that type:
+        if isinstance(name, type) and issubclass(name, BaseTool):
+            # Get the name of the tool class:
+            name = name.__name__
 
         # Iterate over tools and return the one with the matching name:
         for tool in self.tools:
@@ -118,6 +229,19 @@ class ToolSet:
 
         # Return all tools:
         return self.tools
+
+    def list_builtin_tools(self) -> List[BaseTool]:
+        """
+        Return all built-in tools as a list.
+
+        Returns
+        -------
+        List[BaseTool]
+            All built-in tools.
+        """
+
+        # Filter and return only built-in tools:
+        return [tool for tool in self.tools if tool.is_builtin()]
 
     def tool_names(self) -> List[str]:
         """

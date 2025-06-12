@@ -675,13 +675,13 @@ class ModelFeatureScanner(MediaResources):
         """Test if model supports video understanding."""
         try:
             # Test video description capability
-            video_path = self.get_local_test_video_uri("flying.mp4")
+            video_uri = self.get_local_test_video_uri("video.mp4")
 
             messages = [
                 Message(role="system", text="You are a helpful assistant."),
                 Message(role="user", text="Describe what's happening in this video."),
             ]
-            messages[1].append_video(video_path)
+            messages[1].append_video(video_uri)
 
             response = api.generate_text(
                 model_name=model_name, messages=messages, temperature=0.0
@@ -691,13 +691,18 @@ class ModelFeatureScanner(MediaResources):
             if not response or len(response) < 1:
                 return False
 
+            if "m unable to" in str(response[0]).lower():
+                # If the model says it is unable to describe the video, we consider it as not supporting video understanding.
+                return False
+
+            # Check if the response contains text that indicates video understanding:
             response_text = str(response[0]).lower()
             video_indicators = [
-                "fly",
+                "fly ",
                 "flying",
                 "saucer",
                 "hover",
-                "disc",
+                "disc ",
                 "circular",
                 "aircraft",
                 "vehicle",
@@ -706,8 +711,15 @@ class ModelFeatureScanner(MediaResources):
                 "facility",
             ]
 
-            # If any indicators are found in the response
-            return any(indicator in response_text for indicator in video_indicators)
+            # Check if any of the video indicators are found in the response:
+            for indicator in video_indicators:
+                if indicator in response_text:
+                    # aprint(f"Found indicator '{indicator}' in response.")
+                    return True
+
+            # If we reach here, it means no indicators were found in the response
+            return False
+
         except Exception as e:
             aprint(f"Error in test_video: {e}")
             return False
@@ -788,6 +800,97 @@ class ModelFeatureScanner(MediaResources):
             aprint(f"Error in test_tools: {e}")
             return False
 
+    def test_web_search_tool(self, api: BaseApi, model_name: str) -> bool:
+        """Test if model supports built-in web search tool."""
+        try:
+
+            # Create a simple tool for testing
+            toolset = ToolSet()
+
+            # Add the built-in web search tool to the toolset:
+            toolset.add_builtin_web_search_tool()
+
+            # Prepare a message to test the web search tool:
+            messages = [
+                Message(role="system", text="You are a helpful assistant."),
+                Message(role="user", text="What is the weather in London now?"),
+            ]
+
+            # Generate text using the API with the toolset:
+            response = api.generate_text(
+                model_name=model_name,
+                messages=messages,
+                toolset=toolset,
+                temperature=0.0,
+            )
+
+            # Check if we got a meaningful response about the tool
+            if response is None or len(response) < 1:
+                return False
+
+            # Extract the response text:
+            response_text = str(response[-1]).lower()
+
+            # Check if the response contains the last name:
+            return (
+                any(digit in response_text for digit in "0123456789")
+                or "london" in response_text
+            )
+
+        except Exception as e:
+            aprint(f"Error in test_tools: {e}")
+            return False
+
+    def test_mcp_tool(self, api: BaseApi, model_name: str) -> bool:
+        """Test if model supports built-in web search tool."""
+        try:
+            # Create a ToolSet instance:
+            toolset = ToolSet()
+            # Add the built-in web search tool to the toolset:
+            toolset.add_builtin_mcp_tool(
+                server_name="deepwiki",
+                server_url="https://mcp.deepwiki.com/mcp",
+                allowed_tools=["ask_question"],
+            )
+
+            # Prepare a message to test the MCP tool:
+            messages = [
+                Message(
+                    role="system",
+                    text="You are a helpful assistant.",
+                ),
+                Message(
+                    role="user",
+                    text="What transport protocols does the 2025-03-26 version of the MCP spec (modelcontextprotocol/modelcontextprotocol) support?",
+                ),
+            ]
+
+            # Generate text using the API with the toolset:
+            response = api.generate_text(
+                model_name=model_name,
+                messages=messages,
+                toolset=toolset,
+                temperature=0.0,
+            )
+
+            # Check if we got a meaningful response about the tool
+            if response is None or len(response) < 1:
+                return False
+
+            # Extract the response text:
+            response_text = str(response[-1]).lower()
+
+            # Check if the response contains the last name:
+            return (
+                "stdio" in response_text
+                or "streamable" in response_text
+                or "http" in response_text
+            )
+
+        except Exception as e:
+            aprint(f"Error in test_tools: {e}")
+            return False
+
     def test_audio_transcription(self, api: BaseApi, model_name: str) -> bool:
         """Test if model supports audio transcription."""
         try:
@@ -808,24 +911,6 @@ class ModelFeatureScanner(MediaResources):
         except Exception as e:
             aprint(f"Error in test_audio_transcription: {e}")
             return False
-
-    # def test_image_conversion(self, api: BaseApi, model_name: str) -> bool:
-    #     """This feature would require a specialized test that depends on model_name."""
-    #     return self.test_generic_feature(api, model_name, ModelFeatures.ImageConversion)
-    #
-    # def test_audio_conversion(self, api: BaseApi, model_name: str) -> bool:
-    #     """This feature would require a specialized test that depends on model_name."""
-    #     return self.test_generic_feature(api, model_name, ModelFeatures.AudioConversion)
-    #
-    # def test_video_conversion(self, api: BaseApi, model_name: str) -> bool:
-    #     """This feature would require a specialized test that depends on model_name."""
-    #     return self.test_generic_feature(api, model_name, ModelFeatures.VideoConversion)
-    #
-    # def test_document_conversion(self, api: BaseApi, model_name: str) -> bool:
-    #     """This feature would require a specialized test that depends on model_name."""
-    #     return self.test_generic_feature(
-    #         api, model_name, ModelFeatures.DocumentConversion
-    #     )
 
     def save_results(self, folder: str = None) -> List[str]:
         """

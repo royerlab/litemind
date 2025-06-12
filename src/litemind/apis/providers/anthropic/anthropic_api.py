@@ -4,6 +4,7 @@ from typing import List, Optional, Sequence, Type, Union
 from pydantic import BaseModel
 
 from litemind.agent.messages.message import Message
+from litemind.agent.messages.message_block import MessageBlock
 from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.base_api import ModelFeatures
 from litemind.apis.callbacks.callback_manager import CallbackManager
@@ -320,7 +321,7 @@ class AnthropicApi(DefaultApi):
 
         # ---- Claude 3.7 Sonnet ----
         if "3-7-sonnet" in name:
-            return _OUT_128K  # requires `output-128k-2025-02-19` header
+            return _OUT_64K  # can be _OUT_128K  but requires `output-128k-2025-02-19` header
 
         # ---- Claude 3.5 family ----
         if "3-5-sonnet" in name or "3-5-haiku" in name:
@@ -381,7 +382,8 @@ class AnthropicApi(DefaultApi):
             if message.role == "system":
                 for block in message.blocks:
                     if block.has_type(Text):
-                        system_messages += block.media.text
+                        text_media: Text = block.media
+                        system_messages += text_media.text
                     else:
                         raise ValueError(
                             "System message should only contain text blocks."

@@ -39,9 +39,9 @@ def check_anthropic_api_availability(client: "Anthropic", model_name: str):
         # If we get here, the API is available:
         result = True
 
-    except Exception:
+    except Exception as e:
         # If we get an error, we assume it's because the API is not available:
-        aprint(f"Error while trying to check availability of Ollama API: {e}")
+        aprint(f"Error while trying to check availability of Anthropic API: {e}")
 
         # print stack trace:
         import traceback
@@ -51,9 +51,9 @@ def check_anthropic_api_availability(client: "Anthropic", model_name: str):
         result = False
 
     if result:
-        aprint("Gemini API is available.")
+        aprint("Anthropic API is available.")
     else:
-        aprint("Gemini API is not available.")
+        aprint("Anthropic API is not available.")
 
     # Cache the result:
     _cached_check_anthropic_api_availability = result

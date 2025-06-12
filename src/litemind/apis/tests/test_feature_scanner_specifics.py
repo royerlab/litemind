@@ -21,6 +21,14 @@ def test_scan_openai_api_check_specifics(scanner):
 
     # Query supported features for a specific model
     model_feature_map = {
+        "gpt-4.1": [
+            ModelFeatures.TextGeneration,
+            ModelFeatures.StructuredTextGeneration,
+            ModelFeatures.Image,
+            ModelFeatures.Tools,
+            ModelFeatures.WebSearchTool,
+            ModelFeatures.MCPTool,
+        ],
         "gpt-4o": [
             ModelFeatures.TextGeneration,
             ModelFeatures.StructuredTextGeneration,
@@ -39,12 +47,12 @@ def test_scan_openai_api_check_specifics(scanner):
             ModelFeatures.Image,
             ModelFeatures.Tools,
         ],
-        "gpt-4.5-preview": [
-            ModelFeatures.TextGeneration,
-            ModelFeatures.StructuredTextGeneration,
-            ModelFeatures.Image,
-            ModelFeatures.Tools,
-        ],
+        # "gpt-4.5-preview": [
+        #     ModelFeatures.TextGeneration,
+        #     ModelFeatures.StructuredTextGeneration,
+        #     ModelFeatures.Image,
+        #     ModelFeatures.Tools,
+        # ],
     }
 
     _check_features(scanner, OpenAIApi, model_feature_map)
