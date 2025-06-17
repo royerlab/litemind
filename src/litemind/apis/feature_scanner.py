@@ -838,7 +838,7 @@ class ModelFeatureScanner(MediaResources):
             )
 
         except Exception as e:
-            aprint(f"Error in test_tools: {e}")
+            aprint(f"Error in test_web_search_tool: {e}")
             return False
 
     def test_mcp_tool(self, api: BaseApi, model_name: str) -> bool:
@@ -873,14 +873,14 @@ class ModelFeatureScanner(MediaResources):
                 temperature=0.0,
             )
 
-            # Check if we got a meaningful response about the tool
+            # Check if we got a meaningful response from the tool
             if response is None or len(response) < 1:
                 return False
 
             # Extract the response text:
             response_text = str(response[-1]).lower()
 
-            # Check if the response contains the last name:
+            # Check if the response contains keywords:
             return (
                 "stdio" in response_text
                 or "streamable" in response_text
@@ -888,7 +888,7 @@ class ModelFeatureScanner(MediaResources):
             )
 
         except Exception as e:
-            aprint(f"Error in test_tools: {e}")
+            aprint(f"Error in test_mcp_tool: {e}")
             return False
 
     def test_audio_transcription(self, api: BaseApi, model_name: str) -> bool:

@@ -1,0 +1,118 @@
+file: EXAMPLES.md
+folder:
+  path: .
+  extensions:
+    - .py
+    - .md
+    - .txt
+    - .toml
+    - LICENSE
+    - .tests
+    - .html
+    - .ipynb
+  excluded:
+    - 'litemind.egg-info'
+    - 'dist'
+    - 'build'
+    - 'README.md'
+    - '.git'
+    - '.github'
+    - '.codegen'
+    - 'sandbox'
+    - 'exported.txt'
+    - 'utils'
+    - 'scan_results'
+    - 'archives'
+    - 'documents'
+    - 'others'
+    - 'tables'
+    - 'debug_prompt.txt'
+    - '*.scan.md'
+    - '*.scan.yaml'
+prompt: |
+  You are a helpful assistant with deep expertise in Software Engineering and strong expertise in LLM coding.
+  You know how to write complete, compelling and exact code examples for LLM libraries.
+  Your task is to generate a EXAMPLES.md file with 15 code samples:
+  
+  # List of code samples:
+  
+  1. “Hello Agent” quick-start
+  Instantiate OpenAIApi, wrap it in an Agent, add a system prompt (“You are a helpful assistant”), send one user question, print the reply. Steps: init API → create agent → append system message → call agent → log result. 
+  
+  2. Date-aware assistant with a function tool
+  Expose a Python helper get_current_date() through a ToolSet, attach it to the agent, and let the LLM invoke it to answer “What’s today’s date?”. Steps: define function → build toolset → add function tool → create agent with toolset → ask date → observe tool call + return. 
+  
+  3. Agent + RAG: answering from a vector DB
+  Load three Information snippets into an InMemoryVectorDatabase, register the augmentation, and ask a factual question that can be satisfied only by retrieved content. Steps: create vector DB → add information → attach augmentation → pose question → get citation-rich answer. 
+  
+  4. Multimodal Q&A with image context
+  Combine text and an external image URL in the same Message, call an internal describe_image tool to ground the answer, and mention metadata stored in the vector DB. Steps: embed image → define description tool → add to agent → send multimodal message → generate answer. 
+  
+  5. Unified CombinedApi fail-over demo
+  Create CombinedApi, list available models, request both "TextGeneration" and "Image" features, and show the agent auto-selecting the first provider that satisfies both. Steps: instantiate CombinedApi → print list_models() → create agent with model_features → ask mixed prompt. 
+  
+  6. Safe, sandboxed code-runner agent
+  Register an execute_python_code function wrapped in a guarded exec, warn about untrusted code in a system prompt, run print("Hello"), and display sandbox output. Steps: write wrapper → add to toolset → create agent → run snippet → capture stdout. 
+  
+  7. Structured JSON replies with Pydantic
+  Define a WeatherResponse(BaseModel) with fields like temp_c, condition, and city; pass it via response_format, ask “Weather in Paris?”, and show the validated object you get back. Steps: declare dataclass → build agent with format → ask question → access parsed fields. 
+  
+  8. Tool-driven image generation
+  Wrap a generate_cat_image() helper that calls generate_image, returns a local file path, and have the agent produce an acknowledgement when asked “Please generate a cat image.” Steps: create helper → add to toolset → prompt agent → verify image file exists. 
+  
+  9. Realtime speech transcription + translation (non-CLI)
+  -Demonstrate Litemind’s audio modality:
+  -Record a short WAV file in French.
+  -Use CombinedApi.get_best_model([TextGeneration, Audio]) to select a model that understands audio. 
+  -Register transcribe_audio() (Whisper-style) as a function tool.
+  -Ask the agent “Please transcribe and translate this clip into English,” attaching the audio object in the Message.
+  -Show the agent invoking the tool, returning the English text, and citing the original French.
+
+  10. Batch image captioning & metadata enrichment
+  Build a small pipeline that walks through a folder of JPEGs, feeds each image to the agent with a describe_image tool and a Text prompt like “Return JSON with title, objects, style,” then stores the captions in a list or CSV. Steps: iterate files → append image & prompt → agent returns structured JSON → collect rows → save. Multimodal input and structured output leverage Litemind’s image support and Pydantic validation. 
+
+  11. Data-aware chat via pandas-tool
+  -Show the agent answering questions against a loaded pandas.DataFrame without embedding code in the prompt:
+  -Load a CSV into a DataFrame.
+  -Wrap a helper query_dataframe(df, question:str) that returns text/JSON answers.
+  -Add it to the ToolSet.
+  -Ask: “How many rows have price > 100 and what’s their average score?”
+  The agent reasons, calls the function, and replies with aggregated numbers. Tool integration plus structured output illustrate how Litemind bridges LLM reasoning and tabular data. 
+
+  12. Cascading agents (agent-as-tool)
+  Create a “Summariser” sub-agent and register it as a callable tool inside a “Supervisor” agent; ask the supervisor to condense a paragraph and watch it delegate. Steps: build child agent → wrap in tool → attach to parent → issue request → verify delegation. 
+
+  13. Automatic feature discovery for multimodality
+  Iterate over available models, ask for "TextGeneration" + "Audio", and assert the library picks the first model that meets both; print the choice. Steps: list models → loop → assert features → log result. 
+
+  14. Batch ingestion pipeline for PDFs & images  
+  Walk a folder, convert each PDF page or image into Information chunks with metadata, store them in a persistent vector DB, and expose a search-answer agent over that corpus. Steps: iterate files → chunk → add to DB → attach augmentation → query agent. 
+
+  15. Streaming responses with progress callbacks
+  Implement a custom callback that prints tokens as they arrive, attach it to a streaming-capable model, and show the live token flow; then repeat with a non-streaming model for comparison. Steps: define handler → create agent streaming=True → send long prompt → observe tokens → switch model → observe full text only. 
+  python.langchain.com
+  
+  *Important*: Before starting generating the code examples, please review the 15 examples described above carefully and make any adjustments or changes necessary to ensure they are compatible with litemind and its capabilities and features.
+
+  # Instructions for code examples:
+  - Please use markdown code blocks for code examples and other code snippets.
+  - Keep different examples that cover different topics separate from each other. Do not combine different examples into the same code block.
+  - Please keep different examples into different code blocks for clarity, with text preambles before each code block.
+  - Make sure that the code examples are complete and can be run as-is.
+  - Make sure that the code can run without errors, e.g. make sure that all required imports are included.
+  - Make sure, if possible, to include the expected output as comments in the code.
+  - Make sure that code examples are emphatically didactic, well-commented, and easy to understand.
+  - Make sure that the code is well-formatted and follows PEP-8.
+  - Code examples that use specific features must request models that have these features.
+  - In the examples, make sure to use real URLs of files that really exist, for example those used in the tests.
+  - Explain and/or show that ModelFeatures can be provided as a singleton or list of strings instead of enums (see normalisation code).
+  
+  # Important Notes:
+  - Avoid hallucinating things that are not in the repository.
+  - Litemind _does_ _not_ have an agent class called ReActAgent, or anything 'react' related. The Agent class itself is has all the features of the ReAct framework.
+  - Important: If you don't know something for sure, don't make it up. If you don't know, ignore, or just say that you don't know or can't do it.
+
+    
+  # Task:
+  Your task is to follow the instructions above and generate a EXAMPLES.md file with 15 code samples for the Python repository provided below.
+

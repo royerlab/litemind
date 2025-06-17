@@ -298,64 +298,64 @@ def test_generate_markdown_report(scanner):
             assert "## API: DummyApi" in file_content
 
 
-def test_scan_openai_for_debug(scanner):
-    # Query supported features for a specific model
-    model_name = "o3-mini-high"
-
-    # Scan OpenAIAPI:
-    scanner.scan_apis([OpenAIApi], model_names=[model_name])
-
-    # Should have OpenAIAPI in results
-    assert OpenAIApi in scanner.scan_results
-
-    # Should have all models
-    assert len(scanner.scan_results[OpenAIApi]) > 0
-
-    # Get supported features for the model:
-    features = scanner.get_supported_features(OpenAIApi, model_name)
-
-    # Check for specific features:
-    assert ModelFeatures.TextGeneration in features
-    assert ModelFeatures.Image not in features
-
-
-def test_scan_gemini_for_debug(scanner):
-    # Query supported features for a specific model
-    model_name = "models/gemini-1.5-pro"
-
-    # Scan GeminiApi:
-    scanner.scan_apis([GeminiApi], model_names=[model_name])
-
-    # Should have GeminiApi in results
-    assert GeminiApi in scanner.scan_results
-
-    # Should have all models
-    assert len(scanner.scan_results[GeminiApi]) > 0
-
-    # Get supported features for the model:
-    features = scanner.get_supported_features(GeminiApi, model_name)
-
-    # Check for specific features:
-    assert ModelFeatures.TextGeneration in features
-    assert ModelFeatures.Image in features
-
-
-def test_scan_claude_for_debug(scanner):
-    # Query supported features for a specific model
-    model_name = "claude-opus-4-20250514"
-
-    # Scan AnthropicApi:
-    scanner.scan_apis([AnthropicApi], model_names=[model_name])
-
-    # Should have AnthropicApi in results
-    assert AnthropicApi in scanner.scan_results
-
-    # Should have all models
-    assert len(scanner.scan_results[AnthropicApi]) > 0
-
-    # Get supported features for the model:
-    features = scanner.get_supported_features(AnthropicApi, model_name)
-
-    # Check for specific features:
-    assert ModelFeatures.TextGeneration in features
-    assert ModelFeatures.Image in features
+# def test_scan_openai_for_debug(scanner):
+#     # Query supported features for a specific model
+#     model_name = "o3-mini-high"
+#
+#     # Scan OpenAIAPI:
+#     scanner.scan_apis([OpenAIApi], model_names=[model_name])
+#
+#     # Should have OpenAIAPI in results
+#     assert OpenAIApi in scanner.scan_results
+#
+#     # Should have all models
+#     assert len(scanner.scan_results[OpenAIApi]) > 0
+#
+#     # Get supported features for the model:
+#     features = scanner.get_supported_features(OpenAIApi, model_name)
+#
+#     # Check for specific features:
+#     assert ModelFeatures.TextGeneration in features
+#     assert ModelFeatures.Image not in features
+#
+#
+# def test_scan_gemini_for_debug(scanner):
+#     # Query supported features for a specific model
+#     model_name = "models/gemini-1.5-pro"
+#
+#     # Scan GeminiApi:
+#     scanner.scan_apis([GeminiApi], model_names=[model_name])
+#
+#     # Should have GeminiApi in results
+#     assert GeminiApi in scanner.scan_results
+#
+#     # Should have all models
+#     assert len(scanner.scan_results[GeminiApi]) > 0
+#
+#     # Get supported features for the model:
+#     features = scanner.get_supported_features(GeminiApi, model_name)
+#
+#     # Check for specific features:
+#     assert ModelFeatures.TextGeneration in features
+#     assert ModelFeatures.Image in features
+#
+#
+# def test_scan_claude_for_debug(scanner):
+#     # Query supported features for a specific model
+#     model_name = "claude-opus-4-20250514"
+#
+#     # Scan AnthropicApi:
+#     scanner.scan_apis([AnthropicApi], model_names=[model_name])
+#
+#     # Should have AnthropicApi in results
+#     assert AnthropicApi in scanner.scan_results
+#
+#     # Should have all models
+#     assert len(scanner.scan_results[AnthropicApi]) > 0
+#
+#     # Get supported features for the model:
+#     features = scanner.get_supported_features(AnthropicApi, model_name)
+#
+#     # Check for specific features:
+#     assert ModelFeatures.TextGeneration in features
+#     assert ModelFeatures.Image in features

@@ -15,6 +15,7 @@ folder:
     - 'dist'
     - 'build'
     - 'README.md'
+    - 'EXAMPLES.md'
     - '.git'
     - '.github'
     - '.codegen'
@@ -49,7 +50,7 @@ prompt: |
   - Multi-modality
       [This section should explain the multimodal capabilities of the library. In particular, it should explain what model features are, why they are needed, and how to request features when using litemind's API. Also explain the purpose of the Media classes and how they are used.]
   - More Examples
-      [This section should provide additional examples of the library's usage, including more advanced or complex use cases. For example: (i) how to use the CombinedAPI, (ii) agent that can executed Python code, (iii) use of the wrapper API to get structured outputs, (iv) agent that has a tool that can generate an image using the wrapper API.]
+      [This section should provide additional examples of the library's usage, including more advanced or complex use cases. For example: (i) how to use the CombinedAPI, (ii) agent that can executed Python code, (iii) use of the wrapper API to get structured outputs, (iv) agent that has a tool that can generate an image using the wrapper API. PLease explain at the end that more examples can be found in the EXAMPLES.md file.]
   - Command Line Tools
       [This section should explain litemind command line tools and how to use them, with example command lines (check tools package and its contents for details). Please also explain the format of the *.codegen.yml files and give a template. Explain that you need a .codegen folder in the root of the repository and you can apply that to your own repositories.]
   - Caveats and Limitations

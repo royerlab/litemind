@@ -1,4 +1,4 @@
-__version__ = "2025.6.12"
+__version__ = "2025.6.16"
 
 from arbol import aprint, asection
 
@@ -15,12 +15,12 @@ from litemind.apis.providers.openai.openai_api import OpenAIApi
 
 # LLM API implementations:
 API_IMPLEMENTATIONS = [
-    DefaultApi,
-    OpenAIApi,
-    OllamaApi,
+    # DefaultApi,
+    # OpenAIApi,
+    # OllamaApi,
     AnthropicApi,
-    GeminiApi,
-    CombinedApi,
+    # GeminiApi,
+    # CombinedApi,
 ]
 
 # Check availability of each API and remove it from the list if it is not available:

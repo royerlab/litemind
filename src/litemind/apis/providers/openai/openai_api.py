@@ -430,13 +430,6 @@ class OpenAIApi(DefaultApi):
             True if this is a system message (adds [SYSTEM] prefix to text)
         """
         from litemind.media.types.media_audio import Audio
-        from litemind.media.types.media_code import Code
-        from litemind.media.types.media_document import Document
-        from litemind.media.types.media_file import File
-        from litemind.media.types.media_json import Json
-        from litemind.media.types.media_object import Object
-        from litemind.media.types.media_table import Table
-        from litemind.media.types.media_video import Video
 
         content = []
 
@@ -1243,56 +1236,3 @@ class OpenAIApi(DefaultApi):
         )
 
         return embeddings
-
-    def generate_text_with_web_search(
-        self, messages: List[Message], model_name: Optional[str] = None, **kwargs
-    ) -> List[Message]:
-        """
-        Convenience method for text generation with web search enabled.
-
-        This automatically enables the built-in web search tool, allowing the model
-        to search for current information when needed.
-        """
-        return self.generate_text(
-            messages=messages, model_name=model_name, use_web_search=True, **kwargs
-        )
-
-    def generate_text_with_file_search(
-        self,
-        messages: List[Message],
-        vector_store_ids: List[str],
-        model_name: Optional[str] = None,
-        **kwargs,
-    ) -> List[Message]:
-        """
-        Convenience method for text generation with file search enabled.
-
-        Parameters
-        ----------
-        vector_store_ids : List[str]
-            The vector store IDs containing the files to search.
-        """
-        return self.generate_text(
-            messages=messages,
-            model_name=model_name,
-            use_file_search=True,
-            vector_store_ids=vector_store_ids,
-            **kwargs,
-        )
-
-    def generate_text_with_computer_use(
-        self, messages: List[Message], model_name: Optional[str] = None, **kwargs
-    ) -> List[Message]:
-        """
-        Convenience method for text generation with computer use enabled.
-
-        This enables the model to interact with computer interfaces.
-        Note: This is a preview feature and may have limitations.
-        """
-        return self.generate_text(
-            messages=messages,
-            model_name=model_name
-            or "computer-use-preview",  # Default to computer use model
-            use_computer_use=True,
-            **kwargs,
-        )

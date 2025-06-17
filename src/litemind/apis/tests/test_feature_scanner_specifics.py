@@ -66,31 +66,15 @@ def test_scan_anthropic_api_check_specifics(scanner):
 
     # Query supported features for specific models
     model_feature_map = {
-        "claude-3-opus-20240229": [
-            ModelFeatures.TextGeneration,
-            ModelFeatures.StructuredTextGeneration,
-            ModelFeatures.Image,
-            ModelFeatures.Tools,
-        ],
-        "claude-3-sonnet-20240229": [
-            ModelFeatures.TextGeneration,
-            ModelFeatures.StructuredTextGeneration,
-            ModelFeatures.Image,
-            ModelFeatures.Tools,
-        ],
-        "claude-3-haiku-20240307": [
+        "claude-opus-4-20250514": [
+            ModelFeatures.WebSearchTool,
+            ModelFeatures.MCPTool,
             ModelFeatures.TextGeneration,
             ModelFeatures.StructuredTextGeneration,
             ModelFeatures.Image,
             ModelFeatures.Tools,
         ],
         "claude-3-5-sonnet-20240620": [
-            ModelFeatures.TextGeneration,
-            ModelFeatures.StructuredTextGeneration,
-            ModelFeatures.Image,
-            ModelFeatures.Tools,
-        ],
-        "claude-opus-4-20250514": [
             ModelFeatures.TextGeneration,
             ModelFeatures.StructuredTextGeneration,
             ModelFeatures.Image,

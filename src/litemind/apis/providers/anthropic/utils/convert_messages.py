@@ -7,7 +7,6 @@ from litemind.agent.messages.actions.tool_call import ToolCall
 from litemind.agent.messages.actions.tool_use import ToolUse
 from litemind.agent.messages.message import Message
 from litemind.media.types.media_action import Action
-from litemind.media.types.media_audio import Audio
 from litemind.media.types.media_document import Document
 from litemind.media.types.media_image import Image
 from litemind.media.types.media_text import Text
@@ -20,7 +19,7 @@ def convert_messages_for_anthropic(
     media_converter: Optional["MediaConverter"] = None,
 ) -> List["MessageParam"]:
     """
-    Convert litemind Messages into Anthropic's MessageParam format:
+    Convert litemind Messages into Anthropic's MessageParam format with support for new built-in tools:
         [
           {"role": "user", "content": [{"type": "text", "text": "Hello!"}, {"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": "..."}}]},
           {"role": "assistant", "content": [{"type": "text", "text": "Hello there!"}]},
@@ -45,8 +44,34 @@ def convert_messages_for_anthropic(
                     # remove trailing whitespace as it is not allowed by Anthropic!
                     text = text.rstrip()
 
-                # Append the text to the Anthropic's message content:
-                content.append({"type": "text", "text": text})
+                # Create text block
+                text_block = {"type": "text", "text": text}
+
+                # Handle citations if they exist in block attributes
+                if (
+                    hasattr(block, "attributes")
+                    and block.attributes
+                    and "citations" in block.attributes
+                ):
+                    citations = block.attributes["citations"]
+                    if citations:
+                        # Convert citations to Anthropic format
+                        anthropic_citations = []
+                        for citation in citations:
+                            if citation.get("type") == "web_search_citation":
+                                anthropic_citations.append(
+                                    {
+                                        "type": "web_search_result_location",
+                                        "url": citation.get("url", ""),
+                                        "title": citation.get("title", ""),
+                                        "cited_text": citation.get("cited_text", ""),
+                                    }
+                                )
+
+                        if anthropic_citations:
+                            text_block["citations"] = anthropic_citations
+
+                content.append(text_block)
 
             elif block.has_type(Text) and block.is_thinking():
 
@@ -62,7 +87,7 @@ def convert_messages_for_anthropic(
                         {
                             "type": "thinking",
                             "thinking": text,
-                            "signature": block.attributes["signature"],
+                            "signature": block.attributes.get("signature", ""),
                         }
                     )
 
@@ -88,32 +113,10 @@ def convert_messages_for_anthropic(
                         },
                     }
                 )
-            elif block.has_type(Audio):
-
-                # Cast to Audio:
-                audio: Audio = block.media
-
-                # Get media type
-                media_type = audio.get_media_type()
-
-                # get base64 data:
-                base64_data = audio.to_base64_data()
-
-                # Add the audio to the content:
-                content.append(
-                    {
-                        "type": "audio",
-                        "source": {
-                            "type": "base64",
-                            "media_type": media_type,
-                            "data": base64_data,
-                        },
-                    }
-                )
 
             elif block.has_type(Document):
 
-                # Get Document:
+                # Cast to Document:
                 document: Document = block.media
 
                 if document.has_extension("pdf"):
@@ -146,6 +149,7 @@ def convert_messages_for_anthropic(
 
             elif block.has_type(Action):
 
+                # Get the tool action:
                 tool_action: ActionBase = block.get_content()
 
                 # if contents is a ToolUse object do the following:
@@ -154,7 +158,7 @@ def convert_messages_for_anthropic(
                     # Get the tool use object:
                     tool_use: ToolUse = tool_action
 
-                    # Add tool use to the content:
+                    # Add the tool result to the content:
                     content.append(
                         {
                             "type": "tool_result",
@@ -170,10 +174,10 @@ def convert_messages_for_anthropic(
 
                 elif isinstance(tool_action, ToolCall):
 
-                    # Get the tool use object:
-                    tool_call: ToolUse = tool_action
+                    # Get the tool call object:
+                    tool_call: ToolCall = tool_action
 
-                    # Add the tool to the content:
+                    # Add regular tool_use block
                     content.append(
                         {
                             "id": tool_call.id,

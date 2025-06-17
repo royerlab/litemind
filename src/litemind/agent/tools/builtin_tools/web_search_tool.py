@@ -9,6 +9,7 @@ class BuiltinWebSearchTool(BuiltinTool):
     def __init__(
         self,
         search_context_size: str = "medium",
+        max_web_searches: int = 10,
         allowed_domains: List[str] = None,
     ):
         """
@@ -20,6 +21,8 @@ class BuiltinWebSearchTool(BuiltinTool):
         ----------
         search_context_size: str
             The size of the search context to use. This can be 'high', 'medium', or 'low'. Defaults to 'medium'.
+        max_web_searches: int
+            The maximum number of web searches to perform. Defaults to 10.
         allowed_domains: List[str]
             A list of allowed domains to restrict the search to. If None, no restrictions are applied.
 
@@ -29,14 +32,18 @@ class BuiltinWebSearchTool(BuiltinTool):
             name=BuiltinWebSearchTool.__name__, description="Built-in web search tool"
         )
 
-        #
+        # Validate the search context size:
         if search_context_size not in ["high", "medium", "low"]:
             raise ValueError(
                 "search_context_size must be one of 'high', 'medium', or 'low'."
             )
-
         # Set the search context size:
         self.search_context_size = search_context_size
+
+        # Set the maximum number of web searches:
+        if not isinstance(max_web_searches, int) or max_web_searches <= 0:
+            raise ValueError("max_web_searches must be a positive integer.")
+        self.max_web_searches = max_web_searches
 
         if allowed_domains is None:
             allowed_domains = []
