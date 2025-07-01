@@ -14,7 +14,7 @@ from litemind.apis.base_api import BaseApi
 from litemind.apis.model_features import ModelFeatures
 
 
-class Agent():
+class Agent:
 
     def __init__(
         self,

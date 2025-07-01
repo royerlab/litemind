@@ -16,14 +16,15 @@ class Client:
         """
         try:
             import rpyc
+
             self._connection = rpyc.connect(
                 host,
                 port,
                 config={
-                    'allow_pickle': True,
+                    "allow_pickle": True,
                     "allow_all_attrs": True,
                     "sync_request_timeout": 30,
-                }
+                },
             )
             self._remote_service = self._connection.root
             aprint(f"✨ Connected to LiteMind RPC Server at {host}:{port}")
@@ -130,17 +131,25 @@ class _ValueWrapper:
                 try:
                     # Use RPyC's obtain() to force by-value transmission
                     import rpyc.utils.classic
+
                     obtained_value = rpyc.utils.classic.obtain(value)
 
                     # Add detailed debugging
-                    aprint(f"🔍 Original class {key}: {value} (type: {type(value)}, id: {id(value)})")
                     aprint(
-                        f"🔍 Obtained class {key}: {obtained_value} (type: {type(obtained_value)}, id: {id(obtained_value)})")
-                    aprint(f"🔍 Is obtained value a class? {inspect.isclass(obtained_value)}")
+                        f"🔍 Original class {key}: {value} (type: {type(value)}, id: {id(value)})"
+                    )
+                    aprint(
+                        f"🔍 Obtained class {key}: {obtained_value} (type: {type(obtained_value)}, id: {id(obtained_value)})"
+                    )
+                    aprint(
+                        f"🔍 Is obtained value a class? {inspect.isclass(obtained_value)}"
+                    )
                     aprint(f"🔍 Are they the same object? {value is obtained_value}")
 
                     processed_kwargs[key] = obtained_value
-                    aprint(f"🔄 Used obtain() to get local copy of class {value.__name__}")
+                    aprint(
+                        f"🔄 Used obtain() to get local copy of class {value.__name__}"
+                    )
                 except Exception as e:
                     aprint(f"⚠️ Failed to obtain class {value.__name__}: {e}")
                     # Fallback to original value
@@ -148,7 +157,9 @@ class _ValueWrapper:
             else:
                 processed_kwargs[key] = value
 
-        aprint(f"🔄 Processed {len(processed_args)} args and {len(processed_kwargs)} kwargs")
+        aprint(
+            f"🔄 Processed {len(processed_args)} args and {len(processed_kwargs)} kwargs"
+        )
         return self._remote_obj(*processed_args, **processed_kwargs)
 
     def __getattr__(self, name):

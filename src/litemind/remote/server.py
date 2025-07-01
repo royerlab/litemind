@@ -2,10 +2,10 @@
 import threading
 from typing import Dict, Optional
 
-from arbol import aprint
 import rpyc
-from rpyc.utils.server import ThreadedServer
+from arbol import aprint
 from rpyc.utils.helpers import classpartial
+from rpyc.utils.server import ThreadedServer
 
 from litemind.utils.free_port import find_free_port
 
@@ -37,7 +37,9 @@ class ObjectService(rpyc.Service):
                 # Add a debugging wrapper to see what arguments the agent receives
                 return _DebuggingWrapper(obj)
             else:
-                aprint(f"❓ Object '{name}' not found in {list(self._exposed_objects.keys())}")
+                aprint(
+                    f"❓ Object '{name}' not found in {list(self._exposed_objects.keys())}"
+                )
             return obj
         except Exception as e:
             aprint(f"❌ Error serving object '{name}': {e}")
@@ -126,6 +128,7 @@ class Server:
 
                 # Give the server a moment to fully start
                 import time
+
                 time.sleep(0.3)  # Increased wait time
 
         except Exception as e:
@@ -148,7 +151,7 @@ class Server:
     def is_running(self) -> bool:
         """Check if the server is currently running."""
         return self._server is not None and (
-                self._thread is None or self._thread.is_alive()
+            self._thread is None or self._thread.is_alive()
         )
 
 
@@ -167,12 +170,14 @@ class _DebuggingWrapper:
         aprint(f"🔍 Server received {len(args)} args and {len(kwargs)} kwargs")
 
         for key, value in kwargs.items():
-            aprint(f"🔍 Server kwarg '{key}': {value} (type: {type(value)}, id: {id(value)})")
-            if key == 'response_format':
+            aprint(
+                f"🔍 Server kwarg '{key}': {value} (type: {type(value)}, id: {id(value)})"
+            )
+            if key == "response_format":
                 aprint(f"🔍 response_format is class? {inspect.isclass(value)}")
-                if hasattr(value, '__module__'):
+                if hasattr(value, "__module__"):
                     aprint(f"🔍 response_format module: {value.__module__}")
-                if hasattr(value, '__name__'):
+                if hasattr(value, "__name__"):
                     aprint(f"🔍 response_format name: {value.__name__}")
 
         # Call the wrapped object normally

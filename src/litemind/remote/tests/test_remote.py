@@ -39,7 +39,7 @@ def running_server():
     """
     # Find a free port to avoid conflicts
     sock = socket.socket()
-    sock.bind(('', 0))
+    sock.bind(("", 0))
     host, port = sock.getsockname()
     sock.close()
 
@@ -69,6 +69,7 @@ def running_server():
 
 
 # --- Test Cases ---
+
 
 def test_server_expose_objects():
     """

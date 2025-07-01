@@ -3,7 +3,7 @@ import fnmatch
 import os
 from string import Formatter
 from types import MappingProxyType
-from typing import Any, List, Optional, Sequence, Set, Type, Union, Mapping
+from typing import Any, List, Mapping, Optional, Sequence, Set, Type, Union
 
 from arbol import aprint
 from pydantic import BaseModel
@@ -43,7 +43,7 @@ from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_pa
 from litemind.utils.uri_utils import is_uri
 
 
-class Message():
+class Message:
     def __init__(
         self,
         text: Optional[str] = None,
@@ -275,9 +275,7 @@ class Message():
 
         missing = required.difference(replacements)
         if missing:
-            raise KeyError(
-                f"Missing replacement(s) for: {', '.join(sorted(missing))}"
-            )
+            raise KeyError(f"Missing replacement(s) for: {', '.join(sorted(missing))}")
 
         # MappingProxyType gives us an *immutable* view, guarding against
         # accidental mutation inside `format_map`.

@@ -116,6 +116,7 @@ def test_append_templated_text_success():
     assert "Hello, Alice!" in str(block.media.text)
     assert isinstance(block, type(user_message.blocks[0]))
 
+
 def test_append_templated_text_missing_replacement():
     user_message = Message(role="user")
     with pytest.raises(KeyError):

@@ -2,18 +2,19 @@ import socket
 import time
 
 import pytest
+
 from litemind import CombinedApi
 from litemind.agent.agent import Agent
-from litemind.remote.client import Client
-from litemind.remote.server import Server
 from litemind.agent.messages.message import Message
 from litemind.apis.base_api import ModelFeatures
 from litemind.media.types.media_audio import Audio
-
+from litemind.remote.client import Client
+from litemind.remote.server import Server
 
 # -----------------------------------------------------------------------------
 # Helper utilities
 # -----------------------------------------------------------------------------
+
 
 def find_free_port():
     """Find an available (host, port) tuple for testing."""
@@ -49,7 +50,9 @@ def running_litemind_server():
             media_types=[Audio],
         )
         if best_model is None:
-            pytest.skip("No model on this backend supports both images and audio. Skipping test.")
+            pytest.skip(
+                "No model on this backend supports both images and audio. Skipping test."
+            )
 
         real_agent = Agent(api=api, model=best_model)
     except Exception as e:
@@ -110,25 +113,33 @@ def test_remote_agent_text_interaction(running_litemind_server):
 
     try:
         # --- Interact with the remote agent ----------------------------------
-        remote_agent.append_system_message("You are an omniscient all‑knowing being called Ohmm")
+        remote_agent.append_system_message(
+            "You are an omniscient all‑knowing being called Ohmm"
+        )
         response = remote_agent("Who are you?")
 
         # --- Assertions -------------------------------------------------------
         assert response is not None, "Response should not be None"
-        assert len(response) == 1, f"Expected 1 message in response, got {len(response)}"
+        assert (
+            len(response) == 1
+        ), f"Expected 1 message in response, got {len(response)}"
 
         response_text = str(response[-1]).lower()
-        assert "ohmm" in response_text or "chatgpt" in response_text, (
-            f"Response should contain 'ohmm', got: {response_text}"
-        )
+        assert (
+            "ohmm" in response_text or "chatgpt" in response_text
+        ), f"Response should contain 'ohmm', got: {response_text}"
 
         # Ensure the server maintained state
         remote_conversation = remote_agent.conversation
-        assert len(remote_conversation) == 3, (
-            f"Expected 3 messages in conversation, got {len(remote_conversation)}"
+        assert (
+            len(remote_conversation) == 3
+        ), f"Expected 3 messages in conversation, got {len(remote_conversation)}"
+        assert remote_conversation[0].role == "system" and "Ohmm" in str(
+            remote_conversation[0]
         )
-        assert remote_conversation[0].role == "system" and "Ohmm" in str(remote_conversation[0])
-        assert remote_conversation[1].role == "user" and "Who are you?" in str(remote_conversation[1])
+        assert remote_conversation[1].role == "user" and "Who are you?" in str(
+            remote_conversation[1]
+        )
         assert remote_conversation[2].role == "assistant"
     finally:
         client.close()
@@ -205,9 +216,9 @@ def test_remote_agent_multimodal_conversation(running_litemind_server):
         # expected (system + user + assistant).
         # ------------------------------------------------------------------
         remote_conversation = remote_agent.conversation
-        assert len(remote_conversation) == 3, (
-            f"Expected 3 messages in remote conversation, got {len(remote_conversation)}"
-        )
+        assert (
+            len(remote_conversation) == 3
+        ), f"Expected 3 messages in remote conversation, got {len(remote_conversation)}"
         assert remote_conversation[0].role == "system"
         assert remote_conversation[1].role == "user"
         assert remote_conversation[2].role == "assistant"
@@ -229,7 +240,6 @@ def test_connection_failure():
     assert client.get("any_object") is None
 
     client.close()  # Should not raise
-
 
 
 def test_object_not_found(running_litemind_server):

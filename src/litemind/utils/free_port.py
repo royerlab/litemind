@@ -1,5 +1,6 @@
 from typing import Tuple
 
+
 def find_free_port() -> Tuple[str, int]:
     """Finds and returns a free port and its associated host.
 
@@ -35,7 +36,7 @@ def find_free_port() -> Tuple[str, int]:
     # will be accessible from any of the machine's network interfaces.
     # The second argument, 0, is the special port number that tells the
     # operating system to find and assign any currently available ephemeral port.
-    sock.bind(('', 0))
+    sock.bind(("", 0))
 
     # 4. Retrieve the assigned address and port.
     # Now that the OS has assigned a port, getsockname() returns a tuple

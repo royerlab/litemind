@@ -1,5 +1,7 @@
 import pytest
+
 from litemind.apis.providers.ollama.ollama_server import OllamaServer
+
 
 @pytest.mark.timeout(20)
 def test_ollama_server_lifecycle():
@@ -18,5 +20,7 @@ def test_ollama_server_lifecycle():
     # Stop the server
     server.stop()
     # Give it a moment to shut down
-    import time; time.sleep(1)
+    import time
+
+    time.sleep(1)
     assert not server.is_running()
