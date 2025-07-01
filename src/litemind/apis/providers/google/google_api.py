@@ -84,8 +84,8 @@ class GeminiApi(DefaultApi):
             api_key = os.environ.get("GOOGLE_GEMINI_API_KEY")
         if not api_key:
             raise APIError(
-                "A valid GOOGLE_API_KEY is required for GeminiApi. "
-                "Set GOOGLE_API_KEY in the environment or pass api_key explicitly."
+                "A valid GOOGLE_GEMINI_API_KEY is required for GeminiApi. "
+                "Set GOOGLE_GEMINI_API_KEY in the environment or pass api_key explicitly."
             )
 
         self._api_key = api_key

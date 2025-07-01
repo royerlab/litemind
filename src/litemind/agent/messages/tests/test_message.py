@@ -1,6 +1,7 @@
 import copy
 from pprint import pprint
 
+import pytest
 from pydantic import BaseModel
 
 from litemind.agent.messages.message import Message
@@ -107,6 +108,18 @@ def test_message_text():
     # Checks contains operator:
     assert "Who" in user_message
     assert "omniscient" in system_message
+
+
+def test_append_templated_text_success():
+    user_message = Message(role="user")
+    block = user_message.append_templated_text("Hello, {name}!", name="Alice")
+    assert "Hello, Alice!" in str(block.media.text)
+    assert isinstance(block, type(user_message.blocks[0]))
+
+def test_append_templated_text_missing_replacement():
+    user_message = Message(role="user")
+    with pytest.raises(KeyError):
+        user_message.append_templated_text("Hello, {name} and {other}!", name="Alice")
 
 
 def test_message_object():

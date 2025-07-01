@@ -1,8 +1,9 @@
 import copy
 import fnmatch
 import os
-from abc import ABC
-from typing import Any, List, Optional, Sequence, Set, Type, Union
+from string import Formatter
+from types import MappingProxyType
+from typing import Any, List, Optional, Sequence, Set, Type, Union, Mapping
 
 from arbol import aprint
 from pydantic import BaseModel
@@ -42,7 +43,7 @@ from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_pa
 from litemind.utils.uri_utils import is_uri
 
 
-class Message(ABC):
+class Message():
     def __init__(
         self,
         text: Optional[str] = None,
@@ -241,6 +242,52 @@ class Message(ABC):
 
         # Append the text block:
         return self.append_block(MessageBlock(media=Text(text=text), **kwargs))
+
+    def append_templated_text(self, template: str, **replacements) -> MessageBlock:
+        """
+        Replace all `{placeholders}` in *template* with values supplied
+        via **replacements and adds resulting text as a new text block.
+
+        Parameters
+        ----------
+        template:
+            The template string containing `{name}` placeholders.
+
+        **replacements:
+            Keyword arguments whose names match the placeholders.
+
+        Returns
+        -------
+        str
+            The fully formatted string.
+
+        Raises
+        ------
+        KeyError
+            If one or more placeholders are missing a replacement.
+        """
+        # Discover every placeholder that appears in *template*
+        required: set[str] = {
+            field_name
+            for _, field_name, _, _ in Formatter().parse(template)
+            if field_name  # skip literal braces
+        }
+
+        missing = required.difference(replacements)
+        if missing:
+            raise KeyError(
+                f"Missing replacement(s) for: {', '.join(sorted(missing))}"
+            )
+
+        # MappingProxyType gives us an *immutable* view, guarding against
+        # accidental mutation inside `format_map`.
+        safe_mapping: Mapping[str, Any] = MappingProxyType(replacements)
+
+        # Use `format_map` so that **replacements is not re-copied.
+        filled_template = template.format_map(safe_mapping)
+
+        # Append the filled template as a text block:
+        return self.append_text(filled_template)
 
     def append_thinking(self, thinking_text: str, **kwargs) -> MessageBlock:
         """

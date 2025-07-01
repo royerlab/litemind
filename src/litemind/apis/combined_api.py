@@ -55,18 +55,22 @@ class CombinedApi(DefaultApi):
             from litemind.apis.providers.openai.openai_api import OpenAIApi
 
             # List of classes:
-            api_classes = [OpenAIApi, AnthropicApi, OllamaApi, GeminiApi]
+            potential_api_classes = [OpenAIApi, AnthropicApi, OllamaApi, GeminiApi]
+
+            # List of classes that will be used to instantiate the APIs:
+            self.api_classes = []
 
             # List of APIs to combine:
             apis = []
 
             # Add the APIs to the list:
-            for api_class in api_classes:
+            for api_class in potential_api_classes:
                 try:
                     api_instance = api_class()
                     if api_instance.check_availability_and_credentials():
 
                         if len(api_instance.list_models()) > 0:
+                            self.api_classes.append(api_class)
                             apis.append(api_instance)
                         else:
                             aprint(
