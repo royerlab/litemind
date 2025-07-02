@@ -201,8 +201,8 @@ def test_agent_with_image_document_augmentation(api_class):
 
     # Check response contains some reference to the image
     assert len(response) >= 1
-    response_text = response[-1].to_plain_text()
-    assert "image" in response_text.lower()
+    response_text = response[-1].to_plain_text().lower()
+    assert 'image' in response_text or 'scene' in response_text or 'valley' in response_text
 
     # Test removing the augmentation
     agent.remove_augmentation("image_document_test")

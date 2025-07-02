@@ -3,6 +3,15 @@ from typing import Any
 
 
 class BaseToolCallbacks(ABC):
+    """
+    Base class for tool callbacks.
+    This class defines the interface for tool callbacks that can be used to
+    monitor the lifecycle of tool usage, including start, end, and error handling.
+    It is intended to be subclassed to implement specific callback behaviors.
+    Subclasses should implement the methods to handle tool start, end, and error events.
+    This class does not implement any functionality itself, but provides a structure
+    for tool callbacks to follow.
+    """
 
     def on_tool_start(self, tool: "BaseTool", *args, **kwargs) -> None:
         """

@@ -4,6 +4,14 @@ from litemind.agent.tools.callbacks.base_tool_callbacks import BaseToolCallbacks
 
 
 class ToolCallbackManager(BaseToolCallbacks):
+    """
+    A manager for tool callbacks that allows adding, removing, and invoking callbacks
+    for tools in a toolset. This class provides methods to manage a collection of
+    tool callbacks, enabling the execution of callback methods when tools start,
+    end, or encounter errors during execution.
+    This class inherits from BaseToolCallbacks and implements methods to handle
+    tool lifecycle events such as start, end, and error handling.
+    """
     def __init__(self):
         self.callbacks: List[BaseToolCallbacks] = []
 
