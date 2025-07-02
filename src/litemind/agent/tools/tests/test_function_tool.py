@@ -96,7 +96,7 @@ def test_tool_execution_with_parameters():
     )
 
     # Execute the tool and check the result
-    result = tool.execute(param1=42, param2="example")
+    result = tool._execute(param1=42, param2="example")
     assert (
         result == "Received 42 and example"
     ), "Execution result mismatch for sample_function_one"
@@ -109,7 +109,7 @@ def test_tool_execution_no_parameters():
     )
 
     # Execute the tool and check the result
-    result = tool.execute()
+    result = tool._execute()
     assert (
         result == "No parameters here!"
     ), "Execution result mismatch for sample_function_no_params"
@@ -123,13 +123,13 @@ def test_tool_execution_with_default_parameters():
     )
 
     # Test execution with default parameter
-    result_with_default = tool.execute(param1=100)
+    result_with_default = tool._execute(param1=100)
     assert (
         result_with_default == "Received 100 and default"
     ), "Default parameter not applied correctly"
 
     # Test execution with overridden default parameter
-    result_with_override = tool.execute(param1=100, param2="custom")
+    result_with_override = tool._execute(param1=100, param2="custom")
     assert (
         result_with_override == "Received 100 and custom"
     ), "Parameter override not applied correctly"

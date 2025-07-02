@@ -1,11 +1,57 @@
 from typing import Callable, List, Optional, Type, Union
 
 from litemind.agent.tools.base_tool import BaseTool
+from litemind.agent.tools.callbacks.base_tool_callbacks import BaseToolCallbacks
 
 
 class ToolSet:
+    """
+    A set of tools that can be used by an agent.
+    This class allows you to manage a collection of tools, add new tools, and interact with them.
+    It provides methods to add function tools, agent tools, built-in tools, and manage tool callbacks.
+    It also provides methods to check for the presence of tools, retrieve tools by name, and list all tools.
+    """
+
     def __init__(self, tools: Optional[List[BaseTool]] = None):
+        """
+        Create a new ToolSet.
+        This initializes the ToolSet with an optional list of tools.
+        If no tools are provided, an empty ToolSet is created.
+
+        Parameters
+        ----------
+        tools: Optional[List[BaseTool]]
+            A list of tools to initialize the ToolSet with. If None, an empty list is used.
+        """
         self.tools: List[BaseTool] = tools if tools else []
+
+    def add_tool_callback(self, tool_callback: BaseToolCallbacks):
+        """
+        Add a tool callback to all tools in the ToolSet.
+
+        Parameters
+        ----------
+        tool_callback : BaseToolCallbacks
+            The tool callback to add to all tools present in the ToolSet.
+
+        """
+        # Add the tool callback to each tool:
+        for tool in self.tools:
+            tool.callbacks.add_callback(tool_callback)
+
+    def remove_tool_callback(self, tool_callback: BaseToolCallbacks):
+        """
+        Remove a tool callback from all tools in the ToolSet.
+
+        Parameters
+        ----------
+        tool_callback : BaseToolCallbacks
+            The tool callback to remove from all tools present in the ToolSet.
+
+        """
+        # Remove the tool callback from each tool:
+        for tool in self.tools:
+            tool.callbacks.remove_callback(tool_callback)
 
     def add_tool(self, tool: BaseTool):
         """

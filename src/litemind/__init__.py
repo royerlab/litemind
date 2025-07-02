@@ -1,4 +1,4 @@
-__version__ = "2025.07.01"
+__version__ = "2025.07.01.1"
 
 from arbol import aprint, asection
 

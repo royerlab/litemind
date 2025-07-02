@@ -2,6 +2,8 @@ import pytest
 
 from litemind import API_IMPLEMENTATIONS
 from litemind.agent.tools.agent_tool import AgentTool
+from litemind.agent.tools.base_tool import BaseTool
+from litemind.agent.tools.callbacks.base_tool_callbacks import BaseToolCallbacks
 from litemind.agent.tools.function_tool import FunctionTool
 from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.model_features import ModelFeatures
@@ -48,7 +50,7 @@ def test_toolset_add_function_tool():
     ), "The tool description should match the description provided"
 
     # Test that the FunctionTool executes correctly
-    result = added_tool.execute(x=3)
+    result = added_tool._execute(x=3)
     assert result == 9, "The FunctionTool should return the square of the input"
 
 
@@ -85,7 +87,7 @@ def test_toolset_add_agent_tool(api_class):
     ), "The tool description should match the description provided"
 
     # Execute the AgentTool with a sample prompt
-    response = added_tool.execute(prompt="Translate 'Hello' to French.")
+    response = added_tool._execute(prompt="Translate 'Hello' to French.")
     assert (
         "bonjour" in response.lower()
     ), "The response should contain 'bonjour' as part of the translation"

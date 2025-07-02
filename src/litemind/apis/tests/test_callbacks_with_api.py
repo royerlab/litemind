@@ -5,13 +5,13 @@ import pytest
 from litemind import API_IMPLEMENTATIONS
 from litemind.agent.messages.message import Message
 from litemind.apis.base_api import BaseApi
-from litemind.apis.callbacks.base_callbacks import BaseCallbacks
-from litemind.apis.callbacks.callback_manager import CallbackManager
+from litemind.apis.callbacks.api_callback_manager import ApiCallbackManager
+from litemind.apis.callbacks.base_api_callbacks import BaseApiCallbacks
 from litemind.apis.model_features import ModelFeatures
 from litemind.ressources.media_resources import MediaResources
 
 
-class MockCallback(BaseCallbacks):
+class MockCallback(BaseApiCallbacks):
     """
     A mock callback class that records the methods called on it.
     """
@@ -125,7 +125,7 @@ class MockCallback(BaseCallbacks):
 
 @pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
 def test_availability_check(api_class):
-    callback_manager = CallbackManager()
+    callback_manager = ApiCallbackManager()
     mock_callback = MockCallback()
     callback_manager.add_callback(mock_callback)
 
@@ -137,7 +137,7 @@ def test_availability_check(api_class):
 
 @pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
 def test_model_list(api_class):
-    callback_manager = CallbackManager()
+    callback_manager = ApiCallbackManager()
     mock_callback = MockCallback()
     callback_manager.add_callback(mock_callback)
 
@@ -149,7 +149,7 @@ def test_model_list(api_class):
 
 @pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
 def test_best_model_selected(api_class):
-    callback_manager = CallbackManager()
+    callback_manager = ApiCallbackManager()
     mock_callback = MockCallback()
     callback_manager.add_callback(mock_callback)
 
@@ -161,7 +161,7 @@ def test_best_model_selected(api_class):
 
 @pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
 def test_audio_transcription(api_class):
-    callback_manager = CallbackManager()
+    callback_manager = ApiCallbackManager()
     mock_callback = MockCallback()
     callback_manager.add_callback(mock_callback)
 
@@ -183,7 +183,7 @@ def test_audio_transcription(api_class):
 
 @pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
 def test_text_generation(api_class):
-    callback_manager = CallbackManager()
+    callback_manager = ApiCallbackManager()
     mock_callback = MockCallback()
     callback_manager.add_callback(mock_callback)
 
@@ -211,7 +211,7 @@ def test_text_generation(api_class):
 
 @pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
 def test_text_generation_streaming(api_class):
-    callback_manager = CallbackManager()
+    callback_manager = ApiCallbackManager()
     mock_callback = MockCallback()
     callback_manager.add_callback(mock_callback)
 
@@ -243,7 +243,7 @@ def test_text_generation_streaming(api_class):
 
 @pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
 def test_audio_generation(api_class):
-    callback_manager = CallbackManager()
+    callback_manager = ApiCallbackManager()
     mock_callback = MockCallback()
     callback_manager.add_callback(mock_callback)
 
@@ -259,7 +259,7 @@ def test_audio_generation(api_class):
 
 @pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
 def test_image_generation(api_class):
-    callback_manager = CallbackManager()
+    callback_manager = ApiCallbackManager()
     mock_callback = MockCallback()
     callback_manager.add_callback(mock_callback)
 
@@ -282,7 +282,7 @@ def test_image_generation(api_class):
 
 @pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
 def test_text_embedding(api_class):
-    callback_manager = CallbackManager()
+    callback_manager = ApiCallbackManager()
     mock_callback = MockCallback()
     callback_manager.add_callback(mock_callback)
 
@@ -300,7 +300,7 @@ def test_text_embedding(api_class):
 
 @pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
 def test_image_embedding(api_class):
-    callback_manager = CallbackManager()
+    callback_manager = ApiCallbackManager()
     mock_callback = MockCallback()
     callback_manager.add_callback(mock_callback)
 
@@ -320,7 +320,7 @@ def test_image_embedding(api_class):
 
 @pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
 def test_audio_embedding(api_class):
-    callback_manager = CallbackManager()
+    callback_manager = ApiCallbackManager()
     mock_callback = MockCallback()
     callback_manager.add_callback(mock_callback)
 
@@ -340,7 +340,7 @@ def test_audio_embedding(api_class):
 
 @pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
 def test_video_embedding(api_class):
-    callback_manager = CallbackManager()
+    callback_manager = ApiCallbackManager()
     mock_callback = MockCallback()
     callback_manager.add_callback(mock_callback)
 
@@ -360,7 +360,7 @@ def test_video_embedding(api_class):
 
 @pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
 def test_image_description(api_class):
-    callback_manager = CallbackManager()
+    callback_manager = ApiCallbackManager()
     mock_callback = MockCallback()
     callback_manager.add_callback(mock_callback)
 
@@ -377,7 +377,7 @@ def test_image_description(api_class):
 
 @pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
 def test_audio_description(api_class):
-    callback_manager = CallbackManager()
+    callback_manager = ApiCallbackManager()
     mock_callback = MockCallback()
     callback_manager.add_callback(mock_callback)
 
@@ -394,7 +394,7 @@ def test_audio_description(api_class):
 
 @pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
 def test_video_description(api_class):
-    callback_manager = CallbackManager()
+    callback_manager = ApiCallbackManager()
     mock_callback = MockCallback()
     callback_manager.add_callback(mock_callback)
 

@@ -1,12 +1,12 @@
 import pytest
 
 from litemind.agent.messages.message import Message
-from litemind.apis.callbacks.print_callbacks import PrintCallbacks
+from litemind.apis.callbacks.print_api_callbacks import PrintApiCallbacks
 
 
 @pytest.fixture
 def print_callbacks():
-    return PrintCallbacks(
+    return PrintApiCallbacks(
         print_text_embedding=True,
         print_audio_embedding=True,
         print_video_embedding=True,

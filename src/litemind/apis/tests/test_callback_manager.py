@@ -3,11 +3,11 @@ from typing import Any, List, Sequence
 import pytest
 
 from litemind.agent.messages.message import Message
-from litemind.apis.callbacks.base_callbacks import BaseCallbacks
-from litemind.apis.callbacks.callback_manager import CallbackManager
+from litemind.apis.callbacks.api_callback_manager import ApiCallbackManager
+from litemind.apis.callbacks.base_api_callbacks import BaseApiCallbacks
 
 
-class MockCallback(BaseCallbacks):
+class MockCallback(BaseApiCallbacks):
     """
     A mock callback class that records the methods called on it.
     """
@@ -87,11 +87,11 @@ def callback_manager():
     Fixture for creating a CallbackManager instance.
     Returns
     -------
-    CallbackManager
+    ApiCallbackManager
         An instance of the CallbackManager class.
 
     """
-    return CallbackManager()
+    return ApiCallbackManager()
 
 
 @pytest.fixture
@@ -109,7 +109,7 @@ def mock_callback():
 
 def test_add_and_remove_callback(callback_manager, mock_callback):
     """
-    Test adding and removing a callback from the CallbackManager.
+    Test adding and removing a callback from the ApiCallbackManager.
     """
 
     # Add the callback:
@@ -129,7 +129,7 @@ def test_add_and_remove_callback(callback_manager, mock_callback):
 
 def test_on_availability_check(callback_manager, mock_callback):
     """
-    Test the on_availability_check method of the CallbackManager.
+    Test the on_availability_check method of the ApiCallbackManager.
     """
 
     # Add the callback:
@@ -144,7 +144,7 @@ def test_on_availability_check(callback_manager, mock_callback):
 
 def test_on_model_list(callback_manager, mock_callback):
     """
-    Test the on_model_list method of the CallbackManager.
+    Test the on_model_list method of the ApiCallbackManager.
     """
 
     # Add the callback:
@@ -159,7 +159,7 @@ def test_on_model_list(callback_manager, mock_callback):
 
 def test_on_best_model_selected(callback_manager, mock_callback):
     """
-    Test the on_best_model_selected method of the CallbackManager.
+    Test the on_best_model_selected method of the ApiCallbackManager.
     """
 
     # Add the callback:
@@ -174,7 +174,7 @@ def test_on_best_model_selected(callback_manager, mock_callback):
 
 def test_on_text_generation(callback_manager, mock_callback):
     """
-    Test the on_text_generation method of the CallbackManager.
+    Test the on_text_generation method of the ApiCallbackManager.
     """
 
     # Add the callback:
@@ -192,7 +192,7 @@ def test_on_text_generation(callback_manager, mock_callback):
 
 def test_on_text_streaming(callback_manager, mock_callback):
     """
-    Test the on_text_streaming method of the CallbackManager.
+    Test the on_text_streaming method of the ApiCallbackManager.
     """
 
     # Add the callback:

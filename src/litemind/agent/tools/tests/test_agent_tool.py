@@ -39,7 +39,7 @@ def test_tool_agent_translation(api_class):
     prompt = "Translate the following sentence: 'Hello, how are you?'"
 
     # Execute the AgentTool with the prompt
-    agent_response = agent_tool.execute(prompt=prompt)
+    agent_response = agent_tool._execute(prompt=prompt)
 
     # Validate that the response is an AgentResponse and that the result is in French
     assert isinstance(agent_response, str), "AgentResponse result should be a string"
@@ -92,7 +92,7 @@ def test_tool_agent(api_class):
 
     # Execute the AgentTool with a prompt
     prompt = "What is the status of my order?"
-    agent_response = agent_tool.execute(prompt=prompt)
+    agent_response = agent_tool._execute(prompt=prompt)
 
     # Validate the structure and content of the AgentResponse
     assert isinstance(agent_response, str), "AgentResponse result should be a string"

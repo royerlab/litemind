@@ -6,7 +6,7 @@ from arbol import aprint
 from litemind.agent.messages.message import Message
 from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.base_api import ModelFeatures
-from litemind.apis.callbacks.callback_manager import CallbackManager
+from litemind.apis.callbacks.api_callback_manager import ApiCallbackManager
 from litemind.apis.default_api import DefaultApi
 from litemind.apis.exceptions import APIError, APINotAvailableError
 from litemind.apis.feature_scanner import get_default_model_feature_scanner
@@ -49,7 +49,7 @@ class OllamaApi(DefaultApi):
         headers: Optional[Dict[str, str]] = None,
         allow_media_conversions: bool = True,
         allow_media_conversions_with_models: bool = True,
-        callback_manager: Optional[CallbackManager] = None,
+        callback_manager: Optional[ApiCallbackManager] = None,
         **kwargs,
     ):
         """

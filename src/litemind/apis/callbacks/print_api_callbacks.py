@@ -4,10 +4,10 @@ from typing import Any, List, Sequence
 from arbol import aprint
 
 from litemind.agent.messages.message import Message
-from litemind.apis.callbacks.base_callbacks import BaseCallbacks
+from litemind.apis.callbacks.base_api_callbacks import BaseApiCallbacks
 
 
-class PrintCallbacks(BaseCallbacks):
+class PrintApiCallbacks(BaseApiCallbacks):
 
     def __init__(
         self,

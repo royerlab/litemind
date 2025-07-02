@@ -1,41 +1,41 @@
 from typing import Any, List, Sequence, Union
 
 from litemind.agent.messages.message import Message
-from litemind.apis.callbacks.base_callbacks import BaseCallbacks
+from litemind.apis.callbacks.base_api_callbacks import BaseApiCallbacks
 
 
-class CallbackManager(BaseCallbacks):
+class ApiCallbackManager(BaseApiCallbacks):
     def __init__(self):
-        self.callbacks: List[BaseCallbacks] = []
+        self.callbacks: List[BaseApiCallbacks] = []
 
-    def add_callback(self, callback: BaseCallbacks) -> None:
+    def add_callback(self, callback: BaseApiCallbacks) -> None:
         if callback not in self.callbacks:
             self.callbacks.append(callback)
 
     def add_callbacks(
-        self, callbacks_: Union[Sequence[BaseCallbacks], "CallbackManager"]
+        self, callbacks_: Union[Sequence[BaseApiCallbacks], "ApiCallbackManager"]
     ) -> None:
-        if isinstance(callbacks_, CallbackManager):
+        if isinstance(callbacks_, ApiCallbackManager):
             self.callbacks.extend(callbacks_.callbacks)
         elif isinstance(callbacks_, Sequence):
             for callback in callbacks_:
-                if isinstance(callback, BaseCallbacks):
+                if isinstance(callback, BaseApiCallbacks):
                     self.callbacks.append(callback)
 
-    def remove_callback(self, callback: BaseCallbacks) -> None:
+    def remove_callback(self, callback: BaseApiCallbacks) -> None:
         if callback in self.callbacks:
             self.callbacks.remove(callback)
 
-    def __contains__(self, callback: BaseCallbacks) -> bool:
+    def __contains__(self, callback: BaseApiCallbacks) -> bool:
         return callback in self.callbacks
 
     def __len__(self) -> int:
         return len(self.callbacks)
 
-    def __getitem__(self, index: int) -> BaseCallbacks:
+    def __getitem__(self, index: int) -> BaseApiCallbacks:
         return self.callbacks[index]
 
-    def __setitem__(self, index: int, callback: BaseCallbacks) -> None:
+    def __setitem__(self, index: int, callback: BaseApiCallbacks) -> None:
         self.callbacks[index] = callback
 
     def __delitem__(self, index: int) -> None:

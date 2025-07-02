@@ -11,7 +11,7 @@ from litemind.agent.messages.message import Message
 from litemind.agent.tools.base_tool import BaseTool
 from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.base_api import BaseApi
-from litemind.apis.callbacks.callback_manager import CallbackManager
+from litemind.apis.callbacks.api_callback_manager import ApiCallbackManager
 from litemind.apis.exceptions import FeatureNotAvailableError
 from litemind.apis.model_features import ModelFeatures
 from litemind.media.conversion.converters.media_converter_delegated_callables import (
@@ -45,7 +45,7 @@ class DefaultApi(BaseApi):
         self,
         allow_media_conversions: bool = True,
         allow_media_conversions_with_models: bool = True,
-        callback_manager: Optional[CallbackManager] = None,
+        callback_manager: Optional[ApiCallbackManager] = None,
     ):
         """
         Initialize the DefaultApi with the given parameters.
@@ -57,7 +57,7 @@ class DefaultApi(BaseApi):
         allow_media_conversions_with_models: bool
             If True, the API will allow media conversions using models that support the required features in addition to the default media converter.
             To use this the allow_media_conversions parameter must be True.
-        callback_manager: Optional[CallbackManager]
+        callback_manager: Optional[ApiCallbackManager]
             The callback manager to use for callbacks. If None, no callbacks will be used.
         """
 
@@ -631,7 +631,7 @@ class DefaultApi(BaseApi):
                 if tool:
                     try:
                         # Execute the tool
-                        result = tool.execute(**tool_arguments)
+                        result = tool(**tool_arguments)
 
                         # If not a string, convert from JSON:
                         if not isinstance(result, str):

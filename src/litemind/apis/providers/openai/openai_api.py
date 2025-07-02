@@ -14,7 +14,7 @@ from litemind.agent.tools.builtin_tools.mcp_tool import BuiltinMCPTool
 from litemind.agent.tools.builtin_tools.web_search_tool import BuiltinWebSearchTool
 from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.base_api import ModelFeatures
-from litemind.apis.callbacks.callback_manager import CallbackManager
+from litemind.apis.callbacks.api_callback_manager import ApiCallbackManager
 from litemind.apis.default_api import DefaultApi
 from litemind.apis.exceptions import APIError, APINotAvailableError
 from litemind.apis.feature_scanner import get_default_model_feature_scanner
@@ -67,7 +67,7 @@ class OpenAIApi(DefaultApi):
         base_url: Optional[str] = None,
         allow_media_conversions: bool = True,
         allow_media_conversions_with_models: bool = True,
-        callback_manager: Optional[CallbackManager] = None,
+        callback_manager: Optional[ApiCallbackManager] = None,
         **kwargs,
     ):
         """
@@ -851,12 +851,12 @@ class OpenAIApi(DefaultApi):
                     new_messages.extend(result_messages)
 
                 # Check if we have tool calls to execute
-                tool_calls_to_execute = []
+                tool_calls = []
                 for output_item in response.output:
                     if output_item.type == "function_call":
-                        tool_calls_to_execute.append(output_item)
+                        tool_calls.append(output_item)
 
-                if tool_calls_to_execute and use_tools:
+                if tool_calls and use_tools:
                     # Create tool use message to hold results for our internal tracking
                     tool_use_message = Message(role="tool")
                     messages.append(tool_use_message)
@@ -867,7 +867,7 @@ class OpenAIApi(DefaultApi):
                     function_call_outputs = []
 
                     # Execute each tool call
-                    for function_call in tool_calls_to_execute:
+                    for function_call in tool_calls:
                         tool_name = function_call.name
                         tool_arguments = (
                             json.loads(function_call.arguments)
@@ -884,7 +884,7 @@ class OpenAIApi(DefaultApi):
                         if tool:
                             try:
                                 # Execute the tool
-                                result = tool.execute(**tool_arguments)
+                                result = tool(**tool_arguments)
 
                                 # If not a string, convert from JSON:
                                 if not isinstance(result, str):

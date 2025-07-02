@@ -41,7 +41,7 @@ class BuiltinMCPTool(BuiltinTool):
         self.headers = headers if headers is not None else {}
         self.allowed_tools = allowed_tools if allowed_tools is not None else []
 
-    def execute(self, *args, **kwargs) -> Any:
+    def _execute(self, *args, **kwargs) -> Any:
         raise RuntimeError(
             f"{BuiltinMCPTool.__name__} tool cannot be executed directly. It is a placeholder for built-in MCP functionality."
         )

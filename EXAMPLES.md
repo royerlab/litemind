@@ -468,11 +468,13 @@ Implement a custom callback that prints tokens as they arrive, attach it to a st
 ```python
 from litemind import OpenAIApi
 from litemind.agent.agent import Agent
-from litemind.apis.callbacks.base_callbacks import BaseCallbacks
+from litemind.apis.callbacks.base_callbacks import BaseApiCallbacks
 
-class PrintTokensCallback(BaseCallbacks):
+
+class PrintTokensCallback(BaseApiCallbacks):
     def on_text_streaming(self, fragment, **kwargs):
         print(fragment, end="", flush=True)
+
 
 api = OpenAIApi()
 api.callback_manager.add_callback(PrintTokensCallback())

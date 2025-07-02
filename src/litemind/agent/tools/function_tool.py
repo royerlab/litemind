@@ -88,7 +88,7 @@ class FunctionTool(BaseTool):
         else:
             return "string"
 
-    def execute(self, *args, **kwargs) -> Any:
+    def _execute(self, *args, **kwargs) -> Any:
         """
         Execute the tool with given arguments.
 

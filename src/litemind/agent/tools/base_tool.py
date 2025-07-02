@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Any
 
+from litemind.agent.tools.callbacks.tool_callback_manager import ToolCallbackManager
+
 
 class BaseTool(ABC):
     """Abstract base class for a tool."""
@@ -17,6 +19,9 @@ class BaseTool(ABC):
 
         # Initialize the arguments schema
         self.arguments_schema = {}
+
+        # Initialise Callback manager:
+        self.callbacks = ToolCallbackManager()
 
     def __repr__(self):
         return f"{self.name}(description={self.description})"
@@ -50,11 +55,15 @@ class BaseTool(ABC):
         pass
 
     @abstractmethod
-    def execute(self, *args, **kwargs) -> Any:
-        """Execute the tool with the provided arguments."""
+    def _execute(self, *args, **kwargs) -> Any:
+        """
+        Execute the tool with the provided arguments.
+        DO NOT CALL THIS METHOD DIRECTLY, USE THE __call__ METHOD INSTEAD.
+        Otehrwise the callbacks won't be called!
+        """
         pass
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args, **kwargs) -> Any:
         """
         Allow calling the tool as a function.
 
@@ -76,4 +85,19 @@ class BaseTool(ABC):
             raise ValueError(
                 "Positional arguments are not supported. Use keyword arguments instead."
             )
-        return self.execute(*args, **kwargs)
+
+        # Call the callbacks for tool's start:
+        self.callbacks.on_tool_start(self, *args, **kwargs)
+
+        try:
+            # Run the tool's execute method and capture the result:
+            result: Any = self._execute(*args, **kwargs)
+        except Exception as e:
+            # Call the callbacks for tool's error:
+            self.callbacks.on_tool_error(self, e)
+            raise e
+
+        # Call the callbacks for tool's end:
+        self.callbacks.on_tool_end(self, result)
+
+        return result

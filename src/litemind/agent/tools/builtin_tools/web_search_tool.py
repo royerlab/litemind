@@ -55,7 +55,7 @@ class BuiltinWebSearchTool(BuiltinTool):
                 allowed_domains if allowed_domains is not None else []
             )
 
-    def execute(self, *args, **kwargs) -> Any:
+    def _execute(self, *args, **kwargs) -> Any:
         raise RuntimeError(
             f"{BuiltinWebSearchTool.__name__} tool cannot be executed directly. It is a placeholder for built-in web search functionality."
         )

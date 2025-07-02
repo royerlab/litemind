@@ -4,7 +4,7 @@ from typing import Any, List, Sequence
 from litemind.agent.messages.message import Message
 
 
-class BaseCallbacks(ABC):
+class BaseApiCallbacks(ABC):
     def on_availability_check(self, available: bool) -> None:
         """
         Called when the availability and credentials check is performed.

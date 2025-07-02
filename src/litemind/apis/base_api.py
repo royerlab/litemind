@@ -6,7 +6,7 @@ from pydantic import BaseModel
 
 from litemind.agent.messages.message import Message
 from litemind.agent.tools.toolset import ToolSet
-from litemind.apis.callbacks.callback_manager import CallbackManager
+from litemind.apis.callbacks.api_callback_manager import ApiCallbackManager
 from litemind.apis.model_features import ModelFeatures
 from litemind.media.media_base import MediaBase
 from litemind.utils.random_projector import DeterministicRandomProjector
@@ -18,12 +18,12 @@ class BaseApi(ABC):
     """
 
     # constructor:
-    def __init__(self, callback_manager: Optional[CallbackManager] = None, **kwargs):
+    def __init__(self, callback_manager: Optional[ApiCallbackManager] = None, **kwargs):
 
         if callback_manager is not None:
             self.callback_manager = callback_manager
         else:
-            self.callback_manager = CallbackManager()
+            self.callback_manager = ApiCallbackManager()
 
     @abstractmethod
     def check_availability_and_credentials(

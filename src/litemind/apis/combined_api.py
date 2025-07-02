@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from litemind.agent.messages.message import Message
 from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.base_api import BaseApi
-from litemind.apis.callbacks.callback_manager import CallbackManager
+from litemind.apis.callbacks.api_callback_manager import ApiCallbackManager
 from litemind.apis.default_api import DefaultApi
 from litemind.apis.exceptions import APIError
 from litemind.apis.model_features import ModelFeatures
@@ -27,7 +27,7 @@ class CombinedApi(DefaultApi):
         self,
         apis: Optional[List[BaseApi]] = None,
         api_keys: Optional[Dict[str, str]] = None,
-        callback_manager: Optional[CallbackManager] = None,
+        callback_manager: Optional[ApiCallbackManager] = None,
     ):
         """
         Create a new combined API. If no APIs are provided, the default APIs will be used: OpenAIApi, AnthropicApi, OllamaApi, GeminiApi.
@@ -38,7 +38,7 @@ class CombinedApi(DefaultApi):
             A list of APIs to combine.
         api_keys: Dict[str, str]
             A dictionary of API keys for each API.
-        callback_manager: CallbackManager
+        callback_manager: ApiCallbackManager
             A callback manager to handle callbacks.
         """
 
