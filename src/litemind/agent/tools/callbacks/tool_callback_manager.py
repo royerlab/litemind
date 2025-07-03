@@ -12,6 +12,7 @@ class ToolCallbackManager(BaseToolCallbacks):
     This class inherits from BaseToolCallbacks and implements methods to handle
     tool lifecycle events such as start, end, and error handling.
     """
+
     def __init__(self):
         self.callbacks: List[BaseToolCallbacks] = []
 
@@ -56,6 +57,10 @@ class ToolCallbackManager(BaseToolCallbacks):
     def on_tool_start(self, tool: "BaseTool", *args, **kwargs) -> None:
         for callback in self.callbacks:
             callback.on_tool_start(tool, *args, **kwargs)
+
+    def on_tool_activity(self, tool: "BaseTool", activity_type: str, **kwargs) -> Any:
+        for callback in self.callbacks:
+            callback.on_tool_activity(tool, activity_type, **kwargs)
 
     def on_tool_end(self, tool: "BaseTool", result: Any) -> None:
         for callback in self.callbacks:

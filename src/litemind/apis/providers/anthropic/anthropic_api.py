@@ -137,6 +137,13 @@ class AnthropicApi(DefaultApi):
             # Create the Anthropic client
             from anthropic import Anthropic
 
+            # ensure the timeout parameter is set in kwargs and high enough:
+            if (
+                "timeout" not in self.anthropic_api_kwargs
+                or self.anthropic_api_kwargs["timeout"] < 6000
+            ):
+                self.anthropic_api_kwargs["timeout"] = 6000
+
             self.client = Anthropic(
                 api_key=self.api_key, base_url=self.base_url, **anthropic_api_kwargs
             )

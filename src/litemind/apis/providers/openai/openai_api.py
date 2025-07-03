@@ -4,6 +4,7 @@ import os
 import tempfile
 from typing import List, Optional, Sequence, Type, Union
 
+from arbol import aprint
 from openai import OpenAI
 from pydantic import BaseModel
 
@@ -115,6 +116,10 @@ class OpenAIApi(DefaultApi):
         try:
             # Initialize the feature scanner:
             self.feature_scanner = get_default_model_feature_scanner()
+
+            # ensure the timeout parameter is set in kwargs and high enough:
+            if "timeout" not in self.kwargs or self.kwargs["timeout"] < 6000:
+                self.kwargs["timeout"] = 6000
 
             # Create an OpenAI client:
             self.client: OpenAI = OpenAI(
@@ -644,7 +649,7 @@ class OpenAIApi(DefaultApi):
         use_file_search: bool = False
         vector_store_ids: Optional[List[str]] = None
         use_computer_use: bool = False
-        stream: bool = True
+        stream: bool = kwargs["stream"] if "stream" in kwargs else True
 
         # Validate inputs using parent method:
         super().generate_text(
@@ -664,9 +669,16 @@ class OpenAIApi(DefaultApi):
                 messages, toolset if use_tools else None, response_format
             )
 
+        # **WORKAROUND** for deep research models that don't like streaming:
+        if model_name and "deep-research" in model_name:
+            stream = False
+            aprint(
+                "Deep Research models do not support streaming. Disabling streaming for this request."
+            )
+
         # Handle model-specific parameter restrictions
         reasoning_effort = None
-        if "o1" in model_name or "o3" in model_name:
+        if "o1" in model_name or "o3" in model_name or "o4" in model_name:
             # o-series models do not support temperature parameter
             temperature = None
 
@@ -768,25 +780,6 @@ class OpenAIApi(DefaultApi):
                         "max_output_tokens": max_num_output_tokens,
                     }
 
-                    # Add structured output support - THIS IS THE KEY FIX
-                    if response_format:
-                        api_params["text_format"] = response_format
-
-                    # Only add temperature if it's not None (o-series models don't support it)
-                    if temperature is not None:
-                        api_params["temperature"] = temperature
-
-                    # Add reasoning effort if specified (for o-series models)
-                    if reasoning_effort is not None:
-                        api_params["reasoning"] = {"effort": reasoning_effort}
-
-                    # Only add tools if there are any
-                    if tools:
-                        api_params["tools"] = tools
-
-                    # Add any additional kwargs
-                    api_params.update(kwargs)
-
                 else:
                     # Subsequent request: use previous_response_id with tool outputs
                     # response_input should already be set to function_call_outputs from previous iteration
@@ -797,45 +790,61 @@ class OpenAIApi(DefaultApi):
                         "max_output_tokens": max_num_output_tokens,
                     }
 
-                    # Add structured output support - THIS IS THE KEY FIX
-                    if response_format:
-                        api_params["text_format"] = response_format
+                # Add structured output support - THIS IS THE KEY FIX
+                if response_format:
+                    api_params["text_format"] = response_format
 
-                    # Only add temperature if it's not None (o-series models don't support it)
-                    if temperature is not None:
-                        api_params["temperature"] = temperature
+                # Only add temperature if it's not None (o-series models don't support it)
+                if temperature is not None:
+                    api_params["temperature"] = temperature
 
-                    # Add reasoning effort if specified (for o-series models)
-                    if reasoning_effort is not None:
-                        api_params["reasoning"] = {"effort": reasoning_effort}
+                # Add reasoning effort if specified (for o-series models)
+                if reasoning_effort is not None:
+                    api_params["reasoning"] = {
+                        "effort": reasoning_effort,
+                        "summary": "auto",
+                    }
 
-                    # Only add tools if there are any
-                    if tools:
-                        api_params["tools"] = tools
+                # Only add tools if there are any
+                if tools:
+                    api_params["tools"] = tools
 
-                    # Add any additional kwargs
-                    api_params.update(kwargs)
+                # Add any additional kwargs
+                api_params.update(kwargs)
 
                 # Create response using Response API with streaming
                 try:
-                    with self.client.responses.stream(
-                        **api_params
-                    ) as streaming_response:
-                        # Process streaming events - based on official OpenAI example
-                        for event in streaming_response:
-                            if "output_text" in event.type:
-                                # Extract the text delta for streaming callback
-                                if hasattr(event, "delta"):
-                                    self.callback_manager.on_text_streaming(
-                                        fragment=event.delta, **kwargs
-                                    )
-                                elif hasattr(event, "text"):
-                                    self.callback_manager.on_text_streaming(
-                                        fragment=event.text, **kwargs
-                                    )
+                    if stream:
+                        # Streaming request
+                        with self.client.responses.stream(
+                            **api_params
+                        ) as streaming_response:
+                            # Process streaming events - based on official OpenAI example
+                            try:
+                                for event in streaming_response:
+                                    if "output_text" in event.type:
+                                        # Extract the text delta for streaming callback
+                                        if hasattr(event, "delta"):
+                                            self.callback_manager.on_text_streaming(
+                                                fragment=event.delta, **kwargs
+                                            )
+                                        elif hasattr(event, "text"):
+                                            self.callback_manager.on_text_streaming(
+                                                fragment=event.text, **kwargs
+                                            )
+                            except Exception as e:
+                                # Handle any errors during streaming
+                                aprint(f"Unexpected error during streaming: {e}")
+                                # print stack trace:
+                                import traceback
 
-                        # Get the final response - identical to non-streaming!
-                        response = streaming_response.get_final_response()
+                                traceback.print_exc()
+
+                            # Get the final response - identical to non-streaming!
+                            response = streaming_response.get_final_response()
+                    else:
+                        # Non-streaming request
+                        response = self.client.responses.create(**api_params)
 
                 except AttributeError:
                     # Fallback if streaming method not available

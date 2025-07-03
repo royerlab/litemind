@@ -803,3 +803,45 @@ results:
     VideoEmbeddings: false
     VideoGeneration: false
     WebSearchTool: false
+
+  o3-mini-deep-research-medium:
+    Audio: false
+    AudioEmbeddings: false
+    AudioGeneration: false
+    AudioTranscription: false
+    Document: true
+    DocumentEmbeddings: false
+    Image: true
+    ImageEmbeddings: false
+    ImageGeneration: false
+    MCPTool: true
+    StructuredTextGeneration: false
+    TextEmbeddings: false
+    TextGeneration: true
+    Thinking: true
+    Tools: true
+    Video: false
+    VideoEmbeddings: false
+    VideoGeneration: false
+    WebSearchTool: true
+
+  o4-mini-deep-research-medium:
+    Audio: false
+    AudioEmbeddings: false
+    AudioGeneration: false
+    AudioTranscription: false
+    Document: true
+    DocumentEmbeddings: false
+    Image: true
+    ImageEmbeddings: false
+    ImageGeneration: false
+    MCPTool: true
+    StructuredTextGeneration: false
+    TextEmbeddings: false
+    TextGeneration: true
+    Thinking: true
+    Tools: true
+    Video: false
+    VideoEmbeddings: false
+    VideoGeneration: false
+    WebSearchTool: true

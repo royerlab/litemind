@@ -29,6 +29,28 @@ class BaseToolCallbacks(ABC):
         """
         pass
 
+    def on_tool_activity(self, tool: "BaseTool", activity_type: str, **kwargs) -> Any:
+        """
+        Called when tool is 'doing something' this could be used to monitor the activity of the tool if multiple steps are involved.
+        or if we need to access internal information about the tool's execution.
+
+        Parameters
+        ----------
+        tool: BaseTool
+            Tool instance
+        activity_type: str
+            String that describes the type of activity (e.g., "processing", "waiting", etc.)
+        **kwargs: dict
+            Information about the activity, can be anything that is relevant to the activity type.
+
+        Returns
+        -------
+        Any
+            Optional return value that can be used to pass information back to the tool.
+
+        """
+        pass
+
     def on_tool_end(self, tool: "BaseTool", result: Any) -> None:
         """
         Called when tool use is ended.

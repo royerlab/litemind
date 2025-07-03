@@ -18,6 +18,7 @@ class PrintApiCallbacks(BaseToolCallbacks):
     def __init__(
         self,
         print_on_tool_start: bool = False,
+        print_on_tool_activity: bool = False,
         print_on_tool_end: bool = False,
         print_on_tool_error: bool = True,
         **kwargs,
@@ -31,6 +32,8 @@ class PrintApiCallbacks(BaseToolCallbacks):
         ----------
         print_on_tool_start: bool
             Whether to print a message when a tool starts execution.
+        print_on_tool_activity: bool
+            Whether to print a message when a tool is active 'doing something'.
         print_on_tool_end: bool
             Whether to print a message when a tool ends execution.
         print_on_tool_error: bool
@@ -42,6 +45,7 @@ class PrintApiCallbacks(BaseToolCallbacks):
 
         # Set the printing options based on the provided parameters:
         self.print_on_tool_start = print_on_tool_start
+        self.print_on_tool_activity = print_on_tool_activity
         self.print_on_tool_end = print_on_tool_end
         self.print_on_tool_error = print_on_tool_error
 
@@ -50,6 +54,9 @@ class PrintApiCallbacks(BaseToolCallbacks):
 
     def on_tool_start(self, tool: BaseTool, *args, **kwargs) -> None:
         aprint(f"Tool Start: {tool.name} with args: {args} and kwargs: {kwargs}")
+
+    def on_tool_activity(self, tool: "BaseTool", activity_type: str, **kwargs) -> Any:
+        aprint(f"Tool Activity: {tool.name} is {activity_type} with info: {kwargs}")
 
     def on_tool_end(self, tool: BaseTool, result: Any) -> None:
         aprint(f"Tool End: {tool.name} with result: {result}")

@@ -21,6 +21,7 @@ def test_scan_openai_api_check_specifics(scanner):
 
     # Query supported features for a specific model
     model_feature_map = {
+        "o4-mini-deep-research-medium": [ModelFeatures.TextGeneration],
         "gpt-4.1": [
             ModelFeatures.TextGeneration,
             ModelFeatures.StructuredTextGeneration,

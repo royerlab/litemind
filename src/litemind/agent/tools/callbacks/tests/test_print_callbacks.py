@@ -18,7 +18,10 @@ class DummyTool(BaseTool):
 @pytest.fixture
 def print_callbacks():
     return PrintApiCallbacks(
-        print_on_tool_start=True, print_on_tool_end=True, print_on_tool_error=True
+        print_on_tool_start=True,
+        print_on_tool_activity=True,
+        print_on_tool_end=True,
+        print_on_tool_error=True,
     )
 
 
@@ -32,6 +35,15 @@ def test_on_tool_start(print_callbacks, dummy_tool, capsys):
     captured = capsys.readouterr()
     assert (
         f"Tool Start: {dummy_tool.name} with args: () and kwargs: {{'foo': 'bar'}}"
+        in captured.out
+    )
+
+
+def test_on_tool_activity(print_callbacks, dummy_tool, capsys):
+    print_callbacks.on_tool_activity(dummy_tool, "talking", some_info="bla_bla")
+    captured = capsys.readouterr()
+    assert (
+        "Tool Activity: dummy is talking with info: {'some_info': 'bla_bla'}"
         in captured.out
     )
 

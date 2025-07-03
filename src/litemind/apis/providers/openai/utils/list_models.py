@@ -117,6 +117,7 @@ def get_openai_model_list(
                 "gpt",
                 "o1",
                 "o3",
+                "o4",
                 "text-embedding",
                 "whisper",
                 "ada-002",
@@ -129,7 +130,7 @@ def get_openai_model_list(
 
         if not allow_prohibitively_expensive_models:
             # Exclude prohibitively expensive models:
-            excluded += ["o1-pro", "o3-pro"]
+            excluded += ["o1-pro", "o3-pro", "o4-pro"]
 
         # Convert to list of model ids:
         models = [model.id for model in raw_model_list]
@@ -167,8 +168,15 @@ def get_openai_model_list(
         # Actual sorting:
         sorted_model_list = sorted(model_list, key=model_key, reverse=True)
 
-        # List of reasoning models:
-        reasoning_models = ["o1", "o1-pro", "o1-mini", "o3-mini", "o3"]
+        # List of reasoning models filters:
+        reasoning_models_filters = ["o1", "o3", "o4", "o5"]
+
+        # List of reasoning models that contain the filters:
+        reasoning_models = [
+            model
+            for model in sorted_model_list
+            if any(filter_ in model for filter_ in reasoning_models_filters)
+        ]
 
         # Replace each reasoning model 'X' with its three variants:  X-low, X-mid, X-high:
         for reasoning_model in reasoning_models:
