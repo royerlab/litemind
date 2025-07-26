@@ -243,6 +243,34 @@ class Message:
         # Append the text block:
         return self.append_block(MessageBlock(media=Text(text=text), **kwargs))
 
+    def append_quoted_text(
+        self, text: str, quote_level: int = 1, **kwargs
+    ) -> MessageBlock:
+        """
+        Append quoted text to the message. The text is quoted using markdown syntax.
+
+        Parameters
+        ----------
+        text : str
+            The text to append to the message.
+        quote_level: int
+            The level of quoting (default: 1). Each level adds a '>' character at the beginning of each line.
+        kwargs: dict
+            Additional attributes for the text block.
+        """
+
+        # Check that it is really a string:
+        if not isinstance(text, str):
+            raise ValueError(f"Text must be a string, not {type(text)}")
+
+        # Quote the text:
+        quoted_text = "\n".join(
+            f"{'>' * quote_level} {line}" for line in text.splitlines()
+        )
+
+        # Append the quoted text block:
+        return self.append_block(MessageBlock(media=Text(text=quoted_text), **kwargs))
+
     def append_templated_text(self, template: str, **replacements) -> MessageBlock:
         """
         Replace all `{placeholders}` in *template* with values supplied
@@ -489,18 +517,18 @@ class Message:
             # Create a table block from the URI:
             block = MessageBlock(Table(table), source=source)
 
-        elif isinstance(table, ndarray):
+        elif isinstance(table, ndarray) or isinstance(table, list):
 
             # Convert numpy array to DataFrame:
             table = DataFrame(table)
 
             # Create a table block from the DataFrame:
-            block = MessageBlock(Table.from_dataframe(table), source=source)
+            block = MessageBlock(Table.from_table(table), source=source)
 
         elif isinstance(table, DataFrame):
 
             # Create a table block from the DataFrame:
-            block = MessageBlock(Table.from_dataframe(table), source=source)
+            block = MessageBlock(Table.from_table(table), source=source)
 
         else:
             raise ValueError(
@@ -509,6 +537,24 @@ class Message:
 
         # Append the table block:
         return self.append_block(block)
+
+    def append_table_as_text(
+        self, table: Union["ndarray", "DataFrame"], source: Optional[str] = None
+    ):
+        """
+        Append a table to the message as a text block.
+
+        Parameters
+        ----------
+        table : Union[str, ndarray, DataFrame]
+            The table to append. Can be a pandas DataFrame, a numpy array, list or tuple.
+        source : Optional[str]
+            The source of the table (e.g., file path or url).
+        """
+
+        # Convert the table to a markdown string and append it as text:
+        markdown_string = Table.from_table(table).to_markdown()
+        return self.append_text(markdown_string)
 
     def append_file(self, file_uri: str, source: Optional[str] = None) -> MessageBlock:
         """

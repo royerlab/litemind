@@ -87,7 +87,7 @@ def test_message_block_document():
 
 def test_message_block_table():
     table = DataFrame({"A": [1, 2, 3], "B": [4, 5, 6]})
-    block = MessageBlock(Table.from_dataframe(table))
+    block = MessageBlock(Table.from_table(table))
     assert block.has_type(Table)
     assert block.media.to_dataframe().equals(table)
     assert len(block.get_content()) > 40

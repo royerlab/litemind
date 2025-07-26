@@ -3,7 +3,6 @@ from datetime import datetime  # Added import
 
 import pytest
 
-from litemind import AnthropicApi, GeminiApi, OpenAIApi
 from litemind.apis.base_api import BaseApi, ModelFeatures
 from litemind.apis.feature_scanner import ModelFeatureScanner
 

@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Union
 
 from pandas import DataFrame
 
@@ -36,10 +36,14 @@ class Table(MediaURI):
 
         super().__init__(uri=uri, extension=extension, **kwargs)
 
-        self.dataframe = None
+        self.dataframe: Optional[DataFrame] = None
 
     @classmethod
-    def from_dataframe(cls, dataframe: DataFrame, filepath: Optional[str] = None):
+    def from_table(
+        cls,
+        table: Union["ndarray", "DataFrame", list, tuple],
+        filepath: Optional[str] = None,
+    ):
 
         if filepath is None:
             # Create temporary file:
@@ -47,8 +51,25 @@ class Table(MediaURI):
 
             filepath = tempfile.NamedTemporaryFile(delete=False).name
 
+        # If dataframe is a numpy array, or array-like, convert to DataFrame:
+        if isinstance(table, (list, tuple)) or hasattr(table, "__array__"):
+            import pandas as pd
+
+            table = pd.DataFrame(table)
+
+        # At this point `table` should be a DataFrame:
+        elif not isinstance(table, DataFrame):
+            raise ValueError(
+                f"Parameter `dataframe` must be a pandas DataFrame or an array-like object, not {type(table)}"
+            )
+
         # Save dataframe to file:
-        dataframe.to_csv(filepath, index=False)
+        table.to_csv(
+            filepath,
+            index=False,  # avoid the synthetic index column
+            na_rep="",  # match original null representation
+            float_format=None,  # let 'round_trip' preserve original
+        )
 
         # URI:
         table_uri = "file://" + filepath
@@ -77,11 +98,15 @@ class Table(MediaURI):
                 f"Parameter `csv_table_str` must be a string, not {type(csv_table_str)}"
             )
 
-        # Convert the CSV string to a DataFrame:
-        dataframe = pd.read_csv(StringIO(csv_table_str))
+        dataframe = pd.read_csv(
+            StringIO(csv_table_str),
+            dtype=str,  # keep all columns textual
+            keep_default_na=False,  # don't turn 'NA' into NaN
+            float_precision="round_trip",  # exact float repr
+        )
 
         # Create a table from the DataFrame:
-        return cls.from_dataframe(dataframe)
+        return cls.from_table(dataframe)
 
     def load_from_uri(self):
         """
@@ -100,6 +125,7 @@ class Table(MediaURI):
         Get the table as a DataFrame.
         """
 
+        # If the dataframe is not loaded, load it from the URI:
         if self.dataframe is None:
             self.load_from_uri()
 
@@ -107,11 +133,19 @@ class Table(MediaURI):
 
     def to_markdown(self):
 
+        #
         if self.dataframe is None:
             self.load_from_uri()
 
+        # Convert DataFrame to markdown table string:
+        from tabulate import tabulate
+
+        table_markdown = tabulate(
+            self.dataframe, headers="keys", tablefmt="github", showindex=True
+        )
+
         # Convert table to markdown:
-        markdown = f"```dataframe\n{self.dataframe.to_markdown()}\n```"
+        markdown = f"```dataframe\n{table_markdown}\n```"
 
         return markdown
 

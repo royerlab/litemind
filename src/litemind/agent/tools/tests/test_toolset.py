@@ -2,8 +2,6 @@ import pytest
 
 from litemind import API_IMPLEMENTATIONS
 from litemind.agent.tools.agent_tool import AgentTool
-from litemind.agent.tools.base_tool import BaseTool
-from litemind.agent.tools.callbacks.base_tool_callbacks import BaseToolCallbacks
 from litemind.agent.tools.function_tool import FunctionTool
 from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.model_features import ModelFeatures

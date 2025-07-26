@@ -1,4 +1,3 @@
-from abc import ABC
 from typing import List, Optional, Sequence, Union
 
 from arbol import aprint, asection
@@ -100,13 +99,13 @@ class Agent:
         if not self.api.has_model_support_for(
             model_name=self.model, features=ModelFeatures.TextGeneration
         ):
-            raise ValueError("The model does not support text generation")
+            aprint(f"The model {self.model} does not seem to support text generation!")
 
         model_supports_tools = self.api.has_model_support_for(
             model_name=self.model, features=ModelFeatures.Tools
         )
         if toolset is not None and not model_supports_tools:
-            raise ValueError("The model does not support tools")
+            aprint(f"The model {self.model} does not seem to support tools!")
 
         # Set the temperature, toolset, and name:
         self.temperature = temperature

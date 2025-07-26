@@ -123,6 +123,27 @@ def test_append_templated_text_missing_replacement():
         user_message.append_templated_text("Hello, {name} and {other}!", name="Alice")
 
 
+def test_quoted_text():
+    user_message = Message(role="user")
+    user_message.append_quoted_text("Hello, my name is Peter")
+    user_message.append_quoted_text("I am a software engineer")
+    user_message.append_quoted_text("I love coding in Python")
+
+    # Check that the text in the message is correcly quoted:
+    assert any(
+        block.get_content() == "> Hello, my name is Peter"
+        for block in user_message.blocks
+    )
+    assert any(
+        block.get_content() == "> I am a software engineer"
+        for block in user_message.blocks
+    )
+    assert any(
+        block.get_content() == "> I love coding in Python"
+        for block in user_message.blocks
+    )
+
+
 def test_message_object():
     obj = StructuredText(key="example", value="data")
     user_message = Message(role="user")

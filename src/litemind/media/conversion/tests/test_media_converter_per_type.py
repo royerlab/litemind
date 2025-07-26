@@ -381,7 +381,7 @@ class TestMessageConverterPerType:
         }
 
         # Create a Table object
-        table_media = Table.from_dataframe(DataFrame(data))
+        table_media = Table.from_table(DataFrame(data))
 
         # Create a message and append the table media
         message = Message(role="user")

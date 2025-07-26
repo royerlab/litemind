@@ -123,7 +123,7 @@ def test_table_pickle_serialization():
     # Create a DataFrame
     df = pd.DataFrame({"Col1": ["A", "C"], "Col2": ["B", "D"]})
 
-    instance = Table.from_dataframe(df)
+    instance = Table.from_table(df)
 
     # Test pickle serialization
     pickled_data = instance.to_pickle()

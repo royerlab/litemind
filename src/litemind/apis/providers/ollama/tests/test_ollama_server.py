@@ -9,6 +9,11 @@ def test_ollama_server_lifecycle():
     test_port = 11500
     server = OllamaServer(port=test_port)
 
+    # wait for the server to be ready
+    import time
+
+    time.sleep(3)
+
     # Ensure server is not running
     assert not server.is_running()
 

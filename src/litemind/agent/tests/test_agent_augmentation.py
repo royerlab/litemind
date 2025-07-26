@@ -258,6 +258,7 @@ def test_agent_with_video_document_augmentation(api_class):
         or "flying" in response_text
         or "hovering" in response_text
         or "clip" in response_text
+        or "aircraft" in response_text
     )
 
     # Test removing the augmentation

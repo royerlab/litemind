@@ -63,6 +63,7 @@ tables = ["tabulate"]
 videos = ["ffmpeg-python", "imageio[ffmpeg]"]
 audio = ["soundfile"]
 remote = ["rpyc"]
+tasks = ["md2pdf"]
 
 [project.urls]
 Homepage = "https://github.com/royerlab/litemind"

@@ -1,12 +1,13 @@
-# Litemind Code Examples
 
-Below are 15 didactic, runnable, and well-commented code examples demonstrating Litemind's agentic, multimodal, and tool-augmented LLM capabilities. Each example is self-contained and can be run as-is (assuming you have valid API keys and the required dependencies installed).
+# Litemind Python API: 15 Practical Examples
+
+Below are 15 didactic, runnable code examples demonstrating Litemind's agentic, multimodal, and tool-augmented AI capabilities. Each example is self-contained and includes all necessary imports. Where possible, expected output is shown as comments.
 
 ---
 
-## 1. "Hello Agent" Quick-Start
+## 1. “Hello Agent” Quick-Start
 
-Instantiate an OpenAIApi, wrap it in an Agent, add a system prompt, send a user question, and print the reply.
+Instantiate `OpenAIApi`, wrap it in an `Agent`, add a system prompt, send a user question, and print the reply.
 
 ```python
 from litemind import OpenAIApi
@@ -15,8 +16,8 @@ from litemind.agent.agent import Agent
 # Initialize the OpenAI API
 api = OpenAIApi()
 
-# Create an agent with a specific model (or omit model_name for default)
-agent = Agent(api=api, model_name="gpt-4o")
+# Create an agent with the default model
+agent = Agent(api=api)
 
 # Add a system message to guide the agent's behavior
 agent.append_system_message("You are a helpful assistant.")
@@ -25,15 +26,18 @@ agent.append_system_message("You are a helpful assistant.")
 response = agent("What is the capital of France?")
 
 # Print the response
-print("Agent Response:", response)
-# Expected output: The capital of France is Paris.
+print("Simple Agent Response:", response)
+# Expected output (approximate):
+# Simple Agent Response: [*assistant*:
+# The capital of France is Paris.
+# ]
 ```
 
 ---
 
 ## 2. Date-Aware Assistant with a Function Tool
 
-Expose a Python helper through a ToolSet, attach it to the agent, and let the LLM invoke it.
+Expose a Python helper `get_current_date()` through a `ToolSet`, attach it to the agent, and let the LLM invoke it.
 
 ```python
 from litemind import OpenAIApi
@@ -45,8 +49,10 @@ from datetime import datetime
 def get_current_date() -> str:
     return datetime.now().strftime("%Y-%m-%d")
 
-# Initialize the API and toolset
+# Initialize the OpenAI API
 api = OpenAIApi()
+
+# Create a toolset and add the function tool
 toolset = ToolSet()
 toolset.add_function_tool(get_current_date, "Fetch the current date")
 
@@ -58,14 +64,21 @@ agent.append_system_message("You are a helpful assistant.")
 response = agent("What is the current date?")
 
 print("Agent with Tool Response:", response)
-# Expected output: The current date is YYYY-MM-DD.
+# Expected output (approximate):
+# Agent with Tool Response: [*assistant*:
+# Action: get_current_date()
+# , *user*:
+# Action: get_current_date()=2025-05-02
+# , *assistant*:
+# The current date is May 2, 2025.
+# ]
 ```
 
 ---
 
 ## 3. Agent + RAG: Answering from a Vector DB
 
-Load information snippets into an InMemoryVectorDatabase, register the augmentation, and ask a factual question.
+Load three information snippets into an `InMemoryVectorDatabase`, register the augmentation, and ask a factual question.
 
 ```python
 from litemind import OpenAIApi
@@ -82,11 +95,14 @@ agent = Agent(api=api)
 # Create vector database augmentation
 vector_augmentation = InMemoryVectorDatabase(name="test_augmentation")
 
-# Add sample information
+# Add sample informations
 informations = [
-    Information(Text("Igor Bolupskisty was a German-born theoretical physicist who developed the theory of indelible unitarity."), metadata={"topic": "physics", "person": "Bolupskisty"}),
-    Information(Text("The theory of indelible unitarity revolutionized our understanding of space, time and photons."), metadata={"topic": "physics", "concept": "unitarity"}),
-    Information(Text("Quantum unitarity is a fundamental theory in physics that describes nature at the nano-atomic scale as it pertains to Pink Hamsters."), metadata={"topic": "physics", "concept": "quantum unitarity"}),
+    Information(Text("Igor Bolupskisty was a German-born theoretical physicist who developed the theory of indelible unitarity."),
+                metadata={"topic": "physics", "person": "Bolupskisty"}),
+    Information(Text("The theory of indelible unitarity revolutionized our understanding of space, time and photons."),
+                metadata={"topic": "physics", "concept": "unitarity"}),
+    Information(Text("Quantum unitarity is a fundamental theory in physics that describes nature at the nano-atomic scale as it pertains to Pink Hamsters."),
+                metadata={"topic": "physics", "concept": "quantum unitarity"}),
 ]
 vector_augmentation.add_informations(informations)
 
@@ -98,112 +114,102 @@ agent.append_system_message("You are a helpful assistant.")
 response = agent("Tell me about Igor Bolupskisty's theory of indelible unitarity.")
 
 print("Agent with RAG Response:", response)
-# Expected output: A summary mentioning Bolupskisty and unitarity, citing the retrieved facts.
+# Expected output: The answer should cite or paraphrase the relevant information from the vector DB.
 ```
 
 ---
 
 ## 4. Multimodal Q&A with Image Context
 
-Combine text and an image in a Message, call an internal describe_image tool, and mention metadata from the vector DB.
+Combine text and an external image URL in the same message, call an internal describe_image tool, and mention metadata.
 
 ```python
 from litemind import OpenAIApi
 from litemind.agent.agent import Agent
 from litemind.agent.messages.message import Message
 
-# Use a real image URL (public domain)
-image_url = "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Einstein_1921_by_F_Schmutzer_-_restoration.jpg/456px-Einstein_1921_by_F_Schmutzer_-_restoration.jpg"
-
 api = OpenAIApi()
-agent = Agent(api=api, model_name="gpt-4o")
+agent = Agent(api=api)
 agent.append_system_message("You are a helpful assistant.")
 
 # Compose a multimodal message
 msg = Message(role="user", text="Can you describe what you see in this image?")
-msg.append_image(image_url)
+msg.append_image("https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Einstein_1921_by_F_Schmutzer_-_restoration.jpg/456px-Einstein_1921_by_F_Schmutzer_-_restoration.jpg")
 
-# Send the message
 response = agent(msg)
-
 print("Multimodal Q&A Response:", response)
-# Expected output: A description of the image (e.g., "A sepia photograph of Albert Einstein at a chalkboard...")
+# Expected output: Should mention "Einstein", "black-and-white", "photograph", or similar.
 ```
 
 ---
 
 ## 5. Unified CombinedApi Fail-Over Demo
 
-Create a CombinedApi, list available models, request both "TextGeneration" and "Image" features, and show auto-selection.
+Create `CombinedApi`, list available models, request both "TextGeneration" and "Image" features, and show auto-selection.
 
 ```python
-from litemind import CombinedApi
+from litemind.apis.combined_api import CombinedApi
 from litemind.agent.agent import Agent
 from litemind.apis.model_features import ModelFeatures
 
-# Instantiate CombinedApi
 api = CombinedApi()
-
-# List all available models
 print("Available models:", api.list_models())
 
-# Request a model that supports both text and image generation
-features = [ModelFeatures.TextGeneration, ModelFeatures.Image]
+# Request both text and image features (can use enums or strings)
+features = [ModelFeatures.TextGeneration, "Image"]
 model = api.get_best_model(features=features)
-print("Selected model for Text+Image:", model)
+print("Selected model:", model)
 
-# Create agent with required features
-agent = Agent(api=api, model_features=features)
+agent = Agent(api=api, model_name=model)
 agent.append_system_message("You are a helpful assistant.")
 
-# Ask a mixed prompt
-response = agent("Describe a photo of a white cat sitting on a red sofa.")
-
-print("CombinedApi Response:", response)
-# Expected output: A description of a white cat on a red sofa.
+response = agent("Describe the following image: https://upload.wikimedia.org/wikipedia/commons/3/3e/Einstein_1921_by_F_Schmutzer_-_restoration.jpg")
+print("CombinedApi multimodal response:", response)
 ```
 
 ---
 
 ## 6. Safe, Sandboxed Code-Runner Agent
 
-Register an execute_python_code function wrapped in a guarded exec, warn about untrusted code, and run a snippet.
+Register an `execute_python_code` function wrapped in a guarded exec, warn about untrusted code, and run a snippet.
 
 ```python
 from litemind import OpenAIApi
 from litemind.agent.agent import Agent
 from litemind.agent.tools.toolset import ToolSet
 import io
-import contextlib
+import sys
 
 def execute_python_code(code: str) -> str:
-    """Executes Python code in a restricted environment and returns stdout."""
-    stdout = io.StringIO()
+    # WARNING: This is a simple, non-secure sandbox for demonstration only!
+    old_stdout = sys.stdout
+    sys.stdout = io.StringIO()
     try:
-        with contextlib.redirect_stdout(stdout):
-            exec(code, {"__builtins__": {}})
+        exec(code, {"__builtins__": {}})
+        output = sys.stdout.getvalue()
     except Exception as e:
-        return f"Error: {e}"
-    return stdout.getvalue()
+        output = f"Error: {e}"
+    finally:
+        sys.stdout = old_stdout
+    return output
 
 api = OpenAIApi()
 toolset = ToolSet()
-toolset.add_function_tool(execute_python_code, "Execute untrusted Python code in a sandbox.")
+toolset.add_function_tool(execute_python_code, "Execute untrusted Python code in a sandbox (unsafe!)")
 
 agent = Agent(api=api, toolset=toolset)
-agent.append_system_message("You are a code runner. WARNING: Never trust untrusted code.")
+agent.append_system_message("You are a code runner. WARNING: Never trust user code. Always run in a sandbox.")
 
 response = agent('Please run: print("Hello")')
-
-print("Sandboxed Code Runner Output:", response)
-# Expected output: "Hello"
+print("Sandboxed code output:", response)
+# Expected output: Should include "Hello"
 ```
 
 ---
 
 ## 7. Structured JSON Replies with Pydantic
 
-Define a Pydantic model, pass it via response_format, and get a validated object back.
+Define a `WeatherResponse` dataclass, pass it via `response_format`, and ask for structured output.
 
 ```python
 from litemind import OpenAIApi
@@ -216,38 +222,35 @@ class WeatherResponse(BaseModel):
     city: str
 
 api = OpenAIApi()
-agent = Agent(api=api, model_features=["TextGeneration", "StructuredTextGeneration"])
-agent.append_system_message("You are a weather bot. Reply in JSON.")
+agent = Agent(api=api)
+agent.append_system_message("You are a weather bot. Weather conditions must be: sunny, rainy, cloudy, snowy, or partly cloudy.")
 
 response = agent("Weather in Paris?", response_format=WeatherResponse)
-
-# Access the parsed fields
-weather = response[-1][-1].get_content()
-print("Weather object:", weather)
-print("Temperature:", weather.temp_c)
-print("Condition:", weather.condition)
-print("City:", weather.city)
-# Expected output: Weather object with fields temp_c, condition, city
+print("Structured weather response:", response)
+# Expected output: Should be a validated WeatherResponse object, e.g.:
+# temp_c=18.5, condition='sunny', city='Paris'
 ```
 
 ---
 
 ## 8. Tool-Driven Image Generation
 
-Wrap a generate_cat_image() helper that calls generate_image, returns a file path, and have the agent acknowledge.
+Wrap a `generate_cat_image()` helper that calls `generate_image`, returns a local file path, and have the agent acknowledge.
 
 ```python
 from litemind import OpenAIApi
 from litemind.agent.agent import Agent
 from litemind.agent.tools.toolset import ToolSet
+import os
 
 def generate_cat_image() -> str:
-    # Use the API to generate an image and save it locally
     api = OpenAIApi()
-    image = api.generate_image("A white fluffy cat sitting on a sofa", image_width=512, image_height=512)
-    path = "/tmp/generated_cat.png"
+    model = api.get_best_model(features="ImageGeneration")
+    image = api.generate_image(positive_prompt="A cute fluffy cat", model_name=model)
+    # Save to a file
+    path = "cat_image.png"
     image.save(path)
-    return path
+    return os.path.abspath(path)
 
 api = OpenAIApi()
 toolset = ToolSet()
@@ -255,68 +258,61 @@ toolset.add_function_tool(generate_cat_image, "Generate a cat image and return t
 
 agent = Agent(api=api, toolset=toolset)
 response = agent("Please generate a cat image.")
-
-print("Image Generation Response:", response)
-import os
-assert os.path.exists("/tmp/generated_cat.png")
-# Expected output: Acknowledgement and the image file exists at /tmp/generated_cat.png
+print("Image generation response:", response)
+assert os.path.exists("cat_image.png")
 ```
 
 ---
 
 ## 9. Realtime Speech Transcription + Translation (Non-CLI)
 
-Demonstrate Litemind's audio modality: record a WAV, transcribe and translate.
+Demonstrate Litemind’s audio modality: record a short WAV file, transcribe and translate.
 
 ```python
-from litemind import CombinedApi
+from litemind.apis.combined_api import CombinedApi
 from litemind.agent.agent import Agent
 from litemind.agent.tools.toolset import ToolSet
 from litemind.media.types.media_audio import Audio
 
-# Assume you have a local WAV file in French
-audio_uri = "file:///path/to/french_clip.wav"  # Replace with a real file
+# Assume you have a local WAV file in French, e.g. "bonjour.wav"
+audio_uri = "file://path/to/bonjour.wav"
 
 def transcribe_audio(audio_uri: str) -> str:
     api = CombinedApi()
     return api.transcribe_audio(audio_uri)
 
 api = CombinedApi()
-model = api.get_best_model(["TextGeneration", "Audio"])
 toolset = ToolSet()
-toolset.add_function_tool(transcribe_audio, "Transcribe audio to text.")
+toolset.add_function_tool(transcribe_audio, "Transcribe audio and translate to English.")
 
 agent = Agent(api=api, toolset=toolset)
-msg = agent.agent.messages.message.Message(role="user", text="Please transcribe and translate this clip into English.")
-msg.append_audio(audio_uri)
-
-response = agent(msg)
-print("Transcription & Translation:", response)
-# Expected output: English translation, with citation of the original French.
+msg = "Please transcribe and translate this clip into English."
+response = agent(msg, audio=audio_uri)
+print("Transcription and translation:", response)
+# Expected: English translation, with citation of original French.
 ```
 
 ---
 
 ## 10. Batch Image Captioning & Metadata Enrichment
 
-Walk a folder of JPEGs, feed each to the agent with a describe_image tool, and store captions.
+Walk a folder of JPEGs, feed each image to the agent with a describe_image tool and a prompt, and store captions.
 
 ```python
 import os
 from litemind import OpenAIApi
 from litemind.agent.agent import Agent
 from litemind.agent.tools.toolset import ToolSet
-from litemind.media.types.media_image import Image
 from pydantic import BaseModel
 
-class ImageCaption(BaseModel):
+class ImageDescription(BaseModel):
     title: str
     objects: list
     style: str
 
 def describe_image(image_uri: str) -> dict:
     api = OpenAIApi()
-    return {"title": "A cat", "objects": ["cat"], "style": "photograph"}  # Replace with real call
+    return {"title": "A cat", "objects": ["cat"], "style": "photograph"}
 
 api = OpenAIApi()
 toolset = ToolSet()
@@ -324,26 +320,28 @@ toolset.add_function_tool(describe_image, "Describe an image and return JSON.")
 
 agent = Agent(api=api, toolset=toolset)
 
-folder = "/path/to/images"  # Replace with a real folder
-captions = []
+folder = "images"
+results = []
 for fname in os.listdir(folder):
     if fname.lower().endswith(".jpg"):
-        image_uri = f"file://{os.path.join(folder, fname)}"
-        msg = agent.agent.messages.message.Message(role="user", text="Return JSON with title, objects, style.")
-        msg.append_image(image_uri)
-        response = agent(msg, response_format=ImageCaption)
-        captions.append(response[-1][-1].get_content().dict())
+        image_path = os.path.join(folder, fname)
+        response = agent(
+            "Return JSON with title, objects, style.",
+            image=image_path,
+            response_format=ImageDescription
+        )
+        results.append(response)
 
-# Save to CSV
-import pandas as pd
-pd.DataFrame(captions).to_csv("captions.csv", index=False)
+# Save to CSV or print
+for row in results:
+    print(row)
 ```
 
 ---
 
 ## 11. Data-Aware Chat via Pandas-Tool
 
-Show the agent answering questions against a loaded pandas.DataFrame via a tool.
+Show the agent answering questions against a loaded pandas.DataFrame via a function tool.
 
 ```python
 import pandas as pd
@@ -351,56 +349,52 @@ from litemind import OpenAIApi
 from litemind.agent.agent import Agent
 from litemind.agent.tools.toolset import ToolSet
 
-# Load a CSV into a DataFrame
-df = pd.read_csv("data.csv")  # Replace with your CSV
+df = pd.read_csv("data.csv")
 
 def query_dataframe(question: str) -> dict:
-    # Example: implement a simple query
+    # Example: "How many rows have price > 100 and what’s their average score?"
     filtered = df[df["price"] > 100]
-    avg_score = filtered["score"].mean()
-    return {"count": len(filtered), "average_score": avg_score}
+    return {
+        "count": len(filtered),
+        "average_score": filtered["score"].mean()
+    }
 
 api = OpenAIApi()
 toolset = ToolSet()
-toolset.add_function_tool(query_dataframe, "Query a DataFrame.")
+toolset.add_function_tool(query_dataframe, "Query a DataFrame for statistics.")
 
 agent = Agent(api=api, toolset=toolset)
 response = agent("How many rows have price > 100 and what’s their average score?")
-
-print("Data-aware Chat Response:", response)
-# Expected output: Aggregated numbers from the DataFrame.
+print("Data-aware chat response:", response)
 ```
 
 ---
 
 ## 12. Cascading Agents (Agent-as-Tool)
 
-Create a summariser sub-agent and register it as a callable tool inside a supervisor agent.
+Create a “Summariser” sub-agent and register it as a callable tool inside a “Supervisor” agent.
 
 ```python
 from litemind import OpenAIApi
 from litemind.agent.agent import Agent
 from litemind.agent.tools.toolset import ToolSet
+from litemind.agent.tools.agent_tool import AgentTool
 
 api = OpenAIApi()
-
-# Child summariser agent
 summariser = Agent(api=api, name="Summariser")
-summariser.append_system_message("You are a summariser. Summarise any text you receive.")
+summariser.append_system_message("You are a summariser.")
 
-# Wrap summariser as a tool
+# Wrap the summariser as a tool
+summariser_tool = AgentTool(summariser, "Summarise a paragraph.")
+
+supervisor = Agent(api=api, name="Supervisor")
 toolset = ToolSet()
-toolset.add_agent_tool(summariser, "Summarise a paragraph.")
+toolset.add_tool(summariser_tool)
+supervisor.toolset = toolset
 
-# Supervisor agent
-supervisor = Agent(api=api, toolset=toolset, name="Supervisor")
-supervisor.append_system_message("You are a supervisor. Use the summariser tool to condense text.")
-
-paragraph = "Litemind is a Python library for building agentic, multimodal AI applications. It supports tools, RAG, and more."
-response = supervisor(f"Please summarise the following: {paragraph}")
-
-print("Supervisor Agent Response:", response)
-# Expected output: A concise summary, delegated via the summariser tool.
+paragraph = "Litemind is a Python library for agentic, multimodal AI applications. It supports tools, RAG, and more."
+response = supervisor(f"Please summarise: {paragraph}")
+print("Supervisor agent response:", response)
 ```
 
 ---
@@ -410,18 +404,15 @@ print("Supervisor Agent Response:", response)
 Iterate over available models, ask for "TextGeneration" + "Audio", and assert the library picks the first model that meets both.
 
 ```python
-from litemind import CombinedApi
+from litemind.apis.combined_api import CombinedApi
 from litemind.apis.model_features import ModelFeatures
 
 api = CombinedApi()
-features = ["TextGeneration", "Audio"]  # Can use enums or strings
 models = api.list_models()
 for model in models:
-    if api.has_model_support_for(features=features, model_name=model):
+    if api.has_model_support_for(features=[ModelFeatures.TextGeneration, ModelFeatures.Audio], model_name=model):
         print("First model supporting both TextGeneration and Audio:", model)
         break
-else:
-    print("No model found with both features.")
 ```
 
 ---
@@ -432,31 +423,30 @@ Walk a folder, convert each PDF page or image into Information chunks, store in 
 
 ```python
 import os
-from litemind import OpenAIApi
-from litemind.agent.agent import Agent
 from litemind.agent.augmentations.information.information import Information
 from litemind.agent.augmentations.vector_db.in_memory_vector_db import InMemoryVectorDatabase
-from litemind.media.types.media_document import Document
+from litemind.media.types.media_text import Text
 from litemind.media.types.media_image import Image
+from litemind.agent.agent import Agent
+from litemind import OpenAIApi
 
-api = OpenAIApi()
-vector_db = InMemoryVectorDatabase(name="my_corpus", location="/tmp/litemind_vecdb")
-
-folder = "/path/to/folder"  # Replace with your folder
+folder = "docs"
+vecdb = InMemoryVectorDatabase(name="my_corpus")
 for fname in os.listdir(folder):
     path = os.path.join(folder, fname)
     if fname.lower().endswith(".pdf"):
-        info = Information(Document(f"file://{path}"))
-        vector_db.add_informations([info])
+        # For simplicity, treat the whole PDF as one chunk
+        info = Information(Text(f"PDF: {fname}"))
+        vecdb.add_informations([info])
     elif fname.lower().endswith((".jpg", ".png")):
-        info = Information(Image(f"file://{path}"))
-        vector_db.add_informations([info])
+        info = Information(Image(path))
+        vecdb.add_informations([info])
 
+api = OpenAIApi()
 agent = Agent(api=api)
-agent.add_augmentation(vector_db)
-
-response = agent("What is the main topic of the PDF documents in this folder?")
-print("RAG Pipeline Response:", response)
+agent.add_augmentation(vecdb)
+response = agent("What documents mention 'unitarity'?")
+print("RAG search response:", response)
 ```
 
 ---
@@ -468,33 +458,26 @@ Implement a custom callback that prints tokens as they arrive, attach it to a st
 ```python
 from litemind import OpenAIApi
 from litemind.agent.agent import Agent
-from litemind.apis.callbacks.base_callbacks import BaseApiCallbacks
+from litemind.apis.callbacks.print_api_callbacks import PrintApiCallbacks
 
-
-class PrintTokensCallback(BaseApiCallbacks):
+class StreamingCallback(PrintApiCallbacks):
     def on_text_streaming(self, fragment, **kwargs):
         print(fragment, end="", flush=True)
 
-
-api = OpenAIApi()
-api.callback_manager.add_callback(PrintTokensCallback())
-
-agent = Agent(api=api, model_name="gpt-4o")
+api = OpenAIApi(callback_manager=StreamingCallback(print_text_streaming=True))
+agent = Agent(api=api)
 agent.append_system_message("You are a helpful assistant.")
 
-# Send a long prompt to observe streaming
-response = agent("Write a detailed summary of the history of artificial intelligence.")
+long_prompt = "Please write a detailed summary of the history of artificial intelligence, including key milestones and figures."
+print("Streaming response:")
+response = agent(long_prompt, stream=True)
 
-# Now, switch to a non-streaming model (if available)
-agent = Agent(api=api, model_name="gpt-3.5-turbo")  # Example non-streaming
-response = agent("Write a detailed summary of the history of artificial intelligence.")
-print("\nFull text (non-streaming):", response)
+# Now, repeat with a non-streaming model (no live token flow)
+api2 = OpenAIApi()
+agent2 = Agent(api=api2)
+print("\n\nNon-streaming response:")
+response2 = agent2(long_prompt)
+print(response2)
 ```
 
 ---
-
-**Note:**  
-- For all examples, ensure you have valid API keys and the required dependencies installed.
-- Replace file paths and URLs with real, accessible resources as needed.
-- Model features can be provided as enums, strings, or lists of strings (e.g., `["TextGeneration", "Image"]` or `[ModelFeatures.TextGeneration, ModelFeatures.Image]`).
-- Litemind's agent framework is unified; there is no separate "ReActAgent" class—use `Agent` for all agentic workflows.
