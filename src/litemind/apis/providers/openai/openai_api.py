@@ -285,6 +285,10 @@ class OpenAIApi(DefaultApi):
         if "gpt-4.1" in name:
             return _1M_TOKENS
 
+        # ---------- 5 family ----------
+        if "gpt-5" in name:
+            return 400_000
+
         # ---------- o-series ----------
         if any(tag in name for tag in ("o4-mini", "o3", "o1")):
             if "o1-mini" in name or "o1-preview" in name:
@@ -310,6 +314,10 @@ class OpenAIApi(DefaultApi):
         # ---------- 4.1 family ----------
         if "gpt-4.1" in name:
             return 32_768
+
+        # ---------- 5 family ----------
+        if "gpt-5" in name:
+            return 128_000
 
         # ---------- o-series ----------
         if "o4-mini" in name or "o3" in name:
@@ -678,8 +686,8 @@ class OpenAIApi(DefaultApi):
 
         # Handle model-specific parameter restrictions
         reasoning_effort = None
-        if "o1" in model_name or "o3" in model_name or "o4" in model_name:
-            # o-series models do not support temperature parameter
+        if any(tag in model_name.lower() for tag in ("o1", "o3", "o4", "gpt-5")):
+            # o-series and gpt-5 models do not support temperature parameter
             temperature = None
 
             # Extract reasoning effort from model name (e.g., "o3-high" -> "high")
