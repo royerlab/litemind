@@ -1,7 +1,25 @@
 from types import SimpleNamespace
+from typing import Any, Dict, List, Union
 
 
-def recursive_dict_to_attributes(obj):
+def recursive_dict_to_attributes(
+    obj: Union[Dict[str, Any], List[Any], Any]
+) -> Union[SimpleNamespace, List[Any], Any]:
+    """
+    Recursively convert a dictionary to an object with attributes.
+
+    Parameters
+    ----------
+    obj : Union[Dict[str, Any], List[Any], Any]
+        The object to convert. Can be a dict, list, or any other type.
+
+    Returns
+    -------
+    Union[SimpleNamespace, List[Any], Any]
+        If input is a dict, returns a SimpleNamespace with attributes.
+        If input is a list, returns a list with converted elements.
+        Otherwise, returns the input unchanged.
+    """
     if isinstance(obj, dict):
         # Recursively convert all values in the dict
         return SimpleNamespace(

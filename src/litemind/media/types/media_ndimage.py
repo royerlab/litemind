@@ -1,8 +1,5 @@
 from typing import List, Optional, Union
 
-import numpy
-from arbol import aprint
-
 from litemind.media.media_uri import MediaURI
 from litemind.media.types.media_image import Image
 from litemind.media.types.media_text import Text
@@ -63,11 +60,6 @@ class NdImage(MediaURI):
                 import imageio.v3 as iio
 
                 self.array = iio.imread(local_file)
-
-            # Print debug info about loaded array
-            aprint(
-                f"Loaded array with shape: {self.array.shape}, dtype: {self.array.dtype}"
-            )
 
             # Ensure we have at least 2D array
             if self.array.ndim < 2:
@@ -277,8 +269,11 @@ class NdImage(MediaURI):
         )
 
         # Save as PNG and create Image media
+        from litemind.utils.temp_file_manager import register_temp_file
+
         temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
         temp_file.close()
+        register_temp_file(temp_file.name)
 
         # Convert projection to Image media object
         proj_image = Image.from_data(projection, filepath=temp_file.name, format="PNG")

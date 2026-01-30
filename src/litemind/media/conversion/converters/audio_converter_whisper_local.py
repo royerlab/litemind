@@ -27,7 +27,7 @@ class AudioConverterWhisperLocal(BaseConverter):
     def convert(self, media: MediaBase) -> List[MediaBase]:
 
         if not isinstance(media, Audio):
-            raise ValueError(f"Expected Video media, got {type(media)}")
+            raise ValueError(f"Expected Audio media, got {type(media)}")
 
         # Check if Whisper is available:
         if not is_local_whisper_available():

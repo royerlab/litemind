@@ -4,6 +4,12 @@ from arbol import aprint
 _cached_check_anthropic_api_availability = None
 
 
+def clear_availability_cache():
+    """Clear the cached availability check result."""
+    global _cached_check_anthropic_api_availability
+    _cached_check_anthropic_api_availability = None
+
+
 def check_anthropic_api_availability(client: "Anthropic", model_name: str):
     # Use the global variable
     global _cached_check_anthropic_api_availability

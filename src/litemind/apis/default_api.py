@@ -505,8 +505,8 @@ class DefaultApi(BaseApi):
             raise ValueError("Messages list cannot be empty.")
         if not isinstance(temperature, (int, float)):
             raise ValueError("Temperature must be a number.")
-        if temperature < 0 or temperature > 1:
-            raise ValueError("Temperature must be between 0 and 1.")
+        if temperature < 0 or temperature > 2:
+            raise ValueError("Temperature must be between 0 and 2.")
         if max_num_output_tokens is not None and not isinstance(
             max_num_output_tokens, int
         ):
@@ -1119,11 +1119,11 @@ class DefaultApi(BaseApi):
                     )
 
                     # Normalise response:
-                    response = str(response)
+                    response = response[-1].to_plain_text()
 
                     # Check if the response is empty:
                     if not response:
-                        aprint(f"Response is empty. Trying again...")
+                        aprint("Response is empty. Trying again...")
                         continue
 
                     # response in lower case and trimmed of white spaces
@@ -1131,7 +1131,7 @@ class DefaultApi(BaseApi):
 
                     # Check if response is too short:
                     if len(response_lc) < 3:
-                        aprint(f"Response is empty. Trying again...")
+                        aprint("Response is empty. Trying again...")
                         continue
 
                     # if the model refused to answer, we try again!
@@ -1170,7 +1170,7 @@ class DefaultApi(BaseApi):
                 )
 
                 # print the description::
-                with asection(f"Description:"):
+                with asection("Description:"):
                     aprint(response)
 
                 return response
@@ -1182,7 +1182,7 @@ class DefaultApi(BaseApi):
                 import traceback
 
                 traceback.print_exc()
-                return f"Error: '{e}'"
+                raise APIError(f"Error describing image: {e}") from e
 
     def describe_audio(
         self,
@@ -1252,11 +1252,11 @@ class DefaultApi(BaseApi):
                     )
 
                     # Normalise response:
-                    response = str(response)
+                    response = response[-1].to_plain_text()
 
                     # Check if the response is empty:
                     if not response:
-                        aprint(f"Response is empty. Trying again...")
+                        aprint("Response is empty. Trying again...")
                         continue
 
                     # response in lower case and trimmed of white spaces
@@ -1264,7 +1264,7 @@ class DefaultApi(BaseApi):
 
                     # Check if response is too short:
                     if len(response_lc) < 3:
-                        aprint(f"Response is empty. Trying again...")
+                        aprint("Response is empty. Trying again...")
                         continue
 
                     # Update kwargs with other parameters:
@@ -1283,7 +1283,7 @@ class DefaultApi(BaseApi):
                     )
 
                     # print the description::
-                    with asection(f"Description:"):
+                    with asection("Description:"):
                         aprint(response)
 
                     return response
@@ -1298,7 +1298,7 @@ class DefaultApi(BaseApi):
                 import traceback
 
                 traceback.print_exc()
-                return f"Error: '{e}'"
+                raise APIError(f"Error describing audio: {e}") from e
 
     def describe_video(
         self,
@@ -1367,11 +1367,11 @@ class DefaultApi(BaseApi):
                     )
 
                     # Normalize response:
-                    response = str(response)
+                    response = response[-1].to_plain_text()
 
                     # Check if the response is empty:
                     if not response:
-                        aprint(f"Response is empty. Trying again...")
+                        aprint("Response is empty. Trying again...")
                         continue
 
                     # response in lower case and trimmed of white spaces
@@ -1379,7 +1379,7 @@ class DefaultApi(BaseApi):
 
                     # Check if response is too short:
                     if len(response_lc) < 3:
-                        aprint(f"Response is empty. Trying again...")
+                        aprint("Response is empty. Trying again...")
                         continue
 
                     # Update kwargs with other parameters:
@@ -1398,7 +1398,7 @@ class DefaultApi(BaseApi):
                     )
 
                     # print the description::
-                    with asection(f"Description:"):
+                    with asection("Description:"):
                         aprint(response)
 
                     return response
@@ -1411,7 +1411,7 @@ class DefaultApi(BaseApi):
                 import traceback
 
                 traceback.print_exc()
-                return f"Error: '{e}'"
+                raise APIError(f"Error describing video: {e}") from e
 
     def describe_document(
         self,
@@ -1480,11 +1480,11 @@ class DefaultApi(BaseApi):
                     )
 
                     # Normalize response:
-                    response = str(response)
+                    response = response[-1].to_plain_text()
 
                     # Check if the response is empty:
                     if not response:
-                        aprint(f"Response is empty. Trying again...")
+                        aprint("Response is empty. Trying again...")
                         continue
 
                     # response in lower case and trimmed of white spaces
@@ -1492,7 +1492,7 @@ class DefaultApi(BaseApi):
 
                     # Check if response is too short:
                     if len(response_lc) < 3:
-                        aprint(f"Response is empty. Trying again...")
+                        aprint("Response is empty. Trying again...")
                         continue
 
                     # Update kwargs with other parameters:
@@ -1507,11 +1507,11 @@ class DefaultApi(BaseApi):
 
                     # call the callback manager:
                     self.callback_manager.on_document_description(
-                        video_uri=document_uri, description=response, **kwargs
+                        document_uri=document_uri, description=response, **kwargs
                     )
 
                     # print the description::
-                    with asection(f"Description:"):
+                    with asection("Description:"):
                         aprint(response)
 
                     return response
@@ -1524,4 +1524,4 @@ class DefaultApi(BaseApi):
                 import traceback
 
                 traceback.print_exc()
-                return f"Error: '{e}'"
+                raise APIError(f"Error describing document: {e}") from e

@@ -82,7 +82,7 @@ class MockCallback(BaseApiCallbacks):
 
 
 @pytest.fixture
-def callback_manager():
+def callback_manager_fixture():
     """
     Fixture for creating a CallbackManager instance.
     Returns
@@ -107,78 +107,78 @@ def mock_callback():
     return MockCallback()
 
 
-def test_add_and_remove_callback(callback_manager, mock_callback):
+def test_add_and_remove_callback(callback_manager_fixture, mock_callback):
     """
     Test adding and removing a callback from the ApiCallbackManager.
     """
 
     # Add the callback:
-    callback_manager.add_callback(mock_callback)
+    callback_manager_fixture.add_callback(mock_callback)
 
     # Check that the callback is in the manager:
-    assert len(callback_manager) == 1
-    assert mock_callback in callback_manager
+    assert len(callback_manager_fixture) == 1
+    assert mock_callback in callback_manager_fixture
 
     # Remove the callback:
-    callback_manager.remove_callback(mock_callback)
+    callback_manager_fixture.remove_callback(mock_callback)
 
     # Check that the callback is no longer in the manager:
-    assert len(callback_manager) == 0
-    assert mock_callback not in callback_manager
+    assert len(callback_manager_fixture) == 0
+    assert mock_callback not in callback_manager_fixture
 
 
-def test_on_availability_check(callback_manager, mock_callback):
+def test_on_availability_check(callback_manager_fixture, mock_callback):
     """
     Test the on_availability_check method of the ApiCallbackManager.
     """
 
     # Add the callback:
-    callback_manager.add_callback(mock_callback)
+    callback_manager_fixture.add_callback(mock_callback)
 
     # Call the method:
-    callback_manager.on_availability_check(True)
+    callback_manager_fixture.on_availability_check(True)
 
     # Check that the callback was called:
     assert "on_availability_check" in mock_callback.called_methods
 
 
-def test_on_model_list(callback_manager, mock_callback):
+def test_on_model_list(callback_manager_fixture, mock_callback):
     """
     Test the on_model_list method of the ApiCallbackManager.
     """
 
     # Add the callback:
-    callback_manager.add_callback(mock_callback)
+    callback_manager_fixture.add_callback(mock_callback)
 
     # Call the method:
-    callback_manager.on_model_list(["model1", "model2"])
+    callback_manager_fixture.on_model_list(["model1", "model2"])
 
     # Check that the callback was called:
     assert "on_model_list" in mock_callback.called_methods
 
 
-def test_on_best_model_selected(callback_manager, mock_callback):
+def test_on_best_model_selected(callback_manager_fixture, mock_callback):
     """
     Test the on_best_model_selected method of the ApiCallbackManager.
     """
 
     # Add the callback:
-    callback_manager.add_callback(mock_callback)
+    callback_manager_fixture.add_callback(mock_callback)
 
     # Call the method:
-    callback_manager.on_best_model_selected("best_model")
+    callback_manager_fixture.on_best_model_selected("best_model")
 
     # Check that the callback was called:
     assert "on_best_model_selected" in mock_callback.called_methods
 
 
-def test_on_text_generation(callback_manager, mock_callback):
+def test_on_text_generation(callback_manager_fixture, mock_callback):
     """
     Test the on_text_generation method of the ApiCallbackManager.
     """
 
     # Add the callback:
-    callback_manager.add_callback(mock_callback)
+    callback_manager_fixture.add_callback(mock_callback)
 
     # Make a simple message:
     message = Message(role="user", text="Hello, world!")
@@ -186,20 +186,20 @@ def test_on_text_generation(callback_manager, mock_callback):
     # Make a simple response:
     response = Message(role="assistant", text="Hello you!")
 
-    callback_manager.on_text_generation([message], response)
+    callback_manager_fixture.on_text_generation([message], response)
     assert "on_text_generation" in mock_callback.called_methods
 
 
-def test_on_text_streaming(callback_manager, mock_callback):
+def test_on_text_streaming(callback_manager_fixture, mock_callback):
     """
     Test the on_text_streaming method of the ApiCallbackManager.
     """
 
     # Add the callback:
-    callback_manager.add_callback(mock_callback)
+    callback_manager_fixture.add_callback(mock_callback)
 
     # Call the method:
-    callback_manager.on_text_streaming("Hello, world!")
+    callback_manager_fixture.on_text_streaming("Hello, world!")
 
     # Check that the callback was called:
     assert "on_text_streaming" in mock_callback.called_methods

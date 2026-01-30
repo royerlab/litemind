@@ -7,10 +7,8 @@ import threading
 
 import pytest
 
-from litemind.utils.normalise_uri_to_local_file_path import (
-    _temp_directories,
-    uri_to_local_file_path,
-)
+from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_path
+from litemind.utils.temp_file_manager import _temp_dirs
 
 
 @pytest.fixture
@@ -203,7 +201,7 @@ def test_invalid_data_uri():
 def test_temp_directory_tracking():
     """Test that temporary directories are properly tracked for cleanup."""
     # Record the number of temp directories before
-    num_dirs_before = len(_temp_directories)
+    num_dirs_before = len(_temp_dirs)
 
     # Create a data URI that will generate a temp directory
     data = base64.b64encode(b"test").decode("utf-8")
@@ -215,8 +213,8 @@ def test_temp_directory_tracking():
 
     # Verify the directory exists and is tracked
     assert os.path.exists(temp_dir)
-    assert temp_dir in _temp_directories
-    assert len(_temp_directories) > num_dirs_before
+    assert temp_dir in _temp_dirs
+    assert len(_temp_dirs) > num_dirs_before
 
 
 def test_padding_correction():

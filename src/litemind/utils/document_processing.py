@@ -281,8 +281,6 @@ def extract_text_from_document_pages(document_uri: str) -> List[str]:
         # Close the document:
         doc.close()
     else:
-        from docling.document_converter import DocumentConverter
-
         # Instantiate the DocumentConverter:
         converter = initialize_docling_converter()
 

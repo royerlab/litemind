@@ -114,9 +114,6 @@ def generate_tree_structure(
 
     for pointer, path in zip(pointers, filtered_contents):
         if path.is_dir():
-            # Get the folder name without the path
-            folder_name = os.path.basename(path)
-
             # Display the folder
             tree_str += prefix + pointer + f"{path.name}/\n"
             extension = "│   " if pointer == "├── " else "    "

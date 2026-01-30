@@ -32,9 +32,8 @@ class ToolCallbackManager(BaseToolCallbacks):
 
     def remove_callback(self, callback: BaseToolCallbacks) -> None:
         if callback in self.callbacks:
-            if callback in self.callbacks:
-                # Remove the callback if it exists
-                self.callbacks.remove(callback)
+            # Remove the callback if it exists
+            self.callbacks.remove(callback)
 
     def __contains__(self, callback: BaseToolCallbacks) -> bool:
         return callback in self.callbacks

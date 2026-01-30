@@ -59,7 +59,7 @@ class BaseTool(ABC):
         """
         Execute the tool with the provided arguments.
         DO NOT CALL THIS METHOD DIRECTLY, USE THE __call__ METHOD INSTEAD.
-        Otehrwise the callbacks won't be called!
+        Otherwise the callbacks won't be called!
         """
         pass
 

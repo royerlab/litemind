@@ -63,7 +63,9 @@ def convert_video_to_frames_and_audio(
     """
 
     # define a temporary folder:
-    output_dir = tempfile.mkdtemp()
+    from litemind.utils.temp_file_manager import register_temp_dir
+
+    output_dir = register_temp_dir(tempfile.mkdtemp())
 
     # Extract frames and audio
     frames, audio_path = extract_frames_and_audio(
@@ -102,7 +104,7 @@ def convert_video_to_frames_and_audio(
     # Total number of frames:
     total_frames = len(frames)
     message.append_text(
-        f"the video content is provided as a sequence of image frames.\n"
+        "the video content is provided as a sequence of image frames.\n"
     )
     message.append_text(f"Total frames: {total_frames}.\n")
 
@@ -123,9 +125,7 @@ def convert_video_to_frames_and_audio(
 
     # Append audio to the message if it exists:
     if audio_path is not None:
-        message.append_text(
-            f"The video's audio is provided as a separate audio file.\n"
-        )
+        message.append_text("The video's audio is provided as a separate audio file.\n")
         # Append audio to the message
         message.append_audio("file://" + audio_path)
 
@@ -158,7 +158,10 @@ def get_video_info(video_path: str):
     height = int(video_info["height"])
     codec = video_info["codec_name"]
     bit_rate = int(video_info["bit_rate"])
-    frame_rate = eval(video_info["r_frame_rate"])  # Convert frame rate to float
+    # Safely parse frame rate (e.g., "30/1" or "24000/1001")
+    frame_rate_str = video_info["r_frame_rate"]
+    parts = frame_rate_str.split("/")
+    frame_rate = float(parts[0]) / float(parts[1]) if len(parts) == 2 else float(parts[0])
 
     return {
         "duration": duration,

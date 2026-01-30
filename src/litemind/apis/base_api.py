@@ -134,11 +134,11 @@ class BaseApi(ABC):
         In that case this function returns True if any model supports the given features and media types.
 
         Note: The difference between requesting a model that supports the feature Audio versus requesting a model
-        that can receive an Audio media is subtle but important: the AUdio feature means that the model supports
-        audio _natively_. However, litemind's auto media conversion feature can hadnle audio file that carry voice,
+        that can receive an Audio media is subtle but important: the Audio feature means that the model supports
+        audio _natively_. However, litemind's auto media conversion feature can handle audio files that carry voice,
         for example using audio transcription (e.g. via Whisper).
         In that case, the model can carry Audio media in messages, but it does not support the Audio feature,
-        because it does not support audio natively... You can check if a model sup[ports audio _conversion_
+        because it does not support audio natively... You can check if a model supports audio _conversion_
         by checking for the ModelFeatures.AudioConversion feature.
 
 

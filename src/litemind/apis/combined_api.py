@@ -183,7 +183,7 @@ class CombinedApi(DefaultApi):
             return model_list
 
         except Exception:
-            raise APIError("Error fetching model list from OpenAI.")
+            raise APIError("Error fetching model list from CombinedApi.")
 
     def get_best_model(
         self,

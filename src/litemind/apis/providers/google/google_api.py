@@ -10,8 +10,8 @@ from litemind.apis.base_api import ModelFeatures
 from litemind.apis.callbacks.api_callback_manager import ApiCallbackManager
 from litemind.apis.default_api import DefaultApi
 from litemind.apis.exceptions import APIError, APINotAvailableError
-from litemind.apis.feature_scanner import get_default_model_feature_scanner
-from litemind.apis.providers.google.utils.aggegate_chat_response import (
+from litemind.apis.model_registry import get_default_model_registry
+from litemind.apis.providers.google.utils.aggregate_chat_response import (
     aggregate_chat_response,
 )
 from litemind.apis.providers.google.utils.check_availability import (
@@ -25,18 +25,34 @@ from litemind.apis.providers.google.utils.list_models import _get_gemini_models_
 from litemind.apis.providers.google.utils.process_response import (
     process_response_from_gemini,
 )
-from litemind.apis.providers.google.utils.response_to_object import response_to_object
-from litemind.apis.tests.test_callback_manager import callback_manager
 from litemind.media.media_base import MediaBase
 from litemind.media.types.media_action import Action
 from litemind.media.types.media_text import Text
-from litemind.utils.json_to_object import json_to_object
+
+# Default token limits for unknown models
+_DEFAULT_CONTEXT_WINDOW = 1_000_000
+_DEFAULT_MAX_OUTPUT_TOKENS = 65_536
+
+# Supported aspect ratios for Gemini image generation
+_SUPPORTED_ASPECT_RATIOS = {
+    1.0: "1:1",
+    0.75: "3:4",
+    1.333: "4:3",
+    0.5625: "9:16",
+    1.778: "16:9",
+}
+
+
+def _snap_to_aspect_ratio(aspect_ratio: float) -> str:
+    """Snap to closest supported Gemini aspect ratio."""
+    closest = min(_SUPPORTED_ASPECT_RATIOS.keys(), key=lambda r: abs(r - aspect_ratio))
+    return _SUPPORTED_ASPECT_RATIOS[closest]
 
 
 class GeminiApi(DefaultApi):
     """
     A Gemini 1.5+ API implementation conforming to the BaseApi interface.
-    Uses the google.generativeai library (previously known as Google GenAI).
+    Uses the google.genai library (unified Google GenAI SDK).
 
     Gemini models support text generation, image inputs, audio and video inputs, and thinking,
     but do not support all features natively. Support for these features
@@ -64,12 +80,15 @@ class GeminiApi(DefaultApi):
         Parameters
         ----------
         api_key : Optional[str]
-            The API key for Google GenAI. If not provided, reads from GOOGLE_API_KEY.
+            The API key for Google GenAI. If not provided, reads from GOOGLE_GEMINI_API_KEY.
         allow_media_conversions: bool
             If True, the API will allow media conversions using the default media converter.
         allow_media_conversions_with_models: bool
-            If True, the API will allow media conversions using models that support the required features in addition to the default media converter.
-            To use this the allow_media_conversions parameter must be True.
+            If True, the API will allow media conversions using models that support
+            the required features in addition to the default media converter.
+            To use this, the allow_media_conversions parameter must be True.
+        callback_manager : Optional[ApiCallbackManager]
+            Callback manager for API events.
         kwargs : dict
             Additional parameters (unused here, but accepted for consistency).
         """
@@ -92,17 +111,18 @@ class GeminiApi(DefaultApi):
         self.kwargs = kwargs
 
         try:
-            # Initialize the feature scanner:
-            self.feature_scanner = get_default_model_feature_scanner()
+            # Initialize the model registry for feature lookups:
+            self.model_registry = get_default_model_registry()
 
-            # google.generativeai references
-            import google.generativeai as genai
+            # google.genai references - new unified SDK
+            from google.genai import Client
 
-            # Register the API key with google.generativeai
-            genai.configure(api_key=self._api_key, **self.kwargs)
+            # Create the client instance (replaces global genai.configure)
+            # Note: Using default timeout as custom timeouts can cause issues
+            self.client = Client(api_key=self._api_key)
 
             # Get the raw model list:
-            self._model_list = _get_gemini_models_list()
+            self._model_list = _get_gemini_models_list(self.client)
 
         except Exception as e:
             # Print stack trace:
@@ -113,16 +133,11 @@ class GeminiApi(DefaultApi):
 
     def check_availability_and_credentials(self, api_key: Optional[str] = None) -> bool:
 
-        # Check the availability of the API:
-        result = check_gemini_api_availability(api_key=api_key)
+        # Check the availability of the API using the client:
+        result = check_gemini_api_availability(self.client)
 
         # Call the callback manager:
         self.callback_manager.on_availability_check(result)
-
-        # Ensure that the correct key is set:
-        import google.generativeai as genai
-
-        genai.configure(api_key=self._api_key, **self.kwargs)
 
         # Return the result:
         return result
@@ -233,7 +248,7 @@ class GeminiApi(DefaultApi):
             return True
 
         for feature in features:
-            if not self.feature_scanner.supports_feature(
+            if not self.model_registry.supports_feature(
                 self.__class__, model_name, feature
             ):
                 # If the model does not support the feature, we return False:
@@ -242,60 +257,63 @@ class GeminiApi(DefaultApi):
         return True
 
     def _has_thinking_support(self, model_name: str) -> bool:
-        if (
-            "models/gemini" not in model_name.lower()
-            and "thinking" not in model_name.lower()
-        ):
-            return False
-        return True
+        """Check if model supports thinking via registry."""
+        return self.model_registry.supports_feature(
+            self.__class__, model_name, ModelFeatures.Thinking
+        )
+
+    def _build_thinking_config(self, model_name: str, max_output_tokens: int):
+        """
+        Build a ThinkingConfig for models that support native thinking.
+
+        Parameters
+        ----------
+        model_name : str
+            The model name to check for thinking support.
+        max_output_tokens : int
+            Maximum output tokens to compute thinking budget.
+
+        Returns
+        -------
+        ThinkingConfig or None
+            ThinkingConfig if the model supports thinking, None otherwise.
+        """
+        if not self._has_thinking_support(model_name):
+            return None
+
+        from google.genai import types
+
+        # Compute thinking budget as a fraction of max output tokens
+        thinking_budget = max(1024, max_output_tokens // 3)
+
+        model_lower = model_name.lower()
+
+        # Gemini 3.x preview models don't fully support thinking_level yet
+        # Only apply thinking for non-preview gemini-3 models or explicit thinking models
+        if "gemini-3" in model_lower:
+            # Skip thinking for preview models as they may not support all thinking levels
+            if "preview" in model_lower:
+                return None
+            return types.ThinkingConfig(thinking_level="medium")
+        else:
+            # Gemini 2.5 and other thinking models
+            return types.ThinkingConfig(thinking_budget=thinking_budget)
 
     def max_num_input_tokens(self, model_name: Optional[str] = None) -> int:
-
-        # Get the best model if not provided:
         if model_name is None:
             model_name = self.get_best_model()
-
-        # Normalise the model name to lower case:
-        name_lower = model_name.lower()
-
-        from google.generativeai import (
-            list_models,
-        )  # This is the function from your snippet
-
-        for model_obj in list_models():
-            # model_obj is a Model protobuf (or typed dict) with a .name attribute
-            # e.g. "models/gemini-1.5-flash", "models/gemini-2.0-flash-exp", etc.
-            if name_lower == model_obj.name.lower():
-                return model_obj.input_token_limit
-
-        # If we reach this point then the model was not found!
-
-        # So we call super class method:
-        return super().max_num_input_tokens(model_name=model_name)
+        model_info = self.model_registry.get_model_info(self.__class__, model_name)
+        if model_info and model_info.context_window:
+            return model_info.context_window
+        return _DEFAULT_CONTEXT_WINDOW
 
     def max_num_output_tokens(self, model_name: Optional[str] = None) -> int:
-
-        # Get the best model if not provided:
         if model_name is None:
             model_name = self.get_best_model()
-
-        # Normalise the model name to lower case:
-        name_lower = model_name.lower()
-
-        from google.generativeai import (
-            list_models,
-        )  # This is the function from your snippet
-
-        for model_obj in list_models():
-            # model_obj is a Model protobuf (or typed dict) with a .name attribute
-            # e.g. "models/gemini-1.5-flash", "models/gemini-2.0-flash-exp", etc.
-            if name_lower == model_obj.name.lower():
-                return model_obj.output_token_limit
-
-        # If we reach this point then the model was not found!
-
-        # So we call super class method:
-        return super().max_num_output_tokens(model_name=model_name)
+        model_info = self.model_registry.get_model_info(self.__class__, model_name)
+        if model_info and model_info.max_output_tokens:
+            return model_info.max_output_tokens
+        return _DEFAULT_MAX_OUTPUT_TOKENS
 
     def generate_text(
         self,
@@ -309,8 +327,7 @@ class GeminiApi(DefaultApi):
         **kwargs,
     ) -> List[Message]:
 
-        import google.generativeai as genai
-        from google.generativeai import types
+        from google.genai import types
 
         # validate inputs:
         super().generate_text(
@@ -338,14 +355,6 @@ class GeminiApi(DefaultApi):
                     if block.has_type(Text):
                         system_instruction += block.get_content()
 
-        # If reasoning model is selected, we request that the thinking be enclosed in a <thinking> ... <thinking/ tag:
-        if self._has_thinking_support(model_name):
-            system_instruction += "\nThink carefully step-by-step before responding: restate the input, analyze it, consider options, make a plan, and proceed methodically to your conclusion. \n"
-            system_instruction += (
-                f"All reasoning (thinking) which precedes the final answer must be enclosed within thinking tags."
-                f"This is how your response should be formatted: <thinking> reasoning goes here... </thinking> final answer goes here...\n\n"
-            )
-
         # Convert user messages -> gemini format
         preprocessed_messages = self._preprocess_messages(
             messages=messages,
@@ -358,46 +367,51 @@ class GeminiApi(DefaultApi):
         if max_num_output_tokens is None:
             max_num_output_tokens = self.max_num_output_tokens(model_name)
 
-        # Build GenerationConfig
+        # Build native ThinkingConfig if model supports it
+        thinking_config = self._build_thinking_config(model_name, max_num_output_tokens)
+
+        # Format tools for Gemini:
+        gemini_tools = format_tools_for_gemini(toolset)
+
+        # Build GenerationConfig (tools are part of the config in new SDK)
         if response_format is None or toolset is not None:
-            generation_cfg = types.GenerationConfig(
-                temperature=temperature, max_output_tokens=max_num_output_tokens
+            generation_cfg = types.GenerateContentConfig(
+                temperature=temperature,
+                max_output_tokens=max_num_output_tokens,
+                system_instruction=system_instruction if system_instruction else None,
+                thinking_config=thinking_config,
+                tools=gemini_tools,
             )
         else:
-            generation_cfg = types.GenerationConfig(
+            generation_cfg = types.GenerateContentConfig(
                 temperature=temperature,
                 max_output_tokens=max_num_output_tokens,
                 response_mime_type="application/json",
                 response_schema=response_format,
+                system_instruction=system_instruction if system_instruction else None,
+                thinking_config=thinking_config,
+                tools=gemini_tools,
             )
-
-        # Format tools for Gemini:
-        gemini_tools = format_tools_for_gemini(toolset)
 
         # List of new messages part of the response:
         new_messages = []
 
         try:
 
-            # Get model by name and set tools and config:
-            model = genai.GenerativeModel(
-                model_name=model_name,
-                tools=gemini_tools,
-                generation_config=generation_cfg,
-                system_instruction=system_instruction,
-            )
-
-            # Start chat
-            chat = model.start_chat()
-
             # Loop until we get a response that doesn't require tool use:
             while True:
 
                 # Convert messages to gemini format:
-                gemini_messages = convert_messages_for_gemini(preprocessed_messages)
+                gemini_messages = convert_messages_for_gemini(
+                    preprocessed_messages, self.client
+                )
 
-                # Send messages to Gemini:
-                streaming_response = chat.send_message(gemini_messages, stream=True)
+                # Send messages to Gemini using streaming:
+                streaming_response = self.client.models.generate_content_stream(
+                    model=model_name,
+                    contents=gemini_messages,
+                    config=generation_cfg,
+                )
 
                 # Aggregate the response:
                 gemini_response = aggregate_chat_response(
@@ -412,7 +426,7 @@ class GeminiApi(DefaultApi):
 
                 # Append response message to original, preprocessed, and new messages:
                 messages.append(response)
-                # preprocessed_messages.append(response)
+                preprocessed_messages.append(response)
                 new_messages.append(response)
 
                 # If the model wants to use a tool, parse out the tool calls:
@@ -431,33 +445,8 @@ class GeminiApi(DefaultApi):
                     new_messages,
                     preprocessed_messages,
                     toolset,
-                    set_preprocessed=True,
+                    set_preprocessed=False,
                 )
-
-            if response_format:
-
-                # Prepare the messages for formatting:
-                formatting_messages = messages.copy()
-
-                # Add a message to the user to convert the response to JSON:
-                message = Message(
-                    role="user",
-                    text="Convert the answer above to JSON adhering to the following schema:\n{response_format.model_json_schema()}\n",
-                )
-                formatting_messages.append(message)
-
-                # Generate the prompt for the user:
-                structured_message = response_to_object(
-                    messages=formatting_messages,
-                    model_name=model_name,
-                    max_num_output_tokens=max_num_output_tokens,
-                    response_format=response_format,
-                )
-                # If the message is not None or empty, set the processed response to the structured message:
-                if structured_message:
-                    json_to_object(
-                        response, response_format, structured_message[0].get_content()
-                    )
 
             # Fire final callback:
             kwargs.update(
@@ -495,36 +484,31 @@ class GeminiApi(DefaultApi):
         if model_name is None:
             model_name = self.get_best_model(features=ModelFeatures.ImageGeneration)
 
-        import google.generativeai as genai
+        from google.genai import types
 
-        imagen = genai.ImageGenerationModel(model_id=model_name)
-
-        # Computes aspect ratio from resolution:
+        # Computes aspect ratio from resolution and snap to closest supported:
         aspect_ratio = image_width / image_height
+        aspect_ratio_str = _snap_to_aspect_ratio(aspect_ratio)
 
-        # Supported values are: "1:1", "3:4", "4:3", "9:16", and "16:9", snap aspect_ratio to closest:
-        if aspect_ratio == 1:
-            aspect_ratio = "1:1"
-        elif aspect_ratio == 0.75:
-            aspect_ratio = "3:4"
-        elif aspect_ratio == 1.33:
-            aspect_ratio = "4:3"
-        elif aspect_ratio == 0.56:
-            aspect_ratio = "9:16"
-        elif aspect_ratio == 1.77:
-            aspect_ratio = "16:9"
-
-        result = imagen.generate_images(
-            prompt=positive_prompt,
+        # Build the generation config
+        # Note: Imagen models only support "BLOCK_LOW_AND_ABOVE" safety filter level
+        config = types.GenerateImagesConfig(
             number_of_images=1,
-            safety_filter_level="block_only_high",
-            person_generation="allow_adult",
-            aspect_ratio=aspect_ratio,
+            safety_filter_level="BLOCK_LOW_AND_ABOVE",
+            person_generation="ALLOW_ADULT",
+            aspect_ratio=aspect_ratio_str,
             negative_prompt=negative_prompt,
         )
 
+        # Generate images using the client
+        result = self.client.models.generate_images(
+            model=model_name,
+            prompt=positive_prompt,
+            config=config,
+        )
+
         # Get the generated image:
-        generated_image = result[0].image
+        generated_image = result.generated_images[0].image
 
         # Add all parameters to kwargs:
         kwargs.update(
@@ -563,20 +547,26 @@ class GeminiApi(DefaultApi):
                 texts=texts, model_name=model_name, dimensions=dimensions, **kwargs
             )
 
-        # Local import to avoid loading the library if not needed:
-        import google.generativeai as genai
+        from google.genai import types
 
         # Generate the embeddings:
         embeddings = []
 
         for text in texts:
-            # Generate the embeddings:
-            result = genai.embed_content(
-                model=model_name, content=text, output_dimensionality=dimensions
+            # Build embedding config
+            config = types.EmbedContentConfig(
+                output_dimensionality=dimensions,
+            )
+
+            # Generate the embeddings using the client:
+            result = self.client.models.embed_content(
+                model=model_name,
+                contents=text,
+                config=config,
             )
 
             # Get the embeddings:
-            embedding = result["embedding"]
+            embedding = result.embeddings[0].values
 
             # Get the embeddings:
             embeddings.append(embedding)

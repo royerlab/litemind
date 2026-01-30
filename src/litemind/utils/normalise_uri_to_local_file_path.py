@@ -1,35 +1,16 @@
-import atexit
 import base64
 import binascii
 import mimetypes
 import os
 import random
-import shutil
 import tempfile
 import urllib.parse
 from functools import lru_cache
 
 import requests
 
+from litemind.utils.temp_file_manager import register_temp_dir
 from litemind.utils.uri_utils import is_uri, is_valid_path
-
-# Keep track of temp directories for cleanup
-_temp_directories = set()
-
-
-def _register_cleanup():
-    """Register cleanup of temporary directories at process exit."""
-
-    def cleanup_temp_dirs():
-        for dir_path in _temp_directories:
-            if os.path.exists(dir_path):
-                shutil.rmtree(dir_path, ignore_errors=True)
-
-    atexit.register(cleanup_temp_dirs)
-
-
-# Register cleanup on module import
-_register_cleanup()
 
 
 @lru_cache
@@ -111,8 +92,7 @@ def uri_to_local_file_path(file_uri: str) -> str:
                         filename += guessed_ext
 
                 # Create a temp directory, store the file there
-                temp_dir = tempfile.mkdtemp(prefix="download_")
-                _temp_directories.add(temp_dir)  # For cleanup later
+                temp_dir = register_temp_dir(tempfile.mkdtemp(prefix="download_"))
                 local_path = os.path.join(temp_dir, filename)
 
                 with open(local_path, "wb") as f:
@@ -171,8 +151,7 @@ def uri_to_local_file_path(file_uri: str) -> str:
     if not ext:
         ext = ".bin"
 
-    temp_dir = tempfile.mkdtemp(prefix="b64_")
-    _temp_directories.add(temp_dir)  # For cleanup later
+    temp_dir = register_temp_dir(tempfile.mkdtemp(prefix="b64_"))
     filename = f"decoded{ext}"
     local_path = os.path.join(temp_dir, filename)
 

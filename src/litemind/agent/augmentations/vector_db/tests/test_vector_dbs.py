@@ -241,7 +241,7 @@ def test_vector_db_stress_test(vector_db_api):
     )
     print(f"- Average query time: {avg_query_time:.4f} seconds")
     print(
-        f"Note: this benchmark does not include the computation of a complex embedding, we are using a simple hash embedding here."
+        "Note: this benchmark does not include the computation of a complex embedding, we are using a simple hash embedding here."
     )
 
     # Return metrics for potential further analysis

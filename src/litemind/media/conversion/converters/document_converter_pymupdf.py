@@ -37,19 +37,8 @@ class DocumentConverterPymupdf(BaseConverter):
         extension = media.get_extension()
         file_type = classify_uri(media.uri)
 
+        # Only claim PDF support (matching actual implementation in extract_text_and_image_from_document)
         if "pdf" in file_type or "pdf" in extension:
-            return True
-
-        if "epub" in file_type or "epub" in extension:
-            return True
-
-        if "xps" in file_type or "xps" in extension:
-            return True
-
-        if "fb2" in file_type or "fb2" in extension:
-            return True
-
-        if "svg" in file_type or "svg" in extension:
             return True
 
         return False

@@ -103,7 +103,7 @@ class MediaConverterApi(BaseConverter):
 
             return [text_media]
 
-        except Exception as e:
+        except Exception:
 
             # Log the error
             import traceback

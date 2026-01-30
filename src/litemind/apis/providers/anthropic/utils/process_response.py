@@ -31,10 +31,16 @@ def process_response_from_anthropic(
     # Initialize the processed response:
     processed_response = Message(role="assistant")
 
-    # Check the stop reason:
-    if anthropic_response.stop_reason == "refusal":
+    # Check the stop reason and handle special cases:
+    stop_reason = anthropic_response.stop_reason
+    if stop_reason == "refusal":
         # If the stop reason is refusal, return a message indicating refusal:
         processed_response.append_text("I cannot assist with that request (refusal).")
+    elif stop_reason == "max_tokens":
+        # Response was truncated due to token limit - add metadata
+        processed_response.attributes["truncated"] = True
+        processed_response.attributes["stop_reason"] = "max_tokens"
+    # "end_turn", "tool_use", "pause_turn", "stop_sequence" are normal completions
 
     # Text content:
     text_content = ""

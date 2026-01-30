@@ -118,6 +118,7 @@ def get_openai_model_list(
                 "o1",
                 "o3",
                 "o4",
+                "o5",
                 "text-embedding",
                 "whisper",
                 "ada-002",
@@ -130,7 +131,7 @@ def get_openai_model_list(
 
         if not allow_prohibitively_expensive_models:
             # Exclude prohibitively expensive models:
-            excluded += ["o1-pro", "o3-pro", "o4-pro"]
+            excluded += ["o1-pro", "o3-pro", "o4-pro", "o5-pro"]
 
         # Convert to list of model ids:
         models = [model.id for model in raw_model_list]
@@ -235,14 +236,32 @@ def _remove_dated_models(models):
 def model_key(model):
     score = 0
 
-    if "gpt-4.5" in model:
+    # GPT-5 series (latest)
+    if "gpt-5.2" in model:
+        score += 160
+    elif "gpt-5.1" in model:
+        score += 155
+    elif "gpt-5" in model:
+        score += 150
+    # GPT-4.5 series
+    elif "gpt-4.5" in model:
         score += 130
+    # O-series reasoning models
+    elif "o5" in model:
+        score += 130
+    elif "o4" in model:
+        score += 125
     elif "o3" in model:
         score += 120
     elif "o1" in model:
         score += 110
+    # GPT-4.1 series
+    elif "gpt-4.1" in model:
+        score += 105
+    # GPT-4o series
     elif "gpt-4o" in model:
         score += 100
+    # Legacy models
     elif "gpt-4" in model:
         score += 90
     elif "gpt-3.5" in model:
@@ -253,6 +272,9 @@ def model_key(model):
     if "mini" in model:
         score -= 5
 
+    if "nano" in model:
+        score -= 7
+
     if "pro" in model:
         score += 4
 
@@ -260,72 +282,3 @@ def model_key(model):
         score -= 2
 
     return score
-
-
-def postprocess_openai_model_list(model_list: list) -> list:
-    """
-    Postprocess the list of OpenAI models. This is useful to remove problematic models from the list and sort models in decreasing order of quality.
-
-    Parameters
-    ----------
-    model_list : list
-        List of models.
-
-    Returns
-    -------
-    list
-        Post-processed list of models.
-
-    """
-
-    try:
-        # First, sort the list of models:
-        model_list = sorted(model_list)
-
-        # get list of bad models for main LLM:
-        bad_models_filters = {
-            "0613",
-            "vision",
-            "turbo-instruct",
-            "gpt-3.5-turbo",
-            "gpt-3.5-turbo-0613",
-            "gpt-3.5-turbo-0301",
-            "gpt-3.5-turbo-1106",
-            "gpt-3.5-turbo-0125",
-            "gpt-3.5-turbo-16k",
-            "chatgpt-4o-latest",
-        }
-
-        # get list of best models for main LLM:
-        best_models_filters = {"0314", "0301", "1106", "gpt-4", "gpt-4o"}
-
-        # Ensure that some 'bad' or unsupported models are excluded:
-        bad_models = [
-            m for m in model_list if any(bm in m for bm in bad_models_filters)
-        ]
-        for bad_model in bad_models:
-            if bad_model in model_list:
-                model_list.remove(bad_model)
-                # model_list.append(bad_model)
-
-        # Ensure that the best models are at the top of the list:
-        best_models = [
-            m for m in model_list if any(bm in m for bm in best_models_filters)
-        ]
-        model_list = best_models + [m for m in model_list if m not in best_models]
-
-        # Ensure that the very best models are at the top of the list:
-        very_best_models = [
-            m for m in model_list if ("gpt-4o" in m and "mini" not in m)
-        ]
-        model_list = very_best_models + [
-            m for m in model_list if m not in very_best_models
-        ]
-
-    except Exception as exc:
-        aprint(f"Error occurred: {exc}")
-
-        # print stacktrace:
-        traceback.print_exc()
-
-    return model_list

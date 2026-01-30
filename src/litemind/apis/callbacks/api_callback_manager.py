@@ -135,7 +135,7 @@ class ApiCallbackManager(BaseApiCallbacks):
             callback.on_video_description(video_uri, description, **kwargs)
 
     def on_document_description(
-        self, video_uri: str, description: str, **kwargs
+        self, document_uri: str, description: str, **kwargs
     ) -> None:
         for callback in self.callbacks:
-            callback.on_document_description(video_uri, description, **kwargs)
+            callback.on_document_description(document_uri, description, **kwargs)

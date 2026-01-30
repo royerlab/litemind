@@ -1,10 +1,24 @@
+"""
+Tests for ModelFeatureValidator (live API scanning and validation).
+
+These tests verify:
+- Live API scanning functionality (scan_apis, scan_model_features)
+- Result persistence (save_results, load_results)
+- Report generation (generate_markdown_report)
+- Feature detection test methods
+
+Note: For testing the curated ModelRegistry, see test_model_registry.py.
+The ModelFeatureValidator is primarily used for validation and discovery
+of features for new models.
+"""
+
 import tempfile
-from datetime import datetime  # Added import
+from datetime import datetime
 
 import pytest
 
 from litemind.apis.base_api import BaseApi, ModelFeatures
-from litemind.apis.feature_scanner import ModelFeatureScanner
+from litemind.apis.feature_validator import ModelFeatureValidator
 
 
 class DummyApi(BaseApi):
@@ -101,7 +115,7 @@ class DummyApi(BaseApi):
 
 @pytest.fixture
 def scanner():
-    return ModelFeatureScanner(print_exception_stacktraces=True)
+    return ModelFeatureValidator(print_exception_stacktraces=True)
 
 
 def test_scan_apis_and_query(scanner):
@@ -138,7 +152,7 @@ def test_save_and_load_results(scanner):
 
 
 def test_no_yaml_files(tmp_path):
-    scanner = ModelFeatureScanner()
+    scanner = ModelFeatureValidator()
     # Should not raise
     scanner.load_results(folder=str(tmp_path))
     assert scanner.scan_results == {}
@@ -202,7 +216,7 @@ def test_full_feature_set_for_models(scanner):
         # ModelFeatures.Document, # Scanner reports False for DummyApi
     }
 
-    # For modelA and modelB, the specific test_ methods in ModelFeatureScanner
+    # For modelA and modelB, the specific test_ methods in ModelFeatureValidator
     # will yield the same results for features they test directly, as DummyApi methods
     # don't vary their success/failure by model name for these.
     # Differences would only arise from test_generic_feature if DummyApi._features varied,
@@ -210,9 +224,6 @@ def test_full_feature_set_for_models(scanner):
 
     expected_a = expected_common_true_features.copy()
     expected_b = expected_common_true_features.copy()
-
-    # All other features should be False for both models based on current DummyApi and scanner tests
-    all_features_enum = {feature for feature in ModelFeatures}
 
     # Assert that the detected features are exactly what we expect
     assert (
@@ -261,7 +272,7 @@ def test_generate_markdown_report(scanner):
     assert "❌ StructuredTextGeneration" in report  # A feature known to be false
 
     # Test with no results
-    empty_scanner = ModelFeatureScanner()
+    empty_scanner = ModelFeatureValidator()
     empty_report = empty_scanner.generate_markdown_report()
     assert "No scan results available" in empty_report
 

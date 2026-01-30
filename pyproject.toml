@@ -23,10 +23,10 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
-    "openai>=1.93.0",
-    "ollama>=0.5.1",
-    "anthropic>=0.55.0",
-    "google-generativeai>=0.8.5",
+    "openai>=2.16.0",
+    "ollama>=0.6.1",
+    "anthropic>=0.76.0",
+    "google-genai>=1.60.0",
     "pillow",
     "arbol",
     "ansicolors",
@@ -55,6 +55,10 @@ dev = [
     "mypy",
     "isort",
     "pypdf",
+]
+build = [
+    "hatch",
+    "build",
 ]
 rag = ["fastembed", "chromadb", "qdrant-client"]
 whisper = ["openai-whisper"]
@@ -87,9 +91,23 @@ exclude = [
 # Wheel-only file selection
 [tool.hatch.build.targets.wheel]
 packages = ["src/litemind"]
+exclude = [
+    "**/tests/**",
+    "**/test_*",
+    "**/ressources/**",
+    "**/__pycache__/**",
+    "**/.DS_Store",
+]
 
 [project.scripts]
 litemind = "litemind.tools.litemind_tools:main"
+
+[tool.pytest.ini_options]
+markers = [
+    "unit: marks tests as unit tests (fast, no external deps)",
+    "integration: marks tests requiring external APIs",
+    "slow: marks tests that take more than 5 seconds",
+]
 
 [tool.hatch.envs.hatch-test]
 addopts = "--html=reports/report.html --self-contained-html --cov=src --cov-report=html:reports/coverage --md-report=reports/report.md"

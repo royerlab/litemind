@@ -9,7 +9,7 @@ from litemind.apis.base_api import ModelFeatures
 from litemind.apis.callbacks.api_callback_manager import ApiCallbackManager
 from litemind.apis.default_api import DefaultApi
 from litemind.apis.exceptions import APIError, APINotAvailableError
-from litemind.apis.feature_scanner import get_default_model_feature_scanner
+from litemind.apis.model_registry import get_default_model_registry
 from litemind.apis.providers.ollama.utils.aggregate_chat_responses import (
     aggregate_chat_responses,
 )
@@ -77,8 +77,8 @@ class OllamaApi(DefaultApi):
         )
 
         try:
-            # Initialize the feature scanner:
-            self.feature_scanner = get_default_model_feature_scanner()
+            # Initialize the model registry for feature lookups:
+            self.model_registry = get_default_model_registry()
 
             # Connect to Ollama server:
             from ollama import Client
@@ -212,7 +212,7 @@ class OllamaApi(DefaultApi):
             return True
 
         for feature in features:
-            if not self.feature_scanner.supports_feature(
+            if not self.model_registry.supports_feature(
                 self.__class__, model_name, feature
             ):
                 # If the model does not support the feature, we return False:
@@ -237,7 +237,7 @@ class OllamaApi(DefaultApi):
         try:
             model_template = self.client.show(model_name).template
             return ".Tools" in model_template
-        except:
+        except Exception:
             return False
 
     @lru_cache
@@ -364,7 +364,7 @@ class OllamaApi(DefaultApi):
                     # Append the instruction to the text block:
                     text += "\n"
                     text += "Think carefully step-by-step before responding: restate the input, analyze it, consider options, make a plan, and proceed methodically to your conclusion. \n"
-                    text += f"All reasoning (thinking) which precedes the final answer must be enclosed within thinking tags: <thinking> reasoning goes here... </thinking> final answer here...\n\n"
+                    text += "All reasoning (thinking) which precedes the final answer must be enclosed within thinking tags: <thinking> reasoning goes here... </thinking> final answer here...\n\n"
                     break
 
         # Get max num of output tokens for model if not provided:

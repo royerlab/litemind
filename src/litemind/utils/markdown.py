@@ -1,16 +1,16 @@
-def extract_outermost_markdown_block(text):
+def extract_outermost_markdown_block(text: str) -> str:
     """
     Extract content between the first ```markdown (or ```md) and the last ``` in the text.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     text : str
-        The text containing markdown blocks
+        The text containing markdown blocks.
 
-    Returns:
-    --------
+    Returns
+    -------
     str
-        The extracted content between markdown delimiters, or the original text if no block found
+        The extracted content between markdown delimiters, or the original text if no block found.
     """
     # Find the start of the markdown block
     start_markers = ["```markdown", "```md"]

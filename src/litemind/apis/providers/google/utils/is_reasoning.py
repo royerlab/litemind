@@ -3,8 +3,9 @@ import re
 # Compile once on import
 _GEMINI_REASONING_RE = re.compile(
     r"""
-    ^gemini-                # prefix
-    (?:1\.5|2\.0|2\.5)-      # supported generations
+    ^(?:models/)?           # optional models/ prefix
+    gemini-                 # prefix
+    (?:1\.5|2\.0|2\.5|3)-   # supported generations (added 3)
     (?:                     # variations with reasoning
         pro |               # pro
         flash(?:-lite)? |   # flash or flash-lite

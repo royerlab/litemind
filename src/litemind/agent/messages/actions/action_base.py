@@ -1,7 +1,7 @@
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 
 
-class ActionBase:
+class ActionBase(ABC):
 
     @abstractmethod
     def __str__(self):

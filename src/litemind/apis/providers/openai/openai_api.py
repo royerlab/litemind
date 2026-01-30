@@ -18,9 +18,13 @@ from litemind.apis.base_api import ModelFeatures
 from litemind.apis.callbacks.api_callback_manager import ApiCallbackManager
 from litemind.apis.default_api import DefaultApi
 from litemind.apis.exceptions import APIError, APINotAvailableError
-from litemind.apis.feature_scanner import get_default_model_feature_scanner
+from litemind.apis.model_registry import get_default_model_registry
 from litemind.apis.providers.openai.utils.check_availability import (
     check_openai_api_availability,
+)
+from litemind.apis.providers.openai.utils.is_reasoning import (
+    does_openai_model_support_temperature,
+    is_openai_reasoning_model,
 )
 from litemind.apis.providers.openai.utils.list_models import (
     _get_raw_openai_model_list,
@@ -31,13 +35,6 @@ from litemind.media.types.media_action import Action
 from litemind.media.types.media_image import Image
 from litemind.media.types.media_text import Text
 from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_path
-
-# ------------------------------------------------------------------ #
-#  Constants
-# ------------------------------------------------------------------ #
-_1M_TOKENS = 1_048_576  # 1 Mi tokens = 1024 × 1024
-_O_SERIES_CTX = 200_000
-_O_SERIES_OUT = 100_000
 
 
 class OpenAIApi(DefaultApi):
@@ -114,8 +111,8 @@ class OpenAIApi(DefaultApi):
         self.kwargs = kwargs
 
         try:
-            # Initialize the feature scanner:
-            self.feature_scanner = get_default_model_feature_scanner()
+            # Initialize the model registry for feature lookups:
+            self.model_registry = get_default_model_registry()
 
             # ensure the timeout parameter is set in kwargs and high enough:
             if "timeout" not in self.kwargs or self.kwargs["timeout"] < 6000:
@@ -268,7 +265,7 @@ class OpenAIApi(DefaultApi):
             return False
 
         for feature in features:
-            if not self.feature_scanner.supports_feature(
+            if not self.model_registry.supports_feature(
                 self.__class__, model_name, feature
             ):
                 return False
@@ -279,63 +276,27 @@ class OpenAIApi(DefaultApi):
         """Get the maximum number of input tokens for the given model."""
         if model_name is None:
             model_name = self.get_best_model()
-        name = model_name.lower()
 
-        # ---------- 4.1 family ----------
-        if "gpt-4.1" in name:
-            return _1M_TOKENS
+        # Try registry first (most accurate source)
+        model_info = self.model_registry.get_model_info(self.__class__, model_name)
+        if model_info and model_info.context_window:
+            return model_info.context_window
 
-        # ---------- 5 family ----------
-        if "gpt-5" in name:
-            return 400_000
-
-        # ---------- o-series ----------
-        if any(tag in name for tag in ("o4-mini", "o3", "o1")):
-            if "o1-mini" in name or "o1-preview" in name:
-                return 128_000
-            return _O_SERIES_CTX
-
-        # ---------- GPT-4o ----------
-        if "gpt-4o" in name:
-            return 128_000
-
-        # ---------- computer-use-preview ----------
-        if "computer-use-preview" in name:
-            return 128_000
-
-        return 128_000  # Default for Response API models
+        # Fallback for unknown models
+        return 128_000
 
     def max_num_output_tokens(self, model_name: Optional[str] = None) -> int:
         """Get the maximum number of output tokens for the given model."""
         if model_name is None:
             model_name = self.get_best_model()
-        name = model_name.lower()
 
-        # ---------- 4.1 family ----------
-        if "gpt-4.1" in name:
-            return 32_768
+        # Try registry first (most accurate source)
+        model_info = self.model_registry.get_model_info(self.__class__, model_name)
+        if model_info and model_info.max_output_tokens:
+            return model_info.max_output_tokens
 
-        # ---------- 5 family ----------
-        if "gpt-5" in name:
-            return 128_000
-
-        # ---------- o-series ----------
-        if "o4-mini" in name or "o3" in name:
-            return _O_SERIES_OUT
-        if "o1-mini" in name:
-            return 65_536
-        if "o1-preview" in name:
-            return 32_768
-        if "o1" in name:
-            return _O_SERIES_OUT
-
-        # ---------- GPT-4o ----------
-        if "gpt-4o-mini" in name:
-            return 16_384
-        if "gpt-4o" in name:
-            return 16_384
-
-        return 16_384  # Default for Response API models
+        # Fallback for unknown models
+        return 16_384
 
     def _convert_messages_to_response_input(
         self, messages: List[Message], is_tool_followup: bool = False
@@ -501,7 +462,7 @@ class OpenAIApi(DefaultApi):
                                 },
                             }
                         )
-                    except Exception as e:
+                    except Exception:
                         # Fallback to text description if audio processing fails
                         content.append(
                             {
@@ -686,14 +647,17 @@ class OpenAIApi(DefaultApi):
 
         # Handle model-specific parameter restrictions
         reasoning_effort = None
-        if any(tag in model_name.lower() for tag in ("o1", "o3", "o4", "gpt-5")):
-            # o-series and gpt-5 models do not support temperature parameter
+        is_reasoning_model = is_openai_reasoning_model(model_name)
+
+        # Check if model supports temperature (o-series and gpt-5.x don't)
+        if not does_openai_model_support_temperature(model_name):
             temperature = None
 
+        if is_reasoning_model:
             # Extract reasoning effort from model name (e.g., "o3-high" -> "high")
             reasoning_effort_suffix = model_name.split("-")[-1]
 
-            # Check if it is a valid reasoning effort:
+            # O-series models support: low, medium, high
             if reasoning_effort_suffix in ["low", "medium", "high"]:
                 reasoning_effort = reasoning_effort_suffix
                 # Remove the suffix from the model name
@@ -992,8 +956,10 @@ class OpenAIApi(DefaultApi):
                 audio_uri=audio_uri, model_name=model_name, **kwargs
             )
 
-        # Check that the model name contains 'whisper':
-        if "whisper" not in model_name:
+        # Check that the model name is a valid transcription model:
+        # Valid models: whisper-1, gpt-4o-transcribe, gpt-4o-mini-transcribe, gpt-4o-transcribe-diarize
+        valid_transcription_models = ["whisper", "transcribe"]
+        if not any(valid in model_name for valid in valid_transcription_models):
             raise APIError(f"Model {model_name} does not support audio transcription.")
 
         # Get the local path to the audio file:
@@ -1060,6 +1026,9 @@ class OpenAIApi(DefaultApi):
         with tempfile.NamedTemporaryFile(
             suffix=f".{audio_format}", delete=False
         ) as temp_file:
+            from litemind.utils.temp_file_manager import register_temp_file
+
+            register_temp_file(temp_file.name)
             response.write_to_file(temp_file.name)
             audio_file_uri = "file://" + temp_file.name
 
@@ -1117,7 +1086,7 @@ class OpenAIApi(DefaultApi):
                 # based on how the Response API returns generated images
                 # For now, fall back to the standard image generation API
                 pass
-            except:
+            except Exception:
                 pass
 
         # Fall back to standard DALL-E image generation API
@@ -1135,7 +1104,8 @@ class OpenAIApi(DefaultApi):
         elif "dall-e-3" in model_name:
             allowed_sizes = ["1024x1024", "1024x1792", "1792x1024"]
         elif "gpt-image-1" in model_name:
-            allowed_sizes = ["1024x1024", "1024x1536", "1536x1024"]
+            # gpt-image-1 also supports "auto" which lets the API choose
+            allowed_sizes = ["1024x1024", "1024x1536", "1536x1024", "auto"]
         else:
             raise ValueError(
                 f"Model {model_name} is not supported for image generation."
@@ -1149,11 +1119,14 @@ class OpenAIApi(DefaultApi):
                     f"Requested resolution {requested_size} is not allowed."
                 )
 
+            # Filter out non-dimensional sizes like "auto" before parsing
+            dimensional_sizes = [s for s in allowed_sizes if "x" in s]
+
             allowed_widths = sorted(
-                set(int(size.split("x")[0]) for size in allowed_sizes)
+                set(int(size.split("x")[0]) for size in dimensional_sizes)
             )
             allowed_heights = sorted(
-                set(int(size.split("x")[1]) for size in allowed_sizes)
+                set(int(size.split("x")[1]) for size in dimensional_sizes)
             )
 
             closest_width = next(
@@ -1168,8 +1141,11 @@ class OpenAIApi(DefaultApi):
 
         # Set quality and format based on model:
         if "gpt-image-1" in model_name:
-            kwargs["quality"] = "auto"
-            kwargs["output_format"] = "png"
+            # gpt-image-1 supports quality: low, medium, high (default: high)
+            if "quality" not in kwargs:
+                kwargs["quality"] = "high"
+            if "output_format" not in kwargs:
+                kwargs["output_format"] = "png"
         elif "dall-e-3" in model_name:
             kwargs["quality"] = "hd"
             kwargs["response_format"] = "b64_json"

@@ -18,8 +18,8 @@ class Document(MediaURI):
 
         if uri.startswith("http"):
             pass
-        elif uri.startswith("local:"):  # Local file URI
-            file_path = uri[6:]
+        elif uri.startswith("file://"):  # Local file URI
+            file_path = uri[7:]
 
             if not is_document_file(file_path):
                 # If it is a remote URL, then it is ok to not see a correct extension!
@@ -38,7 +38,7 @@ class Document(MediaURI):
 
     def extract_text_from_pages(self) -> List[str]:
 
-        # Download the video file from the URI to a local file:
+        # Download the document file from the URI to a local file:
         local_file = uri_to_local_file_path(self.uri)
 
         # Extract text from the document pages:
@@ -48,7 +48,7 @@ class Document(MediaURI):
 
     def take_image_of_each_page(self):
 
-        # Download the video file from the URI to a local file:
+        # Download the document file from the URI to a local file:
         local_file = uri_to_local_file_path(self.uri)
 
         # Create images of each page:

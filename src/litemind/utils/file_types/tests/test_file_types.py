@@ -173,10 +173,10 @@ def test_libmagic_pe(tmp_path):
 
 
 def test_is_text_file_true(tmp_path):
-    f = (tmp_path / "note.txt").write_text("Hello!\n", encoding="utf-8")
+    (tmp_path / "note.txt").write_text("Hello!\n", encoding="utf-8")
     assert is_text_file(str(tmp_path / "note.txt")) is True
 
 
 def test_is_text_file_false(tmp_path):
-    raw = (tmp_path / "data.bin").write_bytes(b"\x00\xff\x00\xff")
+    (tmp_path / "data.bin").write_bytes(b"\x00\xff\x00\xff")
     assert is_text_file(str(tmp_path / "data.bin")) is False

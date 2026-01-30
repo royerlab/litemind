@@ -96,41 +96,27 @@ def convert_messages_for_anthropic(
                 # Cast to Image:
                 image: Image = block.media
 
-                # Get media type
-                media_type = image.get_media_type()
-
-                # get base64 data:
-                base64_data = image.to_base64_data()
-
-                # Add the image to the content:
-                content.append(
-                    {
-                        "type": "image",
-                        "source": {
-                            "type": "base64",
-                            "media_type": media_type,
-                            "data": (base64_data),
-                        },
-                    }
-                )
-
-            elif block.has_type(Document):
-
-                # Cast to Document:
-                document: Document = block.media
-
-                if document.has_extension("pdf"):
-
-                    # Get media type
-                    media_type = document.get_media_type()
-
-                    # get base64 data:
-                    base64_data = document.to_base64_data()
-
-                    # Add the document to the content:
+                # Check if we have a remote URL (http/https)
+                if not image.is_local() and image.uri.startswith(
+                    ("http://", "https://")
+                ):
+                    # Use URL-based source for remote images
                     content.append(
                         {
-                            "type": "document",
+                            "type": "image",
+                            "source": {
+                                "type": "url",
+                                "url": image.uri,
+                            },
+                        }
+                    )
+                else:
+                    # Use base64-encoded source for local images
+                    media_type = image.get_media_type()
+                    base64_data = image.to_base64_data()
+                    content.append(
+                        {
+                            "type": "image",
                             "source": {
                                 "type": "base64",
                                 "media_type": media_type,
@@ -138,6 +124,41 @@ def convert_messages_for_anthropic(
                             },
                         }
                     )
+
+            elif block.has_type(Document):
+
+                # Cast to Document:
+                document: Document = block.media
+
+                if document.has_extension("pdf"):
+                    # Check if we have a remote URL (http/https)
+                    if not document.is_local() and document.uri.startswith(
+                        ("http://", "https://")
+                    ):
+                        # Use URL-based source for remote PDFs
+                        content.append(
+                            {
+                                "type": "document",
+                                "source": {
+                                    "type": "url",
+                                    "url": document.uri,
+                                },
+                            }
+                        )
+                    else:
+                        # Use base64-encoded source for local PDFs
+                        media_type = document.get_media_type()
+                        base64_data = document.to_base64_data()
+                        content.append(
+                            {
+                                "type": "document",
+                                "source": {
+                                    "type": "base64",
+                                    "media_type": media_type,
+                                    "data": base64_data,
+                                },
+                            }
+                        )
                 else:
                     # Convert Document to text:
                     markdown: str = document.to_markdown(

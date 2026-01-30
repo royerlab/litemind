@@ -53,7 +53,7 @@ def test_agent_with_just_text(api_class):
 
 
 @pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
-def test_agent_with_just_text(api_class):
+def test_agent_with_json_response_format(api_class):
     # Create OpenAI API object:
     api = api_class()
 
@@ -64,7 +64,7 @@ def test_agent_with_just_text(api_class):
 
     aprint(f"Default model: {api.get_best_model()}")
 
-    # 4. Using the Agent with a JSON Response Format
+    # Using the Agent with a JSON Response Format
     class Weather(BaseModel):
         temperature: float
         condition: str

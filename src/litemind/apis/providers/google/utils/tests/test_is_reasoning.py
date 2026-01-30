@@ -9,10 +9,15 @@ from litemind.apis.providers.google.utils.is_reasoning import is_gemini_reasonin
         # Positive cases
         ("gemini-1.5-pro", True),
         ("gemini-1.5-flash", True),
-        ("gemini-2.0-pro", True),
         ("gemini-2.0-flash-thinking-exp-01-21", True),
         ("gemini-2.5-pro-preview-05-06", True),
         ("gemini-2.5-flash", True),
+        # Gemini 3 models
+        ("gemini-3-pro-preview", True),
+        ("gemini-3-flash-preview", True),
+        # models/ prefix variants
+        ("models/gemini-2.5-pro", True),
+        ("models/gemini-3-flash-preview", True),
         # Negative cases
         ("gemini-nano", False),
         ("gemini-1.0-pro", False),

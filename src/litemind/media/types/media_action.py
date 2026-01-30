@@ -22,7 +22,7 @@ class Action(MediaDefault):
 
         # Validate Object here:
         if action is None:
-            raise ValueError(f"Object cannot be None")
+            raise ValueError("Object cannot be None")
         elif not isinstance(action, ActionBase):
             raise ValueError(f"Object must be an ActionBase, got {type(action)}")
 

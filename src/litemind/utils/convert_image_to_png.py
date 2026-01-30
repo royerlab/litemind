@@ -35,6 +35,11 @@ def convert_image_to_png(file_path: str) -> str:
         with Image.open(file_path) as img:
             # Create a temporary file to save the image:
             with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as temp_file:
+                # Register for cleanup at exit:
+                from litemind.utils.temp_file_manager import register_temp_file
+
+                register_temp_file(temp_file.name)
+
                 # Save the image as a PNG file:
                 img.save(temp_file.name, "PNG")
 

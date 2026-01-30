@@ -1,0 +1,225 @@
+# Anthropic Model Registry
+# Curated model capabilities and metadata for Anthropic API (Claude)
+# Last updated: 2026-01-27
+# Cross-referenced with live API response
+
+metadata:
+  provider: AnthropicApi
+  registry_version: "2.0"
+  last_updated: "2026-01-27"
+
+model_families:
+  claude-4.5-family:
+    features:
+      TextGeneration: true
+      StructuredTextGeneration: true
+      Image: true
+      Document: true
+      Tools: true
+      MCPTool: true
+      WebSearchTool: true
+    context_window: 200000
+    max_output_tokens: 64000
+
+  claude-4-family:
+    features:
+      TextGeneration: true
+      StructuredTextGeneration: true
+      Image: true
+      Document: true
+      Tools: true
+      MCPTool: true
+      WebSearchTool: true
+    context_window: 200000
+    max_output_tokens: 64000
+
+  claude-3.7-family:
+    features:
+      TextGeneration: true
+      StructuredTextGeneration: true
+      Image: true
+      Document: true
+      Tools: true
+      MCPTool: true
+      WebSearchTool: true
+    context_window: 200000
+    max_output_tokens: 128000
+
+  claude-3.5-family:
+    features:
+      TextGeneration: true
+      StructuredTextGeneration: true
+      Image: true
+      Document: true
+      Tools: true
+      MCPTool: true
+    context_window: 200000
+    max_output_tokens: 8192
+
+  claude-3-family:
+    features:
+      TextGeneration: true
+      StructuredTextGeneration: true
+      Image: true
+      Tools: true
+      MCPTool: true
+    context_window: 200000
+    max_output_tokens: 4096
+
+  embedding-family:
+    features:
+      TextEmbeddings: true
+      ImageEmbeddings: true
+      AudioEmbeddings: true
+      VideoEmbeddings: true
+      DocumentEmbeddings: true
+
+  transcription-family:
+    features:
+      AudioTranscription: true
+
+models:
+  # ===========================================
+  # Claude 4.5 Series (Latest - October/November 2025)
+  # ===========================================
+
+  # Claude Opus 4.5 - Premium flagship model (November 2025)
+  claude-opus-4-5-20251101:
+    extends: claude-4.5-family
+    notes: "Premium model combining maximum intelligence with practical performance"
+    source: "https://platform.claude.com/docs/en/about-claude/models/overview"
+
+  claude-opus-4-5-20251101-thinking-low:
+    extends: claude-4.5-family
+    features:
+      Thinking: true
+    notes: "Claude Opus 4.5 with low extended thinking"
+
+  claude-opus-4-5-20251101-thinking-mid:
+    extends: claude-4.5-family
+    features:
+      Thinking: true
+    notes: "Claude Opus 4.5 with medium extended thinking"
+
+  claude-opus-4-5-20251101-thinking-high:
+    extends: claude-4.5-family
+    features:
+      Thinking: true
+    notes: "Claude Opus 4.5 with high extended thinking"
+
+  # Claude Sonnet 4.5 - Recommended default model (September 2025)
+  claude-sonnet-4-5-20250929:
+    extends: claude-4.5-family
+    context_window: 1000000  # Supports 1M with beta header
+    notes: "Smart model for complex agents and coding - recommended default"
+    source: "https://platform.claude.com/docs/en/about-claude/models/overview"
+
+  claude-sonnet-4-5-20250929-thinking-low:
+    extends: claude-4.5-family
+    features:
+      Thinking: true
+    notes: "Claude Sonnet 4.5 with low extended thinking"
+
+  claude-sonnet-4-5-20250929-thinking-mid:
+    extends: claude-4.5-family
+    features:
+      Thinking: true
+    notes: "Claude Sonnet 4.5 with medium extended thinking"
+
+  claude-sonnet-4-5-20250929-thinking-high:
+    extends: claude-4.5-family
+    features:
+      Thinking: true
+    notes: "Claude Sonnet 4.5 with high extended thinking"
+
+  # Claude Haiku 4.5 - Fastest model (October 2025)
+  claude-haiku-4-5-20251001:
+    extends: claude-4.5-family
+    notes: "Fastest model with near-frontier intelligence"
+    source: "https://platform.claude.com/docs/en/about-claude/models/overview"
+
+  # ===========================================
+  # Claude 4 Series (Legacy but still available)
+  # ===========================================
+
+  # Claude Opus 4.1 (August 2025)
+  claude-opus-4-1-20250805:
+    extends: claude-4-family
+    max_output_tokens: 32000
+    notes: "Upgrade to Opus 4 focused on agentic tasks and reasoning"
+    source: "https://platform.claude.com/docs/en/about-claude/models/overview"
+
+  # Claude Opus 4 (May 2025)
+  claude-opus-4-20250514:
+    extends: claude-4-family
+    max_output_tokens: 32000
+    notes: "Claude Opus 4 - most capable Claude 4 model"
+    source: "https://platform.claude.com/docs/en/about-claude/models/overview"
+
+  # Claude Sonnet 4 (May 2025)
+  claude-sonnet-4-20250514:
+    extends: claude-4-family
+    context_window: 1000000  # Supports 1M with beta header
+    notes: "Balanced Claude 4 model"
+    source: "https://platform.claude.com/docs/en/about-claude/models/overview"
+
+  # ===========================================
+  # Claude 3.7 Series
+  # ===========================================
+
+  claude-3-7-sonnet-20250219:
+    extends: claude-3.7-family
+    notes: "Claude 3.7 Sonnet"
+    source: "https://platform.claude.com/docs/en/about-claude/models/overview"
+
+  claude-3-7-sonnet-20250219-thinking-low:
+    extends: claude-3.7-family
+    features:
+      Thinking: true
+    notes: "Claude 3.7 Sonnet with low extended thinking"
+
+  claude-3-7-sonnet-20250219-thinking-mid:
+    extends: claude-3.7-family
+    features:
+      Thinking: true
+    notes: "Claude 3.7 Sonnet with medium extended thinking"
+
+  claude-3-7-sonnet-20250219-thinking-high:
+    extends: claude-3.7-family
+    features:
+      Thinking: true
+    notes: "Claude 3.7 Sonnet with high extended thinking"
+
+  # ===========================================
+  # Claude 3.5 Series
+  # ===========================================
+
+  claude-3-5-haiku-20241022:
+    extends: claude-3.5-family
+    features:
+      WebSearchTool: true
+    notes: "Fast and efficient Claude 3.5 Haiku"
+    source: "https://platform.claude.com/docs/en/about-claude/models/overview"
+
+  # ===========================================
+  # Claude 3 Series (Legacy)
+  # ===========================================
+
+  claude-3-haiku-20240307:
+    extends: claude-3-family
+    features:
+      Document: false
+      WebSearchTool: false
+    notes: "Fast Claude 3 model - still available but limited features"
+
+  # ===========================================
+  # Local/Special Models
+  # ===========================================
+
+  whisper-local:
+    extends: transcription-family
+    notes: "Local whisper transcription"
+
+  fastembed:
+    extends: embedding-family
+    notes: "Fast local embedding model"

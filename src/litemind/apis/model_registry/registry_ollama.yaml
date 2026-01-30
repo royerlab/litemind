@@ -1,0 +1,162 @@
+# Ollama Model Registry
+# Curated model capabilities and metadata for Ollama API
+# Last updated: 2026-01-27
+# Note: Ollama models are locally hosted and capabilities may vary by installation
+
+metadata:
+  provider: OllamaApi
+  registry_version: "2.0"
+  last_updated: "2026-01-27"
+
+model_families:
+  llama-vision-family:
+    features:
+      TextGeneration: true
+      Image: true
+      TextEmbeddings: true
+
+  llama-text-family:
+    features:
+      TextGeneration: true
+      StructuredTextGeneration: true
+      TextEmbeddings: true
+
+  deepseek-family:
+    features:
+      TextGeneration: true
+      StructuredTextGeneration: true
+      TextEmbeddings: true
+
+  gemma-vision-family:
+    features:
+      TextGeneration: true
+      StructuredTextGeneration: true
+      Image: true
+
+  phi-family:
+    features:
+      TextGeneration: true
+      StructuredTextGeneration: true
+      TextEmbeddings: true
+
+  qwq-family:
+    features:
+      TextGeneration: true
+      StructuredTextGeneration: true
+      TextEmbeddings: true
+      Tools: true
+
+  embedding-family:
+    features:
+      TextEmbeddings: true
+
+  transcription-family:
+    features:
+      AudioTranscription: true
+
+models:
+  # DeepSeek R1 Series
+  deepseek-r1:32b:
+    extends: deepseek-family
+    notes: "DeepSeek R1 32B parameter model"
+
+  deepseek-r1:32b-thinking:
+    extends: deepseek-family
+    features:
+      Thinking: true
+      TextEmbeddings: false
+    notes: "DeepSeek R1 32B with thinking mode"
+
+  deepseek-r1:70b:
+    extends: deepseek-family
+    notes: "DeepSeek R1 70B parameter model"
+
+  deepseek-r1:70b-thinking:
+    extends: deepseek-family
+    features:
+      Thinking: true
+      TextEmbeddings: false
+    notes: "DeepSeek R1 70B with thinking mode"
+
+  # Gemma3 Series
+  gemma3:27b:
+    extends: gemma-vision-family
+    notes: "Gemma 3 27B parameter model"
+
+  gemma3:27b-it-qat:
+    extends: gemma-vision-family
+    notes: "Gemma 3 27B instruction-tuned QAT"
+
+  gemma3:27b-it-qat-thinking:
+    extends: gemma-vision-family
+    features:
+      Thinking: true
+    notes: "Gemma 3 27B QAT with thinking mode"
+
+  gemma3:27b-thinking:
+    extends: gemma-vision-family
+    features:
+      Thinking: true
+    notes: "Gemma 3 27B with thinking mode"
+
+  # LLaVA Series (Vision models)
+  llava-llama3:latest:
+    extends: llama-vision-family
+    features:
+      StructuredTextGeneration: false
+    notes: "LLaVA based on Llama 3"
+
+  llava-llama3:latest-thinking:
+    extends: llama-vision-family
+    features:
+      Thinking: true
+      StructuredTextGeneration: false
+      TextEmbeddings: false
+    notes: "LLaVA Llama 3 with thinking mode"
+
+  llava:34b:
+    extends: llama-vision-family
+    features:
+      StructuredTextGeneration: false
+    notes: "LLaVA 34B parameter model"
+
+  llava:34b-thinking:
+    extends: llama-vision-family
+    features:
+      Thinking: true
+      StructuredTextGeneration: false
+      TextEmbeddings: false
+    notes: "LLaVA 34B with thinking mode"
+
+  # Phi4 Series
+  phi4:latest:
+    extends: phi-family
+    notes: "Phi 4 model"
+
+  phi4:latest-thinking:
+    extends: phi-family
+    features:
+      Thinking: true
+      TextEmbeddings: false
+    notes: "Phi 4 with thinking mode"
+
+  # QWQ Series
+  qwq:latest:
+    extends: qwq-family
+    notes: "QWQ model"
+
+  qwq:latest-thinking:
+    extends: qwq-family
+    features:
+      Thinking: true
+      TextEmbeddings: false
+    notes: "QWQ with thinking mode"
+
+  # Local/Special Models
+  whisper-local:
+    extends: transcription-family
+    notes: "Local whisper transcription"
+
+  fastembed:
+    extends: embedding-family
+    notes: "Fast local embedding model"

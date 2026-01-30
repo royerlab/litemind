@@ -170,7 +170,9 @@ class Information(InformationBase, PickleSerializable):
             from litemind import CombinedApi
 
             api = CombinedApi()
-            embedding_function = lambda text: api.embed_texts([text])[0]
+
+            def embedding_function(text):
+                return api.embed_texts([text])[0]
 
         # If we already have an embedding, just return it
         if self.embedding is not None:
@@ -252,7 +254,7 @@ class Information(InformationBase, PickleSerializable):
             )
             main_message = Message(
                 role="user",
-                text=f"Please summarize the following document in a concise way.",
+                text="Please summarize the following document in a concise way.",
             )
             main_message.append_media(self.media)
 
@@ -278,7 +280,6 @@ class Information(InformationBase, PickleSerializable):
 
     def to_message_block(self) -> MessageBlock:
         return MessageBlock(
-            role="user",
             media=self.media,
             metadata=self.metadata,
             id=self.id,

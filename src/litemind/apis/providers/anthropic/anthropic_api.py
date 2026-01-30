@@ -12,7 +12,7 @@ from litemind.apis.base_api import ModelFeatures
 from litemind.apis.callbacks.api_callback_manager import ApiCallbackManager
 from litemind.apis.default_api import DefaultApi
 from litemind.apis.exceptions import APIError, APINotAvailableError
-from litemind.apis.feature_scanner import get_default_model_feature_scanner
+from litemind.apis.model_registry import get_default_model_registry
 from litemind.apis.providers.anthropic.utils.check_availability import (
     check_anthropic_api_availability,
 )
@@ -35,14 +35,12 @@ from litemind.media.types.media_text import Text
 # ------------------------------- #
 #   CONSTANTS (docs 2025-06-08)   #
 # ------------------------------- #
-_CTX_200K = 200_000
-_CTX_100K = 100_000
+# Fallback values when model is not in registry
+_DEFAULT_CONTEXT_WINDOW = 200_000
+_DEFAULT_MAX_OUTPUT_TOKENS = 8_192
 
-_OUT_64K = 64_000
-_OUT_32K = 32_000
-_OUT_8K = 8_192
-_OUT_4K = 4_096
-_OUT_128K = 128_000  # beta header for Claude-3.7-Sonnet only
+# Per Anthropic API docs: minimum thinking budget is 1024 tokens
+_THINKING_BUDGET_MIN = 1024
 
 
 class AnthropicApi(DefaultApi):
@@ -98,16 +96,13 @@ class AnthropicApi(DefaultApi):
             callback_manager=callback_manager,
         )
 
-        # Import Anthropic
+        # Check if anthropic package is installed
         try:
-            import anthropic
+            import anthropic  # noqa: F401
         except ImportError:
             raise ImportError(
                 "Please install anthropic to use AnthropicApi: pip install anthropic"
             )
-
-        # Call superclass constructor:
-        self.feature_scanner = get_default_model_feature_scanner()
 
         # Set API key:
         if api_key is None:
@@ -130,9 +125,8 @@ class AnthropicApi(DefaultApi):
         self.anthropic_api_kwargs = anthropic_api_kwargs
 
         try:
-
-            # Initialize the feature scanner:
-            self.feature_scanner = get_default_model_feature_scanner()
+            # Initialize the model registry for feature lookups:
+            self.model_registry = get_default_model_registry()
 
             # Create the Anthropic client
             from anthropic import Anthropic
@@ -287,9 +281,9 @@ class AnthropicApi(DefaultApi):
         ):
             return True
 
-        # General case we pull info from the scanner:
+        # Check feature support from the registry:
         for feature in features:
-            if not self.feature_scanner.supports_feature(
+            if not self.model_registry.supports_feature(
                 self.__class__, model_name, feature
             ):
                 # If the model does not support the feature, we return False:
@@ -297,118 +291,104 @@ class AnthropicApi(DefaultApi):
 
         return True
 
+    def _strip_thinking_suffix(self, model_name: str) -> str:
+        """Strip thinking suffix from model name for registry lookup."""
+        for suffix in ["-thinking-high", "-thinking-mid", "-thinking-low"]:
+            if model_name.endswith(suffix):
+                return model_name[: -len(suffix)]
+        return model_name
+
     def _has_cache_support(self, model_name: str) -> bool:
-        if "sonnet" in model_name or "claude-2.0" in model_name:
+        """Check if model supports prompt caching.
+
+        Supported: Claude 3.5+, 3.7+, 4+, 4.5+ (all variants)
+        Not supported: Claude 2.x, Claude 3 base (3-opus, 3-sonnet, 3-haiku without .5 or .7)
+        """
+        name = model_name.lower()
+
+        # Claude 2.x - no caching
+        if "claude-2" in name:
             return False
+
+        # Claude 3 base models (not 3.5 or 3.7) don't support caching
+        # Check for exact claude-3-opus, claude-3-sonnet, claude-3-haiku patterns
+        # but exclude claude-3-5 and claude-3-7 which DO support caching
+        if any(
+            x in name for x in ["claude-3-opus", "claude-3-sonnet", "claude-3-haiku"]
+        ):
+            # These are Claude 3 base models, but 3.5 and 3.7 support caching
+            if "claude-3-5" not in name and "claude-3-7" not in name:
+                return False
+
+        # All modern models (3.5+, 3.7, 4, 4.5) support caching
         return True
 
     def _has_web_search_support(self, model_name: str) -> bool:
-        """Check if model supports built-in web search."""
-        # Web search is available on most modern Claude models
-        if any(
-            x in model_name.lower()
-            for x in ["claude-4", "claude-3", "claude-sonnet", "claude-opus"]
-        ):
-            return True
-        return False
+        """Check if model supports built-in web search via registry."""
+        base_model = self._strip_thinking_suffix(model_name)
+        return self.model_registry.supports_feature(
+            self.__class__, base_model, ModelFeatures.WebSearchTool
+        )
 
     def _has_mcp_support(self, model_name: str) -> bool:
-        """Check if model supports MCP connector."""
-        # MCP is available on Claude 4 and recent Claude 3 models
-        if any(
-            x in model_name.lower()
-            for x in ["claude-4", "claude-sonnet-4", "claude-opus-4"]
-        ):
-            return True
-        return False
-
-    def _has_code_execution_support(self, model_name: str) -> bool:
-        """Check if model supports code execution tool."""
-        # Code execution is available on Claude 4 models
-        if any(
-            x in model_name.lower()
-            for x in ["claude-4", "claude-sonnet-4", "claude-opus-4"]
-        ):
-            return True
-        return False
+        """Check if model supports MCP connector via registry."""
+        base_model = self._strip_thinking_suffix(model_name)
+        return self.model_registry.supports_feature(
+            self.__class__, base_model, ModelFeatures.MCPTool
+        )
 
     def _has_thinking_support(self, model_name: str) -> bool:
-        """Check if model supports extended thinking."""
-        # Thinking is available on Claude 4 and Claude 3.7+ models
+        """Check if model supports extended thinking via registry."""
+        # Thinking variants always support thinking
         if any(
-            x in model_name.lower()
-            for x in ["claude-4", "claude-3-7", "claude-sonnet-3-7"]
+            model_name.endswith(s)
+            for s in ["-thinking-high", "-thinking-mid", "-thinking-low"]
         ):
             return True
-        return False
+        return self.model_registry.supports_feature(
+            self.__class__, model_name, ModelFeatures.Thinking
+        )
 
     # ------------------------------- #
     def max_num_input_tokens(self, model_name: Optional[str] = None) -> int:
         """
-        Maximum *total* context (input + output) tokens for an Anthropic Claude model.
-        Falls back to 100 K for unknown models.
+        Maximum context window (input tokens) for an Anthropic Claude model.
+        Uses the model registry for accurate, curated values.
+        Falls back to 200K for unknown models.
         """
         if model_name is None:
             model_name = self.get_best_model()
-        name = model_name.lower()
 
-        # ---- Claude 4 ----
-        if "opus-4" in name or "sonnet-4" in name:
-            return _CTX_200K
+        # Strip thinking suffix for registry lookup
+        base_model = self._strip_thinking_suffix(model_name)
 
-        # ---- Claude 3.7 / 3.5 / 3 ----
-        if "claude-3" in name:
-            return _CTX_200K
+        # Try registry first (most accurate source)
+        model_info = self.model_registry.get_model_info(self.__class__, base_model)
+        if model_info and model_info.context_window:
+            return model_info.context_window
 
-        # ---- Claude 2.1 ----
-        if "claude-2.1" in name:
-            return _CTX_200K
-
-        # ---- Claude 2 / Instant 1.x ----
-        if "claude-2.0" in name or "claude-2" in name or "instant-1" in name:
-            return _CTX_100K
-
-        # ---- Fallback ----
-        return _CTX_100K
+        # Fallback for unknown models
+        return _DEFAULT_CONTEXT_WINDOW
 
     def max_num_output_tokens(self, model_name: Optional[str] = None) -> int:
         """
-        Documented *maximum* tokens Claude may generate in one response.
-        Returns the highest published cap (may require beta header, see notes).
-        Falls back to 4 096 for unknown models.
+        Maximum output tokens Claude may generate in one response.
+        Uses the model registry for accurate, curated values.
+        Falls back to 8K for unknown models.
         """
         if model_name is None:
             model_name = self.get_best_model()
-        name = model_name.lower()
 
-        # ---- Claude 4 ----
-        if "opus-4" in name:
-            return _OUT_32K
-        if "sonnet-4" in name:
-            return _OUT_64K
+        # Strip thinking suffix for registry lookup
+        base_model = self._strip_thinking_suffix(model_name)
 
-        # ---- Claude 3.7 Sonnet ----
-        if "3-7-sonnet" in name:
-            return _OUT_64K  # can be _OUT_128K  but requires `output-128k-2025-02-19` header
+        # Try registry first (most accurate source)
+        model_info = self.model_registry.get_model_info(self.__class__, base_model)
+        if model_info and model_info.max_output_tokens:
+            return model_info.max_output_tokens
 
-        # ---- Claude 3.5 family ----
-        if "3-5-sonnet" in name or "3-5-haiku" in name:
-            return _OUT_8K
-
-        # ---- Claude 3 base ----
-        if "3-opus" in name or "3-sonnet" in name or "3-haiku" in name:
-            return _OUT_4K
-
-        # ---- Claude 2.1 ----
-        if "claude-2.1" in name:
-            return _OUT_4K
-
-        # ---- Claude 2 / Instant 1.x ----
-        if "claude-2.0" in name or "claude-2" in name or "instant-1" in name:
-            return _OUT_4K
-
-        # ---- Fallback ----
-        return _OUT_4K
+        # Fallback for unknown models
+        return _DEFAULT_MAX_OUTPUT_TOKENS
 
     def _format_tools_and_mcp_for_anthropic(self, toolset: ToolSet) -> tuple:
         """
@@ -423,7 +403,7 @@ class AnthropicApi(DefaultApi):
 
         anthropic_tools = []
         mcp_servers = []
-        beta_headers = {}
+        beta_features = []  # List of beta feature strings to join later
 
         if toolset:
             # Handle custom function tools using existing formatter
@@ -436,17 +416,21 @@ class AnthropicApi(DefaultApi):
                 if isinstance(builtin_tool, BuiltinWebSearchTool):
                     # Add web search tool
                     web_search_tool: BuiltinWebSearchTool = builtin_tool
-                    max_uses = (
-                        web_search_tool.max_web_searches
-                    )  # Default max uses for web search
 
-                    anthropic_tools.append(
-                        {
-                            "type": "web_search_20250305",
-                            "name": "web_search",
-                            "max_uses": max_uses,
-                        }
-                    )
+                    # Build web search config with required parameters
+                    web_search_config = {
+                        "type": "web_search_20250305",
+                        "name": "web_search",
+                        "max_uses": web_search_tool.max_web_searches,
+                    }
+
+                    # Add optional allowed_domains if specified
+                    if web_search_tool.allowed_domains:
+                        web_search_config["allowed_domains"] = (
+                            web_search_tool.allowed_domains
+                        )
+
+                    anthropic_tools.append(web_search_config)
 
                 elif isinstance(builtin_tool, BuiltinMCPTool):
                     # Add MCP server
@@ -479,13 +463,18 @@ class AnthropicApi(DefaultApi):
                     # Throw an exception if unknown built-in tool is used:
                     raise ValueError(f"Unknown built-in tool: {builtin_tool.name}")
 
-            # Set beta headers if needed
+            # Add MCP beta feature if needed
             if mcp_servers:
-                beta_headers["anthropic-beta"] = "mcp-client-2025-04-04"
+                beta_features.append("mcp-client-2025-04-04")
 
         if not anthropic_tools:
             # If no custom tools were provided, set to NotGiven
             anthropic_tools = NotGiven()
+
+        # Build beta headers from features list
+        beta_headers = (
+            {"anthropic-beta": ",".join(beta_features)} if beta_features else {}
+        )
 
         return anthropic_tools, mcp_servers, beta_headers
 
@@ -498,6 +487,7 @@ class AnthropicApi(DefaultApi):
         toolset: Optional[ToolSet] = None,
         use_tools: bool = True,
         response_format: Optional[BaseModel] = None,
+        tool_choice: Optional[Union[str, dict]] = None,
         **kwargs,
     ) -> List[Message]:
 
@@ -555,26 +545,32 @@ class AnthropicApi(DefaultApi):
         if max_num_output_tokens is None:
             max_num_output_tokens = self.max_num_output_tokens(model_name)
 
-        # Handle thinking mode (preserve original functionality)
+        # Handle thinking mode - strip suffix and configure thinking budget
         original_model_name = model_name
         if model_name.endswith("-thinking-high"):
-            budget_tokens = max(1000, max_num_output_tokens // 2 - 1000)
+            # High: Use half of available output tokens for thinking
+            base_model = model_name.replace("-thinking-high", "")
+            available_output = self.max_num_output_tokens(base_model)
+            budget_tokens = max(_THINKING_BUDGET_MIN, available_output // 2)
             thinking = {"type": "enabled", "budget_tokens": budget_tokens}
-            model_name = model_name.replace("-thinking-high", "")
+            model_name = base_model
             temperature = 1.0
-            use_thinking = True
         elif model_name.endswith("-thinking-mid"):
-            budget_tokens = max(1000, max_num_output_tokens // 2 - 1000)
+            # Mid: Use third of available output tokens for thinking
+            base_model = model_name.replace("-thinking-mid", "")
+            available_output = self.max_num_output_tokens(base_model)
+            budget_tokens = max(_THINKING_BUDGET_MIN, available_output // 3)
             thinking = {"type": "enabled", "budget_tokens": budget_tokens}
-            model_name = model_name.replace("-thinking-mid", "")
+            model_name = base_model
             temperature = 1.0
-            use_thinking = True
         elif model_name.endswith("-thinking-low"):
-            budget_tokens = max(1000, max_num_output_tokens // 4 - 1000)
+            # Low: Use quarter of available output tokens for thinking
+            base_model = model_name.replace("-thinking-low", "")
+            available_output = self.max_num_output_tokens(base_model)
+            budget_tokens = max(_THINKING_BUDGET_MIN, available_output // 4)
             thinking = {"type": "enabled", "budget_tokens": budget_tokens}
-            model_name = model_name.replace("-thinking-low", "")
+            model_name = base_model
             temperature = 1.0
-            use_thinking = True
         else:
             thinking = NotGiven()
 
@@ -591,12 +587,16 @@ class AnthropicApi(DefaultApi):
                 {"type": "code_execution_20241024", "name": "code_execution"}
             )
 
-        # Set up interleaved thinking beta header if needed
+        # Add interleaved thinking beta feature if needed
         if use_interleaved_thinking:
-            if beta_headers:
-                beta_headers["anthropic-beta"] += ",interleaved-thinking-2025-05-14"
-            else:
-                beta_headers["anthropic-beta"] = "interleaved-thinking-2025-05-14"
+            existing_features = (
+                beta_headers.get("anthropic-beta", "").split(",")
+                if beta_headers
+                else []
+            )
+            existing_features = [f for f in existing_features if f]  # Remove empty
+            existing_features.append("interleaved-thinking-2025-05-14")
+            beta_headers["anthropic-beta"] = ",".join(existing_features)
 
         # List of new messages part of the response:
         new_messages = []
@@ -625,6 +625,23 @@ class AnthropicApi(DefaultApi):
                     "extra_headers": beta_headers if beta_headers else NotGiven(),
                     **kwargs,
                 }
+
+                # Add tool_choice if specified and tools are present
+                if tool_choice is not None and anthropic_tools != NotGiven():
+                    if isinstance(tool_choice, str):
+                        if tool_choice in ["auto", "any"]:
+                            request_params["tool_choice"] = {"type": tool_choice}
+                        elif tool_choice == "none":
+                            # Don't use tools even if provided
+                            request_params["tool_choice"] = {"type": "none"}
+                        else:
+                            # Assume it's a specific tool name
+                            request_params["tool_choice"] = {
+                                "type": "tool",
+                                "name": tool_choice,
+                            }
+                    elif isinstance(tool_choice, dict):
+                        request_params["tool_choice"] = tool_choice
 
                 # Add MCP servers if any
                 if mcp_servers:

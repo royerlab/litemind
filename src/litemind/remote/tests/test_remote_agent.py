@@ -10,6 +10,7 @@ from litemind.apis.base_api import ModelFeatures
 from litemind.media.types.media_audio import Audio
 from litemind.remote.client import Client
 from litemind.remote.server import Server
+from litemind.ressources.media_resources import MediaResources
 
 # -----------------------------------------------------------------------------
 # Helper utilities
@@ -176,11 +177,8 @@ def test_remote_agent_multimodal_conversation(running_litemind_server):
         user_msg.append_text(
             "Describe in detail both what you see in the image and what you hear in the audio clip."
         )
-        image_url = (
-            "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Einstein_1921_by_"  # noqa: E501
-            "F_Schmutzer_-_restoration.jpg/456px-Einstein_1921_by_F_Schmutzer_-_restoration.jpg"
-        )
-        audio_url = "https://salford.figshare.com/ndownloader/files/14630270"  # Harvard sentences wav
+        image_url = MediaResources.get_local_test_image_uri("cat.jpg")
+        audio_url = MediaResources.get_local_test_audio_uri("harvard.wav")
         user_msg.append_image(image_url)
         user_msg.append_audio(audio_url)
         messages.append(user_msg)
@@ -199,13 +197,14 @@ def test_remote_agent_multimodal_conversation(running_litemind_server):
         # like the upstream multimodal unit‑tests bundled with LiteMind.
         # ------------------------------------------------------------------
         assert (
-            "einstein" in assistant_text
-            or "black-and-white" in assistant_text
-            or "photograph" in assistant_text
+            "cat" in assistant_text
+            or "feline" in assistant_text
+            or "animal" in assistant_text
             or "smell" in assistant_text
             or "ham" in assistant_text
             or "reading" in assistant_text
             or "test passage" in assistant_text
+            or "sentence" in assistant_text
         ), (
             "Assistant reply did not appear to describe either the image or the audio clip "
             f"(got: {assistant_text!r})"

@@ -21,7 +21,7 @@ class CodeConverter(BaseConverter):
 
     def convert(self, media: MediaBase) -> List[MediaBase]:
         if not isinstance(media, Code):
-            raise ValueError(f"Expected Json media, got {type(media)}")
+            raise ValueError(f"Expected Code media, got {type(media)}")
 
-        # Use the Table's built-in method to convert to Text
+        # Use the Code's built-in method to convert to Text
         return [media.to_markdown_text_media()]

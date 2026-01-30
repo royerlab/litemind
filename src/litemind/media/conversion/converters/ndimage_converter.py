@@ -9,9 +9,9 @@ from litemind.media.types.media_text import Text
 
 class NdImageConverter(BaseConverter):
     """
-    Converter for File media type.
+    Converter for NdImage media type.
 
-    Converts File media to Text media, this is for file media that are not any of the other known media.
+    Converts NdImage media to Text and Image media.
     """
 
     def rule(self) -> List[Tuple[Type[MediaBase], List[Type[MediaBase]]]]:

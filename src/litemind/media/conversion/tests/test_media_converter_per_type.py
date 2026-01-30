@@ -5,9 +5,9 @@ from litemind.agent.messages.message import Message
 from litemind.agent.messages.message_block import MessageBlock
 from litemind.media.conversion.media_converter import MediaConverter
 from litemind.media.types.media_audio import Audio
-from litemind.media.types.media_code import (
+from litemind.media.types.media_code import (  # Assuming this is the import path for Code media
     Code,
-)  # Assuming this is the import path for Code media
+)
 from litemind.media.types.media_document import Document
 from litemind.media.types.media_file import File
 from litemind.media.types.media_image import Image

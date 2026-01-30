@@ -43,9 +43,11 @@ class Agent:
         model_name: str
             The name of the model to use.
         model_features: Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
-            The features to require for a model. If features are provided, the model will be selected based on the features.
-            A ValueError will be raised if a model has also been specified as this is mutually exclusive.
-            Minimal required features are text generation and tools and are added automatically if not provided.
+            The features to require for a model. If features are provided, the
+            model will be selected based on the features. A ValueError will be
+            raised if a model has also been specified as this is mutually
+            exclusive. Minimal required features are text generation and tools
+            and are added automatically if not provided.
         temperature: float
             The temperature to use for text generation.
         toolset: ToolSet
@@ -121,7 +123,8 @@ class Agent:
         valid_positions = ["before_query", "system"]
         if augmentation_context_position not in valid_positions:
             raise ValueError(
-                f"Invalid augmentation_context_position: {augmentation_context_position}. Valid options are: {valid_positions}"
+                f"Invalid augmentation_context_position: {augmentation_context_position}. "
+                f"Valid options are: {valid_positions}"
             )
         self.augmentation_context_position = augmentation_context_position
 
@@ -201,7 +204,8 @@ class Agent:
         k: int
             The number of informations to retrieve from the augmentation.
         threshold: float
-            The score threshold_dict for the augmentation. If the score is below this value, the augmentation will not be used.
+            The score threshold for the augmentation. If the score is below
+            this value, the augmentation will not be used.
         """
         self.augmentation_set.add_augmentation(augmentation, k=k, threshold=threshold)
 
@@ -367,7 +371,7 @@ class Agent:
 
             # Quick report of the conversation (just number of messages):
             if self.conversation:
-                with asection(f"Conversation report:"):
+                with asection("Conversation report:"):
                     aprint(
                         f"Number of messages currently in conversation: {len(self.conversation)}"
                     )
@@ -398,7 +402,7 @@ class Agent:
             )
 
             # Quick report of the response:
-            with asection(f"Response:"):
+            with asection("Response:"):
                 if response is None:
                     aprint(
                         "No response received from the API. Probably an error occurred."
@@ -408,7 +412,7 @@ class Agent:
 
             # Print response messages to stdout if enabled:
             if self.messages_stdout_enabled:
-                with asection("Reponse:"):
+                with asection("Response:"):
                     for message in response:
                         aprint(message)
 
@@ -430,6 +434,19 @@ class Agent:
             if isinstance(conversation, Conversation):
                 self.conversation += conversation
                 messages.extend(conversation.get_all_messages())
+
+        # if a list of messages is provided as a positional argument, append them:
+        if args:
+            first_arg = args[0]
+            # Check for list/tuple of messages (use duck typing for RPyC compatibility)
+            if isinstance(first_arg, (list, tuple)) and not isinstance(
+                first_arg, Conversation
+            ):
+                for item in first_arg:
+                    # Duck typing: check for 'role' attribute (Message-like)
+                    if isinstance(item, Message) or hasattr(item, "role"):
+                        self.conversation.append(item)
+                        messages.append(item)
 
         # if conversation is provided as a keyword argument, append it:
         if "conversation" in kwargs:

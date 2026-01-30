@@ -189,18 +189,33 @@ class ToolSet:
         # Return the MCP tool:
         return builtin_mcp_tool
 
-    def remove_tool(self, tool: BaseTool):
+    def remove_tool(self, tool: Union[str, BaseTool]) -> bool:
         """
-        Remove a tool.
+        Remove a tool by name or instance.
 
         Parameters
         ----------
-        tool : BaseTool
-            The tool to remove.
+        tool : Union[str, BaseTool]
+            The tool name (str) or tool instance (BaseTool) to remove.
 
+        Returns
+        -------
+        bool
+            True if the tool was removed, False if not found.
         """
-        # Remove the tool from the tools list:
-        self.tools.remove(tool)
+        if isinstance(tool, str):
+            # Find tool by name
+            for t in self.tools:
+                if t.name == tool:
+                    self.tools.remove(t)
+                    return True
+            return False
+        else:
+            # Remove by instance
+            if tool in self.tools:
+                self.tools.remove(tool)
+                return True
+            return False
 
     def has_tool(self, tool: Union[str, BaseTool, Type[BaseTool]]) -> bool:
         """
@@ -324,9 +339,10 @@ class ToolSet:
         self.add_tool(other)
         return self
 
-    def __add__(self, other: BaseTool):
-        self.add_tool(other)
-        return self
+    def __add__(self, other: BaseTool) -> "ToolSet":
+        new_toolset = ToolSet(tools=list(self.tools))
+        new_toolset.add_tool(other)
+        return new_toolset
 
     def __str__(self):
         return f"ToolSet({[t.name for t in self.tools]})"

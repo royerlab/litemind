@@ -1,0 +1,364 @@
+# Google Gemini Model Registry
+# Curated model capabilities and metadata for Google Gemini API
+# Last updated: 2026-01-27
+# Cross-referenced with live API response
+
+metadata:
+  provider: GeminiApi
+  registry_version: "2.0"
+  last_updated: "2026-01-27"
+
+model_families:
+  gemini-3-family:
+    features:
+      TextGeneration: true
+      StructuredTextGeneration: true
+      # Note: Thinking is disabled for preview models as they don't fully support it yet
+      Image: true
+      Audio: true
+      Video: true
+      Tools: true
+    context_window: 1000000
+    max_output_tokens: 65536
+
+  gemini-2.5-pro-family:
+    features:
+      TextGeneration: true
+      StructuredTextGeneration: true
+      Image: true
+      Audio: true
+      Video: true
+      Tools: true
+    context_window: 1000000
+    max_output_tokens: 65536
+
+  gemini-2.5-flash-family:
+    features:
+      TextGeneration: true
+      StructuredTextGeneration: true
+      Image: true
+      Audio: true
+      Video: true
+      Tools: true
+    context_window: 1000000
+    max_output_tokens: 65536
+
+  gemini-2.0-flash-family:
+    features:
+      TextGeneration: true
+      StructuredTextGeneration: true
+      Image: true
+      Audio: true
+      Video: true
+      Tools: true
+    context_window: 1000000
+    max_output_tokens: 8192
+
+  gemma-family:
+    features:
+      TextGeneration: true
+      StructuredTextGeneration: true
+    context_window: 128000
+    max_output_tokens: 8192
+
+  embedding-family:
+    features:
+      TextEmbeddings: true
+
+  image-gen-family:
+    features:
+      ImageGeneration: true
+
+  video-gen-family:
+    features:
+      VideoGeneration: true
+
+  # Note: TTS is available in Gemini API but requires specific implementation
+  # using the generate_content method with audio response modality.
+  # AudioGeneration feature is disabled until GeminiApi.generate_audio() is implemented.
+  tts-family:
+    features:
+      TextGeneration: true  # TTS models use generate_content internally
+
+  audio-family:
+    features:
+      TextGeneration: true
+      Audio: true
+
+  transcription-family:
+    features:
+      AudioTranscription: true
+
+models:
+  # ===========================================
+  # Gemini 3 Series (Latest - 2026)
+  # ===========================================
+
+  models/gemini-3-pro-preview:
+    extends: gemini-3-family
+    notes: "Latest Gemini 3 Pro preview model"
+    source: "https://ai.google.dev/gemini-api/docs/models"
+
+  models/gemini-3-pro-image-preview:
+    extends: gemini-3-family
+    features:
+      NativeImageGeneration: true
+    notes: "Gemini 3 Pro with native multimodal image generation (uses generate_content, not generate_images)"
+
+  models/gemini-3-flash-preview:
+    extends: gemini-3-family
+    notes: "Gemini 3 Flash - next gen intelligence at lightning speed"
+    source: "https://deepmind.google/models/gemini/flash/"
+
+  # ===========================================
+  # Gemini 2.5 Pro Series (Stable)
+  # ===========================================
+
+  models/gemini-2.5-pro:
+    extends: gemini-2.5-pro-family
+    features:
+      Thinking: true
+    notes: "Most powerful model with adaptive thinking - stable"
+    source: "https://ai.google.dev/gemini-api/docs/models"
+
+  models/gemini-2.5-pro-preview-tts:
+    extends: tts-family
+    notes: "TTS preview model"
+
+  # ===========================================
+  # Gemini 2.5 Flash Series (Stable)
+  # ===========================================
+
+  models/gemini-2.5-flash:
+    extends: gemini-2.5-flash-family
+    features:
+      Thinking: true
+    notes: "Lightning-fast with controllable thinking budgets - stable"
+    source: "https://ai.google.dev/gemini-api/docs/models"
+
+  models/gemini-2.5-flash-preview-09-2025:
+    extends: gemini-2.5-flash-family
+    features:
+      Thinking: true
+    notes: "Gemini 2.5 Flash preview from September 2025"
+
+  models/gemini-2.5-flash-image:
+    extends: gemini-2.5-flash-family
+    features:
+      NativeImageGeneration: true
+    notes: "Gemini 2.5 Flash with native multimodal image generation (uses generate_content, not generate_images)"
+
+  models/gemini-2.5-flash-preview-tts:
+    extends: tts-family
+    notes: "TTS preview model"
+
+  # Gemini 2.5 Flash-Lite (Stable - cost optimized)
+  models/gemini-2.5-flash-lite:
+    extends: gemini-2.5-flash-family
+    notes: "Fast, low-cost, high-performance model - stable"
+    source: "https://ai.google.dev/gemini-api/docs/models"
+
+  models/gemini-2.5-flash-lite-preview-09-2025:
+    extends: gemini-2.5-flash-family
+    notes: "Gemini 2.5 Flash-Lite preview from September 2025"
+
+  # Gemini 2.5 Computer Use
+  models/gemini-2.5-computer-use-preview-10-2025:
+    extends: gemini-2.5-flash-family
+    notes: "Computer use preview model for desktop automation"
+
+  # Native Audio Models
+  models/gemini-2.5-flash-native-audio-latest:
+    extends: audio-family
+    notes: "Native audio model for Live API - latest"
+
+  models/gemini-2.5-flash-native-audio-preview-09-2025:
+    extends: audio-family
+    notes: "Native audio model for Live API from September 2025"
+
+  models/gemini-2.5-flash-native-audio-preview-12-2025:
+    extends: audio-family
+    notes: "Native audio model for Live API with improved function calling"
+
+  # ===========================================
+  # Gemini 2.0 Series (Still available)
+  # ===========================================
+
+  models/gemini-2.0-flash:
+    extends: gemini-2.0-flash-family
+    notes: "Gemini 2.0 Flash - predecessor to 2.5"
+
+  models/gemini-2.0-flash-001:
+    extends: gemini-2.0-flash-family
+    notes: "Gemini 2.0 Flash versioned"
+
+  models/gemini-2.0-flash-exp:
+    extends: gemini-2.0-flash-family
+    notes: "Gemini 2.0 Flash experimental"
+
+  models/gemini-2.0-flash-lite:
+    extends: gemini-2.0-flash-family
+    notes: "Gemini 2.0 Flash Lite - cost optimized"
+
+  models/gemini-2.0-flash-lite-001:
+    extends: gemini-2.0-flash-family
+    notes: "Gemini 2.0 Flash Lite versioned"
+
+  models/gemini-2.0-flash-lite-preview:
+    extends: gemini-2.0-flash-family
+    notes: "Gemini 2.0 Flash Lite preview"
+
+  models/gemini-2.0-flash-lite-preview-02-05:
+    extends: gemini-2.0-flash-family
+    notes: "Gemini 2.0 Flash Lite preview from February 2025"
+
+  # ===========================================
+  # Alias Models (Latest pointers)
+  # ===========================================
+
+  models/gemini-flash-latest:
+    extends: gemini-2.5-flash-family
+    notes: "Alias pointing to latest Gemini Flash model"
+
+  models/gemini-flash-lite-latest:
+    extends: gemini-2.5-flash-family
+    notes: "Alias pointing to latest Gemini Flash Lite model"
+
+  models/gemini-pro-latest:
+    extends: gemini-2.5-pro-family
+    notes: "Alias pointing to latest Gemini Pro model"
+
+  # ===========================================
+  # Experimental and Special Models
+  # ===========================================
+
+  models/gemini-exp-1206:
+    extends: gemini-2.5-flash-family
+    notes: "Experimental Gemini model from December 2024"
+
+  models/gemini-robotics-er-1.5-preview:
+    extends: gemini-2.5-flash-family
+    notes: "Robotics-focused preview model"
+
+  models/deep-research-pro-preview-12-2025:
+    features:
+      TextGeneration: true
+      Thinking: true
+      Image: true
+      Document: true
+      Tools: true
+      WebSearchTool: true
+    notes: "Deep research model with extended thinking"
+
+  models/nano-banana-pro-preview:
+    extends: gemini-2.5-flash-family
+    notes: "Experimental small model"
+
+  # ===========================================
+  # Gemma 3 Series (Open-weight models)
+  # ===========================================
+
+  models/gemma-3-1b-it:
+    extends: gemma-family
+    notes: "Gemma 3 1B instruction-tuned"
+
+  models/gemma-3-4b-it:
+    extends: gemma-family
+    notes: "Gemma 3 4B instruction-tuned"
+
+  models/gemma-3-12b-it:
+    extends: gemma-family
+    notes: "Gemma 3 12B instruction-tuned"
+
+  models/gemma-3-27b-it:
+    extends: gemma-family
+    notes: "Gemma 3 27B instruction-tuned"
+
+  models/gemma-3n-e2b-it:
+    extends: gemma-family
+    notes: "Gemma 3n e2b instruction-tuned"
+
+  models/gemma-3n-e4b-it:
+    extends: gemma-family
+    notes: "Gemma 3n e4b instruction-tuned"
+
+  # ===========================================
+  # Embedding Models
+  # ===========================================
+
+  models/text-embedding-004:
+    extends: embedding-family
+    notes: "Latest text embedding model"
+    source: "https://ai.google.dev/models/gemini#text-embedding"
+
+  models/gemini-embedding-001:
+    extends: embedding-family
+    notes: "Gemini embedding model v1"
+
+  models/gemini-embedding-exp:
+    extends: embedding-family
+    notes: "Experimental Gemini embedding"
+
+  models/gemini-embedding-exp-03-07:
+    extends: embedding-family
+    notes: "Experimental embedding model from March 2025"
+
+  # ===========================================
+  # Imagen 4.0 (Image Generation)
+  # ===========================================
+
+  models/imagen-4.0-generate-001:
+    extends: image-gen-family
+    notes: "Imagen 4.0 image generation"
+
+  models/imagen-4.0-generate-preview-06-06:
+    extends: image-gen-family
+    notes: "Imagen 4.0 preview from June 2025"
+
+  models/imagen-4.0-ultra-generate-001:
+    extends: image-gen-family
+    notes: "Imagen 4.0 Ultra - highest quality"
+
+  models/imagen-4.0-ultra-generate-preview-06-06:
+    extends: image-gen-family
+    notes: "Imagen 4.0 Ultra preview"
+
+  models/imagen-4.0-fast-generate-001:
+    extends: image-gen-family
+    notes: "Imagen 4.0 Fast - optimized for speed"
+
+  # ===========================================
+  # Veo (Video Generation)
+  # ===========================================
+
+  models/veo-2.0-generate-001:
+    extends: video-gen-family
+    notes: "Veo 2.0 video generation"
+
+  models/veo-3.0-generate-001:
+    extends: video-gen-family
+    notes: "Veo 3.0 video generation"
+
+  models/veo-3.0-fast-generate-001:
+    extends: video-gen-family
+    notes: "Veo 3.0 Fast - optimized for speed"
+
+  models/veo-3.1-generate-preview:
+    extends: video-gen-family
+    notes: "Veo 3.1 preview"
+
+  models/veo-3.1-fast-generate-preview:
+    extends: video-gen-family
+    notes: "Veo 3.1 Fast preview"
+
+  # ===========================================
+  # Local/Special Models
+  # ===========================================
+
+  whisper-local:
+    extends: transcription-family
+    notes: "Local whisper transcription"
+
+  fastembed:
+    extends: embedding-family
+    notes: "Fast local embedding model"

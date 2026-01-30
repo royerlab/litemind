@@ -71,7 +71,11 @@ class Image(MediaURI):
             # Create temporary file:
             import tempfile
 
-            filepath = tempfile.NamedTemporaryFile(delete=False).name + ".png"
+            from litemind.utils.temp_file_manager import register_temp_file
+
+            filepath = register_temp_file(
+                tempfile.NamedTemporaryFile(delete=False).name + ".png"
+            )
 
         # Write
         image.save(filepath, format)
@@ -86,7 +90,7 @@ class Image(MediaURI):
 
     def load_from_uri(self):
 
-        # Download the video file from the URI to a local file:
+        # Download the image file from the URI to a local file:
         local_file = uri_to_local_file_path(self.uri)
 
         # load the image using PIL:

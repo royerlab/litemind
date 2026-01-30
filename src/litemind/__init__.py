@@ -1,4 +1,4 @@
-__version__ = "2025.07.26"
+__version__ = "2026.1.30"
 
 from arbol import aprint, asection
 
@@ -66,7 +66,7 @@ for vecdb_class in list(VECDB_IMPLEMENTATIONS):
     try:
         # Check specific dependencies based on the vector database class
         if vecdb_class == QdrantVectorDatabase:
-            import qdrant_client
+            import qdrant_client  # noqa: F401
         # InMemoryVectorDatabase doesn't require external dependencies
 
     except ImportError as e:

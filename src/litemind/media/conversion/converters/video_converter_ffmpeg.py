@@ -77,7 +77,9 @@ def convert_video_to_info_frames_and_audio(
     video_path = uri_to_local_file_path(media_uri)
 
     # define a temporary folder:
-    output_dir = tempfile.mkdtemp()
+    from litemind.utils.temp_file_manager import register_temp_dir
+
+    output_dir = register_temp_dir(tempfile.mkdtemp())
 
     # Extract frames and audio
     frames, audio_path = extract_frames_and_audio(
@@ -132,7 +134,7 @@ def convert_video_to_info_frames_and_audio(
 
     # Append audio to the message if it exists:
     if audio_path is not None:
-        media_list.append(Text(f"The video's audio is provided separately below:\n"))
+        media_list.append(Text("The video's audio is provided separately below:\n"))
         # Append audio to the message
         media_list.append(Audio("file://" + audio_path))
 

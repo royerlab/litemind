@@ -100,7 +100,7 @@ class Task(ABC):
         of the task is valid.
         The result is a string that is returned by the agent after executing the task.
         The validation can be based on the content of the result, its length, or any other criteria.
-        Checking for typicall 'LLM' artifacts or mistakes is a good example of validation.
+        Checking for typical 'LLM' artifacts or mistakes is a good example of validation.
         If the result is valid, the method should return True, otherwise False.
 
         Parameters
@@ -282,6 +282,8 @@ class Task(ABC):
             return
 
     def _store_prompt(self, prompt: str):
+        # Clear the cache since we're updating the prompt file
+        self._load_prompt.cache_clear()
         # if the file exists already, then delete it:
         if os.path.exists(self._get_prompt_file_path()):
             os.remove(self._get_prompt_file_path())
@@ -315,13 +317,13 @@ class Task(ABC):
         return result
 
     def _get_prompt_file_path(self) -> str:
-        return f"{self.folder}/{self.name}.prompt.md"
+        return os.path.join(self.folder, f"{self.name}.prompt.md")
 
     def _get_result_file_path(self) -> str:
-        return f"{self.folder}/{self.name}.md"
+        return os.path.join(self.folder, f"{self.name}.md")
 
     def _get_pdf_file_path(self) -> str:
-        return f"{self.folder}/{self.name}.pdf"
+        return os.path.join(self.folder, f"{self.name}.pdf")
 
     def get_folder_name(self) -> str:
         """

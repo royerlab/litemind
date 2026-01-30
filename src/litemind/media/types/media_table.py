@@ -49,7 +49,11 @@ class Table(MediaURI):
             # Create temporary file:
             import tempfile
 
-            filepath = tempfile.NamedTemporaryFile(delete=False).name
+            from litemind.utils.temp_file_manager import register_temp_file
+
+            filepath = register_temp_file(
+                tempfile.NamedTemporaryFile(delete=False).name
+            )
 
         # If dataframe is a numpy array, or array-like, convert to DataFrame:
         if isinstance(table, (list, tuple)) or hasattr(table, "__array__"):

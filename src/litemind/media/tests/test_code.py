@@ -37,7 +37,7 @@ class TestCode:
     def test_init_invalid_lang(self):
         """Test initialization with non-string lang raises ValueError."""
         with pytest.raises(
-            ValueError, match="Parameter 'lang' must be a string, not <class 'str'>"
+            ValueError, match="Parameter 'lang' must be a string, not <class 'int'>"
         ):
             Code(code="print('test')", lang=123)
 

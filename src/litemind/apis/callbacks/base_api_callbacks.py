@@ -317,7 +317,7 @@ class BaseApiCallbacks(ABC):
         Parameters
         ----------
         document_uri: str
-            The video URI.
+            The document URI.
         description: str
             The description.
         kwargs: dict

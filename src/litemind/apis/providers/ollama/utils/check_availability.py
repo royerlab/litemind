@@ -4,6 +4,12 @@ from arbol import aprint
 _cached_check_ollama_api_availability = None
 
 
+def clear_availability_cache():
+    """Clear the cached availability check result."""
+    global _cached_check_ollama_api_availability
+    _cached_check_ollama_api_availability = None
+
+
 def check_ollama_api_availability(client):
     """
     Check if the Ollama API is available by sending a test message to the API.

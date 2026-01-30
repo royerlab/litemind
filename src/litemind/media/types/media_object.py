@@ -27,7 +27,7 @@ class Object(MediaDefault):
 
         # Validate Object here:
         if object_ is None:
-            raise ValueError(f"Object cannot be None")
+            raise ValueError("Object cannot be None")
         elif not isinstance(object_, BaseModel):
             raise ValueError(
                 f"Object must be a Pydantic BaseModel, got {type(object_)}"

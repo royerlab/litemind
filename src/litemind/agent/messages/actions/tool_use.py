@@ -25,23 +25,21 @@ class ToolUse(ActionBase):
         """
 
         self.tool_name = tool_name
-        self.arguments = arguments
+        self.arguments = arguments if arguments is not None else {}
         self.id = id
 
         # Add the result attribute
         self.result = result
 
     def __str__(self):
-        arguments = ", ".join(
-            [f"{key}={value}" for key, value in self.arguments.items()]
-        )
+        args = self.arguments or {}
+        arguments = ", ".join([f"{key}={value}" for key, value in args.items()])
         return f"{self.tool_name}({arguments})={self.result}"
 
     def __repr__(self):
-        # Format self.argument as a stringof key=value pairs:
-        arguments = ", ".join(
-            [f"{key}={value}" for key, value in self.arguments.items()]
-        )
+        # Format self.argument as a string of key=value pairs:
+        args = self.arguments or {}
+        arguments = ", ".join([f"{key}={value}" for key, value in args.items()])
         return f"ToolUse(tool={self.tool_name}, arguments={arguments}, result={str(self.result)}, id={self.id})"
 
     def pretty_string(self):
@@ -53,7 +51,6 @@ class ToolUse(ActionBase):
         str
             A pretty string representation of the tool use.
         """
-        arguments = ", ".join(
-            [f"{key}={value}" for key, value in self.arguments.items()]
-        )
+        args = self.arguments or {}
+        arguments = ", ".join([f"{key}={value}" for key, value in args.items()])
         return f"{self.tool_name}({arguments}) -> {str(self.result)} "

@@ -41,16 +41,26 @@ class Conversation:
 
     def clear_all(self):
         """
-        Clear all messages in the conversation.
+        Clear both system and standard messages in the conversation.
         """
         self.system_messages = []
-        self.clear_conversation()
+        self.clear_standard_messages()
 
-    def clear_conversation(self):
+    def clear_standard_messages(self):
         """
-        Clear all messages in the conversation.
+        Clear standard (non-system) messages in the conversation.
         """
         self.standard_messages = []
+
+    # Backwards compatibility alias
+    def clear_conversation(self):
+        """
+        Clear standard messages in the conversation.
+
+        .. deprecated::
+            Use :meth:`clear_standard_messages` instead.
+        """
+        self.clear_standard_messages()
 
     def append(self, message: Message):
         """

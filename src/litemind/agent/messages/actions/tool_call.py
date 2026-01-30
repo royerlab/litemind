@@ -19,20 +19,18 @@ class ToolCall(ActionBase):
         """
 
         self.tool_name = tool_name
-        self.arguments = arguments
+        self.arguments = arguments if arguments is not None else {}
         self.id = id
 
     def __str__(self):
-        arguments = ", ".join(
-            [f"{key}={value}" for key, value in self.arguments.items()]
-        )
+        args = self.arguments or {}
+        arguments = ", ".join([f"{key}={value}" for key, value in args.items()])
         return f"{self.tool_name}({arguments})"
 
     def __repr__(self):
-        arguments = ", ".join(
-            [f"{key}={value}" for key, value in self.arguments.items()]
-        )
-        return f"ToolUse(tool={self.tool_name}, arguments={arguments}, id={self.id})"
+        args = self.arguments or {}
+        arguments = ", ".join([f"{key}={value}" for key, value in args.items()])
+        return f"ToolCall(tool={self.tool_name}, arguments={arguments}, id={self.id})"
 
     def pretty_string(self):
         """
@@ -43,7 +41,6 @@ class ToolCall(ActionBase):
         str
             A pretty string representation of the tool call.
         """
-        arguments = ", ".join(
-            [f"{key}={value}" for key, value in self.arguments.items()]
-        )
+        args = self.arguments or {}
+        arguments = ", ".join([f"{key}={value}" for key, value in args.items()])
         return f"{self.tool_name}({arguments}) "

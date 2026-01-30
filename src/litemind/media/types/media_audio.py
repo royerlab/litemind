@@ -50,7 +50,11 @@ class Audio(MediaURI):
             # Create temporary file:
             import tempfile
 
-            filepath = tempfile.NamedTemporaryFile(delete=False).name + ".wav"
+            from litemind.utils.temp_file_manager import register_temp_file
+
+            filepath = register_temp_file(
+                tempfile.NamedTemporaryFile(delete=False).name + ".wav"
+            )
 
         if file_format is None:
             # Get file extension from filepath:
@@ -70,7 +74,7 @@ class Audio(MediaURI):
 
     def load_from_uri(self):
 
-        # Download the video file from the URI to a local file:
+        # Download the audio file from the URI to a local file:
         local_file = uri_to_local_file_path(self.uri)
 
         # load the audio file using soundfile:

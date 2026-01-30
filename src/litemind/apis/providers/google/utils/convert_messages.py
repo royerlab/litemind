@@ -1,7 +1,6 @@
 import time
-from typing import List, Union
+from typing import TYPE_CHECKING, List, Union
 
-from arbol import aprint
 from PIL.Image import Image as PILImageType  # Correct type import
 
 from litemind.agent.messages.actions.action_base import ActionBase
@@ -14,15 +13,25 @@ from litemind.media.types.media_image import Image
 from litemind.media.types.media_text import Text
 from litemind.media.types.media_video import Video
 
+if TYPE_CHECKING:
+    from google.genai import Client
+
 
 def convert_messages_for_gemini(
     messages: List[Message],
+    client: "Client",
 ) -> List[Union[str, PILImageType]]:  # Use PILImageType correctly
     """
     Convert messages into a format suitable for Gemini, supporting both text and image inputs.
+
+    Parameters
+    ----------
+    messages : List[Message]
+        List of messages to convert.
+    client : Client
+        The google-genai Client instance for file uploads.
     """
-    # Upload the video file to Gemini:
-    import google.generativeai as genai
+    from google.genai import types
 
     # Initialize the list of messages:
     gemini_messages = []
@@ -51,7 +60,9 @@ def convert_messages_for_gemini(
                 try:
                     # Open the image, convert it to PNG format, and append it to the list:
                     with image.open_pil_image(normalise_to_png=True) as img:
-                        gemini_messages.append(img)
+                        # Copy image to avoid file handle closure issues
+                        img_copy = img.copy()
+                        gemini_messages.append(img_copy)
 
                 except Exception as e:
                     raise ValueError(f"Could not open image '{image.uri}': {e}")
@@ -66,12 +77,12 @@ def convert_messages_for_gemini(
                     local_path = audio.to_local_file_path()
 
                     # Upload the audio file to Gemini:
-                    genai_audio_file = genai.upload_file(local_path)
+                    genai_audio_file = client.files.upload(file=local_path)
 
                     # Wait for the file to finish processing:
                     while genai_audio_file.state.name == "PROCESSING":
                         time.sleep(0.1)
-                        genai_audio_file = genai.get_file(genai_audio_file.name)
+                        genai_audio_file = client.files.get(name=genai_audio_file.name)
 
                     # Append the uploaded file to the list of messages:
                     gemini_messages.append(genai_audio_file)
@@ -89,12 +100,12 @@ def convert_messages_for_gemini(
                     local_path = video.to_local_file_path()
 
                     # Upload the video file to Gemini:
-                    genai_video_file = genai.upload_file(local_path)
+                    genai_video_file = client.files.upload(file=local_path)
 
                     # Wait for the file to finish processing:
                     while genai_video_file.state.name == "PROCESSING":
                         time.sleep(0.1)
-                        genai_video_file = genai.get_file(genai_video_file.name)
+                        genai_video_file = client.files.get(name=genai_video_file.name)
 
                     # Append the uploaded file to the list of messages:
                     gemini_messages.append(genai_video_file)
@@ -111,19 +122,22 @@ def convert_messages_for_gemini(
                     # Get the tool use object:
                     tool_use: ToolUse = tool_action
 
-                    # Build a functionResponse part
-                    func_response = genai.protos.Part(
-                        function_response=genai.protos.FunctionResponse(
-                            name=tool_use.tool_name,
-                            response={"result": tool_use.result},
-                        )
+                    # Build a FunctionResponse part using new SDK types
+                    func_response = types.Part.from_function_response(
+                        name=tool_use.tool_name,
+                        response={"result": tool_use.result},
                     )
 
                     # Add tool use to the content:
                     gemini_messages.append(func_response)
                 elif isinstance(tool_action, ToolCall):
-                    # Ignoring tool calls.
-                    pass
+                    # Build a FunctionCall part for the model's tool request
+                    tool_call: ToolCall = tool_action
+                    func_call = types.Part.from_function_call(
+                        name=tool_call.tool_name,
+                        args=tool_call.arguments,
+                    )
+                    gemini_messages.append(func_call)
 
                 else:
                     raise ValueError(
@@ -134,13 +148,3 @@ def convert_messages_for_gemini(
                 raise ValueError(f"Unsupported block type: {block.get_type()}")
 
     return gemini_messages
-
-
-def list_and_delete_uploaded_files():
-    import google.generativeai as genai
-
-    for f in genai.list_files():
-        if f.mime_type.startswith("video/"):
-            aprint("  ", f.name)
-            f.delete()
-            aprint(f"Deleted {f.name}")

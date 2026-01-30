@@ -1,3 +1,15 @@
+"""
+Live API validation tests for ModelFeatureValidator.
+
+These tests validate that specific models support expected features
+by running live API tests. They are useful for:
+- Validating registry data against live APIs
+- Discovering features for new models
+- Detecting API changes or regressions
+
+Note: These tests require valid API keys and make live API calls.
+"""
+
 from typing import Type
 
 import pytest
@@ -5,12 +17,12 @@ from arbol import aprint, asection
 
 from litemind import AnthropicApi, GeminiApi, OpenAIApi
 from litemind.apis.base_api import BaseApi, ModelFeatures
-from litemind.apis.feature_scanner import ModelFeatureScanner
+from litemind.apis.feature_validator import ModelFeatureValidator
 
 
 @pytest.fixture
 def scanner():
-    return ModelFeatureScanner(print_exception_stacktraces=True)
+    return ModelFeatureValidator(print_exception_stacktraces=True)
 
 
 def test_scan_openai_api_check_specifics(scanner):
@@ -20,8 +32,10 @@ def test_scan_openai_api_check_specifics(scanner):
             aprint(f"- {model}")
 
     # Query supported features for a specific model
+    # Note: Deep research models (e.g., o4-mini-deep-research-medium) are excluded
+    # because they require specific tools (web_search_preview, mcp, or file_search)
+    # and don't support plain TextGeneration.
     model_feature_map = {
-        "o4-mini-deep-research-medium": [ModelFeatures.TextGeneration],
         "gpt-4.1": [
             ModelFeatures.TextGeneration,
             ModelFeatures.StructuredTextGeneration,

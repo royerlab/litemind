@@ -13,7 +13,7 @@ def is_fastembed_available() -> bool:
         import importlib.util
 
         return importlib.util.find_spec("fastembed") is not None
-    except:
+    except ImportError:
         return False
 
 

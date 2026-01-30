@@ -22,7 +22,7 @@ class ObjectService(rpyc.Service):
 
     def on_connect(self, conn):
         super().on_connect(conn)
-        aprint(f"🔗 Client connected")
+        aprint("🔗 Client connected")
 
     def on_disconnect(self, conn):
         super().on_disconnect(conn)
@@ -34,8 +34,8 @@ class ObjectService(rpyc.Service):
             obj = self._exposed_objects.get(name)
             if obj is not None:
                 aprint(f"📤 Serving object '{name}' to client")
-                # Add a debugging wrapper to see what arguments the agent receives
-                return _DebuggingWrapper(obj)
+                # Wrap the object to handle RPyC netref arguments
+                return _ServerWrapper(obj)
             else:
                 aprint(
                     f"❓ Object '{name}' not found in {list(self._exposed_objects.keys())}"
@@ -77,7 +77,7 @@ class Server:
         self._exposed_objects: Dict[str, object] = {}
         self._server = None
         self._thread = None
-        aprint(f"✨ LiteMind RPC Server initialized. Ready to expose objects.")
+        aprint("✨ LiteMind RPC Server initialized. Ready to expose objects.")
 
     def get_port(self) -> int:
         return self.port
@@ -111,9 +111,10 @@ class Server:
                 hostname=self.host,
                 port=self.port,
                 protocol_config={
-                    "allow_all_attrs": True,
-                    "allow_pickle": True,
-                    "sync_request_timeout": 30,
+                    "allow_pickle": True,  # Required for complex objects like Messages
+                    "allow_all_attrs": True,  # Required for attribute access on netrefs
+                    "allow_public_attrs": True,
+                    "sync_request_timeout": 300,  # 5 minutes for long-running API calls
                 },
             )
 
@@ -155,34 +156,43 @@ class Server:
         )
 
 
-class _DebuggingWrapper:
+class _ServerWrapper:
     """
-    Server-side wrapper to debug what arguments the agent receives.
+    Server-side wrapper that materializes RPyC netref arguments before passing
+    them to the wrapped object. Uses obtain() to ensure complex objects are
+    properly copied by value.
     """
 
     def __init__(self, wrapped_obj):
         self._wrapped_obj = wrapped_obj
 
     def __call__(self, *args, **kwargs):
-        """Debug arguments before calling the wrapped object."""
-        import inspect
+        """Materialize remote arguments and call the wrapped object."""
+        import rpyc.utils.classic
 
-        aprint(f"🔍 Server received {len(args)} args and {len(kwargs)} kwargs")
+        # Materialize all arguments from netrefs to local copies
+        processed_args = []
+        for arg in args:
+            try:
+                # obtain() pulls remote objects by value
+                processed_args.append(rpyc.utils.classic.obtain(arg))
+            except Exception:
+                # Fallback if obtain fails
+                processed_args.append(arg)
 
+        processed_kwargs = {}
         for key, value in kwargs.items():
-            aprint(
-                f"🔍 Server kwarg '{key}': {value} (type: {type(value)}, id: {id(value)})"
-            )
-            if key == "response_format":
-                aprint(f"🔍 response_format is class? {inspect.isclass(value)}")
-                if hasattr(value, "__module__"):
-                    aprint(f"🔍 response_format module: {value.__module__}")
-                if hasattr(value, "__name__"):
-                    aprint(f"🔍 response_format name: {value.__name__}")
+            try:
+                processed_kwargs[key] = rpyc.utils.classic.obtain(value)
+            except Exception:
+                processed_kwargs[key] = value
 
-        # Call the wrapped object normally
-        return self._wrapped_obj(*args, **kwargs)
+        return self._wrapped_obj(*processed_args, **processed_kwargs)
 
     def __getattr__(self, name):
         """Forward all other attribute access to the wrapped object."""
         return getattr(self._wrapped_obj, name)
+
+    def __getitem__(self, key):
+        """Forward item access to the wrapped object (for dict-like objects)."""
+        return self._wrapped_obj[key]

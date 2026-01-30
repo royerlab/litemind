@@ -1,0 +1,536 @@
+# OpenAI Model Registry
+# Curated model capabilities and metadata for OpenAI API
+# Last updated: 2026-01-27
+# Cross-referenced with live API response
+
+metadata:
+  provider: OpenAIApi
+  registry_version: "2.0"
+  last_updated: "2026-01-27"
+
+model_families:
+  gpt-5-family:
+    features:
+      TextGeneration: true
+      StructuredTextGeneration: true
+      Image: true
+      Tools: true
+      MCPTool: true
+      WebSearchTool: true
+    context_window: 1000000
+    max_output_tokens: 65536
+
+  gpt-4.1-family:
+    features:
+      TextGeneration: true
+      StructuredTextGeneration: true
+      Image: true
+      Tools: true
+      MCPTool: true
+      WebSearchTool: true
+    context_window: 1000000
+    max_output_tokens: 32768
+
+  gpt-4o-family:
+    features:
+      TextGeneration: true
+      StructuredTextGeneration: true
+      Image: true
+      Tools: true
+      MCPTool: true
+    context_window: 128000
+    max_output_tokens: 16384
+
+  gpt-4-family:
+    features:
+      TextGeneration: true
+      Image: true
+      Tools: true
+      MCPTool: true
+    context_window: 128000
+    max_output_tokens: 4096
+
+  gpt-3.5-family:
+    features:
+      TextGeneration: true
+      Tools: true
+      MCPTool: true
+    context_window: 16384
+    max_output_tokens: 4096
+
+  o-series-family:
+    features:
+      TextGeneration: true
+      StructuredTextGeneration: true
+      Thinking: true
+      Image: true
+      Tools: true
+      MCPTool: true
+    context_window: 200000
+    max_output_tokens: 100000
+
+  embedding-family:
+    features:
+      TextEmbeddings: true
+      ImageEmbeddings: true
+      AudioEmbeddings: true
+      VideoEmbeddings: true
+      DocumentEmbeddings: true
+
+  tts-family:
+    features:
+      AudioGeneration: true
+
+  image-gen-family:
+    features:
+      ImageGeneration: true
+
+  transcription-family:
+    features:
+      AudioTranscription: true
+
+  audio-family:
+    features:
+      TextGeneration: true
+      Audio: true
+
+  realtime-family:
+    features:
+      TextGeneration: true
+      Audio: true
+
+models:
+  # ===========================================
+  # GPT-5 Series (Latest flagship - 2025/2026)
+  # ===========================================
+
+  gpt-5:
+    extends: gpt-5-family
+    notes: "GPT-5 flagship model"
+
+  gpt-5-chat-latest:
+    extends: gpt-5-family
+    notes: "GPT-5 chat-optimized latest"
+
+  gpt-5-codex:
+    extends: gpt-5-family
+    notes: "GPT-5 code-optimized"
+
+  gpt-5-mini:
+    extends: gpt-5-family
+    notes: "GPT-5 smaller variant"
+
+  gpt-5-nano:
+    extends: gpt-5-family
+    notes: "GPT-5 smallest variant"
+
+  gpt-5-pro:
+    extends: gpt-5-family
+    notes: "GPT-5 professional variant"
+
+  gpt-5-search-api:
+    extends: gpt-5-family
+    notes: "GPT-5 search-optimized"
+
+  # GPT-5.1 Series
+  gpt-5.1:
+    extends: gpt-5-family
+    notes: "GPT-5.1 model"
+
+  gpt-5.1-chat-latest:
+    extends: gpt-5-family
+    notes: "GPT-5.1 chat-optimized latest"
+
+  gpt-5.1-codex:
+    extends: gpt-5-family
+    notes: "GPT-5.1 code-optimized"
+
+  gpt-5.1-codex-max:
+    extends: gpt-5-family
+    notes: "GPT-5.1 codex maximum capability"
+
+  gpt-5.1-codex-mini:
+    extends: gpt-5-family
+    notes: "GPT-5.1 codex smaller variant"
+
+  # GPT-5.2 Series
+  gpt-5.2:
+    extends: gpt-5-family
+    notes: "GPT-5.2 latest model"
+
+  gpt-5.2-chat-latest:
+    extends: gpt-5-family
+    notes: "GPT-5.2 chat-optimized latest"
+
+  gpt-5.2-codex:
+    extends: gpt-5-family
+    notes: "GPT-5.2 code-optimized"
+
+  gpt-5.2-pro:
+    extends: gpt-5-family
+    notes: "GPT-5.2 professional variant"
+
+  # ===========================================
+  # GPT-4.1 Series
+  # ===========================================
+
+  gpt-4.1:
+    extends: gpt-4.1-family
+    notes: "GPT-4.1 with improved instruction following and 1M context"
+    source: "https://platform.openai.com/docs/models/gpt-4.1"
+
+  gpt-4.1-mini:
+    extends: gpt-4.1-family
+    notes: "Smaller, faster GPT-4.1 variant"
+
+  gpt-4.1-nano:
+    extends: gpt-4.1-family
+    features:
+      WebSearchTool: false
+    notes: "Smallest GPT-4.1 variant for high throughput"
+
+  # ===========================================
+  # O4 Series (Reasoning models - only variants exist)
+  # ===========================================
+
+  o4-mini-low:
+    extends: o-series-family
+    notes: "o4-mini with low reasoning effort"
+
+  o4-mini-medium:
+    extends: o-series-family
+    notes: "o4-mini with medium reasoning effort"
+
+  o4-mini-high:
+    extends: o-series-family
+    notes: "o4-mini with high reasoning effort"
+
+  # O4 Deep Research
+  o4-mini-deep-research-low:
+    features:
+      TextGeneration: true
+      Thinking: true
+      Image: true
+      Document: true
+      Tools: true
+      MCPTool: true
+      WebSearchTool: true
+    notes: "o4-mini deep research with low effort"
+
+  o4-mini-deep-research-medium:
+    features:
+      TextGeneration: true
+      Thinking: true
+      Image: true
+      Document: true
+      Tools: true
+      MCPTool: true
+      WebSearchTool: true
+    notes: "o4-mini deep research with medium effort"
+
+  o4-mini-deep-research-high:
+    features:
+      TextGeneration: true
+      Thinking: true
+      Image: true
+      Document: true
+      Tools: true
+      MCPTool: true
+      WebSearchTool: true
+    notes: "o4-mini deep research with high effort"
+
+  # ===========================================
+  # O3 Series (Reasoning models - only variants exist)
+  # ===========================================
+
+  o3-low:
+    extends: o-series-family
+    notes: "O3 with low reasoning effort"
+
+  o3-medium:
+    extends: o-series-family
+    notes: "O3 with medium reasoning effort"
+
+  o3-high:
+    extends: o-series-family
+    notes: "O3 with high reasoning effort"
+
+  o3-mini-low:
+    extends: o-series-family
+    features:
+      Image: false
+    notes: "O3-mini with low reasoning effort"
+
+  o3-mini-medium:
+    extends: o-series-family
+    features:
+      Image: false
+    notes: "O3-mini with medium reasoning effort"
+
+  o3-mini-high:
+    extends: o-series-family
+    features:
+      Image: false
+    notes: "O3-mini with high reasoning effort"
+
+  # O3 Deep Research
+  o3-deep-research-low:
+    features:
+      TextGeneration: true
+      Thinking: true
+      Image: true
+      Document: true
+      Tools: true
+      MCPTool: true
+      WebSearchTool: true
+    notes: "O3 deep research with low effort"
+
+  o3-deep-research-medium:
+    features:
+      TextGeneration: true
+      Thinking: true
+      Image: true
+      Document: true
+      Tools: true
+      MCPTool: true
+      WebSearchTool: true
+    notes: "O3 deep research with medium effort"
+
+  o3-deep-research-high:
+    features:
+      TextGeneration: true
+      Thinking: true
+      Image: true
+      Document: true
+      Tools: true
+      MCPTool: true
+      WebSearchTool: true
+    notes: "O3 deep research with high effort"
+
+  # ===========================================
+  # O1 Series (Reasoning models - only variants exist)
+  # ===========================================
+
+  o1-low:
+    extends: o-series-family
+    notes: "O1 with low reasoning effort"
+
+  o1-medium:
+    extends: o-series-family
+    notes: "O1 with medium reasoning effort"
+
+  o1-high:
+    extends: o-series-family
+    notes: "O1 with high reasoning effort"
+
+  # ===========================================
+  # GPT-4o Series
+  # ===========================================
+
+  gpt-4o:
+    extends: gpt-4o-family
+    features:
+      WebSearchTool: true
+    notes: "GPT-4o multimodal model"
+    source: "https://platform.openai.com/docs/models/gpt-4o"
+
+  gpt-4o-mini:
+    extends: gpt-4o-family
+    features:
+      WebSearchTool: true
+    notes: "Smaller GPT-4o variant"
+    source: "https://platform.openai.com/docs/models/gpt-4o-mini"
+
+  chatgpt-4o-latest:
+    extends: gpt-4o-family
+    features:
+      Tools: false
+    notes: "ChatGPT-optimized version, tools may be limited"
+
+  gpt-4o-audio-preview:
+    extends: audio-family
+    context_window: 128000
+    max_output_tokens: 16384
+    notes: "Audio-capable GPT-4o"
+    source: "https://platform.openai.com/docs/models/gpt-4o-audio"
+
+  gpt-4o-mini-audio-preview:
+    extends: audio-family
+    context_window: 128000
+    max_output_tokens: 16384
+    notes: "Audio-capable GPT-4o-mini"
+
+  gpt-4o-realtime-preview:
+    extends: realtime-family
+    notes: "Realtime API model"
+
+  gpt-4o-mini-realtime-preview:
+    extends: realtime-family
+    notes: "Realtime API model mini"
+
+  gpt-4o-search-preview:
+    features:
+      TextGeneration: true
+      Image: true
+      WebSearchTool: true
+    notes: "Search-optimized preview model"
+
+  gpt-4o-mini-search-preview:
+    features:
+      TextGeneration: true
+      Image: true
+      WebSearchTool: true
+    notes: "Search-optimized mini preview model"
+
+  gpt-4o-transcribe:
+    extends: transcription-family
+    notes: "Transcription-optimized GPT-4o"
+
+  gpt-4o-transcribe-diarize:
+    extends: transcription-family
+    notes: "Transcription with speaker diarization"
+
+  gpt-4o-mini-transcribe:
+    extends: transcription-family
+    notes: "Transcription-optimized GPT-4o-mini"
+
+  gpt-4o-mini-tts:
+    extends: tts-family
+    notes: "TTS-optimized GPT-4o-mini"
+
+  # ===========================================
+  # GPT-4 Series (Legacy)
+  # ===========================================
+
+  gpt-4:
+    extends: gpt-4-family
+    features:
+      Image: false
+    context_window: 8192
+    notes: "Original GPT-4"
+    source: "https://platform.openai.com/docs/models/gpt-4"
+
+  gpt-4-turbo:
+    extends: gpt-4-family
+    notes: "GPT-4 Turbo"
+    source: "https://platform.openai.com/docs/models/gpt-4-turbo"
+
+  gpt-4-turbo-preview:
+    extends: gpt-4-family
+    features:
+      Image: false
+    notes: "GPT-4 Turbo preview"
+
+  # ===========================================
+  # GPT-3.5 Series (Legacy)
+  # ===========================================
+
+  gpt-3.5-turbo:
+    extends: gpt-3.5-family
+    notes: "GPT-3.5 Turbo"
+    source: "https://platform.openai.com/docs/models/gpt-3-5"
+
+  gpt-3.5-turbo-16k:
+    extends: gpt-3.5-family
+    notes: "GPT-3.5 Turbo with 16k context"
+
+  gpt-3.5-turbo-instruct:
+    extends: gpt-3.5-family
+    notes: "GPT-3.5 Turbo instruct model"
+
+  # ===========================================
+  # Audio Models
+  # ===========================================
+
+  gpt-audio:
+    extends: audio-family
+    notes: "GPT Audio model"
+
+  gpt-audio-mini:
+    extends: audio-family
+    notes: "GPT Audio mini model"
+
+  # ===========================================
+  # Realtime Models
+  # ===========================================
+
+  gpt-realtime:
+    extends: realtime-family
+    notes: "GPT Realtime model"
+
+  gpt-realtime-mini:
+    extends: realtime-family
+    notes: "GPT Realtime mini model"
+
+  # ===========================================
+  # Embedding Models
+  # ===========================================
+
+  text-embedding-3-large:
+    extends: embedding-family
+    notes: "Latest large embedding model"
+    source: "https://platform.openai.com/docs/models/embeddings"
+
+  text-embedding-3-small:
+    extends: embedding-family
+    notes: "Latest small embedding model"
+
+  # ===========================================
+  # TTS Models
+  # ===========================================
+
+  tts-1:
+    extends: tts-family
+    source: "https://platform.openai.com/docs/models/tts"
+
+  tts-1-hd:
+    extends: tts-family
+    notes: "High-definition TTS model"
+
+  # ===========================================
+  # Image Generation Models
+  # ===========================================
+
+  dall-e-2:
+    extends: image-gen-family
+    source: "https://platform.openai.com/docs/models/dall-e"
+
+  dall-e-3:
+    extends: image-gen-family
+    notes: "Latest DALL-E model"
+
+  gpt-image-1:
+    extends: image-gen-family
+    notes: "GPT-based image generation"
+
+  gpt-image-1-mini:
+    extends: image-gen-family
+    notes: "GPT-based image generation mini"
+
+  gpt-image-1.5:
+    extends: image-gen-family
+    notes: "GPT-based image generation 1.5"
+
+  chatgpt-image-latest:
+    extends: image-gen-family
+    notes: "ChatGPT image generation latest"
+
+  # ===========================================
+  # Transcription Models
+  # ===========================================
+
+  whisper-1:
+    extends: transcription-family
+    source: "https://platform.openai.com/docs/models/whisper"
+
+  # ===========================================
+  # Local/Special Models
+  # ===========================================
+
+  whisper-local:
+    extends: transcription-family
+    notes: "Local whisper transcription"
+
+  fastembed:
+    extends: embedding-family
+    notes: "Fast local embedding model"

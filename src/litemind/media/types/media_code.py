@@ -7,7 +7,7 @@ class Code(MediaDefault):
     A media that stores computer code in a given language
     """
 
-    def __init__(self, code: str, lang: str):
+    def __init__(self, code: str, lang: str, **kwargs):
         """
         Create a new code information.
 
@@ -17,6 +17,8 @@ class Code(MediaDefault):
             The source code string.
         lang: str
             The programming language of the source code.
+        kwargs: dict
+            Additional attributes passed to MediaDefault.
 
         """
 
@@ -24,12 +26,15 @@ class Code(MediaDefault):
         if not isinstance(code, str):
             raise ValueError(f"Parameter 'code' must be a string, not {type(code)}")
 
-        # Set code attribute:
-        self.code = code
-
         # Check that it is really a string:
         if not isinstance(lang, str):
-            raise ValueError(f"Parameter 'lang' must be a string, not {type(code)}")
+            raise ValueError(f"Parameter 'lang' must be a string, not {type(lang)}")
+
+        # Call parent constructor:
+        super().__init__(**kwargs)
+
+        # Set code attribute:
+        self.code = code
 
         # Set language attribute:
         self.lang = lang.lower()

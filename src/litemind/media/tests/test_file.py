@@ -179,8 +179,8 @@ class TestFile:
         file_media = File(uri=uri)
 
         try:
-            # Get text media representation
-            text_media = file_media.to_markdown_text_media()
+            # Get text media representation - should fail
+            file_media.to_markdown_text_media()
 
             # Should not reach this point!
             assert False, "Expected an error but none was raised."

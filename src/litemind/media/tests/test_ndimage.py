@@ -186,8 +186,8 @@ class TestNdImage:
             # We should not get to this point:
             assert False, "Expected an exception due to insufficient dimensions"
 
-        except Exception as e:
-            assert True, "Expected an exception above due to insufficient dimensions"
+        except Exception:
+            pass  # Expected exception due to insufficient dimensions
 
         finally:
             # Clean up
