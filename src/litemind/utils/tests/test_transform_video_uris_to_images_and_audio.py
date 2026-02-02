@@ -4,6 +4,7 @@ from litemind.agent.messages.message import Message
 from litemind.media.types.media_audio import Audio
 from litemind.media.types.media_image import Image
 from litemind.ressources.media_resources import MediaResources
+from litemind.utils.ffmpeg_utils import is_ffmpeg_available
 from litemind.utils.transform_video_uris_to_images_and_audio import (
     transform_video_uris_to_images_and_audio,
 )
@@ -22,6 +23,9 @@ def create_message_with_video_uri():
 
 
 def test_transform_video_uris_to_images_and_audio(create_message_with_video_uri):
+    # Skip test if ffmpeg is not available:
+    if not is_ffmpeg_available():
+        pytest.skip("ffmpeg is not available. Skipping test.")
     message = create_message_with_video_uri
 
     # Transform the message:

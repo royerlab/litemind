@@ -283,21 +283,26 @@ class GeminiApi(DefaultApi):
 
         from google.genai import types
 
-        # Compute thinking budget as a fraction of max output tokens
-        thinking_budget = max(1024, max_output_tokens // 3)
-
         model_lower = model_name.lower()
 
-        # Gemini 3.x preview models don't fully support thinking_level yet
-        # Only apply thinking for non-preview gemini-3 models or explicit thinking models
+        # Gemini 3.x uses thinking_level instead of thinking_budget (per Google docs)
+        # - "low" may not consistently return thinking content
+        # - "medium" is only supported by Gemini 3 Flash, not Pro
+        # - "high" is supported by all Gemini 3 models and consistently returns thinking
+        # include_thoughts=True is required to get thinking content in the response
         if "gemini-3" in model_lower:
-            # Skip thinking for preview models as they may not support all thinking levels
-            if "preview" in model_lower:
-                return None
-            return types.ThinkingConfig(thinking_level="medium")
+            # Use "high" for consistent thinking output across Gemini 3 Pro and Flash
+            return types.ThinkingConfig(
+                thinking_level="high",
+                include_thoughts=True,
+            )
         else:
-            # Gemini 2.5 and other thinking models
-            return types.ThinkingConfig(thinking_budget=thinking_budget)
+            # Gemini 2.5 and other thinking models use thinking_budget
+            thinking_budget = max(1024, max_output_tokens // 3)
+            return types.ThinkingConfig(
+                thinking_budget=thinking_budget,
+                include_thoughts=True,
+            )
 
     def max_num_input_tokens(self, model_name: Optional[str] = None) -> int:
         if model_name is None:

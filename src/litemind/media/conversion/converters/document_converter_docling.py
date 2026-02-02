@@ -159,11 +159,20 @@ def initialize_docling_converter():
     return converter
 
 
-__default_docling_converter = initialize_docling_converter()
+# Lazy initialization - only create converter when actually needed
+__default_docling_converter = None
+
+
+def _get_docling_converter():
+    """Get or initialize the docling converter lazily."""
+    global __default_docling_converter
+    if __default_docling_converter is None:
+        __default_docling_converter = initialize_docling_converter()
+    return __default_docling_converter
 
 
 def convert_to_markdown(document_uri: str):
-    # Check if PyMuPDF is available, if not throw an error!
+    # Check if docling is available, if not throw an error!
     if not is_docling_available():
         raise ImportError(
             "docling is not available. Please install it to use this function."
@@ -172,8 +181,11 @@ def convert_to_markdown(document_uri: str):
     # Convert the document URI to a local file path.
     document_path = uri_to_local_file_path(document_uri)
 
+    # Get the converter (lazy initialization)
+    converter = _get_docling_converter()
+
     # Parse the document:
-    result = __default_docling_converter.convert(document_path)
+    result = converter.convert(document_path)
 
     # Get the document:
     document = result.document

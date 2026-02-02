@@ -13,7 +13,7 @@ model_families:
     features:
       TextGeneration: true
       StructuredTextGeneration: true
-      # Note: Thinking is disabled for preview models as they don't fully support it yet
+      Thinking: true
       Image: true
       Audio: true
       Video: true

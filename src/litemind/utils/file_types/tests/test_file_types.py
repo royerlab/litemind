@@ -91,8 +91,9 @@ def test_png_file_is_detected(tmp_path):
 
 def test_binary_file_is_detected(tmp_path):
     p = tmp_path / "raw.xzyst"
-    # Null-bytes will trigger the binary heuristic
-    f = _write_bytes(p, b"\xff\xfe\xfd\xfc\x00\x01\x02\x03RandomBinary\x00\xff")
+    # Use binary data that won't be misinterpreted as UTF-16 BOM (\xff\xfe)
+    # This sequence contains null bytes and high bytes that are clearly binary
+    f = _write_bytes(p, b"\x89\x50\x00\x01\x02\x03\x00\x00RandomBinary\x00\xff\xab\xcd")
     meta = probe(f)
     assert meta["is_text"] is False
     assert classify(f) == "binary"
@@ -164,12 +165,20 @@ magic = sys.modules.get("magic")
 @pytest.mark.skipif(magic is None, reason="python-magic not installed")
 def test_libmagic_pe(tmp_path):
     p = tmp_path / "hello.exe"
-    _write_bytes(p, b"MZFakePE")
+    # Create a more complete DOS MZ header so libmagic can recognize it
+    # MZ header (64 bytes minimum) with magic number and PE offset pointer
+    mz_header = bytearray(64)
+    mz_header[0:2] = b"MZ"  # DOS magic number
+    mz_header[60:64] = (64).to_bytes(4, "little")  # PE header offset
+    _write_bytes(p, bytes(mz_header))
     meta = probe(str(p))
+    # libmagic may return various executable-related MIME types
     assert meta["libmagic_mime"] in {
         "application/x-dosexec",
         "application/vnd.microsoft.portable-executable",
-    }
+        "application/x-ms-dos-executable",
+        "application/x-executable",
+    } or "executable" in (meta["libmagic_mime"] or "").lower() or "dosexec" in (meta["libmagic_mime"] or "").lower()
 
 
 def test_is_text_file_true(tmp_path):

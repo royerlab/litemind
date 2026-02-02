@@ -165,6 +165,7 @@ def test_append_folder_with_code_files(test_folder):
     message.append_folder(test_folder)
 
     # Should identify Python files as code
-    assert "│   └── subfile.txt (29 bytes)" in str(message)
+    # Note: When subfolder is the last item, the prefix uses spaces (not │)
+    assert "    └── subfile.txt (29 bytes)" in str(message)
     assert "Empty File: empty.txt" in str(message)
     assert "Prog. Lang. Code File: script.py" in str(message)

@@ -78,8 +78,8 @@ def generate_tree_structure(
         return tree_str + prefix + "... (further contents truncated)\n"
 
     contents = list(Path(folder_path).iterdir())
-    # Optional: sort for consistency
-    # contents.sort(key=lambda p: (p.is_file(), p.name.lower()))
+    # Sort for consistency: files first, then directories, both alphabetically
+    contents.sort(key=lambda p: (p.is_dir(), p.name.lower()))
 
     # Filter contents based on criteria
     filtered_contents = []

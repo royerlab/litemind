@@ -1,3 +1,4 @@
+import pytest
 from pandas import DataFrame
 from pydantic import BaseModel
 
@@ -18,6 +19,8 @@ from litemind.media.types.media_table import Table
 from litemind.media.types.media_text import Text
 from litemind.media.types.media_video import Video
 from litemind.ressources.media_resources import MediaResources
+from litemind.utils.ffmpeg_utils import is_ffmpeg_available
+from litemind.utils.whisper_transcribe_audio import is_local_whisper_available
 
 
 class TestMessageConverterPerType:
@@ -28,6 +31,9 @@ class TestMessageConverterPerType:
 
     def test_convert_audio_media(self):
         """Test conversion of audio media."""
+        # Skip test if local whisper is not available:
+        if not is_local_whisper_available():
+            pytest.skip("Local whisper is not available. Skipping test.")
         self.converter.add_default_converters()
 
         # Create message with audio media
@@ -437,6 +443,10 @@ class TestMessageConverterPerType:
 
     def test_convert_video_media(self):
         """Test conversion of video media."""
+
+        # Skip test if ffmpeg is not available:
+        if not is_ffmpeg_available():
+            pytest.skip("ffmpeg is not available. Skipping test.")
 
         # Initialize the converter
         self.converter.add_default_converters()

@@ -9,38 +9,42 @@ description = "A wrapper API around LLM APIs and agentic AI framework"
 authors = [{ name = "Loic A. Royer" }]
 license = "BSD-3-Clause"        # SPDX
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 keywords = ["llm", "ai", "agents", "wrapper"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: BSD License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
+    # LLM API providers
     "openai>=2.16.0",
     "ollama>=0.6.1",
     "anthropic>=0.76.0",
     "google-genai>=1.60.0",
-    "pillow",
-    "arbol",
+    # Core utilities
+    "pillow>=12.0.0",
+    "arbol>=2026.2.1",
     "ansicolors",
     "json-repair",
     "tiktoken",
-    "pydantic",
-    "pandas",
-    "numpy",
+    # Data handling
+    "pydantic>=2.0.0",
+    "pandas>=3.0.0",
+    "numpy>=2.0.0",
+    # File/format handling
     "chardet",
     "pyyaml",
     "absl-py",
     "scipy",
     "filetype",
-    "python-magic"
+    "python-magic",
 ]
 
 [project.optional-dependencies]

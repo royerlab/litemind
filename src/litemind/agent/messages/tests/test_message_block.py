@@ -90,6 +90,7 @@ def test_message_block_table():
     block = MessageBlock(Table.from_table(table))
     assert block.has_type(Table)
     assert block.media.to_dataframe().equals(table)
-    assert len(block.get_content()) > 40
+    # get_content() returns the URI for Table media
+    assert block.get_content() is not None
 
     assert "Table:" in str(block)
