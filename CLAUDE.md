@@ -2,6 +2,25 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Makefile Commands
+
+The project includes a Makefile with common development tasks. Run `make help` to see all available commands:
+
+```bash
+make setup         # Install project with all development dependencies
+make install       # Install project with minimal dependencies
+make test          # Run all tests
+make test-cov      # Run tests with coverage report
+make check         # Run all code checks (format + lint + typecheck)
+make format        # Format code with black and isort
+make lint          # Run flake8 linter
+make typecheck     # Run mypy type checker
+make build         # Build package
+make clean         # Clean build artifacts
+make publish       # Bump version, commit, tag, and push (triggers PyPI release)
+make publish-patch # Publish patch version (same day increment)
+```
+
 ## Build & Development Commands
 
 ```bash
@@ -31,6 +50,25 @@ pytest --cov=src --cov-report=html:reports/coverage src/
 # Build package
 hatch clean && hatch build
 ```
+
+## Publishing to PyPI
+
+Publishing is handled via GitHub Actions triggered by git tags. Use the Makefile commands:
+
+```bash
+# For a new day's release (bumps version to YYYY.M.D format)
+make publish
+
+# For same-day patch releases (bumps to YYYY.M.D.N format)
+make publish-patch
+```
+
+These commands will:
+1. Update the version in `src/litemind/__init__.py`
+2. Commit the version bump
+3. Create a git tag (e.g., `v2026.2.4`)
+4. Push to origin with tags
+5. GitHub Actions then automatically publishes to PyPI via OIDC trusted publishing
 
 ## CLI Tools
 
