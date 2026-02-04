@@ -110,6 +110,36 @@ API call → Tool execution (if needed) → Response → Conversation history
 - Type hints throughout
 - Conventional commits: `feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`
 
+## Dependency Management
+
+### Running Tests
+
+Always use `hatch test` to run tests, not raw `pytest`. The hatch-test environment includes all required optional dependencies:
+
+```bash
+# Run all tests
+hatch test
+
+# Run specific test file
+hatch test -- src/litemind/agent/tests/test_agent.py -v
+
+# Run tests matching a pattern
+hatch test -- -k "tools" src/
+```
+
+### Key Dependency Constraints
+
+**Docling compatibility**: Docling is an important library for document conversion. It requires `pandas>=2.1.4,<3.0.0` and has specific numpy constraints. Do NOT upgrade pandas to 3.x or numpy beyond what docling supports without checking compatibility first.
+
+**pytest-md-report**: This package doesn't support pytest 9.x yet. It has been removed from the test dependencies until it's updated.
+
+### Lazy-loaded Optional Dependencies
+
+Some converters use lazy loading to avoid import-time dependency conflicts:
+- `document_converter_docling.py` - Docling converter is initialized lazily via `_get_docling_converter()`
+
+This pattern allows the library to work even when optional dependencies aren't installed, while still supporting them when available.
+
 ## Documentation Conventions
 
 ### Sub-package README Files

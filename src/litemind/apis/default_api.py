@@ -12,7 +12,7 @@ from litemind.agent.tools.base_tool import BaseTool
 from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.base_api import BaseApi
 from litemind.apis.callbacks.api_callback_manager import ApiCallbackManager
-from litemind.apis.exceptions import FeatureNotAvailableError
+from litemind.apis.exceptions import APIError, FeatureNotAvailableError
 from litemind.apis.model_features import ModelFeatures
 from litemind.media.conversion.converters.media_converter_delegated_callables import (
     MediaConverterApi,

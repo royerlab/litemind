@@ -8,13 +8,25 @@ def is_local_whisper_available() -> bool:
     """
     Check if Whisper is available.
 
+    Whisper requires both the whisper Python package and ffmpeg
+    to be installed as a system binary.
+
     :return: True if Whisper is available, False otherwise.
     """
 
     try:
         import importlib.util
+        import shutil
 
-        return importlib.util.find_spec("whisper") is not None
+        # Check if whisper module is available
+        if importlib.util.find_spec("whisper") is None:
+            return False
+
+        # Check if ffmpeg is available (required by whisper)
+        if shutil.which("ffmpeg") is None:
+            return False
+
+        return True
     except Exception:
         return False
 

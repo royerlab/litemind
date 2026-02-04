@@ -8,12 +8,18 @@ from litemind.utils.random_projector import DeterministicRandomProjector
 
 @lru_cache()
 def is_fastembed_available() -> bool:
-    # Check that the fastembed library is installed:
-    try:
-        import importlib.util
+    """
+    Check that the fastembed library is installed and working.
 
-        return importlib.util.find_spec("fastembed") is not None
-    except ImportError:
+    This actually imports fastembed to verify it works, since
+    version mismatches in transitive dependencies (like tokenizers)
+    can cause import errors even when the module is installed.
+    """
+    try:
+        from fastembed import TextEmbedding  # noqa: F401
+
+        return True
+    except Exception:
         return False
 
 
