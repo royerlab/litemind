@@ -11,22 +11,25 @@ def json_to_object(
     text_content: str,
 ):
     """
-    Parse a JSON string into an object of the specified format.
+    Parse a JSON string and append the resulting object to a message.
+
+    Attempts to repair malformed JSON before parsing. On success, the
+    parsed Pydantic object is appended to the message. On failure, an
+    error text is appended instead.
 
     Parameters
     ----------
-    message: Message
-        The message object to append the parsed JSON object to.
-    response_format: Optional[BaseModel | str]
-        The format of the JSON string to parse.
-    text_content: str
+    message : Message
+        The message to append the parsed object to.
+    response_format : BaseModel or str, optional
+        The Pydantic model class to validate the JSON against.
+    text_content : str
         The JSON string to parse.
 
     Returns
     -------
     Message
-        The message object with the parsed JSON object appended.
-
+        The message with the parsed object (or error text) appended.
     """
 
     # Strip the text content of leading and trailing whitespace:

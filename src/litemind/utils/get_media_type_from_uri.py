@@ -3,18 +3,22 @@ from typing import Optional
 
 def get_media_type_from_uri(uri: str) -> Optional[str]:
     """
-    Extract the media type from the given URI.
+    Determine the MIME media type from a URI.
+
+    Supports data URIs (extracting the type from the header) and
+    file/HTTP URIs (inferring the type from the file extension).
 
     Parameters
     ----------
-    uri: str
-        The URI to extract the media type from.
+    uri : str
+        The URI to determine the media type for. Can be a ``data:`` URI,
+        ``file://`` URI, or ``http(s)://`` URL.
 
     Returns
     -------
-    str
-        The media type of the
-
+    str or None
+        The MIME media type (e.g., ``"image/png"``), or None if the
+        type cannot be determined.
     """
 
     if uri.startswith("data:"):

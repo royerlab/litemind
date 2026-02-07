@@ -4,7 +4,12 @@ from litemind.agent.tools.builtin_tools.builtin_tool import BuiltinTool
 
 
 class BuiltinWebSearchTool(BuiltinTool):
-    """A tool that represents built-in web search functionality."""
+    """A built-in tool that enables web search via the API provider.
+
+    This tool is not executed locally; it carries configuration parameters
+    that the API provider uses to perform web searches on behalf of the
+    model.
+    """
 
     def __init__(
         self,
@@ -56,6 +61,7 @@ class BuiltinWebSearchTool(BuiltinTool):
             )
 
     def _execute(self, *args, **kwargs) -> Any:
+        """Raise RuntimeError because web search tools are executed by the API provider."""
         raise RuntimeError(
             f"{BuiltinWebSearchTool.__name__} tool cannot be executed directly. It is a placeholder for built-in web search functionality."
         )

@@ -53,6 +53,11 @@ def process_response_from_gemini(
     # If there is text content, add it to the processed response:
     if text_content:
         processed_response.append_text(text_content)
+    elif not tool_calls and native_thinking:
+        # Gemini thinking models (e.g. 2.5 Pro) may place the entire answer
+        # in the thinking block and return empty text.  Use thinking content
+        # as a fallback so the caller receives a non-empty response.
+        processed_response.append_text(native_thinking)
 
     # Variable to hold whether the response is a tool use:
     is_tool_use = False
@@ -71,5 +76,11 @@ def process_response_from_gemini(
         processed_response = json_to_object(
             processed_response, response_format, text_content
         )
+
+    # Preserve raw Gemini parts (including thought signatures) so that
+    # convert_messages_for_gemini can replay them with full fidelity:
+    raw_parts = gemini_response.get("raw_parts")
+    if raw_parts:
+        processed_response._gemini_raw_parts = raw_parts
 
     return processed_response

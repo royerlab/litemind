@@ -14,9 +14,22 @@ from litemind.media.types.media_text import Text
 def convert_messages_for_ollama(
     messages: List[Message], response_format: Optional[BaseModel] = None
 ) -> List[Dict[str, Any]]:
-    """
-    Convert litemind 'Message' objects into Ollama's expected message format.
+    """Convert litemind Messages into Ollama's chat message format.
 
+    Handles text, images (as local file paths), tool calls/results,
+    and optional structured output via response_format.
+
+    Parameters
+    ----------
+    messages : List[Message]
+        Litemind messages to convert.
+    response_format : Optional[BaseModel]
+        If provided, appends a JSON schema prompt for structured output.
+
+    Returns
+    -------
+    List[Dict[str, Any]]
+        Messages in Ollama chat format.
     """
 
     # Initialize the list of messages:

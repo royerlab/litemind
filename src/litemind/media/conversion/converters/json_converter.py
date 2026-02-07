@@ -7,11 +7,7 @@ from litemind.media.types.media_text import Text
 
 
 class JsonConverter(BaseConverter):
-    """
-    Converter for Json media type.
-
-    Converts Json media to Text media.
-    """
+    """Converts Json media to Text by rendering as a Markdown JSON code block."""
 
     def rule(self) -> List[Tuple[Type[MediaBase], List[Type[MediaBase]]]]:
         return [(Json, [Text])]

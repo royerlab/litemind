@@ -4,7 +4,12 @@ from litemind.agent.tools.builtin_tools.builtin_tool import BuiltinTool
 
 
 class BuiltinMCPTool(BuiltinTool):
-    """A tool that represents built-in mcp tools."""
+    """A built-in tool that connects to a Model Context Protocol (MCP) server.
+
+    MCP tools are not executed locally; instead, the API provider
+    communicates with the specified MCP server. This class carries the
+    server connection parameters.
+    """
 
     def __init__(
         self,
@@ -42,6 +47,7 @@ class BuiltinMCPTool(BuiltinTool):
         self.allowed_tools = allowed_tools if allowed_tools is not None else []
 
     def _execute(self, *args, **kwargs) -> Any:
+        """Raise RuntimeError because MCP tools are executed by the API provider."""
         raise RuntimeError(
             f"{BuiltinMCPTool.__name__} tool cannot be executed directly. It is a placeholder for built-in MCP functionality."
         )

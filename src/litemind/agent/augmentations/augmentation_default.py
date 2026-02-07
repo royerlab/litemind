@@ -10,9 +10,12 @@ from litemind.media.types.media_text import Text
 
 
 class AugmentationDefault(AugmentationBase):
-    """
-    Default implementation of the AugmentationBase class.
-    This class is meant to be subclassed by concrete augmentation implementations.
+    """Default partial implementation of AugmentationBase with query normalization.
+
+    Provides ``_normalize_query`` to convert various query types (str,
+    BaseModel, MediaBase, Information) into MediaBase objects, and a
+    default ``get_relevant_informations_iterator`` implementation.
+    Subclasses must still implement ``get_relevant_informations``.
     """
 
     def __init__(self, name: str, description: Optional[str] = None):
@@ -37,19 +40,18 @@ class AugmentationDefault(AugmentationBase):
             The query normalized to a media object.
         """
 
-        if isinstance(query, str):
+        if isinstance(query, Information):
+            # Get the media in the information:
+            return query.media
+        elif isinstance(query, str):
             # For string queries, we wrap as a text media:
             return Text(query)
-        elif isinstance(query, BaseModel):
-            # For BaseModel objects, we wrap into an Object media:
-            return Object(query)
         elif isinstance(query, MediaBase):
             # For MediaBase objects, we just keep as is as it is supported by Vector Databases.
             return query
-        elif isinstance(query, Information):
-            # Get the media in the information:
-            media = query.media
-            return media
+        elif isinstance(query, BaseModel):
+            # For BaseModel objects, we wrap into an Object media:
+            return Object(query)
         else:
             raise ValueError(
                 f"Unsupported query type: {type(query)}. Supported types are: str, BaseModel, MediaBase, Information."
@@ -66,12 +68,13 @@ class AugmentationDefault(AugmentationBase):
 
         Parameters
         ----------
-        query: Union[str, BaseModel]
+        query : Union[str, BaseModel, MediaBase, Information]
             The query to retrieve informations for.
-        k: int
+        k : int
             The maximum number of informations to retrieve.
-        threshold: float
-            The score threshold_dict for the augmentation. If the score is below this value, the augmentation will not be used.
+        threshold : float
+            Minimum relevance score. Results below this threshold are
+            excluded.
 
         Returns
         -------

@@ -1,4 +1,4 @@
 class MessageError(Exception):
-    """Base class for exceptions in this module."""
+    """Base exception class for message-related errors in the agent package."""
 
     pass

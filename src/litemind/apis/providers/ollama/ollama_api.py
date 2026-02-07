@@ -93,11 +93,7 @@ class OllamaApi(DefaultApi):
             self._model_list = _get_ollama_models_list(self.client)
 
         except Exception as e:
-            # Print stack trace:
-            import traceback
-
-            traceback.print_exc()
-            raise APINotAvailableError(f"Error initializing Ollama client: {e}")
+            raise APINotAvailableError(f"Ollama server is not available: {e}")
 
     def check_availability_and_credentials(self, api_key: Optional[str] = None) -> bool:
 
@@ -256,10 +252,6 @@ class OllamaApi(DefaultApi):
                     return model_info[key]
         except ResponseError as e:
             aprint(f"Model {model_name} not found in Ollama: {e.error}")
-            # Print stack trace:
-            import traceback
-
-            traceback.print_exc()
 
         # return default value if nothing else works:
         return 2500
@@ -280,10 +272,6 @@ class OllamaApi(DefaultApi):
                     return model_info[key]
         except ResponseError as e:
             aprint(f"Model {model_name} not found in Ollama: {e.error}")
-            # Print stack trace:
-            import traceback
-
-            traceback.print_exc()
 
         # return default value if nothing else works:
         return 4096
@@ -365,6 +353,7 @@ class OllamaApi(DefaultApi):
                     text += "\n"
                     text += "Think carefully step-by-step before responding: restate the input, analyze it, consider options, make a plan, and proceed methodically to your conclusion. \n"
                     text += "All reasoning (thinking) which precedes the final answer must be enclosed within thinking tags: <thinking> reasoning goes here... </thinking> final answer here...\n\n"
+                    block.media.text = text
                     break
 
         # Get max num of output tokens for model if not provided:
@@ -440,7 +429,7 @@ class OllamaApi(DefaultApi):
 
             # Call the callback manager:
             self.callback_manager.on_text_generation(
-                response=ollama_response, messages=messages, **kwargs
+                response=response, messages=messages, **kwargs
             )
 
         except ResponseError as e:

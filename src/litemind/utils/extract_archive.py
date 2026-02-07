@@ -50,17 +50,28 @@ def _safe_extract_7z(archive, dest_dir: str) -> None:
 
 def extract_archive(archive_file_path: str) -> str:
     """
-    Extracts an archive to a temporary folder.
+    Extract an archive to a temporary directory.
+
+    Supports ZIP, tar.gz/tgz, tar.bz2/tbz, tar.xz/txz, 7z, and RAR
+    formats. The temporary directory is registered for cleanup at process
+    exit. Includes path traversal protection for all supported formats.
 
     Parameters
     ----------
     archive_file_path : str
-        The path to the archive file.
+        The path or URI to the archive file.
 
     Returns
     -------
     str
-        The path to the extracted folder.
+        The path to the temporary directory containing the extracted files.
+
+    Raises
+    ------
+    ValueError
+        If the archive format is unsupported or path traversal is detected.
+    ImportError
+        If the required extraction library is not installed.
     """
 
     import tempfile

@@ -57,12 +57,34 @@ class Message:
         role: str = "user",
     ):
         """
-        Create a new message.
+        Create a new message with optional initial content.
 
         Parameters
         ----------
-        role: str
-            The role of the message (e.g., 'system', 'user', 'assistant').
+        text : Optional[str]
+            Text content to append as a text block.
+        json : Optional[str]
+            JSON string to append as a JSON block.
+        obj : Optional[BaseModel]
+            Pydantic model to append as an object block.
+        image : Optional[str]
+            Image URI to append as an image block.
+        audio : Optional[str]
+            Audio URI to append as an audio block.
+        video : Optional[str]
+            Video URI to append as a video block.
+        document : Optional[str]
+            Document URI to append as a document block.
+        table : Optional[str]
+            Table URI to append as a table block.
+        role : str
+            The role of the message sender. Must be one of 'system',
+            'user', 'assistant', or 'tool'.
+
+        Raises
+        ------
+        ValueError
+            If ``role`` is not a valid role string.
         """
 
         # Check that the role is a string that is either: 'system', 'user', or 'assistant':
@@ -130,18 +152,24 @@ class Message:
         ----------
         block : MessageBlock
             The message block to append.
+
+        Returns
+        -------
+        MessageBlock
+            The appended message block.
         """
         self.blocks.append(block)
         return block
 
     def append_blocks(self, blocks: Union["Message", Sequence[MessageBlock]]):
         """
-        Append a list of message blocks to the message.
+        Append multiple message blocks to the message.
 
         Parameters
         ----------
-        blocks : Sequence[MessageBlock]
-            The message blocks to append.
+        blocks : Union[Message, Sequence[MessageBlock]]
+            The message blocks to append. If a Message is provided, its
+            blocks are extracted and appended.
         """
 
         # If the blocks are from another message, extract the blocks:
@@ -155,14 +183,19 @@ class Message:
         self, block: MessageBlock, block_before: MessageBlock
     ) -> MessageBlock:
         """
-        Append a message block to the message.
+        Insert a message block after an existing block.
 
         Parameters
         ----------
         block : MessageBlock
-            The message block to append.
+            The message block to insert.
         block_before : MessageBlock
-            The message block to insert after.
+            The existing block after which to insert the new block.
+
+        Returns
+        -------
+        MessageBlock
+            The inserted message block.
         """
 
         # find the index of the block_before:
@@ -177,14 +210,19 @@ class Message:
         self, blocks: List[MessageBlock], block_before: MessageBlock
     ) -> List[MessageBlock]:
         """
-        Insert a list of message blocks after a block in the current message.
+        Insert multiple message blocks after an existing block.
 
         Parameters
         ----------
         blocks : List[MessageBlock]
             The message blocks to insert.
         block_before : MessageBlock
-            The block to insert the message after.
+            The existing block after which to insert.
+
+        Returns
+        -------
+        List[MessageBlock]
+            The inserted message blocks.
         """
 
         # insert the blocks after the block_before:
@@ -198,14 +236,19 @@ class Message:
         self, message: "Message", block_before: MessageBlock
     ) -> "Message":
         """
-        Insert a message after a block in the current message.
+        Insert all blocks from another message after an existing block.
 
         Parameters
         ----------
         message : Message
-            The message to insert.
+            The message whose blocks will be inserted.
         block_before : MessageBlock
-            The block to insert the message after.
+            The existing block after which to insert.
+
+        Returns
+        -------
+        Message
+            The inserted message.
         """
 
         self.insert_blocks(message.blocks, block_before)
@@ -214,14 +257,19 @@ class Message:
 
     def append_media(self, media: MediaBase, **kwargs) -> MessageBlock:
         """
-        Append a media block to the message.
+        Append a media object to the message as a new block.
 
         Parameters
         ----------
         media : MediaBase
-            The media block to append.
-        kwargs : dict
-            Additional attributes for the media block.
+            The media object to append.
+        **kwargs
+            Additional attributes for the message block.
+
+        Returns
+        -------
+        MessageBlock
+            The appended message block.
         """
 
         # Append the media block:
@@ -234,10 +282,14 @@ class Message:
         Parameters
         ----------
         text : str
-            The text to append to the message.
-        kwargs: dict
+            The text to append.
+        **kwargs
             Additional attributes for the text block.
 
+        Returns
+        -------
+        MessageBlock
+            The appended text block.
         """
 
         # Append the text block:
@@ -247,16 +299,27 @@ class Message:
         self, text: str, quote_level: int = 1, **kwargs
     ) -> MessageBlock:
         """
-        Append quoted text to the message. The text is quoted using markdown syntax.
+        Append quoted text to the message using markdown blockquote syntax.
 
         Parameters
         ----------
         text : str
-            The text to append to the message.
-        quote_level: int
-            The level of quoting (default: 1). Each level adds a '>' character at the beginning of each line.
-        kwargs: dict
+            The text to quote and append.
+        quote_level : int
+            The nesting level of the blockquote. Each level prepends an
+            additional '>' character to each line.
+        **kwargs
             Additional attributes for the text block.
+
+        Returns
+        -------
+        MessageBlock
+            The appended quoted text block.
+
+        Raises
+        ------
+        ValueError
+            If ``text`` is not a string.
         """
 
         # Check that it is really a string:
@@ -273,21 +336,22 @@ class Message:
 
     def append_templated_text(self, template: str, **replacements) -> MessageBlock:
         """
-        Replace all `{placeholders}` in *template* with values supplied
-        via **replacements and adds resulting text as a new text block.
+        Append text from a template with placeholder substitution.
+
+        Replaces all ``{placeholders}`` in *template* with values supplied
+        via keyword arguments and appends the result as a new text block.
 
         Parameters
         ----------
-        template:
-            The template string containing `{name}` placeholders.
-
-        **replacements:
+        template : str
+            The template string containing ``{name}`` placeholders.
+        **replacements
             Keyword arguments whose names match the placeholders.
 
         Returns
         -------
-        str
-            The fully formatted string.
+        MessageBlock
+            The appended text block with the filled template.
 
         Raises
         ------
@@ -347,17 +411,21 @@ class Message:
         self, json_str: str, source: Optional[str] = None, **kwargs
     ) -> MessageBlock:
         """
-        Append json to the message.
+        Append a JSON string to the message.
 
         Parameters
         ----------
         json_str : str
-            The structured text to append to the message.
+            The JSON string to append.
         source : Optional[str]
-            The source of the json (e.g., file path or url).
-        kwargs: dict
-            Additional attributes for the json block.
+            The source of the JSON (e.g., file path or URL).
+        **kwargs
+            Additional attributes for the JSON block.
 
+        Returns
+        -------
+        MessageBlock
+            The appended JSON block.
         """
 
         # Append the json block:
@@ -369,18 +437,23 @@ class Message:
         self, code: str, lang: str = "python", source: Optional[str] = None, **kwargs
     ) -> MessageBlock:
         """
-        Append code to the message.
+        Append a code snippet to the message.
 
         Parameters
         ----------
         code : str
-            The code to append to the message.
+            The code to append.
         lang : str
-            The language of the code (default: 'python').
+            The programming language of the code.
         source : Optional[str]
-            The source of the code (e.g., file path or url).
-        kwargs: dict
-            Additional attributes for the json block.
+            The source of the code (e.g., file path or URL).
+        **kwargs
+            Additional attributes for the code block.
+
+        Returns
+        -------
+        MessageBlock
+            The appended code block.
         """
 
         # Append the code block:
@@ -392,16 +465,21 @@ class Message:
         self, obj: BaseModel, source: Optional[str] = None, **kwargs
     ) -> MessageBlock:
         """
-        Append a Pydantic object to the message.
+        Append a Pydantic model object to the message.
 
         Parameters
         ----------
         obj : BaseModel
-            The object to append to the message.
+            The Pydantic model instance to append.
         source : Optional[str]
-            The source of the object (e.g., file path or url).
-        kwargs: dict
-            Additional attributes for the json block.
+            The source of the object (e.g., file path or URL).
+        **kwargs
+            Additional attributes for the object block.
+
+        Returns
+        -------
+        MessageBlock
+            The appended object block.
         """
 
         # Append the object block:
@@ -416,11 +494,16 @@ class Message:
         Parameters
         ----------
         image_uri : str
-            The image to append.
+            URI of the image (local file path or URL).
         source : Optional[str]
-            The source of the image (e.g., file path or url).
-        kwargs: dict
+            The original source of the image.
+        **kwargs
             Additional attributes for the image block.
+
+        Returns
+        -------
+        MessageBlock
+            The appended image block.
         """
 
         # Append the image block:
@@ -432,17 +515,21 @@ class Message:
         self, audio_uri: str, source: Optional[str] = None, **kwargs
     ) -> MessageBlock:
         """
-        Append an audio to the message.
+        Append an audio clip to the message.
 
         Parameters
         ----------
         audio_uri : str
-            The audio to append.
+            URI of the audio file (local file path or URL).
         source : Optional[str]
-            The source of the audio (e.g., file path or url).
-        kwargs : dict
+            The original source of the audio.
+        **kwargs
             Additional attributes for the audio block.
 
+        Returns
+        -------
+        MessageBlock
+            The appended audio block.
         """
 
         # Append the audio block:
@@ -459,11 +546,16 @@ class Message:
         Parameters
         ----------
         video_uri : str
-            The video to append.
+            URI of the video file (local file path or URL).
         source : Optional[str]
-            The source of the video (e.g., file path or url).
-        kwargs : dict
+            The original source of the video.
+        **kwargs
             Additional attributes for the video block.
+
+        Returns
+        -------
+        MessageBlock
+            The appended video block.
         """
 
         # Append the video block:
@@ -480,9 +572,14 @@ class Message:
         Parameters
         ----------
         document_uri : str
-            The document to append.
+            URI of the document file (local file path or URL).
         source : Optional[str]
-            The source of the document (e.g., file path or url).
+            The original source of the document.
+
+        Returns
+        -------
+        MessageBlock
+            The appended document block.
         """
 
         # Append the document block:
@@ -499,9 +596,20 @@ class Message:
         Parameters
         ----------
         table : Union[str, ndarray, DataFrame]
-            The table to append. Can be a URI of a local or remote file, a pandas DataFrame, or a numpy array.
+            The table to append. Can be a URI of a local or remote file,
+            a pandas DataFrame, a numpy array, or a Python list.
         source : Optional[str]
-            The source of the table (e.g., file path or url).
+            The original source of the table (e.g., file path or URL).
+
+        Returns
+        -------
+        MessageBlock
+            The appended table block.
+
+        Raises
+        ------
+        ValueError
+            If ``table`` is not a supported type.
         """
 
         # Check that it is a numpy array or a pandas DataFrame:
@@ -542,14 +650,24 @@ class Message:
         self, table: Union["ndarray", "DataFrame"], source: Optional[str] = None
     ):
         """
-        Append a table to the message as a text block.
+        Append a table to the message as a markdown text block.
+
+        The table is converted to a markdown-formatted string before
+        being appended as a text block.
 
         Parameters
         ----------
-        table : Union[str, ndarray, DataFrame]
-            The table to append. Can be a pandas DataFrame, a numpy array, list or tuple.
+        table : Union[ndarray, DataFrame]
+            The table to append. Can be a pandas DataFrame, a numpy
+            array, list, or tuple.
         source : Optional[str]
-            The source of the table (e.g., file path or url).
+            The original source of the table (unused, kept for API
+            consistency).
+
+        Returns
+        -------
+        MessageBlock
+            The appended text block containing the table in markdown format.
         """
 
         # Convert the table to a markdown string and append it as text:
@@ -558,14 +676,25 @@ class Message:
 
     def append_file(self, file_uri: str, source: Optional[str] = None) -> MessageBlock:
         """
-        Append a file to the message.
+        Append a raw file to the message.
 
         Parameters
         ----------
         file_uri : str
-            The file to append.
+            The file URI to append. Must be a local ``file://`` URI.
         source : Optional[str]
-            The source of the file (e.g., file path or url).
+            The original source of the file.
+
+        Returns
+        -------
+        MessageBlock
+            The appended file block.
+
+        Raises
+        ------
+        ValueError
+            If the URI does not start with ``file://`` or the file does
+            not exist.
         """
 
         # Check that the file is a local file:
@@ -874,6 +1003,7 @@ class Message:
     def append_archive(self, archive_uri: str, depth: int = -1):
         """
         Append an archive to the message.
+
         Parameters
         ----------
         archive_uri: str
@@ -912,16 +1042,24 @@ class Message:
         self, tool_name: str, arguments: dict, id: str
     ) -> MessageBlock:
         """
-        Add a tool call to the message. This is typically part of an assistant's response.
+        Append a tool call to the message.
+
+        This is typically part of an assistant's response requesting that
+        a tool be executed.
 
         Parameters
         ----------
-        tool_name: str
-            The name of the tool.
-        arguments: dict
-            The arguments used with the tool.
-        id: str
-            The id of the tool use message.
+        tool_name : str
+            The name of the tool to call.
+        arguments : dict
+            The arguments for the tool call.
+        id : str
+            A unique identifier for this tool call.
+
+        Returns
+        -------
+        MessageBlock
+            The appended tool call block.
         """
 
         # Create a new tool use message block:
@@ -934,18 +1072,26 @@ class Message:
         self, tool_name: str, arguments: dict, result: Any, id: str
     ) -> MessageBlock:
         """
-        Add a tool use to the message. This is typically part of a user's input in reply of an assistant's tool call.
+        Append a tool use result to the message.
+
+        This is typically part of a user message sent in reply to an
+        assistant's tool call, containing the execution result.
 
         Parameters
         ----------
-        tool_name: str
-            The name of the tool.
-        arguments: dict
-            The arguments used with the tool.
-        result: Any
-            The result of the tool use.
-        id: str
-            The id of the tool use message.
+        tool_name : str
+            The name of the tool that was executed.
+        arguments : dict
+            The arguments that were passed to the tool.
+        result : Any
+            The result returned by the tool.
+        id : str
+            The identifier matching the original tool call.
+
+        Returns
+        -------
+        MessageBlock
+            The appended tool use block.
         """
 
         # Create a new tool use message block:
@@ -958,19 +1104,25 @@ class Message:
         self, filters: Union[str, List[str]], remove_quotes=True
     ) -> List[MessageBlock]:
         """
-        Extract markdown blocks from the message that contain the given filter string.
+        Extract fenced code blocks from text blocks matching filter strings.
+
+        Searches text blocks for the filter string, then extracts any
+        fenced code blocks (delimited by triple backticks) found within
+        matching blocks.
+
         Parameters
         ----------
-        filters: Union[str, List[str]]
-            The filter string to search for in the markdown blocks. Can be a singleton string for convenience.
-        remove_quotes: bool
-            Whether to remove the quotes from the markdown block content (default: True).
+        filters : Union[str, List[str]]
+            Filter string(s) to search for. A block must contain at least
+            one filter string to be searched for code blocks.
+        remove_quotes : bool
+            If True, strips the opening fence line (e.g., ````` ```python`````)
+            from the extracted content.
 
         Returns
         -------
         List[MessageBlock]
-            The markdown blocks that contain the filter string.
-
+            The extracted code blocks as text message blocks.
         """
         # Extract markdown blocks from the message that contain the given filter string.
 
@@ -1209,11 +1361,12 @@ class Message:
 
     def __str__(self) -> str:
         """
-        Return the message as a string.
+        Return a human-readable string representation of the message.
+
         Returns
         -------
         str
-            The message as a string.
+            The message prefixed with its role, followed by all blocks.
         """
         message_string = f"*{self.role}*:\n"
         for block in self.blocks:
@@ -1222,11 +1375,12 @@ class Message:
 
     def lower(self) -> str:
         """
-        Return the message as a string in lowercase.
+        Return the message string representation in lowercase.
+
         Returns
         -------
         str
-            The message as a string in lowercase.
+            The lowercased string representation.
         """
         return self.__str__().lower()
 
@@ -1246,6 +1400,23 @@ class Message:
         return plain_text
 
     def to_markdown(self, media_converter: Optional["MediaConverter"] = None):
+        """
+        Convert the message to a markdown string.
+
+        All media blocks are converted to text via the media converter,
+        then concatenated into a single markdown string.
+
+        Parameters
+        ----------
+        media_converter : Optional[MediaConverter]
+            The media converter to use. If None, a default converter is
+            created with default converters.
+
+        Returns
+        -------
+        str
+            The message content as a markdown string.
+        """
 
         if media_converter is None:
             # If no media converter is provided, instantiate a default one:
@@ -1395,11 +1566,12 @@ class Message:
 
     def __repr__(self) -> str:
         """
-        Return the message as a string.
+        Return the string representation of the message.
+
         Returns
         -------
         str
-            The message as a string.
+            Same as ``__str__``.
         """
         return str(self)
 
@@ -1412,20 +1584,32 @@ class Message:
     def __hash__(self):
         """
         Return the hash of the message.
+
         Returns
         -------
         int
-            The hash of the message.
+            Hash based on the role and blocks.
         """
         return hash((self.role, tuple(self.blocks)))
 
     def __eq__(self, other: "Message") -> bool:
         """
-        Compare two messages for equality.
+        Compare two messages for equality based on role and blocks.
+
+        Parameters
+        ----------
+        other : Message
+            The message to compare with.
+
         Returns
         -------
         bool
-            True if the messages are equal, False otherwise.
+            True if both messages have the same role and identical blocks.
+
+        Raises
+        ------
+        TypeError
+            If ``other`` is not a Message instance.
         """
 
         # Check if is a Message:
@@ -1451,10 +1635,16 @@ class Message:
     def __ne__(self, other: "Message") -> bool:
         """
         Compare two messages for inequality.
+
+        Parameters
+        ----------
+        other : Message
+            The message to compare with.
+
         Returns
         -------
         bool
-            True if the messages are not equal, False otherwise.
+            True if the messages differ.
         """
         return not self == other
 
@@ -1535,15 +1725,14 @@ class Message:
             The concatenated message.
         """
 
-        # Create a new message as copy of the current message:
-        new_message = other.copy()
-
         if isinstance(other, Message):
-            # Concatenate the blocks of the current message to the new message:
+            # Create a copy of the other message and append self's blocks:
+            new_message = other.copy()
             new_message.blocks += self.blocks
         elif isinstance(other, MessageBlock):
-            # Append the message block to the new message:
-            new_message.blocks.append(self)
+            # Create a copy of self and prepend the block:
+            new_message = self.copy()
+            new_message.blocks.insert(0, other)
         else:
             # Raise an error if the other object is not a Message or MessageBlock:
             raise ValueError(

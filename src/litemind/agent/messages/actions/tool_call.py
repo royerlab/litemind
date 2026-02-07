@@ -2,20 +2,24 @@ from litemind.agent.messages.actions.action_base import ActionBase
 
 
 class ToolCall(ActionBase):
+    """Represents a request from the LLM to execute a tool.
+
+    Encapsulates the tool name, arguments, and a unique identifier that
+    links this call to its corresponding ``ToolUse`` result.
+    """
 
     def __init__(self, tool_name: str, arguments: dict = None, id: str = None):
         """
-        Object that encapsulates information about a tool call.
+        Create a new tool call.
 
         Parameters
         ----------
-        tool_name: str
-            The name of the tool used.
-        arguments
-            The arguments used with the tool.
-        id:str
-            The id of the tool use message
-
+        tool_name : str
+            The name of the tool to call.
+        arguments : dict, optional
+            The arguments for the tool call. Defaults to an empty dict.
+        id : str, optional
+            A unique identifier for this tool call.
         """
 
         self.tool_name = tool_name

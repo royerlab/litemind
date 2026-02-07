@@ -17,14 +17,13 @@ from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_pa
 
 
 class VideoConverterFfmpeg(BaseConverter):
-    """
-    Converter for Video media type.
+    """Converts Video media to Text metadata, Image frames, and Audio track.
 
-    Converts Video media to Text, Image and Audio media.
+    Requires ffmpeg to be installed and accessible on the system PATH.
     """
 
     def rule(self) -> List[Tuple[Type[MediaBase], List[Type[MediaBase]]]]:
-        return [(Video, [Text, Image, Audio])]
+        return [(Video, [Text, Image])]
 
     def can_convert(self, media: MediaBase) -> bool:
         return media is not None and isinstance(media, Video)
@@ -44,22 +43,31 @@ def convert_video_to_info_frames_and_audio(
     frame_interval: int = 1,
     key_frames: bool = False,
 ) -> List[MediaBase]:
-    """
-    Converts a video media into image frames, an audio file, and video info.
+    """Decompose a video into metadata text, image frames, and an audio track.
 
     Parameters
     ----------
-    media: MediaBase
-        Media to convert.
-    frame_interval: int
-        Interval in seconds to sample frames from the video.
-    key_frames: bool
-        Whether to extract key frames instead of sampling at regular intervals.
+    media : Video
+        The video media to decompose.
+    frame_interval : int, optional
+        Interval in seconds between sampled frames. Default is 1.
+    key_frames : bool, optional
+        If True, extract key frames instead of sampling at regular
+        intervals. Default is False.
 
     Returns
     -------
     List[MediaBase]
-        The corresponding audio, images and text media describing the video
+        A list starting with a Text summary, followed by alternating
+        Text/Image pairs for each frame, and optionally an Audio media
+        for the soundtrack.
+
+    Raises
+    ------
+    RuntimeError
+        If ffmpeg is not available.
+    ValueError
+        If *media* is not a Video instance.
     """
 
     # Check if ffmpeg is available:

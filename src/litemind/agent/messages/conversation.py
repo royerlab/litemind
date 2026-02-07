@@ -4,12 +4,15 @@ from litemind.agent.messages.message import Message
 
 
 class Conversation:
+    """A conversation that stores system and standard messages separately.
+
+    System messages are kept separate from standard (user/assistant/tool)
+    messages so they can be consistently placed at the beginning of the
+    message list sent to the LLM API.
+    """
 
     def __init__(self):
-        """
-        A conversation object that stores messages.
-
-        """
+        """Create a new empty conversation."""
 
         self.system_messages: List[Message] = []
         self.standard_messages: List[Message] = []
@@ -17,22 +20,23 @@ class Conversation:
     def get_all_messages(self):
         """
         Get all messages in the conversation.
+
         Returns
         -------
         List[Message]
-            A list of all messages in the conversation
-
+            A list of all messages, with system messages first.
         """
         return self.system_messages + self.standard_messages
 
     def get_last_message(self):
         """
-        Get the last message in the conversation.
+        Get the last standard (non-system) message in the conversation.
+
         Returns
         -------
-        Message
-            The last message in the conversation.
-
+        Message or None
+            The last standard message, or None if there are no standard
+            messages.
         """
         if self.standard_messages:
             return self.standard_messages[-1]
@@ -65,10 +69,14 @@ class Conversation:
     def append(self, message: Message):
         """
         Append a message to the conversation.
+
+        System messages are routed to ``system_messages``; all others go
+        to ``standard_messages``.
+
         Parameters
         ----------
         message : Message
-            The message to append to the conversation.
+            The message to append.
         """
         if message.role == "system":
             self.system_messages.append(message)
@@ -77,11 +85,12 @@ class Conversation:
 
     def extend(self, messages: Sequence[Message]):
         """
-        Extend the conversation with a list of messages.
+        Extend the conversation with multiple messages.
+
         Parameters
         ----------
         messages : Sequence[Message]
-            The messages to extend the conversation with.
+            The messages to append. Each is routed by its role.
         """
         for message in messages:
             self.append(message)
@@ -108,17 +117,17 @@ class Conversation:
 
     def __add__(self, other: "Conversation"):
         """
-        Add two conversations together
+        Combine two conversations into a new one.
+
         Parameters
         ----------
         other : Conversation
-            The conversation to add to the current conversation
+            The conversation to combine with.
 
         Returns
         -------
         Conversation
-            A new conversation object that is the combination of the two conversations
-
+            A new conversation containing messages from both conversations.
         """
         new_conversation = Conversation()
         new_conversation.system_messages = self.system_messages + other.system_messages
@@ -129,7 +138,8 @@ class Conversation:
 
     def __getitem__(self, item) -> Message:
         """
-        Get a message from the conversation by index.
+        Get a message by index across all messages.
+
         Parameters
         ----------
         item : int
@@ -139,7 +149,6 @@ class Conversation:
         -------
         Message
             The message at the specified index.
-
         """
         return self.get_all_messages()[item]
 

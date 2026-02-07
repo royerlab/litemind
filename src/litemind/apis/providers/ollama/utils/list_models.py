@@ -2,6 +2,21 @@ from typing import List
 
 
 def _get_ollama_models_list(client) -> List[str]:
+    """Get available Ollama models, sorted by size, with thinking variants.
+
+    For each model, a ``-thinking`` suffixed variant is also included
+    to enable thinking/reasoning mode.
+
+    Parameters
+    ----------
+    client : Any
+        The Ollama client instance.
+
+    Returns
+    -------
+    List[str]
+        Model names sorted by size (largest first), with thinking variants.
+    """
     # Get the ls of models:
     model_list = list(client.list().models)
 

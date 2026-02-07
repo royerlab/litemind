@@ -7,23 +7,24 @@ from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_pa
 
 
 class NdImage(MediaURI):
-    """
-    A media that stores an nD image, aka a multi-dimensional image.
+    """Media that stores a multi-dimensional (nD) image.
+
+    Supports numpy ``.npy``/``.npz`` files, TIFF stacks, and other
+    multi-dimensional image formats. Provides methods to generate 2-D
+    maximum intensity projections for LLM consumption.
     """
 
     def __init__(self, uri: str, extension: Optional[str] = None, **kwargs):
-        """
-        Create a new nD image media.
+        """Create a new nD image media.
 
         Parameters
         ----------
-        uri: str
-            The image URI.
-        extension: str
-            Extension/Type of the nD image file in case it is not clear from the URI. This is the extension _without_ the dot -- 'png' not '.png'.
-        kwargs: dict
-            Other arguments passed to MediaURI.
-
+        uri : str
+            The image URI or local file path.
+        extension : str, optional
+            File extension override without the leading dot (e.g. ``"tiff"``).
+        **kwargs
+            Additional keyword arguments forwarded to ``MediaURI``.
         """
 
         super().__init__(uri=uri, extension=extension, **kwargs)
@@ -32,6 +33,18 @@ class NdImage(MediaURI):
         self.array = None
 
     def load_from_uri(self):
+        """Load the nD image data from the URI into ``self.array``.
+
+        Handles ``.npy``, ``.npz``, ``.tif``/``.tiff`` (via tifffile), and
+        other formats (via imageio). The loaded array must have at least
+        2 dimensions.
+
+        Raises
+        ------
+        Exception
+            If the file cannot be opened, decoded, or has fewer than
+            2 dimensions.
+        """
         # Download the file from the URI to a local file:
         local_file = uri_to_local_file_path(self.uri)
 
@@ -75,21 +88,23 @@ class NdImage(MediaURI):
     def to_text_and_2d_projection_medias(
         self, channel_threshold=10
     ) -> List[Union[Text, Image]]:
-        """
-        Creates a list of Text and Image media objects that describe the nD image
-        for LLM ingestion purposes. Handles singleton dimensions and channel-like dimensions specially.
+        """Create Text and Image media describing this nD image for LLM ingestion.
+
+        Generates a textual description of the array (shape, dtype, statistics)
+        followed by maximum intensity projection images for each pair of
+        spatial dimensions. Channel-like dimensions (small axes) are iterated
+        over separately.
 
         Parameters
         ----------
-        channel_threshold : int
-            Dimensions with size less than or equal to this threshold are considered channel-like
+        channel_threshold : int, optional
+            Dimensions with size at most this value are treated as channels
+            rather than spatial axes. Default is 10.
 
         Returns
         -------
-        list
-            A list of alternating Text and Image media objects:
-            - First a Text with markdown description of the array
-            - Then pairs of Text and Image objects for each maximum projection
+        List[Union[Text, Image]]
+            Alternating Text descriptions and Image projections.
         """
 
         import numpy as np
@@ -205,20 +220,19 @@ class NdImage(MediaURI):
         return result
 
     def _get_channel_indices(self, channel_dims, dimensions):
-        """
-        Get all possible combinations of indices for channel dimensions.
+        """Get all combinations of indices for channel-like dimensions.
 
         Parameters
         ----------
-        channel_dims : list
-            List of dimension indices that are considered channels
-        dimensions : tuple
-            Shape of the array
+        channel_dims : list of int
+            Dimension indices that are considered channels.
+        dimensions : tuple of int
+            Shape of the full array.
 
         Returns
         -------
-        list
-            List of tuples with channel indices combinations
+        list of tuple
+            All index combinations across the channel dimensions.
         """
         import itertools
 
@@ -231,21 +245,22 @@ class NdImage(MediaURI):
     def _add_projection_to_result(
         self, axis1, axis2, dim_labels, result, channel_dims=None, channel_indices=None
     ):
-        """
-        Creates and adds a projection for the specified axes to the result list.
+        """Create a maximum projection for two axes and append to the result list.
 
         Parameters
         ----------
-        axis1, axis2 : int
-            Indices of axes to project onto
-        dim_labels : list
-            Labels for dimensions
+        axis1 : int
+            First spatial axis index.
+        axis2 : int
+            Second spatial axis index.
+        dim_labels : list of str
+            Human-readable labels for each dimension.
         result : list
-            List to append the Text and Image objects to
-        channel_dims : list, optional
-            Indices of channel-like dimensions
-        channel_indices : tuple, optional
-            Index values for each channel dimension
+            Accumulator list to which Text and Image objects are appended.
+        channel_dims : list of int, optional
+            Channel dimension indices to fix.
+        channel_indices : tuple of int, optional
+            Index values for each channel dimension.
         """
         import tempfile
 
@@ -282,8 +297,23 @@ class NdImage(MediaURI):
     def _create_max_projection(
         self, axis1, axis2, channel_dims=None, channel_indices=None
     ):
-        """
-        Creates a maximum intensity projection along two specified axes.
+        """Create a maximum intensity projection along two specified axes.
+
+        Parameters
+        ----------
+        axis1 : int
+            First retained spatial axis index.
+        axis2 : int
+            Second retained spatial axis index.
+        channel_dims : list of int, optional
+            Channel dimension indices to fix before projecting.
+        channel_indices : tuple of int, optional
+            Specific index values for each channel dimension.
+
+        Returns
+        -------
+        numpy.ndarray
+            An RGB uint8 image array (H x W x 3).
         """
         import numpy as np
 
@@ -352,18 +382,20 @@ class NdImage(MediaURI):
         return rgb_projection.astype(np.uint8)
 
     def _normalize_for_display(self, array):
-        """
-        Normalizes array values to [0, 255] range with improved contrast.
+        """Normalize array values to the [0, 255] range for image display.
+
+        Uses percentile-based contrast stretching (0.5th to 99.5th
+        percentile) for arrays with more than 100 elements.
 
         Parameters
         ----------
         array : numpy.ndarray
-            Input array to normalize
+            The input array to normalize.
 
         Returns
         -------
         numpy.ndarray
-            Normalized array in uint8 format
+            A uint8 array with values in [0, 255].
         """
         import numpy as np
 

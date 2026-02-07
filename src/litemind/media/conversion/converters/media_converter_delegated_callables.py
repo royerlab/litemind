@@ -12,49 +12,61 @@ from litemind.media.types.media_video import Video
 
 
 class MediaConverterApi(BaseConverter):
-    """
-    Converter for Image, Audio, Video and Document media relying on a Litemind provider API.
+    """Converts Image, Audio, Video, and Document media to Text via a LLM provider API.
 
+    Delegates to the provider's ``describe_*`` methods (e.g.
+    ``describe_image``, ``describe_audio``) to generate text descriptions.
+    Only supports media types for which the underlying model has the
+    corresponding feature (Image, Audio, Video, Document).
     """
 
     def __init__(self, api: BaseApi):
-        """
-        Initialize the converter with a Litemind provider API.
-        These functions should take a string (the media URI) and return a string (the description).
-        The functions should be able to handle the media URI and return a description.
+        """Initialise the converter with a litemind provider API.
 
         Parameters
         ----------
-        api: BaseApi
-            The Litemind provider API to use for conversion.
+        api : BaseApi
+            The provider API used to generate text descriptions of media.
         """
 
         super().__init__()
         self.api: BaseApi = api
 
     def rule(self) -> List[Tuple[Type[MediaBase], List[Type[MediaBase]]]]:
-        # Define the conversion rules for each media type
+        """Declare all theoretically possible API-based media conversions.
 
-        rules = (
-            []
-        )  # [(Image, [Text]), (Audio, [Text]), (Video, [Text]), (Document, [Text])]
+        Returns a static list of all media-to-text conversions that the
+        API *could* perform. The actual feature check is deferred to
+        ``can_convert()`` which is called at conversion time, not during
+        graph construction. This avoids a circular dependency where
+        ``rule()`` calls ``has_model_support_for()`` which calls
+        ``can_convert_within()`` which calls ``rule()`` again.
 
-        if self.api.has_model_support_for(ModelFeatures.Image):
-            rules.append((Image, [Text]))
-
-        if self.api.has_model_support_for(ModelFeatures.Audio):
-            rules.append((Audio, [Text]))
-
-        if self.api.has_model_support_for(ModelFeatures.Video):
-            rules.append((Video, [Text]))
-
-        if self.api.has_model_support_for(ModelFeatures.Document):
-            rules.append((Document, [Text]))
-
-        return rules
+        Returns
+        -------
+        List[Tuple[Type[MediaBase], List[Type[MediaBase]]]]
+            Rules for each media type the API could potentially describe.
+        """
+        return [
+            (Image, [Text]),
+            (Audio, [Text]),
+            (Video, [Text]),
+            (Document, [Text]),
+        ]
 
     def can_convert(self, media: MediaBase) -> bool:
-        # Check if the media is one of the supported types
+        """Check whether the API can describe the given media type.
+
+        Parameters
+        ----------
+        media : MediaBase
+            The media to check.
+
+        Returns
+        -------
+        bool
+            True if the media type is supported by the underlying model.
+        """
         if isinstance(media, Image) and self.api.has_model_support_for(
             ModelFeatures.Image
         ):
@@ -75,6 +87,21 @@ class MediaConverterApi(BaseConverter):
             return False
 
     def convert(self, media: MediaBase) -> List[MediaBase]:
+        """Generate a text description of the media using the LLM API.
+
+        Falls back to returning the original media if the API call fails.
+
+        Parameters
+        ----------
+        media : MediaBase
+            The media to describe.
+
+        Returns
+        -------
+        List[MediaBase]
+            A single-element list containing a Text description, or the
+            original media if an error occurs.
+        """
 
         try:
             if isinstance(media, Image) and self.api.has_model_support_for(

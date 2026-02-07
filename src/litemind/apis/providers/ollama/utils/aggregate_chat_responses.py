@@ -4,26 +4,23 @@ from typing import Callable, Iterable
 def aggregate_chat_responses(
     chunks: Iterable["ChatResponse"], callback: Callable
 ) -> "ChatResponse":
-    """
-    Aggregate an iterable of ChatResponse objects into a single ChatResponse.
+    """Aggregate streaming ChatResponse chunks into a single ChatResponse.
 
-    1. If there are no items in `chunks`, returns an empty ChatResponse.
-    2. Otherwise, initializes with the first chunk and merges subsequent chunks:
-       - Concatenates `.message.content`
-       - Extends `.message.tool_calls` and `.message.images`
-       - Overwrites scalar fields with the last non-None occurrence
-       - Marks `.done` as True if any chunk has `.done=True`
-    3. Returns the final merged ChatResponse.
+    Concatenates text content, extends tool calls and images, and
+    overwrites scalar fields with the last non-None occurrence.
 
-    -----------
-    Parameters:
-        chunks: Iterable[ChatResponse]
-            An iterable of ChatResponse objects (often from streaming).
-        callback: Callable
-            A callable to be invoked after each chunk is processed.
+    Parameters
+    ----------
+    chunks : Iterable[ChatResponse]
+        An iterable of ChatResponse objects from streaming.
+    callback : Callable
+        Called with each text fragment as ``callback(fragment=text)``.
 
-    Returns:
-        A single ChatResponse with merged fields.
+    Returns
+    -------
+    ChatResponse
+        A single merged ChatResponse. If no chunks are provided,
+        returns an empty ChatResponse with role "assistant".
     """
 
     from ollama import ChatResponse, Message

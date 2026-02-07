@@ -16,9 +16,8 @@ def check_ollama_api_availability(client):
 
     Parameters
     ----------
-    client:
-        Ollama API client
-
+    client : Any
+        The Ollama API client instance.
 
     Returns
     -------
@@ -39,15 +38,8 @@ def check_ollama_api_availability(client):
 
         # If we get here, the API is available:
         result = True
-    except Exception as e:
-        # If we get an error, we assume it's because Ollama is not running:
-        aprint(f"Error while trying to check availability of Ollama API: {e}")
-
-        # print stack trace:
-        import traceback
-
-        traceback.print_exc()
-
+    except Exception:
+        # Ollama server is not running or not reachable:
         result = False
 
     if result:

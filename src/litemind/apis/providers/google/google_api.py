@@ -378,6 +378,12 @@ class GeminiApi(DefaultApi):
         # Format tools for Gemini:
         gemini_tools = format_tools_for_gemini(toolset)
 
+        # Disable explicit thinking config when tools are present — Gemini
+        # models that support thinking will still think implicitly, but we
+        # avoid passing a thinking_config that could conflict with tool use.
+        if gemini_tools:
+            thinking_config = None
+
         # Build GenerationConfig (tools are part of the config in new SDK)
         if response_format is None or toolset is not None:
             generation_cfg = types.GenerateContentConfig(
@@ -512,8 +518,23 @@ class GeminiApi(DefaultApi):
             config=config,
         )
 
-        # Get the generated image:
-        generated_image = result.generated_images[0].image
+        # Get the generated image and ensure it is a PIL Image:
+        google_image = result.generated_images[0].image
+
+        # The Google SDK may return a google.genai.types.Image wrapper
+        # rather than a PIL Image directly. Convert if needed:
+        if isinstance(google_image, PilImage.Image):
+            generated_image = google_image
+        elif hasattr(google_image, "_pil_image") and google_image._pil_image:
+            generated_image = google_image._pil_image
+        elif hasattr(google_image, "image_bytes") and google_image.image_bytes:
+            import io
+
+            generated_image = PilImage.open(io.BytesIO(google_image.image_bytes))
+        else:
+            raise ValueError(
+                "Could not extract PIL image from Gemini generate_images response."
+            )
 
         # Add all parameters to kwargs:
         kwargs.update(

@@ -5,15 +5,21 @@ from litemind.agent.messages.message import Message
 
 
 class BaseApiCallbacks(ABC):
+    """Abstract base class defining callback hooks for API operations.
+
+    Subclass this and override methods to receive notifications about
+    API events such as text generation, embedding, media description,
+    and model selection.
+    """
+
     def on_availability_check(self, available: bool) -> None:
         """
         Called when the availability and credentials check is performed.
 
         Parameters
         ----------
-        available: bool
+        available : bool
             Whether the API is available.
-
         """
         pass
 
@@ -23,12 +29,10 @@ class BaseApiCallbacks(ABC):
 
         Parameters
         ----------
-
-        models: List[str]
+        models : List[str]
             The list of models.
-        kwargs: dict
+        kwargs : dict
             Other and additional keyword arguments.
-
         """
         pass
 
@@ -38,12 +42,10 @@ class BaseApiCallbacks(ABC):
 
         Parameters
         ----------
-
-        model_name: str
+        model_name : str
             The model name.
-        kwargs: dict
+        kwargs : dict
             Other and additional keyword arguments.
-
         """
         pass
 
@@ -55,24 +57,24 @@ class BaseApiCallbacks(ABC):
 
         Parameters
         ----------
-        response: Message
-            The response message.
-        messages: List[Message]
+        messages : List[Message]
             The list of messages.
-        kwargs
+        response : Message
+            The response message.
+        kwargs : dict
             Other and additional keyword arguments.
         """
         pass
 
     def on_text_streaming(self, fragment: str, **kwargs) -> None:
         """
-        Called when a text completion is generated.
+        Called when a streaming text fragment is received during generation.
 
         Parameters
         ----------
-        fragment: str
+        fragment : str
             Streaming fragment during generation.
-        kwargs
+        kwargs : dict
             Other and additional keyword arguments.
         """
         pass
@@ -85,14 +87,12 @@ class BaseApiCallbacks(ABC):
 
         Parameters
         ----------
-
-        transcription: str
+        transcription : str
             The transcription.
-        audio_uri: str
+        audio_uri : str
             The audio URI.
-        kwargs: dict
+        kwargs : dict
             Other and additional keyword arguments.
-
         """
         pass
 
@@ -104,14 +104,12 @@ class BaseApiCallbacks(ABC):
 
         Parameters
         ----------
-
-        document_uri: str
+        document_uri : str
             The document URI.
-        markdown: str
+        markdown : str
             The markdown content.
-        kwargs: dict
+        kwargs : dict
             Other and additional keyword arguments.
-
         """
         pass
 
@@ -123,16 +121,14 @@ class BaseApiCallbacks(ABC):
 
         Parameters
         ----------
-
-        video_uri: str
+        video_uri : str
             The video URI.
-        images: List[str]
+        images : List[str]
             The list of image URIs.
-        audio: str
+        audio : str
             The audio URI.
-        kwargs: dict
+        kwargs : dict
             Other and additional keyword arguments.
-
         """
         pass
 
@@ -142,14 +138,12 @@ class BaseApiCallbacks(ABC):
 
         Parameters
         ----------
-
-        text: str
+        text : str
             The text prompt.
-        audio_uri: str
+        audio_uri : str
             The audio URI.
-        kwargs: dict
+        kwargs : dict
             Other and additional keyword arguments.
-
         """
         pass
 
@@ -159,13 +153,12 @@ class BaseApiCallbacks(ABC):
 
         Parameters
         ----------
-        prompt: str
+        prompt : str
             The image generation prompt.
-        image: Any
+        image : Any
             The generated image.
-        kwargs: dict
+        kwargs : dict
             Other and additional keyword arguments.
-
         """
         pass
 
@@ -177,14 +170,12 @@ class BaseApiCallbacks(ABC):
 
         Parameters
         ----------
-        texts: List[str]
+        texts : List[str]
             The input texts.
-        embeddings: Sequence[Sequence[float]]
+        embeddings : Sequence[Sequence[float]]
             The generated embeddings.
-        kwargs: dict
+        kwargs : dict
             Other and additional keyword arguments.
-
-
         """
         pass
 
@@ -196,13 +187,12 @@ class BaseApiCallbacks(ABC):
 
         Parameters
         ----------
-        image_uris: List[str]
+        image_uris : List[str]
             The input image URIs.
-        embeddings: Sequence[Sequence[float]]
+        embeddings : Sequence[Sequence[float]]
             The generated embeddings.
-        kwargs: dict
+        kwargs : dict
             Other and additional keyword arguments.
-
         """
         pass
 
@@ -214,13 +204,12 @@ class BaseApiCallbacks(ABC):
 
         Parameters
         ----------
-        audio_uris: List[str]
+        audio_uris : List[str]
             The input audio URIs.
-        embeddings: Sequence[Sequence[float]]
+        embeddings : Sequence[Sequence[float]]
             The generated embeddings.
-        kwargs: dict
+        kwargs : dict
             Other and additional keyword arguments.
-
         """
         pass
 
@@ -232,13 +221,12 @@ class BaseApiCallbacks(ABC):
 
         Parameters
         ----------
-        video_uris: List[str]
+        video_uris : List[str]
             The input video URIs.
-        embeddings: Sequence[Sequence[float]]
+        embeddings : Sequence[Sequence[float]]
             The generated embeddings.
-        kwargs: dict
+        kwargs : dict
             Other and additional keyword arguments.
-
         """
         pass
 
@@ -250,13 +238,12 @@ class BaseApiCallbacks(ABC):
 
         Parameters
         ----------
-        document_uris: List[str]
-            The input video URIs.
-        embeddings: Sequence[Sequence[float]]
+        document_uris : List[str]
+            The input document URIs.
+        embeddings : Sequence[Sequence[float]]
             The generated embeddings.
-        kwargs: dict
+        kwargs : dict
             Other and additional keyword arguments.
-
         """
         pass
 
@@ -266,14 +253,12 @@ class BaseApiCallbacks(ABC):
 
         Parameters
         ----------
-
-        image_uri: str
+        image_uri : str
             The image URI.
-        description: str
+        description : str
             The description.
-        kwargs: dict
+        kwargs : dict
             Other and additional keyword arguments.
-
         """
         pass
 
@@ -283,12 +268,11 @@ class BaseApiCallbacks(ABC):
 
         Parameters
         ----------
-
-        audio_uri: str
+        audio_uri : str
             The audio URI.
-        description: str
+        description : str
             The description.
-        kwargs: dict
+        kwargs : dict
             Other and additional keyword arguments.
         """
         pass
@@ -299,11 +283,11 @@ class BaseApiCallbacks(ABC):
 
         Parameters
         ----------
-        video_uri: str
+        video_uri : str
             The video URI.
-        description: str
+        description : str
             The description.
-        kwargs: dict
+        kwargs : dict
             Other and additional keyword arguments.
         """
         pass
@@ -316,11 +300,11 @@ class BaseApiCallbacks(ABC):
 
         Parameters
         ----------
-        document_uri: str
+        document_uri : str
             The document URI.
-        description: str
+        description : str
             The description.
-        kwargs: dict
+        kwargs : dict
             Other and additional keyword arguments.
         """
         pass

@@ -3,15 +3,29 @@ from litemind.utils.pickle_serialisation import PickleSerializable
 
 
 class MediaDefault(MediaBase, PickleSerializable):
-    """
-    This class provides default and common implementations of methods for MediaBase
+    """Default implementation of common MediaBase methods.
 
+    Provides standard implementations of ``to_message_block``, ``__str__``,
+    ``__len__``, ``__contains__``, ``__hash__``, and ``__eq__`` so that
+    concrete media subclasses only need to implement ``get_content``.
+
+    Parameters
+    ----------
+    **kwargs
+        Arbitrary keyword attributes stored in ``self.attributes``.
     """
 
     def __init__(self, **kwargs):
         self.attributes = kwargs
 
     def to_message_block(self) -> "MessageBlock":
+        """Wrap this media in a MessageBlock.
+
+        Returns
+        -------
+        MessageBlock
+            A new message block containing this media instance.
+        """
         from litemind.agent.messages.message_block import MessageBlock
 
         return MessageBlock(self)

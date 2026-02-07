@@ -13,34 +13,24 @@ def process_response_from_ollama(
     toolset: Optional[ToolSet],
     response_format: Optional[Union[BaseModel, str]] = None,
 ) -> Message:
-    """
-    Process Ollama's response, checking for tool calls and executing them if needed.
+    """Convert an Ollama chat response into a litemind Message.
+
+    Extracts text content, thinking blocks, and tool calls from the
+    Ollama response. Optionally parses structured output.
 
     Parameters
     ----------
-    ollama_response : dict
-        The response from Ollama's `chat` call, e.g.:
-        {
-          'done': True,
-          'message': {
-            'content': "...",
-            'tool_calls': [
-                {
-                    'function': {...},
-                    'type': 'function_call',
-                }
-            ]
-          }
-        }
+    ollama_response : Union[ChatResponse, Iterator[ChatResponse]]
+        The response from Ollama's ``chat`` call.
     toolset : Optional[ToolSet]
-        The ToolSet object containing the tools to execute.
-    response_format : Optional[BaseModel | str]
-        The format of the response.
+        The ToolSet used during generation, needed for tool call extraction.
+    response_format : Optional[Union[BaseModel, str]]
+        If provided, parses the text response into this Pydantic model.
 
     Returns
     -------
     Message
-        The final response message (either direct text or the tool's result).
+        Processed response as a litemind Message with role "assistant".
     """
 
     # Initialize the processed response:

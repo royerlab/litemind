@@ -2,7 +2,7 @@ from typing import Any, List, Sequence
 
 import pytest
 
-from litemind import API_IMPLEMENTATIONS
+from litemind import get_available_apis
 from litemind.agent.messages.message import Message
 from litemind.apis.base_api import BaseApi
 from litemind.apis.callbacks.api_callback_manager import ApiCallbackManager
@@ -123,7 +123,7 @@ class MockCallback(BaseApiCallbacks):
         )
 
 
-@pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
+@pytest.mark.parametrize("api_class", get_available_apis())
 def test_availability_check(api_class):
     callback_manager = ApiCallbackManager()
     mock_callback = MockCallback()
@@ -135,7 +135,7 @@ def test_availability_check(api_class):
     assert "on_availability_check" in mock_callback.called_methods
 
 
-@pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
+@pytest.mark.parametrize("api_class", get_available_apis())
 def test_model_list(api_class):
     callback_manager = ApiCallbackManager()
     mock_callback = MockCallback()
@@ -147,7 +147,7 @@ def test_model_list(api_class):
     assert "on_model_list" in mock_callback.called_methods
 
 
-@pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
+@pytest.mark.parametrize("api_class", get_available_apis())
 def test_best_model_selected(api_class):
     callback_manager = ApiCallbackManager()
     mock_callback = MockCallback()
@@ -159,7 +159,7 @@ def test_best_model_selected(api_class):
     assert "on_best_model_selected" in mock_callback.called_methods
 
 
-@pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
+@pytest.mark.parametrize("api_class", get_available_apis())
 def test_audio_transcription(api_class):
     callback_manager = ApiCallbackManager()
     mock_callback = MockCallback()
@@ -181,7 +181,7 @@ def test_audio_transcription(api_class):
     assert "on_audio_transcription" in mock_callback.called_methods
 
 
-@pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
+@pytest.mark.parametrize("api_class", get_available_apis())
 def test_text_generation(api_class):
     callback_manager = ApiCallbackManager()
     mock_callback = MockCallback()
@@ -209,7 +209,7 @@ def test_text_generation(api_class):
     assert "on_text_generation" in mock_callback.called_methods
 
 
-@pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
+@pytest.mark.parametrize("api_class", get_available_apis())
 def test_text_generation_streaming(api_class):
     callback_manager = ApiCallbackManager()
     mock_callback = MockCallback()
@@ -241,7 +241,7 @@ def test_text_generation_streaming(api_class):
     assert "fragment=" in mock_callback.call_parameters_dump
 
 
-@pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
+@pytest.mark.parametrize("api_class", get_available_apis())
 def test_audio_generation(api_class):
     callback_manager = ApiCallbackManager()
     mock_callback = MockCallback()
@@ -257,7 +257,7 @@ def test_audio_generation(api_class):
         assert "on_audio_generation" in mock_callback.called_methods
 
 
-@pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
+@pytest.mark.parametrize("api_class", get_available_apis())
 def test_image_generation(api_class):
     callback_manager = ApiCallbackManager()
     mock_callback = MockCallback()
@@ -280,7 +280,7 @@ def test_image_generation(api_class):
     assert "on_image_generation" in mock_callback.called_methods
 
 
-@pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
+@pytest.mark.parametrize("api_class", get_available_apis())
 def test_text_embedding(api_class):
     callback_manager = ApiCallbackManager()
     mock_callback = MockCallback()
@@ -298,7 +298,7 @@ def test_text_embedding(api_class):
         assert "on_text_embedding" in mock_callback.called_methods
 
 
-@pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
+@pytest.mark.parametrize("api_class", get_available_apis())
 def test_image_embedding(api_class):
     callback_manager = ApiCallbackManager()
     mock_callback = MockCallback()
@@ -318,7 +318,7 @@ def test_image_embedding(api_class):
         assert "on_image_embedding" in mock_callback.called_methods
 
 
-@pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
+@pytest.mark.parametrize("api_class", get_available_apis())
 def test_audio_embedding(api_class):
     callback_manager = ApiCallbackManager()
     mock_callback = MockCallback()
@@ -338,7 +338,7 @@ def test_audio_embedding(api_class):
         assert "on_audio_embedding" in mock_callback.called_methods
 
 
-@pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
+@pytest.mark.parametrize("api_class", get_available_apis())
 def test_video_embedding(api_class):
     callback_manager = ApiCallbackManager()
     mock_callback = MockCallback()
@@ -358,7 +358,7 @@ def test_video_embedding(api_class):
         assert "on_video_embedding" in mock_callback.called_methods
 
 
-@pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
+@pytest.mark.parametrize("api_class", get_available_apis())
 def test_image_description(api_class):
     callback_manager = ApiCallbackManager()
     mock_callback = MockCallback()
@@ -375,7 +375,7 @@ def test_image_description(api_class):
         assert "on_image_description" in mock_callback.called_methods
 
 
-@pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
+@pytest.mark.parametrize("api_class", get_available_apis())
 def test_audio_description(api_class):
     callback_manager = ApiCallbackManager()
     mock_callback = MockCallback()
@@ -392,7 +392,7 @@ def test_audio_description(api_class):
         assert "on_audio_description" in mock_callback.called_methods
 
 
-@pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
+@pytest.mark.parametrize("api_class", get_available_apis())
 def test_video_description(api_class):
     callback_manager = ApiCallbackManager()
     mock_callback = MockCallback()

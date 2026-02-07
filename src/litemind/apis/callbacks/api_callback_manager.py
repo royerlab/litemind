@@ -5,7 +5,15 @@ from litemind.apis.callbacks.base_api_callbacks import BaseApiCallbacks
 
 
 class ApiCallbackManager(BaseApiCallbacks):
+    """Manager that dispatches API callback events to registered listeners.
+
+    Acts as a composite pattern: implements the same callback interface as
+    ``BaseApiCallbacks`` and fans out each event to all registered callback
+    instances.
+    """
+
     def __init__(self):
+        """Initialize with an empty list of callback listeners."""
         self.callbacks: List[BaseApiCallbacks] = []
 
     def add_callback(self, callback: BaseApiCallbacks) -> None:

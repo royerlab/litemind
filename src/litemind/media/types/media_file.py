@@ -6,34 +6,37 @@ from litemind.utils.file_types.file_types import is_text_file, probe
 
 
 class File(MediaURI):
-    """
-    A media that stores a generic file, typically a file type no already covered by the other media types.
+    """Media for generic files not covered by other media types.
+
+    Acts as a catch-all for file types that do not have a dedicated media
+    class (e.g. binaries, archives). Provides conversion to a descriptive
+    Text media including file metadata and content previews.
     """
 
     def __init__(self, uri: str, extension: Optional[str] = None, **kwargs):
-        """
-        Create a new file media.
+        """Create a new file media.
 
         Parameters
         ----------
-        uri: str
-            The file URI.
-        extension: str
-            Extension/Type of the file in case it is not clear from the URI. This is the extension _without_ the dot -- 'exe' not '.exe'.
-        kwargs: dict
-            Other arguments passed to MediaURI.
+        uri : str
+            The file URI or local file path.
+        extension : str, optional
+            File extension override without the leading dot (e.g. ``"exe"``).
+        **kwargs
+            Additional keyword arguments forwarded to ``MediaURI``.
         """
 
         super().__init__(uri=uri, extension=extension, **kwargs)
 
     def load_from_uri(self):
-        """
-        Load the file from its URI.
+        """Load the raw file content from the URI.
+
+        Populates ``self.data`` with the file content as bytes.
 
         Returns
         -------
         bytes
-            The raw file content as bytes.
+            The raw file content.
         """
         local_path = self.to_local_file_path()
         with open(local_path, "rb") as f:
@@ -42,20 +45,22 @@ class File(MediaURI):
         return self.data
 
     def to_markdown_text_media(self, hex_dump_length=128) -> Text:
-        """
-        Creates a LLM-ready description of the binary file, including file metadata
-        and hex dumps of the file content.
+        """Create an LLM-friendly text description of the file.
+
+        Includes file metadata (size, type, MIME type, last modified date)
+        and either the full text content (for text files) or hex dumps of
+        the first and last bytes (for binary files).
 
         Parameters
         ----------
-        hex_dump_length: int
-            The number of bytes to read from the beginning and end of the file for the hex dump.
-            Default is 128 bytes.
+        hex_dump_length : int, optional
+            Number of bytes to include in the hex dump from the beginning
+            and end of binary files. Default is 128.
 
         Returns
         -------
-        List[Media]
-            A list containing a single Text media with the file description.
+        Text
+            A Text media containing the file description.
         """
         import binascii
         import os

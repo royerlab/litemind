@@ -194,7 +194,7 @@ from litemind.apis.callbacks.api_callback_manager import ApiCallbackManager
 
 class MyCallback(BaseApiCallbacks):
     def on_text_generation(self, messages, response, **kwargs):
-        print(f"Generated {len(response)} tokens")
+        print(f"Generated response with {len(response.blocks)} blocks")
 
     def on_text_streaming(self, fragment, **kwargs):
         print(fragment, end="", flush=True)
@@ -219,30 +219,29 @@ Available callbacks:
 
 ```python
 from litemind import OpenAIApi
+from litemind.agent.messages.message import Message
 
 api = OpenAIApi()
-messages = [
-    {"role": "system", "content": "You are a helpful assistant."},
-    {"role": "user", "content": "What is the capital of France?"}
-]
-response = api.generate_text(messages=messages, model_name="gpt-4o")
+system_msg = Message(role="system", text="You are a helpful assistant.")
+user_msg = Message(role="user", text="What is the capital of France?")
+response = api.generate_text(messages=[system_msg, user_msg], model_name="gpt-4o")
 ```
 
 ### Feature-Based Model Selection
 
 ```python
 from litemind.apis.combined_api import CombinedApi
+from litemind.agent.messages.message import Message
 
 api = CombinedApi()
 
 # Get best model for multimodal + tools
 model = api.get_best_model(features=["image", "tools"])
 
-# Generate with automatic model selection
-response = api.generate_text(
-    messages=messages,
-    model_features=["textgeneration", "tools"]
-)
+# Generate with the selected model
+system_msg = Message(role="system", text="You are a helpful assistant.")
+user_msg = Message(role="user", text="Describe this scene.")
+response = api.generate_text(messages=[system_msg, user_msg], model_name=model)
 ```
 
 ### Structured Outputs

@@ -5,9 +5,26 @@ from litemind.agent.tools.callbacks.tool_callback_manager import ToolCallbackMan
 
 
 class BaseTool(ABC):
-    """Abstract base class for a tool."""
+    """Abstract base class for all tools usable by an Agent.
+
+    Tools wrap callable functionality (functions, sub-agents, or built-in
+    API features) behind a uniform interface. Each tool has a name,
+    description, arguments schema, and a callback manager for lifecycle
+    monitoring.
+    """
 
     def __init__(self, name: str, description: str):
+        """
+        Initialize the base tool.
+
+        Parameters
+        ----------
+        name : str
+            The name of the tool. Whitespace is stripped and collapsed.
+        description : str
+            A description of what the tool does. A trailing period is
+            added if not present.
+        """
 
         # Store the name, make sure to strip any leading or trailing whitespace and any spaces in between:
         self.name = "".join(name.strip().split())
@@ -58,8 +75,22 @@ class BaseTool(ABC):
     def _execute(self, *args, **kwargs) -> Any:
         """
         Execute the tool with the provided arguments.
-        DO NOT CALL THIS METHOD DIRECTLY, USE THE __call__ METHOD INSTEAD.
-        Otherwise the callbacks won't be called!
+
+        .. warning::
+            Do not call this method directly. Use ``__call__`` instead
+            to ensure callbacks are invoked.
+
+        Parameters
+        ----------
+        *args
+            Positional arguments for the tool.
+        **kwargs
+            Keyword arguments for the tool.
+
+        Returns
+        -------
+        Any
+            The result of the tool execution.
         """
         pass
 

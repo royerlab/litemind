@@ -10,10 +10,12 @@ from litemind.media.media_base import MediaBase
 
 
 class AugmentationSet:
-    """
-    A set of augmentations that can be used by an agent.
+    """A managed collection of augmentations for Retrieval-Augmented Generation.
 
-    This is similar to the ToolSet class but for augmentations.
+    Each augmentation can have its own ``k`` (number of results) and
+    ``threshold`` (minimum relevance score) settings. Provides methods
+    to search all augmentations individually or combine results ranked
+    by relevance score.
     """
 
     def __init__(self):
@@ -33,16 +35,17 @@ class AugmentationSet:
         threshold: float = 0.0,
     ):
         """
-        Add an augmentation to the set. A k and threshold values can be specified for each augmentation.
+        Add an augmentation with per-augmentation retrieval settings.
 
         Parameters
         ----------
-        augmentation: AugmentationBase
+        augmentation : AugmentationBase
             The augmentation to add.
-        k: int
-            The number of informations to retrieve from the augmentation.
-        threshold: float
-            The score threshold_dict for the augmentation. If the score is below this value, the augmentation will not be used.
+        k : int
+            The maximum number of informations to retrieve from this
+            augmentation.
+        threshold : float
+            Minimum relevance score. Results below this value are excluded.
         """
         self.augmentations.append(augmentation)
         self.k_dict[augmentation] = k
@@ -118,24 +121,23 @@ class AugmentationSet:
         threshold: Optional[float] = None,
     ) -> Dict[str, List[InformationBase]]:
         """
-        Search all augmentations and return the results.
-        The results are kept separate for each augmentation.
+        Search all augmentations and return results per augmentation.
 
         Parameters
         ----------
-        query: Union[str, BaseModel, MediaBase, Information]
+        query : Union[str, BaseModel, MediaBase, Information]
             The query to search for.
-        k: Optional[int]
-            The max number of results to return from each augmentation.
-            If not specified, the k_dict value assigned to each augmentation will be used.
-        threshold: Optional[float]
-            The score threshold_dict for the augmentation. If the score is below this value, the augmentation will not be used.
-            If not specified, the threshold_dict value assigned to each augmentation will be used.
+        k : Optional[int]
+            Maximum results per augmentation. If None, uses each
+            augmentation's configured ``k`` value.
+        threshold : Optional[float]
+            Minimum relevance score. If None, uses each augmentation's
+            configured threshold.
 
         Returns
         -------
         Dict[str, List[InformationBase]]
-            A dictionary mapping augmentation names to lists of relevant informations.
+            A dictionary mapping augmentation names to their result lists.
         """
 
         # Initialize results dictionary
@@ -160,23 +162,26 @@ class AugmentationSet:
         self, query: Union[str, InformationBase], k: int = 5, threshold: float = 0.0
     ) -> List[InformationBase]:
         """
-        Search all augmentations and combine the results into one list sorted by decreasing scores.
-        This assumes that the scores are comparable across augmentations.
+        Search all augmentations and return a merged, ranked result list.
+
+        Results from all augmentations are combined and sorted by
+        descending relevance score. This assumes scores are comparable
+        across augmentations.
 
         Parameters
         ----------
-        query: Union[str, Document]
+        query : Union[str, InformationBase]
             The query to search for.
-        k: int
-            The total number of results to return. The top k_dict results from all augmentations will be returned.
-        threshold: float
-            The score threshold_dict for the augmentation. If the score is below this value, the augmentation will not be used.
+        k : int
+            The total number of top results to return across all
+            augmentations.
+        threshold : float
+            Minimum relevance score. Results below this value are excluded.
 
         Returns
         -------
-        List[Document]
-            A combined list of relevant informations from all augmentations,
-            sorted by relevance score.
+        List[InformationBase]
+            The top ``k`` informations sorted by relevance score.
         """
 
         # Initialize an empty list to store all informations
@@ -199,41 +204,44 @@ class AugmentationSet:
             key=lambda x: x.score if x.score is not None else 0, reverse=True
         )
 
-        # Return top k_dict results
+        # Return top k results
         return all_infos[:k]
 
     def _search_raw(self, augmentation, k, query, threshold):
         """
-        Perform a search for a specific augmentation and return the results.
-        This method is used internally by search_all and search_combined.
-        It retrieves the k_dict and threshold_dict for this augmentation and
-        calls the augmentation's get_relevant_informations method.
-        It also adds the augmentation name to the metadata of each information.
-        This is useful for debugging and tracking which augmentation was used to retrieve the information.
-        This method is not meant to be called directly.
+        Perform a search on a single augmentation and tag results.
+
+        Retrieves the per-augmentation ``k`` and ``threshold`` if not
+        overridden, calls ``get_relevant_informations``, and annotates
+        each result's metadata with the augmentation name.
 
         Parameters
         ----------
-        augmentation: AugmentationBase
-            The augmentation to search for.
+        augmentation : AugmentationBase
+            The augmentation to search.
         k : Optional[int]
-            The max number of results to return from this augmentation.
-        query: Union[str, BaseModel, MediaBase, Information]
+            Maximum results. Falls back to the augmentation's configured
+            value if None.
+        query : Union[str, BaseModel, MediaBase, Information]
             The query to search for.
-        threshold: Optional[float]
-            The score threshold_dict for the augmentation. If the score is below this value, the augmentation will not be used.
+        threshold : Optional[float]
+            Minimum relevance score. Falls back to the augmentation's
+            configured value if None.
 
         Returns
         -------
         List[InformationBase]
-            A list of relevant informations from this augmentation.
-
+            Relevant informations with augmentation name in metadata.
         """
-        # Get the k_dict and threshold_dict for this augmentation
-        k_ = k or self.k_dict.get(augmentation)
+        # Get the k value for this augmentation
+        k_ = k if k is not None else self.k_dict.get(augmentation)
 
-        # Get the threshold_dict for this augmentation
-        threshold_ = threshold or self.threshold_dict.get(augmentation)
+        # Get the threshold value for this augmentation
+        threshold_ = (
+            threshold
+            if threshold is not None
+            else self.threshold_dict.get(augmentation)
+        )
 
         # Get the relevant informations from the augmentation
         infos = augmentation.get_relevant_informations(

@@ -136,25 +136,21 @@ def scan(
 
     .. deprecated::
         This function performs full feature scanning which is expensive and
-        can produce false negatives. Consider using `validate()` to validate
-        the curated registry instead, or `discover()` for new models.
+        can produce false negatives. Use ``validate`` to check the curated
+        registry or ``discover`` for new models instead.
 
     Parameters
     ----------
     apis : List[Type[BaseApi]]
         The API classes to scan.
     model_names : Optional[List[str]]
-        The names of the models to scan. If None, scans all available models.
+        The names of the models to scan. If ``None``, scans all available
+        models.
     output_dir : Optional[str]
-        The directory to save the scan results. If None, uses the default directory.
-
-    Returns
-    -------
-    None
-        The function does not return anything. It prints the report and saves the results to the specified directory.
-
+        Directory to save the scan results. If ``None``, uses the default
+        directory.
     """
-    # Ensure that list of APis is not empty or None:
+    # Ensure that list of APIs is not empty or None:
     if (
         apis is None
         or not isinstance(apis, list)
@@ -189,7 +185,7 @@ def scan(
 
             if not available_models:
                 aprint("No models available for scanning.")
-                return
+                continue
 
             # Filter model list for scanning
             if model_names is not None:
@@ -204,7 +200,7 @@ def scan(
 
             if not scan_models:
                 aprint("No models to scan.")
-                return
+                continue
 
             # Scan the API class directly
             aprint(f"Scanning {len(scan_models)} models: {', '.join(scan_models)}")

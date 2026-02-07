@@ -105,11 +105,29 @@ exclude = [
 [project.scripts]
 litemind = "litemind.tools.litemind_tools:main"
 
+[tool.isort]
+profile = "black"
+
 [tool.pytest.ini_options]
 markers = [
     "unit: marks tests as unit tests (fast, no external deps)",
     "integration: marks tests requiring external APIs",
     "slow: marks tests that take more than 5 seconds",
+]
+
+[tool.hatch.envs.default]
+extra-dependencies = [
+    "black[jupyter]",
+    "isort",
+    "flake8",
+    "mypy",
+]
+
+[tool.hatch.envs.ci-test]
+extra-dependencies = [
+    "pytest",
+    "tifffile",
+    "tabulate",
 ]
 
 [tool.hatch.envs.hatch-test]

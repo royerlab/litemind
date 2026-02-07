@@ -3,43 +3,44 @@ from typing import Any
 
 
 class MediaBase(ABC):
-    """
-    Abstract base class defining the interface for 'media' which can be text, code, json, objects, images, audios, videos, etc...
+    """Abstract base class for all media types in litemind.
 
-    This class defines the minimum contract that any media implementation must fulfill
-    to work with the rest of the litemind API
+    Media types include text, code, JSON, images, audio, video, documents,
+    tables, and more. This class defines the interface that every media
+    implementation must satisfy to integrate with the litemind API and
+    message system.
     """
 
     @abstractmethod
     def get_content(self) -> Any:
-        """
-        Get the content of the media.
+        """Get the underlying content of this media.
 
         Returns
         -------
         Any
-            The content of the media.
+            The raw content. The concrete type depends on the media subclass
+            (e.g., ``str`` for Text, ``dict`` for Json, a URI string for
+            URI-based media).
         """
         pass
 
     @abstractmethod
     def to_message_block(self) -> "MessageBlock":
-        """
-        Convert this media to a message block.
+        """Convert this media into a MessageBlock for use in conversations.
 
         Returns
         -------
         MessageBlock
-            The media formatted as a message block.
+            A message block wrapping this media instance.
         """
         pass
 
     @abstractmethod
     def __str__(self) -> str:
-        """String representation of the media."""
+        """Return a human-readable string representation of the media."""
         pass
 
     @abstractmethod
     def __len__(self) -> int:
-        """Length of the media in bytes for binary data and characters for text"""
+        """Return the length of the media in characters for text or bytes for binary data."""
         pass

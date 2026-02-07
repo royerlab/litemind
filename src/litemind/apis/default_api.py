@@ -34,13 +34,18 @@ from litemind.utils.whisper_transcribe_audio import (
 
 
 class DefaultApi(BaseApi):
-    """
-    This is the default API that provides default local models (whisper-local) and features (Video2Image, DocumentConversion, ...).
-    This class is _not_ meant to be used directly, but rather as a base class for other classes that implement BaseAPI.
+    """Standard implementation of BaseApi providing media description and embedding.
 
+    DefaultApi extends BaseApi by implementing the ``describe_*`` methods
+    (image, audio, video, document) that construct appropriate Message objects
+    with media content and delegate to ``generate_text``. It also provides
+    local models (whisper-local, fastembed) and media conversion capabilities.
+
+    This class is not meant to be used directly. Concrete provider
+    implementations (OpenAI, Anthropic, Gemini, Ollama) inherit from this
+    class and override the abstract ``generate_text`` method.
     """
 
-    # constructor:
     def __init__(
         self,
         allow_media_conversions: bool = True,
@@ -52,12 +57,12 @@ class DefaultApi(BaseApi):
 
         Parameters
         ----------
-        allow_media_conversions: bool
+        allow_media_conversions : bool
             If True, the API will allow media conversions using the default media converter.
-        allow_media_conversions_with_models: bool
+        allow_media_conversions_with_models : bool
             If True, the API will allow media conversions using models that support the required features in addition to the default media converter.
             To use this the allow_media_conversions parameter must be True.
-        callback_manager: Optional[ApiCallbackManager]
+        callback_manager : Optional[ApiCallbackManager]
             The callback manager to use for callbacks. If None, no callbacks will be used.
         """
 
@@ -80,7 +85,18 @@ class DefaultApi(BaseApi):
     def check_availability_and_credentials(
         self, api_key: Optional[str] = None
     ) -> Optional[bool]:
+        """Check API availability. The default API is always available.
 
+        Parameters
+        ----------
+        api_key : Optional[str]
+            Ignored for the default API.
+
+        Returns
+        -------
+        bool
+            Always returns True.
+        """
         # Call the callback manager if available:
         self.callback_manager.on_availability_check(True)
 
@@ -97,7 +113,25 @@ class DefaultApi(BaseApi):
         ] = None,
         media_types: Optional[Sequence[Type[MediaBase]]] = None,
     ) -> List[str]:
+        """List available local models, optionally filtered by features.
 
+        Returns models such as ``fastembed`` and ``whisper-local`` depending
+        on which optional dependencies are installed.
+
+        Parameters
+        ----------
+        features : Optional[Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]]
+            Required features to filter models by.
+        non_features : Optional[Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]]
+            Features to exclude from the results.
+        media_types : Optional[Sequence[Type[MediaBase]]]
+            Media types that the returned models must support.
+
+        Returns
+        -------
+        List[str]
+            List of available model names.
+        """
         # Normalise the features:
         features = ModelFeatures.normalise(features)
         non_features = ModelFeatures.normalise(non_features)
@@ -136,7 +170,24 @@ class DefaultApi(BaseApi):
         media_types: Optional[Sequence[Type[MediaBase]]] = None,
         exclusion_filters: Optional[List[str]] = None,
     ) -> Optional[str]:
+        """Select the best available local model matching the given criteria.
 
+        Parameters
+        ----------
+        features : Optional[Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]]
+            Required features the model must support.
+        non_features : Optional[Union[List[str], ModelFeatures, Sequence[ModelFeatures]]]
+            Features the model must not have.
+        media_types : Optional[Sequence[Type[MediaBase]]]
+            Media types the model must be able to process.
+        exclusion_filters : Optional[List[str]]
+            Substrings that, if found in a model name, exclude it.
+
+        Returns
+        -------
+        Optional[str]
+            The best matching model name, or None if no model matches.
+        """
         # Normalise the features, non-features, and media types:
         features = ModelFeatures.normalise(features)
         non_features = ModelFeatures.normalise(non_features)
@@ -178,19 +229,19 @@ class DefaultApi(BaseApi):
         media_types: Optional[Sequence[Type[MediaBase]]] = None,
         exclusion_filters: Optional[Union[str, List[str]]] = None,
     ) -> List[str]:
-        """
-        Filter the list of models based on the given features.
+        """Filter the list of models based on the given features.
+
         Parameters
         ----------
-        model_list: List[str]
+        model_list : List[str]
             List of models.
-        features: Sequence[ModelFeatures], or ModelFeatures, or str, or List[str]
+        features : Sequence[ModelFeatures], or ModelFeatures, or str, or List[str]
             List of features to filter on.
-        non_features: Optional[Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]]
+        non_features : Optional[Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]]
             List of features to exclude.
-        media_types: Optional[Sequence[Type[MediaBase]]]
-            Set of media types that the models must support
-        exclusion_filters: Optional[Union[str,List[str]]]
+        media_types : Optional[Sequence[Type[MediaBase]]]
+            Set of media types that the models must support.
+        exclusion_filters : Optional[Union[str, List[str]]]
             List of strings that if found in the model name exclude it.
 
         Returns
@@ -242,7 +293,26 @@ class DefaultApi(BaseApi):
         media_types: Optional[Sequence[Type[MediaBase]]] = None,
         model_name: Optional[str] = None,
     ) -> bool:
+        """Check whether a model supports the given features and media types.
 
+        Extends the base class check by also considering media conversion
+        capabilities (e.g., a model supports images if it supports
+        ``Image`` directly or via ``ImageConversion``).
+
+        Parameters
+        ----------
+        features : Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
+            Features to check support for.
+        media_types : Optional[Sequence[Type[MediaBase]]]
+            Media types to check support for.
+        model_name : Optional[str]
+            Model to check. If None, checks any available model.
+
+        Returns
+        -------
+        bool
+            True if the model supports all requested features and media types.
+        """
         # Get the features required for the given media types:
         if media_types is not None:
 
@@ -435,7 +505,18 @@ class DefaultApi(BaseApi):
         return True
 
     def get_model_features(self, model_name: str) -> List[ModelFeatures]:
+        """Get all features supported by a given model.
 
+        Parameters
+        ----------
+        model_name : str
+            The model name to query.
+
+        Returns
+        -------
+        List[ModelFeatures]
+            List of all features the model supports.
+        """
         # List to store model features:
         model_features: List[ModelFeatures] = []
 
@@ -452,6 +533,11 @@ class DefaultApi(BaseApi):
     ) -> Set[Type[MediaBase]]:
         """
         Get the allowed media types for text generation.
+
+        Parameters
+        ----------
+        model_name : str
+            The model name to query for supported media types.
 
         Returns
         -------
@@ -523,7 +609,24 @@ class DefaultApi(BaseApi):
         exclude_extensions: Optional[Sequence[str]] = None,
         deepcopy: bool = True,
     ) -> List[Message]:
+        """Preprocess messages by converting media to types the model supports.
 
+        Parameters
+        ----------
+        messages : List[Message]
+            Messages to preprocess.
+        allowed_media_types : Optional[Sequence[Type[MediaBase]]]
+            Media types the target model can handle natively.
+        exclude_extensions : Optional[Sequence[str]]
+            File extensions to exclude from conversion.
+        deepcopy : bool
+            If True, deep-copies messages before modifying them.
+
+        Returns
+        -------
+        List[Message]
+            Preprocessed messages with converted media.
+        """
         # Make a deep copy of the messages and their blocks to prevent damaging the original messages:
         if deepcopy:
             messages = copy.deepcopy(messages)
@@ -576,26 +679,18 @@ class DefaultApi(BaseApi):
 
         Parameters
         ----------
-        response: Message
-
-        messages: List[Message]
+        response : Message
+            The assistant response message containing tool call blocks.
+        messages : List[Message]
             These are the messages passed to the text generation method.
-
-        new_messages: List[Message]
+        new_messages : List[Message]
             This list accumulates the new messages that are created during the processing.
-
-        preprocessed_messages: List[Message]
+        preprocessed_messages : List[Message]
             Preprocessed messages to add the tool uses to.
-
-        toolset: ToolSet
+        toolset : ToolSet
             Toolset to use for the tools. Must be the same one that was used to create the response.
-
-        set_preprocessed: bool
-            If True, the preprocessed messages are set to teh new tool use message instead of being appended to.
-
-        Returns
-        -------
-
+        set_preprocessed : bool
+            If True, the preprocessed messages are set to the new tool use message instead of being appended to.
         """
 
         # Prepare message that will hold the tool uses and adds it to the original, preprocessed, and new messages:
@@ -1154,26 +1249,29 @@ class DefaultApi(BaseApi):
                         )
                         continue
 
-                # Update kwargs with other parameters:
-                kwargs = {
-                    "model_name": model_name,
-                    "temperature": temperature,
-                    "max_output_tokens": max_output_tokens,
-                    "number_of_tries": number_of_tries,
-                    "system": system,
-                    "query": query,
-                }
+                    # Update kwargs with other parameters:
+                    kwargs = {
+                        "model_name": model_name,
+                        "temperature": temperature,
+                        "max_output_tokens": max_output_tokens,
+                        "number_of_tries": number_of_tries,
+                        "system": system,
+                        "query": query,
+                    }
 
-                # call the callback manager:
-                self.callback_manager.on_image_description(
-                    image_uri=image_uri, description=response, **kwargs
-                )
+                    # call the callback manager:
+                    self.callback_manager.on_image_description(
+                        image_uri=image_uri, description=response, **kwargs
+                    )
 
-                # print the description::
-                with asection("Description:"):
-                    aprint(response)
+                    # print the description::
+                    with asection("Description:"):
+                        aprint(response)
 
-                return response
+                    return response
+
+                # Return None if no response was generated:
+                return None
 
             except Exception as e:
                 # Log the error:

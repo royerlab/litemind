@@ -1,6 +1,6 @@
 import pytest
 
-from litemind import API_IMPLEMENTATIONS
+from litemind import get_available_apis
 from litemind.apis.base_api import ModelFeatures
 from litemind.media.types.media_audio import Audio
 from litemind.media.types.media_document import Document
@@ -9,7 +9,7 @@ from litemind.media.types.media_video import Video
 from litemind.ressources.media_resources import MediaResources
 
 
-@pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
+@pytest.mark.parametrize("api_class", get_available_apis())
 class TestBaseApiImplementationsDescribe(MediaResources):
     """
     A tests suite that runs the same tests on each ApiClass

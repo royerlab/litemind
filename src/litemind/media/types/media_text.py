@@ -2,21 +2,26 @@ from litemind.media.media_default import MediaDefault
 
 
 class Text(MediaDefault):
-    """
-    A media that stores plain text
+    """Media that stores plain text content.
+
+    This is the most fundamental media type and serves as the common target
+    for most media converters.
     """
 
     def __init__(self, text: str, **kwargs):
-        """
-        Create a new text information.
+        """Create a new text media.
 
         Parameters
         ----------
-        text: str
+        text : str
             The plain text content.
-        kwargs: dict
-            Other arguments passed to MediaDefault.
+        **kwargs
+            Additional keyword arguments forwarded to ``MediaDefault``.
 
+        Raises
+        ------
+        ValueError
+            If *text* is not a string.
         """
 
         super().__init__(**kwargs)
@@ -29,6 +34,13 @@ class Text(MediaDefault):
         self.text = text
 
     def get_content(self) -> str:
+        """Return the plain text content.
+
+        Returns
+        -------
+        str
+            The stored text string.
+        """
         return self.text
 
     def __str__(self) -> str:

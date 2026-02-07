@@ -5,19 +5,26 @@ from PIL import Image
 
 def convert_image_to_jpeg(file_path: str) -> str:
     """
-    Convert an image to a JPEG file.
-    Uses PIL to open the image in any format and save it as a JPEG file.
+    Convert an image to JPEG format.
+
+    Opens the image with PIL and saves it as a JPEG temporary file.
+    If the file is already a JPEG, returns the original path unchanged.
 
     Parameters
     ----------
     file_path : str
-        The path to the image file.
+        The path to the image file to convert.
 
     Returns
     -------
     str
-        The path to the JPEG file.
+        The path to the converted JPEG file, or the original path if
+        already JPEG.
 
+    Raises
+    ------
+    ValueError
+        If the file path is empty or the file is not a valid image.
     """
 
     # Check if the file exists:

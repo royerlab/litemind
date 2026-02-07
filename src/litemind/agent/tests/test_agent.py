@@ -2,14 +2,14 @@ import pytest
 from arbol import aprint
 from pydantic import BaseModel
 
-from litemind import API_IMPLEMENTATIONS
+from litemind import get_available_apis
 from litemind.agent.agent import Agent
 from litemind.agent.messages.message import Message
 from litemind.apis.model_features import ModelFeatures
 from litemind.ressources.media_resources import MediaResources
 
 
-@pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
+@pytest.mark.parametrize("api_class", get_available_apis())
 def test_agent_with_just_text(api_class):
     # Create OpenAI API object:
     api = api_class()
@@ -53,7 +53,7 @@ def test_agent_with_just_text(api_class):
     assert "Ohmm" in response
 
 
-@pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
+@pytest.mark.parametrize("api_class", get_available_apis())
 def test_agent_with_json_response_format(api_class):
     # Create OpenAI API object:
     api = api_class()
@@ -126,7 +126,7 @@ def test_agent_with_json_response_format(api_class):
     ]
 
 
-@pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
+@pytest.mark.parametrize("api_class", get_available_apis())
 def test_agent_message_with_image(api_class):
     # Create OpenAI API object:
     api = api_class()

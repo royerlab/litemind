@@ -1,3 +1,5 @@
+"""File extension constants organized by media/file type category."""
+
 # ---------------------------------------------------
 # Table file extensions
 # ---------------------------------------------------

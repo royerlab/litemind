@@ -8,11 +8,7 @@ from litemind.media.types.media_text import Text
 
 
 class NdImageConverter(BaseConverter):
-    """
-    Converter for NdImage media type.
-
-    Converts NdImage media to Text and Image media.
-    """
+    """Converts NdImage media to Text descriptions and 2-D Image projections."""
 
     def rule(self) -> List[Tuple[Type[MediaBase], List[Type[MediaBase]]]]:
         return [(NdImage, [Text, Image])]

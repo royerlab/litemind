@@ -2,20 +2,26 @@ import re
 
 
 def is_openai_reasoning_model(model_name: str) -> bool:
-    """
-    Return True iff `model_name` is one of OpenAI's public reasoning models.
+    """Check if a model is an OpenAI reasoning (o-series) model.
 
-    Matches o-series models: o1, o3, o4, o5, o1-mini, o3-high, o4-mini-low, etc.
-    Does NOT match models like 'gpt-4o1' or 'modelo3'.
+    Matches o-series models: o1, o3, o4, o5 and their variants
+    (e.g., o1-mini, o3-high, o4-mini-low). Does NOT match models
+    like ``gpt-4o1`` or ``modelo3``.
 
+    Parameters
+    ----------
+    model_name : str
+        The model name to check.
+
+    Returns
+    -------
+    bool
+        True if the model is an o-series reasoning model.
+
+    Examples
+    --------
     >>> is_openai_reasoning_model("o3")
     True
-    >>> is_openai_reasoning_model("o3-high")
-    True
-    >>> is_openai_reasoning_model("o4-mini-low")
-    True
-    >>> is_openai_reasoning_model("gpt-4.5-preview")
-    False
     >>> is_openai_reasoning_model("gpt-4o")
     False
     """
@@ -24,28 +30,26 @@ def is_openai_reasoning_model(model_name: str) -> bool:
 
 
 def does_openai_model_support_temperature(model_name: str) -> bool:
-    """
-    Return True iff `model_name` supports the temperature parameter.
+    """Check if a model supports the temperature parameter.
 
-    Models that do NOT support temperature:
-    - O-series reasoning models (o1, o3, o4, o5, etc.)
-    - GPT-5.x series models (gpt-5, gpt-5.1, gpt-5.2, etc.)
+    O-series reasoning models (o1, o3, o4, o5) and GPT-5.x series
+    models do not support the temperature parameter.
 
+    Parameters
+    ----------
+    model_name : str
+        The model name to check.
+
+    Returns
+    -------
+    bool
+        True if the model supports temperature, False otherwise.
+
+    Examples
+    --------
     >>> does_openai_model_support_temperature("gpt-4o")
     True
-    >>> does_openai_model_support_temperature("gpt-4o-mini")
-    True
-    >>> does_openai_model_support_temperature("gpt-4.1")
-    True
     >>> does_openai_model_support_temperature("o3")
-    False
-    >>> does_openai_model_support_temperature("o3-high")
-    False
-    >>> does_openai_model_support_temperature("gpt-5")
-    False
-    >>> does_openai_model_support_temperature("gpt-5.2-pro")
-    False
-    >>> does_openai_model_support_temperature("gpt-5.1-codex")
     False
     """
     # O-series reasoning models don't support temperature

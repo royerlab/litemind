@@ -118,3 +118,20 @@ def test_can_convert_within_with_default_converters():
     # Just ensure the function runs without errors
     result = converter.can_convert_within(Video, {Video, Text, Audio, Image})
     assert isinstance(result, bool)
+
+
+def test_video_converts_within_text_and_image():
+    """Test that video can be converted within {Text, Image} without requiring Audio.
+
+    Regression test: the video converter rule must declare Video -> [Text, Image]
+    so that image-only models (which don't support Audio natively) can still
+    process video via the conversion fallback.
+    """
+    converter = MediaConverter()
+    converter.add_default_converters()
+
+    # Image-only models should be able to handle video:
+    assert converter.can_convert_within(Video, {Text, Image})
+
+    # Full support (with Audio) should also work:
+    assert converter.can_convert_within(Video, {Text, Image, Audio})

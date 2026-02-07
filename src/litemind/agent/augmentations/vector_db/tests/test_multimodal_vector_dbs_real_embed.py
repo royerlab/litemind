@@ -4,7 +4,7 @@ import uuid
 
 import pytest
 
-from litemind import VECDB_IMPLEMENTATIONS
+from litemind import get_available_vecdbs
 from litemind.agent.augmentations.information.information import Information
 from litemind.media.types.media_audio import Audio
 from litemind.media.types.media_code import Code
@@ -25,7 +25,7 @@ def _get_temp_folder():
 class TestMultimodalRelevantInformations(MediaResources):
     """Test suite for get_relevant_informations with multimodal content"""
 
-    @pytest.mark.parametrize("vector_db_api", VECDB_IMPLEMENTATIONS)
+    @pytest.mark.parametrize("vector_db_api", get_available_vecdbs())
     def test_get_relevant_informations_multimodal_basic(self, vector_db_api):
         """Test get_relevant_informations with various media types"""
         db = vector_db_api(location=_get_temp_folder())
@@ -94,7 +94,7 @@ class TestMultimodalRelevantInformations(MediaResources):
         audio_results = db.get_relevant_informations(harvard_audio_uri, k=3)
         assert len(audio_results) > 0
 
-    @pytest.mark.parametrize("vector_db_api", VECDB_IMPLEMENTATIONS)
+    @pytest.mark.parametrize("vector_db_api", get_available_vecdbs())
     def test_get_relevant_informations_code(self, vector_db_api):
         """Test get_relevant_informations with code in different languages"""
         db = vector_db_api(location=_get_temp_folder())
@@ -130,7 +130,7 @@ class TestMultimodalRelevantInformations(MediaResources):
         )
         assert len(sql_results) > 0
 
-    @pytest.mark.parametrize("vector_db_api", VECDB_IMPLEMENTATIONS)
+    @pytest.mark.parametrize("vector_db_api", get_available_vecdbs())
     def test_get_relevant_informations_images(self, vector_db_api):
         """Test get_relevant_informations with images"""
         db = vector_db_api(location=_get_temp_folder())
@@ -167,7 +167,7 @@ class TestMultimodalRelevantInformations(MediaResources):
         )
         assert len(image_results) > 0
 
-    @pytest.mark.parametrize("vector_db_api", VECDB_IMPLEMENTATIONS)
+    @pytest.mark.parametrize("vector_db_api", get_available_vecdbs())
     def test_get_relevant_informations_audio_video(self, vector_db_api):
         """Test get_relevant_informations with audio and video"""
         db = vector_db_api(location=_get_temp_folder())
@@ -200,7 +200,7 @@ class TestMultimodalRelevantInformations(MediaResources):
         )
         assert len(video_results) > 0
 
-    @pytest.mark.parametrize("vector_db_api", VECDB_IMPLEMENTATIONS)
+    @pytest.mark.parametrize("vector_db_api", get_available_vecdbs())
     def test_get_relevant_informations_table(self, vector_db_api):
         """Test get_relevant_informations with tables"""
         db = vector_db_api(location=_get_temp_folder())
@@ -228,7 +228,7 @@ class TestMultimodalRelevantInformations(MediaResources):
         text_results = db.get_relevant_informations("product prices", k=1)
         assert len(text_results) > 0
 
-    @pytest.mark.parametrize("vector_db_api", VECDB_IMPLEMENTATIONS)
+    @pytest.mark.parametrize("vector_db_api", get_available_vecdbs())
     def test_get_relevant_informations_document(self, vector_db_api):
         """Test get_relevant_informations with documents"""
         db = vector_db_api(location=_get_temp_folder())
@@ -249,7 +249,7 @@ class TestMultimodalRelevantInformations(MediaResources):
         )
         assert len(doc_results) > 0
 
-    @pytest.mark.parametrize("vector_db_api", VECDB_IMPLEMENTATIONS)
+    @pytest.mark.parametrize("vector_db_api", get_available_vecdbs())
     def test_get_relevant_informations_json(self, vector_db_api):
         """Test get_relevant_informations with JSON data"""
         db = vector_db_api(location=_get_temp_folder())
@@ -271,7 +271,7 @@ class TestMultimodalRelevantInformations(MediaResources):
         json_results = db.get_relevant_informations(Information(json_query), k=1)
         assert len(json_results) > 0
 
-    @pytest.mark.parametrize("vector_db_api", VECDB_IMPLEMENTATIONS)
+    @pytest.mark.parametrize("vector_db_api", get_available_vecdbs())
     def test_get_relevant_informations_mixed_media(self, vector_db_api):
         """Test retrieving mixed media types with the same query"""
         db = vector_db_api(location=_get_temp_folder())
@@ -309,7 +309,7 @@ class TestMultimodalRelevantInformations(MediaResources):
         media_types = {type(result.content).__name__ for result in results}
         assert len(media_types) > 1
 
-    @pytest.mark.parametrize("vector_db_api", VECDB_IMPLEMENTATIONS)
+    @pytest.mark.parametrize("vector_db_api", get_available_vecdbs())
     def test_get_relevant_informations_edge_cases(self, vector_db_api):
         """Test edge cases for get_relevant_informations"""
         db = vector_db_api(location=_get_temp_folder())

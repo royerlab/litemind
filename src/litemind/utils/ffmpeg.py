@@ -1,4 +1,15 @@
 def _set_ffmpeg_binary():
+    """
+    Configure ffmpeg and ffprobe binary paths from imageio-ffmpeg.
+
+    Sets the ``FFMPEG_BINARY`` and ``FFPROBE_BINARY`` environment variables,
+    creates symlinks in ``~/local/bin/``, and adds that directory to PATH.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the ffmpeg executable provided by imageio-ffmpeg is not found.
+    """
     import os
 
     import imageio_ffmpeg

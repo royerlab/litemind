@@ -7,7 +7,23 @@ from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_pa
 
 
 def load_table_from_uri(uri: str):
-    """Load a table file (CSV, TSV, etc.) into a pandas DataFrame."""
+    """
+    Load a tabular data file into a pandas DataFrame.
+
+    Supports CSV, TSV/TAB, and Excel formats. For other delimited
+    formats, attempts automatic delimiter detection.
+
+    Parameters
+    ----------
+    uri : str
+        The URI of the table file. Can be a local path, ``file://`` URI,
+        or remote URL.
+
+    Returns
+    -------
+    pandas.DataFrame or None
+        The loaded DataFrame, or None if loading fails.
+    """
     file_extension = path.splitext(uri)[1].lower()
 
     try:

@@ -166,11 +166,11 @@ class QdrantVectorDatabase(DefaultVectorDatabase):
 
     def get_information(self, information_id: str) -> Optional[Information]:
         """
-        Retrieve a information by ID.
+        Retrieve an information by its ID.
 
         Parameters
         ----------
-        information_id: str
+        information_id : str
             The ID of the information to retrieve.
 
         Returns
@@ -196,24 +196,25 @@ class QdrantVectorDatabase(DefaultVectorDatabase):
         threshold: float = 0.0,
     ) -> List[Information]:
         """
-        Perform similarity search.
+        Find similar informations using Qdrant's vector search.
 
         Parameters
         ----------
-        query: Union[str, BaseModel, MediaBase, Information, List[float]]
-            The query string or embedding vector.
-        k: int
+        query : Union[str, BaseModel, MediaBase, Information, List[float]]
+            The query: a string, Pydantic model, media object, Information,
+            or a raw embedding vector.
+        k : int
             The maximum number of results to return.
-        threshold: float
-            The similarity threshold_dict. If the similarity is below this value, the result will not be used.
+        threshold : float
+            Minimum similarity score. Results below this value are excluded.
 
         Returns
         -------
         List[Information]
-            The most similar informations, ordered by similarity (highest first).
+            The most similar informations, ordered by descending similarity.
         """
 
-        # If no documents are requested we obey:
+        # If no informations are requested we obey:
         if k <= 0:
             return []
 
@@ -257,8 +258,8 @@ class QdrantVectorDatabase(DefaultVectorDatabase):
             # Set the score (similarity) for the information
             info.score = result.score
 
-            # Check if the score is above the threshold_dict
-            if info.score > threshold:
+            # Check if the score is above the threshold
+            if info.score >= threshold:
                 # Add the information to the list
                 results.append(info)
 
@@ -306,21 +307,21 @@ class QdrantVectorDatabase(DefaultVectorDatabase):
         threshold: float = 0.0,
     ) -> List[Information]:
         """
-        Get relevant informations for a query.
+        Get relevant informations for a query via Qdrant similarity search.
 
         Parameters
         ----------
-        query: Union[str, BaseModel, MediaBase, Information]
+        query : Union[str, BaseModel, MediaBase, Information]
             The query to retrieve informations for.
-        k: int
+        k : int
             The maximum number of informations to retrieve.
-        threshold: float
-            The score threshold_dict for the augmentation. If the score is below this value, the augmentation will not be used.
+        threshold : float
+            Minimum relevance score. Results below this value are excluded.
 
         Returns
         -------
         List[Information]
-            A list of relevant informations.
+            A list of relevant informations sorted by similarity.
         """
 
         # Normalize the query
@@ -330,7 +331,7 @@ class QdrantVectorDatabase(DefaultVectorDatabase):
         return self.similarity_search(query, k, threshold)
 
     def save(self) -> None:
-        # No need to implement save for Qdrant as it stays in sync with the database.
+        """Persist the database state. No-op for Qdrant (auto-persisted)."""
         pass
 
     def close(self) -> None:

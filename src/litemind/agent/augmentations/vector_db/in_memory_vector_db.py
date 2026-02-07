@@ -308,28 +308,29 @@ class InMemoryVectorDatabase(DefaultVectorDatabase):
         threshold: float = 0.0,
     ) -> List[Information]:
         """
-        Perform similarity search using the KD-tree.
+        Find similar informations using the KD-tree.
 
         Parameters
         ----------
-        query: Union[str, BaseModel, MediaBase, Information, List[float]]
-            The query string, Pydantic base model, media object, information object, or embedding vector.
-        k: int
-            The maximum number of informations to return.
-        threshold: float
-            The score threshold_dict for the augmentation. If the score is below this value, the augmentation will not be used.
+        query : Union[str, BaseModel, MediaBase, Information, List[float]]
+            The query: a string, Pydantic model, media object, Information,
+            or a raw embedding vector.
+        k : int
+            The maximum number of results to return.
+        threshold : float
+            Minimum similarity score. Results below this value are excluded.
 
         Returns
         -------
         List[Information]
-            The most similar informations, ordered by similarity (highest first).
+            The most similar informations, ordered by descending similarity.
         """
 
         # If the query is empty, return an empty list:
         if not self.informations:
             return []
 
-        # If no documents are requested we obey:
+        # If no informations are requested we obey:
         if k <= 0:
             return []
 
@@ -372,13 +373,13 @@ class InMemoryVectorDatabase(DefaultVectorDatabase):
         # Convert results to information list
         results = []
 
-        # Handle both k_dict=1 and k_dict>1 cases by ensuring indices is always iterable
+        # Handle both k=1 and k>1 cases by ensuring indices is always iterable
         if k == 1:
-            # For k_dict=1, convert numpy scalar to Python int
+            # For k=1, convert numpy scalar to Python int
             indices = [int(indices)]
             distances = [float(distances)]
         else:
-            # For k_dict>1, convert each numpy int to Python int
+            # For k>1, convert each numpy int to Python int
             indices = [int(idx) for idx in indices]
             distances = [float(dist) for dist in distances]
 
@@ -406,21 +407,21 @@ class InMemoryVectorDatabase(DefaultVectorDatabase):
         threshold: float = 0.0,
     ) -> List[InformationBase]:
         """
-        Get relevant informations for a query.
+        Get relevant informations for a query via similarity search.
 
         Parameters
         ----------
-        query: Union[str, BaseModel, MediaBase, Information]
+        query : Union[str, BaseModel, MediaBase, Information]
             The query to retrieve informations for.
-        k: int
+        k : int
             The maximum number of informations to retrieve.
-        threshold: float
-            The score threshold_dict for the augmentation. If the score is below this value, the augmentation will not be used.
+        threshold : float
+            Minimum relevance score. Results below this value are excluded.
 
         Returns
         -------
-        List[Information]
-            A list of relevant informations.
+        List[InformationBase]
+            A list of relevant informations sorted by similarity.
         """
 
         # Normalize the query

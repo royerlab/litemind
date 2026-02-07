@@ -14,6 +14,13 @@ from litemind.apis.model_features import ModelFeatures
 
 
 class Agent:
+    """Main orchestrator for agentic AI interactions.
+
+    The Agent manages conversation state, tool execution, augmentation-based
+    retrieval, and LLM API calls. It selects a suitable model based on
+    requested features, maintains a conversation history, and supports
+    Retrieval-Augmented Generation (RAG) via its augmentation set.
+    """
 
     def __init__(
         self,
@@ -135,13 +142,13 @@ class Agent:
 
     def append_system_message(self, message: Union[str, Message]):
         """
-        Set a system message for the agent.
+        Append a system message to the agent's conversation.
 
         Parameters
         ----------
-        message: Union[str,Message]
-            The system message to set.
-
+        message : Union[str, Message]
+            The system message to append. If a string is provided, it is
+            automatically wrapped in a Message with role='system'.
         """
 
         # If a string is provided, convert it to a message:
@@ -251,7 +258,7 @@ class Agent:
 
         Returns
         -------
-        List[Document]
+        List[InformationBase]
             A list of relevant informations.
         """
         with asection(
@@ -274,14 +281,20 @@ class Agent:
         max_doc_length: int = 1000,
     ) -> None:
         """
-        Add context from informations to the conversation.
+        Add retrieved context from informations to the conversation.
+
+        Depending on ``augmentation_context_position``, the context is
+        inserted either as a user message right before the query or as an
+        additional system message.
 
         Parameters
         ----------
-        query_message: Message
+        query_message : Message
             The user's query message.
-        documents: List[Document]
+        documents : List[InformationBase]
             The informations to add as context.
+        max_doc_length : int
+            Maximum character length for each document's context text.
         """
         if not documents:
             return
@@ -340,6 +353,30 @@ class Agent:
         return self
 
     def __call__(self, *args, **kwargs) -> List[Message]:
+        """
+        Run the agent on the given input and return the response messages.
+
+        Accepts text strings, Message objects, lists of messages, or
+        Conversation objects as positional or keyword arguments. The input
+        is appended to the conversation, augmentations are queried if
+        available, and the LLM API is called (with tool execution if
+        applicable).
+
+        Parameters
+        ----------
+        *args
+            Positional arguments: str (user text), Message, list of Messages,
+            or a Conversation.
+        **kwargs
+            Keyword arguments including ``text``, ``message``,
+            ``conversation``, and ``role``.
+
+        Returns
+        -------
+        List[Message]
+            The response messages from the LLM, which are also appended
+            to the conversation history.
+        """
 
         # Prepare the call by normalising parameters:
         self._prepare_call(*args, **kwargs)
@@ -411,23 +448,45 @@ class Agent:
                     aprint(f"Number of messages in response: {len(response)}")
 
             # Print response messages to stdout if enabled:
-            if self.messages_stdout_enabled:
+            if self.messages_stdout_enabled and response:
                 with asection("Response:"):
                     for message in response:
                         aprint(message)
 
         # Append response messages to conversation:
-        self.conversation.extend(response)
+        if response:
+            self.conversation.extend(response)
 
         # Return response
         return response
 
     def _prepare_call(self, *args, **kwargs) -> List[Message]:
+        """
+        Normalize and append input arguments to the conversation.
+
+        Handles multiple input formats (str, Message, list of Messages,
+        Conversation) provided as positional or keyword arguments, and
+        appends them to the agent's conversation.
+
+        Parameters
+        ----------
+        *args
+            Positional arguments: str, Message, list of Messages, or
+            a Conversation.
+        **kwargs
+            Keyword arguments: ``text``, ``message``, ``conversation``,
+            ``role``.
+
+        Returns
+        -------
+        List[Message]
+            The messages that were appended to the conversation.
+        """
 
         messages: List[Message] = []
 
         # if a role is provided as a keyword argument, append it:
-        role = kwargs["role"] if "role" in kwargs else "user"
+        role = kwargs.pop("role", "user")
         # if conversation is provided as a positional argument, append it:
         if args:
             conversation = args[0]

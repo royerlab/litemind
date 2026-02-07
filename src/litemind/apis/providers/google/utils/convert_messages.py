@@ -1,7 +1,6 @@
+import io
 import time
-from typing import TYPE_CHECKING, List, Union
-
-from PIL.Image import Image as PILImageType  # Correct type import
+from typing import TYPE_CHECKING, List
 
 from litemind.agent.messages.actions.action_base import ActionBase
 from litemind.agent.messages.actions.tool_call import ToolCall
@@ -20,125 +19,127 @@ if TYPE_CHECKING:
 def convert_messages_for_gemini(
     messages: List[Message],
     client: "Client",
-) -> List[Union[str, PILImageType]]:  # Use PILImageType correctly
-    """
-    Convert messages into a format suitable for Gemini, supporting both text and image inputs.
+) -> list:
+    """Convert litemind Messages into Gemini Content objects.
+
+    Produces a list of ``types.Content`` objects with proper ``role``
+    assignments (``user`` / ``model``) so that thinking-model thought
+    signatures are preserved across turns.
+
+    System messages are skipped since Gemini handles them separately
+    via the ``system_instruction`` config parameter.
 
     Parameters
     ----------
     messages : List[Message]
-        List of messages to convert.
+        Litemind messages to convert.
     client : Client
-        The google-genai Client instance for file uploads.
+        The google-genai Client instance, used for uploading audio/video files.
+
+    Returns
+    -------
+    list
+        List of ``types.Content`` objects suitable for Gemini's
+        ``generate_content`` method.
     """
     from google.genai import types
 
-    # Initialize the list of messages:
-    gemini_messages = []
+    gemini_contents: list = []
 
-    # Iterate over each message:
     for message in messages:
-
-        # If the message is a system message, skip it:
+        # System messages are handled via system_instruction in the config:
         if message.role == "system":
             continue
 
-        # Iterate over each block in the message:
+        # Map litemind roles to Gemini roles:
+        gemini_role = "model" if message.role == "assistant" else "user"
+
+        # If this is a model message with preserved raw parts (including
+        # thought signatures), replay them directly to maintain context
+        # for Gemini thinking models across turns:
+        raw_parts = getattr(message, "_gemini_raw_parts", None)
+        if raw_parts and gemini_role == "model":
+            gemini_contents.append(types.Content(role="model", parts=raw_parts))
+            continue
+
+        # Collect parts for this message:
+        parts: list = []
+
         for block in message.blocks:
             if block.has_type(Text) and not block.is_thinking():
-                gemini_messages.append(f"{message.role}: {block.media}")
+                parts.append(types.Part(text=str(block.media)))
 
             elif block.has_type(Text) and block.is_thinking():
                 # Thinking blocks are not passed back to the model:
                 pass
 
             elif block.has_type(Image):
-
-                # Cast to Image:
                 image: Image = block.media
-
                 try:
-                    # Open the image, convert it to PNG format, and append it to the list:
                     with image.open_pil_image(normalise_to_png=True) as img:
-                        # Copy image to avoid file handle closure issues
                         img_copy = img.copy()
-                        gemini_messages.append(img_copy)
-
+                        buf = io.BytesIO()
+                        img_copy.save(buf, format="PNG")
+                        parts.append(
+                            types.Part.from_bytes(
+                                data=buf.getvalue(),
+                                mime_type="image/png",
+                            )
+                        )
                 except Exception as e:
                     raise ValueError(f"Could not open image '{image.uri}': {e}")
 
             elif block.has_type(Audio):
-
-                # Cast to Audio:
                 audio: Audio = block.media
-
                 try:
-                    # Convert the video URI to a local file path:
                     local_path = audio.to_local_file_path()
-
-                    # Upload the audio file to Gemini:
                     genai_audio_file = client.files.upload(file=local_path)
-
-                    # Wait for the file to finish processing:
                     while genai_audio_file.state.name == "PROCESSING":
                         time.sleep(0.1)
                         genai_audio_file = client.files.get(name=genai_audio_file.name)
-
-                    # Append the uploaded file to the list of messages:
-                    gemini_messages.append(genai_audio_file)
-
+                    parts.append(
+                        types.Part.from_uri(
+                            file_uri=genai_audio_file.uri,
+                            mime_type=genai_audio_file.mime_type,
+                        )
+                    )
                 except Exception as e:
                     raise ValueError(f"Could not open audio '{audio.uri}': {e}")
 
             elif block.has_type(Video):
-
-                # Cast to Video:
                 video: Video = block.media
-
                 try:
-                    # Convert the video URI to a local file path:
                     local_path = video.to_local_file_path()
-
-                    # Upload the video file to Gemini:
                     genai_video_file = client.files.upload(file=local_path)
-
-                    # Wait for the file to finish processing:
                     while genai_video_file.state.name == "PROCESSING":
                         time.sleep(0.1)
                         genai_video_file = client.files.get(name=genai_video_file.name)
-
-                    # Append the uploaded file to the list of messages:
-                    gemini_messages.append(genai_video_file)
-
+                    parts.append(
+                        types.Part.from_uri(
+                            file_uri=genai_video_file.uri,
+                            mime_type=genai_video_file.mime_type,
+                        )
+                    )
                 except Exception as e:
                     raise ValueError(f"Could not process video '{video.uri}': {e}")
 
             elif block.has_type(Action):
-
                 tool_action: ActionBase = block.get_content()
 
-                # if contents is a ToolUse object do the following:
                 if isinstance(tool_action, ToolUse):
-                    # Get the tool use object:
                     tool_use: ToolUse = tool_action
-
-                    # Build a FunctionResponse part using new SDK types
                     func_response = types.Part.from_function_response(
                         name=tool_use.tool_name,
                         response={"result": tool_use.result},
                     )
-
-                    # Add tool use to the content:
-                    gemini_messages.append(func_response)
+                    parts.append(func_response)
                 elif isinstance(tool_action, ToolCall):
-                    # Build a FunctionCall part for the model's tool request
                     tool_call: ToolCall = tool_action
                     func_call = types.Part.from_function_call(
                         name=tool_call.tool_name,
                         args=tool_call.arguments,
                     )
-                    gemini_messages.append(func_call)
-
+                    parts.append(func_call)
                 else:
                     raise ValueError(
                         f"Unsupported action type: {type(tool_action).__name__}"
@@ -147,4 +148,8 @@ def convert_messages_for_gemini(
             else:
                 raise ValueError(f"Unsupported block type: {block.get_type()}")
 
-    return gemini_messages
+        # Only add content if there are parts:
+        if parts:
+            gemini_contents.append(types.Content(role=gemini_role, parts=parts))
+
+    return gemini_contents

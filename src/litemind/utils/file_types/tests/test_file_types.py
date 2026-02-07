@@ -173,12 +173,17 @@ def test_libmagic_pe(tmp_path):
     _write_bytes(p, bytes(mz_header))
     meta = probe(str(p))
     # libmagic may return various executable-related MIME types
-    assert meta["libmagic_mime"] in {
-        "application/x-dosexec",
-        "application/vnd.microsoft.portable-executable",
-        "application/x-ms-dos-executable",
-        "application/x-executable",
-    } or "executable" in (meta["libmagic_mime"] or "").lower() or "dosexec" in (meta["libmagic_mime"] or "").lower()
+    assert (
+        meta["libmagic_mime"]
+        in {
+            "application/x-dosexec",
+            "application/vnd.microsoft.portable-executable",
+            "application/x-ms-dos-executable",
+            "application/x-executable",
+        }
+        or "executable" in (meta["libmagic_mime"] or "").lower()
+        or "dosexec" in (meta["libmagic_mime"] or "").lower()
+    )
 
 
 def test_is_text_file_true(tmp_path):

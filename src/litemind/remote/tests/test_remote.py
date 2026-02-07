@@ -5,8 +5,14 @@ import time
 
 import pytest
 
+from litemind.remote import is_rpyc_available
 from litemind.remote.client import Client
 from litemind.remote.server import Server
+
+# Skip all tests in this module if rpyc is not available
+pytestmark = pytest.mark.skipif(
+    not is_rpyc_available(), reason="rpyc library not available"
+)
 
 
 # A dummy class to simulate the litemind.agent.Agent for isolated testing.

@@ -1,7 +1,7 @@
 import pytest
 from pydantic import BaseModel
 
-from litemind import API_IMPLEMENTATIONS, InMemoryVectorDatabase
+from litemind import InMemoryVectorDatabase, get_available_apis
 from litemind.agent.agent import Agent
 from litemind.agent.augmentations.information.information import Information
 from litemind.apis.model_features import ModelFeatures
@@ -16,10 +16,10 @@ from litemind.media.types.media_text import Text
 from litemind.media.types.media_video import Video
 from litemind.ressources.media_resources import MediaResources
 
-# Take API_IMPLEMENTATIONS and remove OllamaApi isf present:
+# Take available APIs and remove OllamaApi if present:
 # Ollama is a bit slow and the tests take for ever...
 API_IMPLEMENTATIONS_AUG_AGENT_TESTS = [
-    api for api in API_IMPLEMENTATIONS if api.__name__ != "OllamaApi"
+    api for api in get_available_apis() if api.__name__ != "OllamaApi"
 ]
 
 
@@ -226,6 +226,14 @@ def test_agent_with_video_document_augmentation(api_class):
         # skip test using pytest feature:
         pytest.skip(
             f"Skipping test for {api_class.__name__} as no video understanding model is available."
+        )
+
+    # Also skip if video conversion is not available (requires ffmpeg)
+    from litemind.utils.ffmpeg_utils import is_ffmpeg_available
+
+    if not is_ffmpeg_available():
+        pytest.skip(
+            "Skipping video test: ffmpeg is not available for video conversion."
         )
 
     # Create agent with augmentation configuration

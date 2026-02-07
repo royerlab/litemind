@@ -12,7 +12,14 @@ from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_pa
 
 @lru_cache()
 def is_pymupdf_available() -> bool:
-    # Check if package pymupdf s available:
+    """
+    Check whether the pymupdf and pymupdf4llm packages are available.
+
+    Returns
+    -------
+    bool
+        True if both pymupdf and pymupdf4llm are importable.
+    """
     try:
         import importlib.util
 
@@ -26,6 +33,17 @@ def is_pymupdf_available() -> bool:
 
 
 def initialize_docling_converter():
+    """
+    Initialize the Docling document converter.
+
+    Configures PDF and DOCX pipeline options including OCR, table
+    extraction, and page image generation.
+
+    Returns
+    -------
+    DocumentConverter
+        A configured Docling DocumentConverter instance.
+    """
     from docling.datamodel.base_models import InputFormat
     from docling.datamodel.pipeline_options import (
         PaginatedPipelineOptions,
@@ -37,7 +55,6 @@ def initialize_docling_converter():
         WordFormatOption,
     )
 
-    """Initialize the docling document converter with appropriate settings for document processing"""
     # Configure pipeline options for PDF
     pdf_pipeline_options = PdfPipelineOptions()
     pdf_pipeline_options.do_ocr = True  # Enable OCR for image-based PDFs
@@ -61,18 +78,23 @@ def initialize_docling_converter():
 
 def convert_document_to_markdown(document_uri: str) -> str:
     """
-    Convert a document to a markdown string.
+    Convert a document to a markdown string using pymupdf4llm.
 
     Parameters
     ----------
-    document_uri: str
-        The URI of the document to convert.
+    document_uri : str
+        The URI of the document to convert. Can be a local path, file URI,
+        or remote URL.
 
     Returns
     -------
     str
-        The resulting markdown string.
+        The document content as a markdown-formatted string.
 
+    Raises
+    ------
+    ImportError
+        If pymupdf or pymupdf4llm is not installed.
     """
 
     # Check if package pymupdf is available:
@@ -95,18 +117,26 @@ def convert_document_to_markdown(document_uri: str) -> str:
 
 def extract_images_from_document(document_uri: str) -> List[str]:
     """
-    Extract images from a document.
+    Extract embedded images from a document using PyMuPDF.
+
+    Each image found in the document pages is saved as a PNG file in a
+    temporary directory.
 
     Parameters
     ----------
-    document_uri: str
-        The URI of the document to extract images from.
+    document_uri : str
+        The URI of the document to extract images from. Can be a local
+        path, file URI, or remote URL.
 
     Returns
     -------
     List[str]
-        The list of image file URIs.
+        A list of ``file://`` URIs pointing to the extracted PNG images.
 
+    Raises
+    ------
+    ImportError
+        If pymupdf is not installed.
     """
 
     # Check if package pymupdf is available:
@@ -173,15 +203,27 @@ def extract_images_from_document(document_uri: str) -> List[str]:
 
 def take_images_of_each_document_page(document_uri, dpi=300):
     """
-    Convert a PDF file into a list of images (one per page) using PyMuPDF.
+    Render each page of a PDF document as an image using PyMuPDF.
 
-    Parameters:
-        document_uri (str): The uri to the document file.
-        dpi (int): Desired resolution for the output images in dots per inch.
-                   Default is 300. The zoom factor is computed as dpi / 72.
+    Parameters
+    ----------
+    document_uri : str
+        The URI of the PDF document. Can be a local path, file URI,
+        or remote URL.
+    dpi : int, optional
+        Resolution for the output images in dots per inch. Default is 300.
+        The zoom factor is computed as ``dpi / 72``.
 
-    Returns:
-        list: A list of PIL Image objects corresponding to each page of the PDF.
+    Returns
+    -------
+    List[str]
+        A list of ``file://`` URIs pointing to the rendered PNG images,
+        one per page.
+
+    Raises
+    ------
+    ImportError
+        If pymupdf is not installed.
     """
 
     import fitz  # PyMuPDF
@@ -239,15 +281,25 @@ def extract_text_from_document_pages(document_uri: str) -> List[str]:
     """
     Extract text from each page of a document.
 
+    For PDF files, uses PyMuPDF directly. For other formats, uses the
+    Docling document converter.
+
     Parameters
     ----------
     document_uri : str
-        The URI of the document to extract text from.
+        The URI of the document to extract text from. Can be a local
+        path, file URI, or remote URL.
 
     Returns
     -------
     List[str]
-        A list of text strings, one for each page. If the converter does not support page-by-page extraction then a singleton is returned.
+        A list of text strings, one per page. If the converter does not
+        support page-by-page extraction, a single-element list is returned.
+
+    Raises
+    ------
+    ImportError
+        If pymupdf is not installed (for PDF files).
     """
 
     # Convert the URI to a local file path:

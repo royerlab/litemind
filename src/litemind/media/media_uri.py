@@ -13,33 +13,41 @@ from litemind.utils.uri_utils import is_uri, is_valid_path
 
 
 class MediaURI(MediaDefault):
-    """
-    A media that is accessible via URI.
+    """Media whose content is referenced by a URI.
+
+    Supports ``file://`` URIs for local files and ``http(s)://`` URIs for
+    remote resources. Local file paths are automatically converted to
+    ``file://`` URIs on construction. Provides helper methods for resolving
+    URIs to local paths, base64 data, and MIME types.
     """
 
     def __init__(self, uri: str, extension: Optional[str] = None, **kwargs):
-        """
-        Create a new URI-based media.
+        """Create a new URI-based media.
 
         Parameters
         ----------
-        uri: str
-            The media's URI (Uniform Resource Identifier) or local file path.
-        extension: str
-            Extension/Type of the media file in case it is not clear from the URI.
-        kwargs: dict
-            Other arguments passed to MediaDefault.
+        uri : str
+            A URI (``file://``, ``http://``, ``https://``) or local file path.
+        extension : str, optional
+            File extension override (without the leading dot, e.g. ``"png"``).
+            Used when the extension cannot be inferred from the URI.
+        **kwargs
+            Additional keyword arguments forwarded to ``MediaDefault``.
 
+        Raises
+        ------
+        ValueError
+            If *uri* is neither a valid URI nor a valid local file path.
         """
         super().__init__(**kwargs)
 
-        # Check that it is a valid table URI:
-        if not is_uri(uri) or not is_valid_path(uri):
+        # Check that it is a valid URI or local file path:
+        if not uri or (not is_uri(uri) and not is_valid_path(uri)):
             raise ValueError(f"Invalid URI or local file path: '{uri}'.")
 
         # Check that file is a valid file path and normalise to URI:
         if not is_uri(uri):
-            # Get the absolute file path and then prepend 'file://:
+            # Get the absolute file path and then prepend 'file://':
             uri = os.path.abspath(uri)
             uri = "file://" + uri
 
@@ -49,86 +57,114 @@ class MediaURI(MediaDefault):
         self.local_path = None
 
     def get_content(self) -> str:
-        """
-        Get the content of the media.
+        """Get the URI string for this media.
 
         Returns
         -------
         str
-            The content of the media.
+            The URI of the media resource.
         """
         return self.uri
 
     def is_local(self):
-        """
-        Check if the URI is local.
-        """
-        return self.uri.startswith("file://") or self.uri.startswith("/")
-
-    def get_filename(self):
-        """
-        Get the filename of the media.
-        """
-        return self.uri.split("/")[-1] if self.uri else None
-
-    def get_extension(self):
-        """
-        Get the extension of the media, without the dot
-        """
-        return self.extension or self.uri.split(".")[-1].lower()
-
-    def has_extension(self, extension: str):
-        """
-        Check if the media has an extension.
-
-        Parameters
-        ----------
-        extension: str
+        """Check whether the URI points to a local file.
 
         Returns
         -------
         bool
+            True if the URI starts with ``file://`` or ``/``.
+        """
+        return self.uri.startswith("file://") or self.uri.startswith("/")
 
+    def get_filename(self):
+        """Extract the filename from the URI.
+
+        Returns
+        -------
+        str or None
+            The last path component of the URI, or None if the URI is empty.
+        """
+        return self.uri.split("/")[-1] if self.uri else None
+
+    def get_extension(self):
+        """Get the file extension, without the leading dot.
+
+        Returns the explicitly set extension if available, otherwise infers
+        it from the URI.
+
+        Returns
+        -------
+        str
+            The file extension in lowercase (e.g. ``"png"``, ``"csv"``).
+        """
+        if self.extension:
+            return self.extension
+        # Extract the filename portion from the URI, stripping query/fragment:
+        filename = self.uri.split("/")[-1] if "/" in self.uri else self.uri
+        filename = filename.split("?")[0].split("#")[0]
+        if "." in filename:
+            return filename.rsplit(".", 1)[-1].lower()
+        return ""
+
+    def has_extension(self, extension: str):
+        """Check whether this media has a given file extension.
+
+        Parameters
+        ----------
+        extension : str
+            The extension to check (without the dot, e.g. ``"pdf"``).
+
+        Returns
+        -------
+        bool
+            True if the media's extension matches or the URI ends with the
+            given extension.
         """
 
         # Normalize the extension to lower case:
         extension = extension.lower()
 
         # Check if the extension is in the media's extension or if the URI ends with the extension:
-        return extension.lower() in self.get_extension() or self.uri.endswith(extension)
+        return extension.lower() == self.get_extension() or self.uri.lower().endswith(
+            "." + extension
+        )
 
     def get_media_type(self) -> Optional[str]:
-        """
-        Get the media type of this media.
+        """Get the media type string (e.g. ``"image"``, ``"audio"``).
+
         Returns
         -------
-        str
-            The media type of this media
-
+        str or None
+            The media type derived from the URI, or None if it cannot be
+            determined.
         """
         return get_media_type_from_uri(self.uri)
 
     def get_mime_type(self, mime_prefix) -> Optional[str]:
-        """
-        Get the MIME type of this media.
+        """Build a MIME type string from a prefix and the file extension.
+
+        Parameters
+        ----------
+        mime_prefix : str
+            The MIME type prefix (e.g. ``"image"``, ``"audio"``).
 
         Returns
         -------
         str
-            The MIME type of this media.
-
+            A MIME type such as ``"image/png"`` or ``"audio/wav"``.
         """
         return f"{mime_prefix}/{self.get_extension()}"
 
     def to_remote_or_data_uri(self):
-        """
-        Convert the URI to a remote or data URI.
+        """Convert to a remote URL or an inline ``data:`` URI.
+
+        For local ``file://`` URIs the file is read, base64-encoded, and
+        returned as a ``data:`` URI. Remote URIs are returned unchanged.
 
         Returns
         -------
         str
-            The remote or data URI.
-
+            A remote URL or a ``data:`` URI.
         """
 
         # Default value is URI:
@@ -144,18 +180,21 @@ class MediaURI(MediaDefault):
         return uri
 
     def to_base64_data(self):
-        """
-        Convert the URI to a base64 data (just the data part of the URI).
+        """Get the raw base64-encoded data for this media.
+
+        For ``data:`` URIs the data portion is extracted directly. For other
+        URIs the resource is first resolved to a local file and then encoded.
+
         Returns
         -------
         str
-            The base64 data of the URI.
+            The base64-encoded content string (without the ``data:`` prefix).
         """
         # If the URI is a data URI, then we return the data part:
         if self.uri.startswith("data:"):
             return self.uri.split(",")[-1]
 
-        # If not, first we normalise the URI to  a local file path:
+        # If not, first we normalise the URI to a local file path:
         local_path = uri_to_local_file_path(self.uri)
 
         # Then we read the file and convert it to base64:
@@ -164,16 +203,15 @@ class MediaURI(MediaDefault):
         return base64_data
 
     def to_local_file_path(self) -> str:
-        """
-        Convert the URI of this media to a local file path.
+        """Resolve the URI to a local file path.
 
-        Parameters
-        ----------
+        Remote resources are downloaded to a temporary file on first access.
+        The result is cached in ``self.local_path`` for subsequent calls.
 
         Returns
         -------
         str
-            The local file path of the URI.
+            An absolute local file path.
         """
 
         if self.local_path:
@@ -187,8 +225,10 @@ class MediaURI(MediaDefault):
 
     @abstractmethod
     def load_from_uri(self):
-        """
-        Load the data from the URI.
+        """Load and parse the resource data from the URI.
+
+        Subclasses must implement this to populate type-specific attributes
+        (e.g., pixel arrays for images, DataFrames for tables).
         """
         pass
 

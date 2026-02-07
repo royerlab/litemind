@@ -34,7 +34,7 @@ class Information(InformationBase, PickleSerializable):
     _score: Optional[float]
         A relevance score, usually assigned during retrieval.
     parent: Optional[Information]
-        The parent document.
+        The parent information.
     children: List[Information]
         Child informations. Empty list if no children exist.
     """
@@ -50,26 +50,34 @@ class Information(InformationBase, PickleSerializable):
         children: Optional[List["Information"]] = None,
     ):
         """
-        Create a new document.
+        Create a new Information.
+
+        An Information must have either ``media`` or ``children``, but
+        not both. Leaf informations hold media content directly, while
+        parent informations aggregate children.
 
         Parameters
         ----------
-        media: Optional[MediaBase]
-            The media contained in this Information.
-            Can only be None if it has children.
-            And if it is not None, it can't have children.
-        summary: Optional[str]
-            A summary of the information's content.
-        metadata: Optional[dict]
-            Additional metadata about the information.
-        id: Optional[str]
-            A unique identifier for the information.
-        score: Optional[float]
-            A relevance score, usually assigned during retrieval.
-        parent: Optional[Information]
-            The parent document.
-        children: Optional[List[Information]]
-            A list of child informations.
+        media : Optional[MediaBase]
+            The media content. Must be None if ``children`` is provided.
+        summary : Optional[str]
+            A text summary of the information's content.
+        metadata : Optional[dict]
+            Additional metadata (e.g., source, author, date).
+        id : Optional[str]
+            A unique identifier. Auto-generated (UUID4) if not provided.
+        score : Optional[float]
+            A relevance score, typically assigned during retrieval.
+        parent : Optional[Information]
+            The parent information in a hierarchy.
+        children : Optional[List[Information]]
+            Child informations. Must be None if ``media`` is provided.
+
+        Raises
+        ------
+        ValueError
+            If both ``media`` and ``children`` are None, or both are
+            provided.
         """
 
         # Set attributes:
@@ -140,10 +148,12 @@ class Information(InformationBase, PickleSerializable):
         """
         Add a child information to this information.
 
+        The child's ``parent`` attribute is set to this information.
+
         Parameters
         ----------
-        document: Document
-            The child document to add.
+        document : Information
+            The child information to add.
         """
         document.parent = self
         self.children.append(document)
@@ -152,19 +162,27 @@ class Information(InformationBase, PickleSerializable):
         self, embedding_function: Optional[Callable[[str], List[float]]] = None
     ) -> List[float]:
         """
-        Compute an embedding for this document.
-        If the document has children, compute embeddings for them as well and average.
+        Compute an embedding vector for this information.
+
+        For leaf informations, embeds the media content directly. For
+        parent informations with children, recursively computes child
+        embeddings and averages them. Cached after first computation.
 
         Parameters
         ----------
-        embedding_function: Optional[Callable[[str], List[float]]]
+        embedding_function : Optional[Callable[[str], List[float]]]
             A function that takes a string and returns an embedding vector.
-            If not provided, uses litemind's default embedding function.
+            If not provided, uses litemind's default API for embeddings.
 
         Returns
         -------
         List[float]
-            The computed embedding.
+            The computed embedding vector.
+
+        Raises
+        ------
+        ValueError
+            If the information has no media and no children.
         """
         if embedding_function is None:
             from litemind import CombinedApi
@@ -180,6 +198,10 @@ class Information(InformationBase, PickleSerializable):
 
         # If we don't have children, compute the embedding for our content
         if not self.children:
+            if self.media is None:
+                raise ValueError(
+                    "Cannot compute embedding: Information has no media and no children."
+                )
             self.embedding = embedding_function(self.content)
             return list(self.embedding)
 
@@ -188,10 +210,10 @@ class Information(InformationBase, PickleSerializable):
             if child.embedding is None:
                 child.compute_embedding(embedding_function)
 
-        # Average the embeddings of our children
-        embeddings = [child.embedding for child in self.children] + [
-            embedding_function(self.content)
-        ]
+        # Average the embeddings of our children (and own content if we have media)
+        embeddings = [child.embedding for child in self.children]
+        if self.media is not None:
+            embeddings.append(embedding_function(self.content))
         self.embedding = mean(embeddings, axis=0).tolist()
 
         # Return the computed embedding
@@ -214,29 +236,39 @@ class Information(InformationBase, PickleSerializable):
     def summarize(
         self,
         summarization_function: Optional[Callable[[str], str]] = None,
-        model: Optional[BaseModel] = None,
+        model: Optional[str] = None,
         api: Optional[BaseApi] = None,
         temperature: float = 0.0,
     ) -> str:
         """
-        Generate a summary for this document.
+        Generate a text summary for this information.
 
         Parameters
         ----------
-        summarization_function: Optional[Callable[[str], str]]
-            A function that takes an information and returns a summary.
-            If not provided, uses litemind to summarize using api and model parameters.
+        summarization_function : Optional[Callable[[str], str]]
+            A function that takes content and returns a summary string.
+            If not provided, uses the LLM API to generate a summary.
+        model : Optional[str]
+            Model name for LLM-based summarization. Ignored if
+            ``summarization_function`` is provided.
         api : Optional[BaseApi]
-            An instance of a BaseApi to use for summarization if no summarization function is provided.
-        model : Optional[BaseModel]
-            A model to use for summarization if no summarization function is provided. Model must be valid for the given API.
-        temperature : Optional[float]
-            The temperature to use for the summarization. Ignored if summarization_function is provided.
+            API instance for LLM-based summarization. Defaults to
+            ``CombinedApi()`` if not provided. Ignored if
+            ``summarization_function`` is provided.
+        temperature : float
+            Sampling temperature for LLM summarization. Ignored if
+            ``summarization_function`` is provided.
 
         Returns
         -------
         str
-            The generated summary.
+            The generated summary, also stored in ``self.summary``.
+
+        Raises
+        ------
+        ValueError
+            If ``summarization_function`` is provided together with
+            ``api`` or ``model``.
         """
         if summarization_function is None:
 
@@ -279,6 +311,14 @@ class Information(InformationBase, PickleSerializable):
         return self.summary
 
     def to_message_block(self) -> MessageBlock:
+        """
+        Convert this information to a MessageBlock for inclusion in a Message.
+
+        Returns
+        -------
+        MessageBlock
+            A message block containing this information's media and metadata.
+        """
         return MessageBlock(
             media=self.media,
             metadata=self.metadata,

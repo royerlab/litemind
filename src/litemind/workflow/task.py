@@ -10,12 +10,16 @@ from litemind.agent.messages.message import Message
 
 
 class Task(ABC):
-    """
-    Abstract class that represents a task.
-    Tasks can be combined into a workflow -- a graph of tasks in which tasks can depend on other tasks.
-    Users must implement classes that derive from this base class and implement both the build_message()
-    and validate_result() methods.
+    """Abstract base class representing a single unit of work in a workflow.
 
+    Tasks can be organized into a directed acyclic graph (DAG) via
+    dependencies, forming a workflow.  Subclasses must implement
+    :meth:`build_message` (to create the prompt sent to the agent) and
+    :meth:`validate_result` (to verify that the agent's response is
+    acceptable).
+
+    Each task persists its prompt and result to disk so that completed
+    tasks are not re-executed on subsequent runs.
     """
 
     def __init__(
@@ -27,19 +31,23 @@ class Task(ABC):
         save_pdf: bool = False,
     ):
         """
-        Initializes the Task.
-        Ideally, you want to customize the constructor of your derived class.
+        Initialize the task.
 
         Parameters
         ----------
         name : str
-            The name of the task
-        agent : Agent
-            The agent to execute the task
-        dependencies : Optional[List['Task']], optional
-            The list of dependencies (results of other tasks), by default None
-        save_pdf: bool
-            Whether to save the task's result as a PDF file, by default False
+            A unique name for this task. Used as the base filename for
+            persisted prompts and results.
+        agent : Agent, optional
+            The agent that will execute this task, by default ``None``.
+        dependencies : list of Task, optional
+            Tasks whose results this task depends on, by default ``None``.
+        folder : str, optional
+            Directory in which to store prompt and result files. Defaults
+            to the current working directory.
+        save_pdf : bool, optional
+            Whether to also save the result as a PDF file, by default
+            ``False``.
         """
 
         # Basic attributes:
@@ -62,86 +70,93 @@ class Task(ABC):
         self.save_pdf = save_pdf
 
     def add_dependency(self, task: "Task"):
-        """
-        Adds a dependency to this task.
+        """Register another task as a dependency of this one.
 
         Parameters
         ----------
-        task: Task
-            The task to add as a dependency.
-
+        task : Task
+            The task that must complete before this task can run.
         """
         self.dependencies[task.name] = task
 
     @abstractmethod
     def build_message(self) -> Message:
-        """
-        Build the message to send to the agent.
-        This method should be implemented by the user to create a message
-        that contains the necessary information for the agent to execute the task.
-        The message should be a Message object that contains the prompt for the task.
-        The prompt can depend on the results of other tasks, which can be accessed
-        through the dependencies' dictionary, or can depend on the task's own attributes,
-        which may have been set in the constructor.
+        """Build the prompt message to send to the agent.
+
+        Subclasses must implement this method.  The message may reference
+        results from dependency tasks (available via ``self.dependencies``)
+        or any attributes set on the task instance.
 
         Returns
         -------
         Message
-            The message to send to the agent.
-
+            The message containing the prompt for the agent.
         """
         pass
 
     @abstractmethod
     def validate_result(self, result: str) -> bool:
-        """
-        Validate the result of the task.
-        This method should be implemented by the user to check if the result
-        of the task is valid.
-        The result is a string that is returned by the agent after executing the task.
-        The validation can be based on the content of the result, its length, or any other criteria.
-        Checking for typical 'LLM' artifacts or mistakes is a good example of validation.
-        If the result is valid, the method should return True, otherwise False.
+        """Check whether the agent's result is acceptable.
+
+        Subclasses must implement this method.  Validation may inspect
+        content, length, or any other criteria (e.g., checking for
+        common LLM artifacts).
 
         Parameters
         ----------
-        result: str
-            The result of the task to validate.
+        result : str
+            The result string returned by the agent.
 
         Returns
         -------
         bool
-            True if the result is valid, False otherwise.
-
+            ``True`` if the result passes validation, ``False`` otherwise.
         """
         return True
 
     def post_process_result_before_saving_pdf(self, result: str) -> str:
-        """
-        Post-process the result before saving it to PDF.
-        This can be used to format the result, add additional information, etc.
-        """
-        return result
+        """Post-process the result string before it is converted to PDF.
 
-    def __call__(self) -> str:
-        """
-        Allow calling the task as a function.
-        This method will check if the task is complete, and if not, it will run the task.
-        If dependencies are not complete, it will run them first.
-        If the task is already complete, it will return the result without running the task again.
-        If the task has an agent assigned, it will build the message and send it to the agent.
-        If the task does not have an agent assigned, it will print a message and return None.
-        If the task is complete, it will return the result.
+        Override this method to reformat the markdown, strip artifacts, or
+        add extra content before PDF generation.
+
+        Parameters
+        ----------
+        result : str
+            The raw result markdown string.
 
         Returns
         -------
         str
-            The result of the task, or None if the task could not be run.
+            The processed markdown string to be rendered as PDF.
+        """
+        return result
 
+    def __call__(self) -> str:
+        """Execute the task by delegating to :meth:`run`.
+
+        Returns
+        -------
+        str or None
+            The task result, or ``None`` if the task could not be run.
         """
         return self.run()
 
     def run(self) -> str:
+        """Execute the task and return its result.
+
+        If any dependency tasks have not been completed, they are run
+        first.  If this task has already been completed (a valid result
+        file exists on disk), the cached result is returned without
+        re-executing.
+
+        Returns
+        -------
+        str or None
+            The task result as a markdown string, or ``None`` if the
+            task could not be executed (e.g., no agent assigned or an
+            error occurred).
+        """
 
         with asection(f"Running task: {self.name}"):
 
@@ -202,14 +217,16 @@ class Task(ABC):
             return result
 
     def is_complete(self) -> bool:
-        """
-        Check if the task is complete.
+        """Check whether this task has already been completed.
+
+        A task is considered complete when its result file exists on disk
+        and the stored result passes :meth:`validate_result`.
 
         Returns
         -------
         bool
-            True if the task is complete, False otherwise.
-
+            ``True`` if a valid result is already persisted, ``False``
+            otherwise.
         """
 
         # Check if the result file exists:
@@ -229,9 +246,13 @@ class Task(ABC):
             return False
 
     def get_prompt(self) -> Optional[str]:
-        """
-        Returns the prompt for the task, if it exists.
-        If the prompt file does not exist, returns None.
+        """Return the stored prompt for this task, if available.
+
+        Returns
+        -------
+        str or None
+            The prompt markdown string, or ``None`` if no prompt file
+            has been written yet.
         """
         if os.path.exists(self._get_prompt_file_path()):
             return self._load_prompt()
@@ -240,9 +261,13 @@ class Task(ABC):
             return None
 
     def get_result(self) -> Optional[str]:
-        """
-        Returns the result for the task, if it exists.
-        If the result file does not exist, returns None.
+        """Return the stored result for this task, if available.
+
+        Returns
+        -------
+        str or None
+            The result markdown string, or ``None`` if the task has not
+            been completed yet.
         """
         if os.path.exists(self._get_result_file_path()):
             return self._load_result()
@@ -251,9 +276,17 @@ class Task(ABC):
             return None
 
     def save_as_pdf(self, result: Optional[str]):
-        """
-        Saves the task's prompt and result as a PDF file.
-        The PDF will be saved in the specified folder or in the task's folder if no folder is specified.
+        """Save the task output as a PDF file in the task's folder.
+
+        The *result* is first passed through
+        :meth:`post_process_result_before_saving_pdf` before rendering.
+        If *result* is ``None``, the stored prompt is used instead.
+
+        Parameters
+        ----------
+        result : str or None
+            The markdown content to render.  If ``None``, the previously
+            stored prompt is loaded from disk.
         """
         try:
             # Get the PDF file path:
@@ -326,8 +359,13 @@ class Task(ABC):
         return os.path.join(self.folder, f"{self.name}.pdf")
 
     def get_folder_name(self) -> str:
-        """
-        Returns the last part of the folder path
+        """Return the leaf directory name of this task's output folder.
+
+        Returns
+        -------
+        str
+            The last component of the folder path (e.g. ``"results"``
+            for ``"/tmp/results"``).
         """
         return os.path.basename(self.folder)
 

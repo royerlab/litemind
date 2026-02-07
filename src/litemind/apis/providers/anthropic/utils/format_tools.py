@@ -6,23 +6,20 @@ from litemind.agent.tools.toolset import ToolSet
 def format_tools_for_anthropic(
     toolset: Optional[ToolSet],
 ) -> Optional[List["ToolParam"]]:
-    """
-    Convert a ToolSet into Anthropic's list[ToolParam] format for custom function tools.
+    """Convert a ToolSet into Anthropic's ToolParam format.
 
-    Built-in tools (web search, MCP, code execution) are handled separately
-    by the main API class and should not be processed here.
+    Converts custom function tools only. Built-in tools (web search, MCP,
+    code execution) are handled separately by the main API class.
 
-    Example ToolParam:
-    {
-        "name": "get_weather",
-        "description": "Get the weather for a specific location",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "location": {"type": "string"}
-            }
-        }
-    }
+    Parameters
+    ----------
+    toolset : Optional[ToolSet]
+        The toolset to convert. If None or empty, returns None.
+
+    Returns
+    -------
+    Optional[List[ToolParam]]
+        List of tool definitions in Anthropic format, or None if no tools.
     """
     if not toolset:
         return None

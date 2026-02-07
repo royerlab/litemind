@@ -4,14 +4,14 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-from litemind import API_IMPLEMENTATIONS
+from litemind import get_available_apis
 from litemind.apis.base_api import ModelFeatures
 from litemind.apis.tests.utils.levenshtein import levenshtein_distance
 from litemind.ressources.media_resources import MediaResources
 from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_path
 
 
-@pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
+@pytest.mark.parametrize("api_class", get_available_apis())
 class TestBaseApiImplementationsGenerateMultimodal(MediaResources):
     """
     A tests suite that runs the same tests on each ApiClass

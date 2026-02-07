@@ -16,23 +16,32 @@ from litemind.utils.uri_utils import is_uri, is_valid_path
 @lru_cache
 def uri_to_local_file_path(file_uri: str) -> str:
     """
-    Given a file URI (which can be an existing local file path, a remote URL, or
-    Base64-encoded data), returns the absolute path to a local file.
+    Resolve a file URI to a local file path.
 
-    1. If file_uri is already a local file path, returns its absolute path.
-    2. If file_uri is a 'file://' URI, converts it to a local path.
-    3. If file_uri is a remote URL (http/https/ftp), downloads it to a temp file.
-    4. If file_uri is a data URI or raw Base64, decodes it to a temp file.
+    Handles multiple URI schemes:
+
+    1. Local file paths -- returns the absolute path directly.
+    2. ``file://`` URIs -- converts to a local path.
+    3. Remote URLs (``http``, ``https``, ``ftp``) -- downloads to a temp file.
+    4. ``data:`` URIs or raw Base64 strings -- decodes to a temp file.
+
+    Results are cached via ``lru_cache`` to avoid redundant downloads.
 
     Parameters
     ----------
     file_uri : str
-        The file URI to be converted, or a well formed local file path.
+        The file URI to resolve, or a local file path.
 
     Returns
     -------
     str
         The absolute path to the local file.
+
+    Raises
+    ------
+    ValueError
+        If the URI is empty, the local file is not found, the download
+        fails, the Base64 data is invalid, or the URI scheme is unsupported.
     """
     if not file_uri:
         raise ValueError("Empty or null file URI provided")

@@ -8,6 +8,11 @@ from litemind.apis.callbacks.base_api_callbacks import BaseApiCallbacks
 
 
 class PrintApiCallbacks(BaseApiCallbacks):
+    """Callback implementation that prints API events to stdout via Arbol.
+
+    Each event type can be individually enabled or disabled through
+    constructor parameters. Useful for debugging and development.
+    """
 
     def __init__(
         self,

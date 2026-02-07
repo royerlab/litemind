@@ -404,6 +404,7 @@ class OpenAIApi(DefaultApi):
             True if this is a system message (adds [SYSTEM] prefix to text)
         """
         from litemind.media.types.media_audio import Audio
+        from litemind.media.types.media_video import Video
 
         content = []
 
@@ -477,6 +478,20 @@ class OpenAIApi(DefaultApi):
                             "type": "output_text",
                             "text": f"[Audio: {media.get_filename()}]",
                         }
+                    )
+
+            elif block.has_type(Video):
+                # Graceful fallback for Video blocks that couldn't be converted
+                filename = (
+                    media.get_filename() if hasattr(media, "get_filename") else "video"
+                )
+                if is_input:
+                    content.append(
+                        {"type": "input_text", "text": f"[Video file: {filename}]"}
+                    )
+                else:
+                    content.append(
+                        {"type": "output_text", "text": f"[Video: {filename}]"}
                     )
 
             elif block.has_type(Action):
@@ -910,7 +925,12 @@ class OpenAIApi(DefaultApi):
                     try:
                         obj_data = json.loads(text_content)
                         obj_instance = response_format(**obj_data)
-                        last_message.append_object(obj_instance)
+                        # Replace the Text block with the Object block:
+                        from litemind.media.types.media_object import Object
+
+                        last_message.blocks[-1] = MessageBlock(
+                            media=Object(obj_instance)
+                        )
                     except (json.JSONDecodeError, ValueError):
                         # If parsing fails, keep as text
                         pass
@@ -1103,8 +1123,8 @@ class OpenAIApi(DefaultApi):
             ]
         elif "dall-e-3" in model_name:
             allowed_sizes = ["1024x1024", "1024x1792", "1792x1024"]
-        elif "gpt-image-1" in model_name:
-            # gpt-image-1 also supports "auto" which lets the API choose
+        elif "gpt-image" in model_name:
+            # gpt-image models also support "auto" which lets the API choose
             allowed_sizes = ["1024x1024", "1024x1536", "1536x1024", "auto"]
         else:
             raise ValueError(
@@ -1140,8 +1160,8 @@ class OpenAIApi(DefaultApi):
             closest_size = requested_size
 
         # Set quality and format based on model:
-        if "gpt-image-1" in model_name:
-            # gpt-image-1 supports quality: low, medium, high (default: high)
+        if "gpt-image" in model_name:
+            # gpt-image models support quality: low, medium, high (default: high)
             if "quality" not in kwargs:
                 kwargs["quality"] = "high"
             if "output_format" not in kwargs:
@@ -1163,6 +1183,15 @@ class OpenAIApi(DefaultApi):
 
         # Get the image and decode:
         image_b64 = response.data[0].b64_json
+        if image_b64 is None:
+            if hasattr(response.data[0], "url") and response.data[0].url:
+                raise ValueError(
+                    f"Model {model_name} returned a URL instead of base64 data. "
+                    "Set response_format='b64_json' in kwargs."
+                )
+            raise ValueError(
+                f"Model {model_name} did not return image data (b64_json is None)."
+            )
         image_data = base64.b64decode(image_b64)
 
         # Create PIL image:

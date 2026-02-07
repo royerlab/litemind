@@ -4,13 +4,17 @@ from litemind.agent.tools.toolset import ToolSet
 
 
 def format_tools_for_ollama(toolset: ToolSet) -> List[Dict]:
-    """
-    Convert a litemind ToolSet into Ollama's expected `tools` JSON schema.
+    """Convert a litemind ToolSet into Ollama's tool JSON schema format.
 
-    Each tool in the ToolSet must provide:
-      - name: str
-      - description: str
-      - parameters: dict (JSON schema)
+    Parameters
+    ----------
+    toolset : ToolSet
+        The toolset containing function tools to convert.
+
+    Returns
+    -------
+    List[Dict]
+        List of tool definitions in Ollama's expected format.
     """
     ollama_tools = []
     for tool in toolset.tools:  # Adjust as needed if your toolset differs

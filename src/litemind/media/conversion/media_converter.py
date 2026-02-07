@@ -11,16 +11,15 @@ from litemind.media.types.media_types import all_media_types
 
 
 class MediaConverter:
-    """
-    This class implements the conversion of a list messages containing arbitrary media to a list of messages containing
-    only certain allowed media. Media not covered are converted to an allowed media.
+    """Pipeline for converting messages with arbitrary media to a restricted set of allowed types.
 
-    Media converters can be added to the list of media converters. The conversion is done by using the media converters defined in the class.
-    The first media converter in the list able to convert a media takes precedence.
+    Maintains an ordered list of ``BaseConverter`` instances. When
+    converting, the first converter that can handle a given media takes
+    precedence. Conversion is applied recursively by default so that
+    intermediate types (e.g. Table -> Text) are fully resolved.
     """
 
     def __init__(self):
-
         # List of media converters
         self.media_converters: List[BaseConverter] = []
 
@@ -30,23 +29,27 @@ class MediaConverter:
         convert_videos: bool = True,
         convert_documents: bool = True,
     ) -> List[BaseConverter]:
-        """
-        Add default converters to convert all media to text.
+        """Register the standard set of converters.
+
+        Adds converters for NdImage, Table, Object, Code, Json, and
+        optionally Video (requires ffmpeg), Document (requires pymupdf
+        and/or docling), and Audio (requires local Whisper). Converters
+        are only added when their dependencies are available.
 
         Parameters
         ----------
-        convert_audio: bool
-            If True, add the audio converter to the list of default converters.
-        convert_videos: bool
-            If True, add the video converter to the list of default converters.
-        convert_documents: bool
-            If True, add the document converter to the list of default converters.
+        convert_audio : bool, optional
+            Include the Whisper-based audio converter. Default is True.
+        convert_videos : bool, optional
+            Include the ffmpeg-based video converter. Default is True.
+        convert_documents : bool, optional
+            Include document converters (pymupdf, docling, txt fallback).
+            Default is True.
 
         Returns
         -------
         List[BaseConverter]
-            The list of default converters.
-
+            The converters that were actually added.
         """
 
         # Create a list of default converters
@@ -135,18 +138,15 @@ class MediaConverter:
     def add_media_converter(
         self, media_converter: BaseConverter, highest_priority: bool = False
     ):
-        """
-        Add a media converter to the list of media converters.
-        The media converter is a callable that takes a message and returns a converted message.
+        """Add a converter to the pipeline.
 
         Parameters
         ----------
-        media_converter: callable
-            The media converter to add. It should be a callable that takes a message and returns a converted message.
-        highest_priority: bool
-            If True, the media converter is added to the beginning of the list of media converters.
-            This means that it will be used first when converting messages. Default is False.
-
+        media_converter : BaseConverter
+            The converter to add.
+        highest_priority : bool, optional
+            If True, insert at the front of the list so it takes precedence
+            over existing converters. Default is False (append).
         """
         if highest_priority:
             # Add the media converter to the beginning of the list
@@ -156,14 +156,17 @@ class MediaConverter:
             self.media_converters.append(media_converter)
 
     def remove_media_converter(self, media_converter: BaseConverter):
-        """
-        Remove a media converter from the list of media converters.
+        """Remove a converter from the pipeline.
 
         Parameters
         ----------
-        media_converter: callable
-            The media converter to remove. It should be a callable that takes a message and returns a converted message.
+        media_converter : BaseConverter
+            The converter instance to remove.
 
+        Raises
+        ------
+        ValueError
+            If the converter is not in the pipeline.
         """
         self.media_converters.remove(media_converter)
 
@@ -172,21 +175,23 @@ class MediaConverter:
         source_media_type: Type[MediaBase],
         allowed_media_types: Set[Type[MediaBase]],
     ) -> bool:
-        """
-        Determines if a source media type, after all possible conversions,
-        results in media types that are all contained within the allowed set.
+        """Check whether a source type can be fully converted to allowed types.
+
+        Performs a BFS over the conversion graph to verify that every
+        reachable type from *source_media_type* is contained in
+        *allowed_media_types*.
 
         Parameters
         ----------
-        source_media_type: Type[MediaBase]
-            The source media type to convert from.
-        allowed_media_types: Set[Type[MediaBase]]
-            The set of allowed media types that conversions should be limited to.
+        source_media_type : Type[MediaBase]
+            The media type to start from.
+        allowed_media_types : Set[Type[MediaBase]]
+            The set of acceptable target types.
 
         Returns
         -------
         bool
-            True if all resulting conversions are within the allowed types, False otherwise.
+            True if all conversion outputs are within the allowed set.
         """
 
         # If there are no converters, then we cannot convert anything, source type must be in allowed types:
@@ -235,18 +240,17 @@ class MediaConverter:
     def get_convertible_media_types(
         self, allowed_media_types: Set[Type[MediaBase]]
     ) -> Set[Type[MediaBase]]:
-        """
-        Get the set of media types that can be converted to the allowed media types.
+        """Find all media types that can be converted to the allowed set.
 
         Parameters
         ----------
-        allowed_media_types: Set[Type[MediaBase]]
-            The set of allowed media types that conversions should be limited to.
+        allowed_media_types : Set[Type[MediaBase]]
+            The set of acceptable target types.
 
         Returns
         -------
         Set[Type[MediaBase]]
-            The set of media types that can be converted to the allowed media types.
+            All media types for which ``can_convert_within`` returns True.
         """
         convertable_media_types = set()
 
@@ -267,30 +271,29 @@ class MediaConverter:
         exclude_extensions: Optional[Sequence[str]] = None,
         recursive: bool = True,
     ) -> List[Message]:
-        """
-        Convert a list of messages to a list of messages containing only certain allowed media.
-        The conversion is done by using the media converters defined in the class.
-        The conversion is not done in place: a new list of messages is returned.
+        """Convert messages so they contain only allowed media types.
+
+        Iterates over each message block and applies the first matching
+        converter. The conversion is **not** performed in place; new
+        messages are returned.
 
         Parameters
         ----------
-        messages: Sequence[Message]
-            The list of messages to convert.
-        allowed_media_types: Sequence[MediaBase]
-            The list of allowed media types. The media types are defined in the MediaBase class.
-        exclude_extensions: Optional[Sequence[str]]
-            The list of file extensions to exclude from the conversion.
-            The file extensions are defined only for some media types.
-            If excluded then the conversion is skipped and the corresponding media is kept as is.
-            If None, all file extensions are allowed. Default is None.
-        recursive: bool
-            Apply conversion recursively until no more conversion is possible. Default is True.
+        messages : List[Message]
+            The messages to convert.
+        allowed_media_types : Sequence[Type[MediaBase]]
+            Media types that should be kept as-is.
+        exclude_extensions : Sequence[str], optional
+            File extensions to skip during conversion (media with these
+            extensions are kept unchanged). Default is None (no exclusions).
+        recursive : bool, optional
+            If True, reapply conversion until no further changes occur.
+            Default is True.
 
         Returns
         -------
-        list[Message]
-            The list of messages containing only certain allowed media.
-
+        List[Message]
+            New messages containing only allowed (or unconvertible) media.
         """
 
         # List that will hold the converted messages:
@@ -356,9 +359,11 @@ class MediaConverter:
                     if converted is not None:
                         conversion_happened = True
                         # If a converter was found, append the converted media
-                        for media in converted:
+                        for converted_item in converted:
                             new_message.append_block(
-                                MessageBlock(media=media, attributes=attributes)
+                                MessageBlock(
+                                    media=converted_item, attributes=attributes
+                                )
                             )
                     else:
                         # If no converter is found, keep the original media:

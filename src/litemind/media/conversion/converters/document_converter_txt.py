@@ -9,9 +9,11 @@ from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_pa
 
 
 class DocumentConverterTxt(BaseConverter):
-    """
-    Converter for text documents media types.
-    Converts text documents media to Text media.
+    """Converts text-based documents (plain text, code, scripts) to Text media.
+
+    This is a low-priority fallback converter that reads the file content
+    directly and wraps it in a Markdown fenced code block with the original
+    filename and extension.
     """
 
     def rule(self) -> List[Tuple[Type[MediaBase], List[Type[MediaBase]]]]:
@@ -27,7 +29,7 @@ class DocumentConverterTxt(BaseConverter):
         if not isinstance(media, Document):
             return False
 
-        # Check if the file is a PDF:
+        # Check if the file is a text-based document:
         file_type = classify_uri(media.uri)
         if file_type not in {"text", "code", "script"}:
             return False

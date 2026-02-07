@@ -4,7 +4,12 @@ import tempfile
 import numpy as np
 import pytest
 
-from litemind.media.types.media_audio import Audio
+from litemind.media.types.media_audio import Audio, is_soundfile_available
+
+# Skip all tests in this module if soundfile is not available
+pytestmark = pytest.mark.skipif(
+    not is_soundfile_available(), reason="soundfile library not available"
+)
 
 
 @pytest.fixture

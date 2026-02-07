@@ -9,23 +9,24 @@ from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_pa
 
 
 class Image(MediaURI):
-    """
-    A media that stores an image
+    """Media that stores an image referenced by URI.
+
+    Supports loading from local files or remote URLs. Images can be
+    converted between formats (PNG, JPEG) and loaded as numpy arrays
+    or PIL Image objects.
     """
 
     def __init__(self, uri: str, extension: Optional[str] = None, **kwargs):
-        """
-        Create a new image media.
+        """Create a new image media.
 
         Parameters
         ----------
-        uri: str
-            The image URI.
-        extension: str
-            Extension/Type of the image file in case it is not clear from the URI. This is the extension _without_ the dot -- 'png' not '.png'.
-        kwargs: dict
-            Other arguments passed to MediaURI.
-
+        uri : str
+            The image URI or local file path.
+        extension : str, optional
+            File extension override without the leading dot (e.g. ``"png"``).
+        **kwargs
+            Additional keyword arguments forwarded to ``MediaURI``.
         """
 
         super().__init__(uri=uri, extension=extension, **kwargs)
@@ -40,6 +41,25 @@ class Image(MediaURI):
         filepath: Optional[str] = None,
         format: Optional[str] = None,
     ):
+        """Create an Image from a numpy array.
+
+        The array is converted to a PIL Image, saved to disk (as PNG by
+        default), and wrapped in an Image media.
+
+        Parameters
+        ----------
+        array : numpy.ndarray
+            Pixel data as a numpy array (H x W or H x W x C).
+        filepath : str, optional
+            Destination file path. A temporary file is created if None.
+        format : str, optional
+            Image format for saving (e.g. ``"PNG"``, ``"JPEG"``).
+
+        Returns
+        -------
+        Image
+            A new Image media referencing the saved file.
+        """
 
         # Create image using PIL
         from PIL import Image as PILImage
@@ -63,9 +83,22 @@ class Image(MediaURI):
         filepath: Optional[str] = None,
         format: Optional[str] = None,
     ):
-        # Create image using PIL
+        """Create an Image from a PIL Image object.
 
-        # Save image as PNG:
+        Parameters
+        ----------
+        image : PIL.Image.Image
+            The PIL image to save and wrap.
+        filepath : str, optional
+            Destination file path. A temporary PNG file is created if None.
+        format : str, optional
+            Image format for saving (e.g. ``"PNG"``, ``"JPEG"``).
+
+        Returns
+        -------
+        Image
+            A new Image media referencing the saved file.
+        """
 
         if filepath is None:
             # Create temporary file:
@@ -89,6 +122,18 @@ class Image(MediaURI):
         return image
 
     def load_from_uri(self):
+        """Load the image data from the URI into ``self.array``.
+
+        Downloads the image if necessary, opens it with PIL, and converts
+        it to a numpy array.
+
+        Raises
+        ------
+        FileNotFoundError
+            If the image file does not exist at the resolved path.
+        Exception
+            If the image cannot be opened or decoded.
+        """
 
         # Download the image file from the URI to a local file:
         local_file = uri_to_local_file_path(self.uri)
@@ -113,18 +158,18 @@ class Image(MediaURI):
             )
 
     def open_pil_image(self, normalise_to_png: bool = False) -> "ImageFile":
-        """
-        Convert the image to a PIL image.
+        """Open the image as a PIL Image object.
 
         Parameters
         ----------
-        normalise_to_png: bool
-            If True, convert the image to PNG format.
+        normalise_to_png : bool, optional
+            If True, convert the image to PNG format before opening.
+            Default is False.
 
         Returns
         -------
-        PILImage
-            The image as a PIL image.
+        PIL.Image.Image
+            The opened PIL image.
         """
 
         # load the image using PIL:
@@ -140,15 +185,14 @@ class Image(MediaURI):
         return PILImage.open(local_path)
 
     def normalise_to_png(self):
-        """
-        Convert the image to PNG format.
-        This method ensures that the image is in PNG format by converting it if necessary.
+        """Convert the image to PNG format in place.
+
+        Updates ``self.local_path`` to point to the converted file.
 
         Returns
         -------
         str
-            The local path of the image in PNG format.
-
+            The local file path of the PNG image.
         """
 
         # Ensure local file is available:
@@ -160,21 +204,20 @@ class Image(MediaURI):
         return self.local_path
 
     def normalise_to_jpeg(self):
-        """
-        Convert the image to JPEG format.
-        This method ensures that the image is in JPEG format by converting it if necessary.
+        """Convert the image to JPEG format in place.
+
+        Updates ``self.local_path`` to point to the converted file.
 
         Returns
         -------
         str
-            The local path of the image in JPEG format.
-
+            The local file path of the JPEG image.
         """
 
         # Ensure local file is available:
         self.to_local_file_path()
 
-        # Ensure local file is a PNG file:
+        # Ensure local file is a JPEG file:
         self.local_path = convert_image_to_jpeg(self.local_path)
 
         return self.local_path

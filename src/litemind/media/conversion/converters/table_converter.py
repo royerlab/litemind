@@ -7,11 +7,7 @@ from litemind.media.types.media_text import Text
 
 
 class TableConverter(BaseConverter):
-    """
-    Converter for Table media type.
-
-    Converts Table media to Text media.
-    """
+    """Converts Table media to Text by rendering as a Markdown table."""
 
     def rule(self) -> List[Tuple[Type[MediaBase], List[Type[MediaBase]]]]:
         return [(Table, [Text])]

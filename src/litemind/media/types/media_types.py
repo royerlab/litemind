@@ -2,8 +2,16 @@ from typing import List, Type
 
 
 def all_media_types() -> List[Type["MediaBase"]]:
-    """
-    Returns a list of all media types available in the litemind.media.types module.
+    """Return a list of all concrete media type classes.
+
+    This function lazily imports every media type to avoid circular import
+    issues. Useful for iteration over the full set of media types, e.g.
+    when building a conversion graph.
+
+    Returns
+    -------
+    List[Type[MediaBase]]
+        All registered media type classes in alphabetical order.
     """
 
     from litemind.media.types.media_action import Action

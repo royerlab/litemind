@@ -7,11 +7,7 @@ from litemind.media.types.media_text import Text
 
 
 class CodeConverter(BaseConverter):
-    """
-    Converter for Code media type.
-
-    Converts Code media to Text media.
-    """
+    """Converts Code media to Text by rendering as a Markdown code block."""
 
     def rule(self) -> List[Tuple[Type[MediaBase], List[Type[MediaBase]]]]:
         return [(Code, [Text])]

@@ -11,8 +11,16 @@ from litemind.utils.free_port import find_free_port
 
 
 class ObjectService(rpyc.Service):
-    """
-    RPyC service that exposes registered objects.
+    """RPyC service that exposes registered Python objects to remote clients.
+
+    Each instance holds a dictionary of named objects and provides
+    ``exposed_get_object``, ``exposed_list_objects``, and ``exposed_ping``
+    endpoints that RPyC clients can call.
+
+    Parameters
+    ----------
+    exposed_objects : Dict[str, object]
+        Mapping of names to the Python objects to be served.
     """
 
     def __init__(self, exposed_objects: Dict[str, object]):
@@ -21,15 +29,29 @@ class ObjectService(rpyc.Service):
         aprint(f"🏗️ ObjectService initialized with {len(exposed_objects)} objects")
 
     def on_connect(self, conn):
+        """Log when a client connects to the service."""
         super().on_connect(conn)
         aprint("🔗 Client connected")
 
     def on_disconnect(self, conn):
+        """Log when a client disconnects from the service."""
         super().on_disconnect(conn)
         aprint("🔌 Client disconnected")
 
     def exposed_get_object(self, name: str):
-        """Return an object by its registered name (or None if absent)."""
+        """Return a server-wrapped object by its registered name.
+
+        Parameters
+        ----------
+        name : str
+            The registered name of the object.
+
+        Returns
+        -------
+        _ServerWrapper or None
+            The wrapped object, or ``None`` if no object is registered
+            under *name*.
+        """
         try:
             obj = self._exposed_objects.get(name)
             if obj is not None:
@@ -46,24 +68,46 @@ class ObjectService(rpyc.Service):
             return None
 
     def exposed_list_objects(self):
-        """Return list of available object names."""
+        """Return the list of registered object names.
+
+        Returns
+        -------
+        list of str
+            Names under which objects have been exposed.
+        """
         return list(self._exposed_objects.keys())
 
     def exposed_ping(self):
-        """Simple ping method for testing."""
+        """Return ``"pong"`` -- used by clients to verify connectivity.
+
+        Returns
+        -------
+        str
+            The literal string ``"pong"``.
+        """
         return "pong"
 
 
 class Server:
-    """A simple, elegant server for exposing litemind objects."""
+    """RPyC server for exposing litemind objects to remote clients.
+
+    Objects are registered with :meth:`expose` and become available to any
+    ``Client`` that connects to this server. The server can run in the
+    foreground (blocking) or in a background daemon thread.
+    """
 
     def __init__(self, host: Optional[str] = None, port: Optional[int] = None):
         """
-        Initializes the server.
+        Initialize the server.
 
-        Args:
-            host (str): The hostname to bind to.
-            port (int): The port to listen on.
+        Parameters
+        ----------
+        host : str or None, optional
+            The hostname to bind to. If ``None``, an available local
+            address is selected automatically.
+        port : int or None, optional
+            The port to listen on. If ``None``, a free port is selected
+            automatically.
         """
 
         # Get free port if needed:
@@ -80,26 +124,38 @@ class Server:
         aprint("✨ LiteMind RPC Server initialized. Ready to expose objects.")
 
     def get_port(self) -> int:
+        """Return the port the server is (or will be) listening on.
+
+        Returns
+        -------
+        int
+            The configured port number.
+        """
         return self.port
 
     def expose(self, name: str, obj: object):
-        """
-        Makes an object available to remote clients under a specific name.
+        """Register an object so that remote clients can access it by name.
 
-        Args:
-            name (str): The name to register the object under.
-            obj (object): The object instance to expose.
+        Parameters
+        ----------
+        name : str
+            The name to register the object under. Clients use this name
+            to retrieve the object via ``Client.get(name)``.
+        obj : object
+            The object instance to expose.
         """
         aprint(f"  📦 Exposing '{name}': {obj}")
         self._exposed_objects[name] = obj
 
     def start(self, block=True):
-        """
-        Starts the RPC server.
+        """Start the RPyC server.
 
-        Args:
-            block (bool): If True (default), the server runs forever.
-                          If False, it runs in a background thread.
+        Parameters
+        ----------
+        block : bool, optional
+            If ``True`` (the default), the call blocks and the server
+            runs in the foreground until stopped.  If ``False``, the
+            server runs in a daemon background thread.
         """
 
         # Use classpartial to create a service class with the exposed objects
@@ -137,7 +193,7 @@ class Server:
             raise
 
     def close(self):
-        """Stops the server."""
+        """Stop the server and join the background thread if one exists."""
         try:
             if self._server:
                 aprint("🛑 Server shutting down.")
@@ -150,7 +206,14 @@ class Server:
             aprint(f"⚠️ Error during server shutdown: {e}")
 
     def is_running(self) -> bool:
-        """Check if the server is currently running."""
+        """Check whether the server is currently running.
+
+        Returns
+        -------
+        bool
+            ``True`` if the server has been started and has not been
+            closed, ``False`` otherwise.
+        """
         return self._server is not None and (
             self._thread is None or self._thread.is_alive()
         )

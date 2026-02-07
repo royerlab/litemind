@@ -39,11 +39,26 @@ except ImportError:  # │
 
 def probe(path: str, read_bytes: int = 4096) -> Dict[str, Any]:
     """
-    Return a dict describing the file.
-      • extension_mime  – MIME guessed from the file-name
-      • signature_mime  – MIME guessed from magic numbers (filetype)
-      • libmagic_mime   – MIME guessed by libmagic (if available)
-      • is_text         – True/False based on null-byte & UTF-8 decode
+    Probe a file and return MIME type information from multiple sources.
+
+    Parameters
+    ----------
+    path : str
+        The path to the file to probe.
+    read_bytes : int, optional
+        Number of bytes to read for the text-vs-binary heuristic.
+        Default is 4096.
+
+    Returns
+    -------
+    dict
+        Dictionary with the following keys:
+
+        - ``extension_mime`` : MIME guessed from the file name extension.
+        - ``signature_mime`` : MIME guessed from magic numbers (filetype lib).
+        - ``libmagic_mime`` : MIME guessed by libmagic (if available).
+        - ``is_text`` : True if the file appears to be UTF-8 text, False if
+          binary, or None on error.
     """
     info: Dict[str, Any] = {}
 
@@ -123,11 +138,24 @@ _EXECUTABLE = {
 
 def classify_uri(uri: str, read_bytes: int = 4096) -> str:
     """
-    Convenience wrapper around classify().
+    Classify a file by its URI, downloading if necessary.
 
-    Returns one of:
-      'text' | 'code' | 'pdf' | 'image' | 'audio' |
-      'video' | 'archive' | 'office document' | 'executable' | 'web' | 'binary'
+    Resolves the URI to a local file path and delegates to
+    :func:`classify`.
+
+    Parameters
+    ----------
+    uri : str
+        A file URI, local path, or remote URL.
+    read_bytes : int, optional
+        Bytes to read for probing. Default is 4096.
+
+    Returns
+    -------
+    str
+        One of: ``"text"``, ``"code"``, ``"script"``, ``"pdf"``,
+        ``"image"``, ``"audio"``, ``"video"``, ``"archive"``,
+        ``"office"``, ``"executable"``, ``"web"``, or ``"binary"``.
     """
     # Convert URI to local file path:
     from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_path
@@ -139,9 +167,24 @@ def classify_uri(uri: str, read_bytes: int = 4096) -> str:
 @lru_cache()
 def classify(path: str, read_bytes: int = 4096) -> str:
     """
-    Return one of:
-      'text' | 'code' | 'pdf' | 'image' | 'audio' |
-      'video' | 'archive' | 'office' | 'executable' | 'web' | 'binary'
+    Classify a local file into a high-level type category.
+
+    Uses MIME type detection (libmagic, file signatures, extensions)
+    to determine the file type.
+
+    Parameters
+    ----------
+    path : str
+        The path to the local file to classify.
+    read_bytes : int, optional
+        Bytes to read for probing. Default is 4096.
+
+    Returns
+    -------
+    str
+        One of: ``"text"``, ``"code"``, ``"script"``, ``"pdf"``,
+        ``"image"``, ``"audio"``, ``"video"``, ``"archive"``,
+        ``"office"``, ``"executable"``, ``"web"``, or ``"binary"``.
     """
     meta = probe(path, read_bytes)
     mime = (
@@ -221,21 +264,26 @@ def classify(path: str, read_bytes: int = 4096) -> str:
     return "binary"
 
 
-def is_text_file(path: str, read_bytes: int = 4096) -> bool | None:
+def is_text_file(path: str, read_bytes: int = 4096) -> bool:
     """
-    Convenience wrapper around probe().
+    Check if the file is a plain text file.
+
+    Parameters
+    ----------
+    path : str
+        The path to the file.
+    read_bytes : int, optional
+        Number of bytes to read for probing. Default is 4096.
 
     Returns
     -------
-    bool | None
-        • True   – looks like plain text (incl. UTF-8/ASCII/UTF-16 BOM etc.)
-        • False  – has NUL bytes or other binary markers
-        • None   – file unreadable or error occurred
+    bool
+        True if the file is classified as plain text, False otherwise.
     """
     return classify(path) == "text"
 
 
-def is_script_file(path: str, read_bytes: int = 4096) -> bool | None:
+def is_script_file(path: str, read_bytes: int = 4096) -> bool:
     """
     Check if the file is a script file based on its extension and content.
 
@@ -244,26 +292,27 @@ def is_script_file(path: str, read_bytes: int = 4096) -> bool | None:
     path : str
         The path to the file.
     read_bytes : int, optional
-        The number of bytes to read from the file for probing, by default 4096.
+        Number of bytes to read for probing. Default is 4096.
+
     Returns
     -------
-    bool | None
-        • True   – looks like script file based on extension and content
-        • False  – does not look like script file
+    bool
+        True if the file is a script file, False otherwise.
     """
     return classify(path) == "script"
 
 
 def is_prog_code_file(path: str, read_bytes: int = 4096) -> bool:
     """
-    Check if the file is a programming language code file based on its extension and content.
+    Check if the file is a programming language code file.
 
     Parameters
     ----------
     path : str
         The path to the file.
     read_bytes : int, optional
-        The number of bytes to read from the file for probing, by default 4096.
+        Number of bytes to read for probing. Default is 4096.
+
     Returns
     -------
     bool
@@ -274,7 +323,7 @@ def is_prog_code_file(path: str, read_bytes: int = 4096) -> bool:
 
 def is_pdf_file(path: str) -> bool:
     """
-    Check if the file is a PDF based on its MIME type.
+    Check if the file is a PDF document.
 
     Parameters
     ----------
@@ -291,7 +340,7 @@ def is_pdf_file(path: str) -> bool:
 
 def is_image_file(path: str) -> bool:
     """
-    Check if the file is an image based on its MIME type.
+    Check if the file is an image.
 
     Parameters
     ----------
@@ -308,7 +357,7 @@ def is_image_file(path: str) -> bool:
 
 def is_audio_file(path: str) -> bool:
     """
-    Check if the file is an audio file based on its MIME type.
+    Check if the file is an audio file.
 
     Parameters
     ----------
@@ -325,7 +374,7 @@ def is_audio_file(path: str) -> bool:
 
 def is_video_file(path: str) -> bool:
     """
-    Check if the file is a video file based on its MIME type.
+    Check if the file is a video file.
 
     Parameters
     ----------
@@ -342,7 +391,7 @@ def is_video_file(path: str) -> bool:
 
 def is_archive_file(path: str) -> bool:
     """
-    Check if the file is an archive file based on its MIME type.
+    Check if the file is an archive file.
 
     Parameters
     ----------
@@ -359,7 +408,7 @@ def is_archive_file(path: str) -> bool:
 
 def is_office_file(path: str) -> bool:
     """
-    Check if the file is an office document based on its MIME type.
+    Check if the file is an office document (Word, Excel, PowerPoint, etc.).
 
     Parameters
     ----------
@@ -377,21 +426,24 @@ def is_office_file(path: str) -> bool:
 
 def is_executable_file(path: str) -> bool:
     """
-    Check if the file is an executable file based on its MIME type.
+    Check if the file is an executable file.
+
     Parameters
     ----------
-    path
+    path : str
+        The path to the file.
 
     Returns
     -------
-
+    bool
+        True if the file is an executable, False otherwise.
     """
     return classify(path) == "executable"
 
 
 def is_web_file(path: str) -> bool:
     """
-    Check if the file is a web file based on its MIME type.
+    Check if the file is a web file (HTML, PHP, template, etc.).
 
     Parameters
     ----------
@@ -408,7 +460,10 @@ def is_web_file(path: str) -> bool:
 
 def is_document_file(path: str) -> bool:
     """
-    Check if the file is a document file based on its MIME type.
+    Check if the file is a document (text, code, office, PDF, or web).
+
+    This is a composite check that returns True for any file that could
+    reasonably be considered a human-readable document.
 
     Parameters
     ----------
@@ -418,7 +473,7 @@ def is_document_file(path: str) -> bool:
     Returns
     -------
     bool
-        True if the file is a document file, False otherwise.
+        True if the file is a document, False otherwise.
     """
     return (
         is_text_file(path)
@@ -432,7 +487,7 @@ def is_document_file(path: str) -> bool:
 
 def get_extension(path: str) -> str:
     """
-    Get the file extension from the path.
+    Get the lowercase file extension from a path.
 
     Parameters
     ----------
@@ -442,7 +497,8 @@ def get_extension(path: str) -> str:
     Returns
     -------
     str
-        The file extension, or an empty string if no extension is found.
+        The lowercase file extension (e.g., ``".py"``), or an empty
+        string if no extension is found.
     """
     return os.path.splitext(path)[1].lower() if os.path.splitext(path)[1] else ""
 
@@ -455,8 +511,8 @@ def has_extension(path: str, extensions: Set[str]) -> bool:
     ----------
     path : str
         The path to the file.
-    extensions : Set[str]
-        A list of file extensions to check against.
+    extensions : set of str
+        A set of file extensions (including leading dot) to check against.
 
     Returns
     -------

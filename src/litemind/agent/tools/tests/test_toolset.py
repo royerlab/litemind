@@ -1,6 +1,6 @@
 import pytest
 
-from litemind import API_IMPLEMENTATIONS
+from litemind import get_available_apis
 from litemind.agent.tools.agent_tool import AgentTool
 from litemind.agent.tools.function_tool import FunctionTool
 from litemind.agent.tools.toolset import ToolSet
@@ -53,7 +53,7 @@ def test_toolset_add_function_tool():
 
 
 # Test for adding an AgentTool through add_agent_tool
-@pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
+@pytest.mark.parametrize("api_class", get_available_apis())
 def test_toolset_add_agent_tool(api_class):
     from litemind.agent.agent import Agent
 

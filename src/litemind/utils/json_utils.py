@@ -5,14 +5,41 @@ from typing import Any, Dict, Optional
 
 
 class JSONSerializable:
-    """Mixin class that provides automatic JSON serialization with recursive support."""
+    """
+    Mixin class providing automatic JSON serialization.
+
+    Supports recursive handling of nested ``JSONSerializable`` objects,
+    lists, and dictionaries. Skips private attributes (prefixed with ``_``).
+    """
 
     def to_json(self, indent: Optional[int] = None) -> str:
-        """Convert object to JSON string."""
+        """
+        Serialize this object to a JSON string.
+
+        Parameters
+        ----------
+        indent : int, optional
+            Number of spaces for JSON indentation. None for compact output.
+
+        Returns
+        -------
+        str
+            The JSON string representation.
+        """
         return json.dumps(self.to_dict(), cls=_JSONEncoder, indent=indent)
 
     def to_dict(self) -> Dict[str, Any]:
-        """Convert object to dictionary with recursive handling of nested objects."""
+        """
+        Convert this object to a dictionary.
+
+        Recursively converts nested ``JSONSerializable`` objects. Skips
+        private attributes (those starting with ``_``).
+
+        Returns
+        -------
+        dict
+            Dictionary representation of this object.
+        """
         result = {}
         for k, v in self.__dict__.items():
             if k.startswith("_"):
@@ -43,7 +70,24 @@ class JSONSerializable:
 
     @classmethod
     def from_json(cls, json_str: str) -> "JSONSerializable":
-        """Create instance from JSON string."""
+        """
+        Create an instance from a JSON string.
+
+        Parameters
+        ----------
+        json_str : str
+            A valid JSON string.
+
+        Returns
+        -------
+        JSONSerializable
+            A new instance populated from the JSON data.
+
+        Raises
+        ------
+        ValueError
+            If the string is not valid JSON.
+        """
         try:
             data = json.loads(json_str)
             return cls.from_dict(data)
@@ -52,7 +96,22 @@ class JSONSerializable:
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "JSONSerializable":
-        """Create instance from dictionary with recursive handling."""
+        """
+        Create an instance from a dictionary.
+
+        Matches dictionary keys to constructor parameters and sets any
+        remaining keys as attributes on the instance.
+
+        Parameters
+        ----------
+        data : dict
+            Dictionary with keys corresponding to the class attributes.
+
+        Returns
+        -------
+        JSONSerializable
+            A new instance populated from the dictionary.
+        """
         # Extract constructor parameters
         init_signature = inspect.signature(cls.__init__)
         param_names = set(list(init_signature.parameters.keys())[1:])  # Exclude 'self'
@@ -81,7 +140,7 @@ class JSONSerializable:
 
 
 class _JSONEncoder(json.JSONEncoder):
-    """Custom JSON encoder that handles common non-serializable types."""
+    """Custom JSON encoder that handles dates, sets, and objects with ``to_dict``."""
 
     def default(self, obj: Any) -> Any:
         # Handle dates and times

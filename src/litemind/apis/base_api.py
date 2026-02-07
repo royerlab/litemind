@@ -13,13 +13,22 @@ from litemind.utils.random_projector import DeterministicRandomProjector
 
 
 class BaseApi(ABC):
-    """
-    The base class for all APIs. This class provides the interface for all provider APIs to implement.
+    """Abstract base class defining the interface for all LLM provider APIs.
+
+    All provider implementations (OpenAI, Anthropic, Gemini, Ollama) must
+    inherit from this class and implement its abstract methods for text
+    generation, media embedding, audio transcription, and media description.
     """
 
-    # constructor:
     def __init__(self, callback_manager: Optional[ApiCallbackManager] = None, **kwargs):
+        """Initialize the base API with an optional callback manager.
 
+        Parameters
+        ----------
+        callback_manager : Optional[ApiCallbackManager]
+            Callback manager for monitoring API operations. If None, a default
+            (no-op) manager is created.
+        """
         if callback_manager is not None:
             self.callback_manager = callback_manager
         else:
@@ -36,13 +45,14 @@ class BaseApi(ABC):
 
         Parameters
         ----------
-        api_key: Optional[str]
-            If needed, the API key to check.
+        api_key : Optional[str]
+            The API key to check. If None, checks environment variables.
 
         Returns
         -------
-        bool
-            True if the API key is valid, False otherwise, None if no credentials are required.
+        Optional[bool]
+            True if available and valid, False if unavailable, None if no
+            credentials are required.
 
         """
         pass
@@ -66,17 +76,17 @@ class BaseApi(ABC):
 
         Parameters
         ----------
-        features: Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
-            The feature(s) to filter on.
-        non_features: Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
-            The feature(s) to exclude from the list.
-        media_types: Optional[Sequence[Type[MediaBase]]]
-            The media types (e.g. Text, Image, Audio, Video, Document) that the model must support.
+        features : Optional[Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]]
+            Required feature(s) to filter on.
+        non_features : Optional[Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]]
+            Feature(s) to exclude from the list.
+        media_types : Optional[Sequence[Type[MediaBase]]]
+            Media types the model must support (e.g., Text, Image, Audio).
 
         Returns
         -------
         List[str]
-            The list of models available
+            List of matching model names.
 
         """
         pass
@@ -101,22 +111,19 @@ class BaseApi(ABC):
 
         Parameters
         ----------
-        features: Sequence[ModelFeatures], or ModelFeatures, or str, or List[str]
-            List of features to filter on.
-        non_features: Sequence[ModelFeatures], or ModelFeatures, or str, or List[str]
-            List of features to exclude from the list.
-        media_types: Optional[Sequence[Type[MediaBase]]] = None,
-            List of media types (Text, Image", Audio, Video, Document) that the model must support.
-            For example, requiring Audio means requiring either ModelFeatures.Audio or ModelFeatures.AudioConversion.
-        exclusion_filters: Optional[List[str]]
-            List of strings that if found in the model name exclude it.
-
+        features : Optional[Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]]
+            Required features the model must support.
+        non_features : Optional[Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]]
+            Features the model must not have.
+        media_types : Optional[Sequence[Type[MediaBase]]]
+            Media types the model must support.
+        exclusion_filters : Optional[List[str]]
+            Substrings that, if found in a model name, exclude it.
 
         Returns
         -------
-        str
-            The default model to use.
-            None if no models satisfy the requirements
+        Optional[str]
+            The best matching model name, or None if no model matches.
 
         """
         pass
@@ -144,17 +151,17 @@ class BaseApi(ABC):
 
         Parameters
         ----------
-        features: Sequence[ModelFeatures] or ModelFeatures, or str, or List[str]
+        features : Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
             The feature(s) to check for.
-        media_types: Optional[Sequence[Type[MediaBase]]]
-            The media types (e.g. Text, Image, Audio, Video, Document) that the model must support.
-        model_name: Optional[str]
-            The name of the model to use.
+        media_types : Optional[Sequence[Type[MediaBase]]]
+            Media types the model must support.
+        model_name : Optional[str]
+            The model to check. If None, checks any available model.
 
         Returns
         -------
         bool
-            True if the model has text generation support, False otherwise.
+            True if the model supports the requested features and media types.
 
         """
         pass
@@ -166,26 +173,25 @@ class BaseApi(ABC):
 
         Parameters
         ----------
-        model_name: str
-            The name of the model to use.
+        model_name : str
+            The model name to query.
 
         Returns
         -------
         List[ModelFeatures]
-            The features of the model.
+            All features the model supports.
 
         """
         pass
 
     @abstractmethod
     def max_num_input_tokens(self, model_name: Optional[str] = None) -> int:
-        """
-        Get the maximum number of input tokens for the given model.
+        """Get the maximum number of input tokens for the given model.
 
         Parameters
         ----------
-        model_name: Optional[str]
-            The name of the model to use.
+        model_name : Optional[str]
+            The model to query. If None, uses the best available model.
 
         Returns
         -------
@@ -197,12 +203,12 @@ class BaseApi(ABC):
 
     @abstractmethod
     def max_num_output_tokens(self, model_name: Optional[str] = None) -> int:
-        """
-        Get the maximum number of output tokens for the given model.
+        """Get the maximum number of output tokens for the given model.
+
         Parameters
         ----------
-        model_name: Optional[str]
-            The name of the model to use.
+        model_name : Optional[str]
+            The model to query. If None, uses the best available model.
 
         Returns
         -------
@@ -219,10 +225,10 @@ class BaseApi(ABC):
 
         Parameters
         ----------
-        text: str
+        text : str
             The text to count the tokens in.
-        model_name: Optional[str]
-            The name of the model to use.
+        model_name : Optional[str]
+            The model whose tokenizer to use.
 
         Returns
         -------
@@ -249,33 +255,29 @@ class BaseApi(ABC):
 
         Parameters
         ----------
-        model_name: str
-            The name of the model to use.
-        messages: List[Message]
+        messages : List[Message]
             The list of messages to send to the model.
-        temperature: float
-            The temperature to use.
-        max_num_output_tokens: Optional[int]
-            The maximum number of tokens to use.
-        toolset: Optional[ToolSet]
-            The toolset to use.
-        use_tools: bool
-            Whether to use tools if provided.
-            In that case this method will run use the tools that the model deems necessary until reaching a final answer.
-            If False, when the text generation model requests tool use, the tools are not used and the response contains a message with a ToolCall block.
-        response_format: Optional[BaseModel | str]
-            The response format to use. Provide a pydantic object to use as the output format or json schema.
-        kwargs: dict
-            Additional arguments to pass to the completion function, this is API specific!
-
+        model_name : Optional[str]
+            The model to use. If None, uses the best available model.
+        temperature : float
+            Sampling temperature (0.0 = deterministic).
+        max_num_output_tokens : Optional[int]
+            Maximum tokens in the response.
+        toolset : Optional[ToolSet]
+            The toolset available for function calling.
+        use_tools : bool
+            If True, executes tool calls automatically until a final
+            answer is reached. If False, returns raw ToolCall blocks.
+        response_format : Optional[BaseModel]
+            Pydantic model for structured output parsing.
+        **kwargs
+            Additional provider-specific arguments.
 
         Returns
         -------
         List[Message]
-            The response from the model. A response is a list of messages.
-            For simple requests this is usually a single Message,
-            but when using tools there is typically multiple messages,
-            including user messages for the tool responses.
+            Response messages. For simple requests this is a single Message;
+            when tools are used, includes intermediate tool call/result messages.
 
         """
         pass
@@ -294,16 +296,16 @@ class BaseApi(ABC):
 
         Parameters
         ----------
-        text: str
+        text : str
             The text to convert to audio.
-        voice: Optional[str]
-            The voice to use.
-        audio_format: Optional[str]
-            The format of the audio file. Can be: "mp3", "flac", "wav", or "pcm". By default, "mp3" is used.
-        model_name: Optional[str]
-            The name of the model to use.
-        kwargs: dict
-            Additional arguments to pass to the audio generation function.
+        voice : Optional[str]
+            The voice to use for synthesis.
+        audio_format : Optional[str]
+            Audio file format: "mp3", "flac", "wav", or "pcm". Defaults to "mp3".
+        model_name : Optional[str]
+            The model to use. If None, selects the best available.
+        **kwargs
+            Additional provider-specific arguments.
 
         Returns
         -------
@@ -330,26 +332,25 @@ class BaseApi(ABC):
 
         Parameters
         ----------
-        positive_prompt: str
-            The prompt to use for image generation.
-        negative_prompt: str
-            Prompt to specifying what not to generate
-        model_name: str
-            The name of the model to use.
-        image_width: int
-            The width of the image.
-        image_height: int
-            The height of the image.
-        preserve_aspect_ratio: bool
+        positive_prompt : str
+            The prompt describing what to generate.
+        negative_prompt : Optional[str]
+            Prompt specifying what not to generate.
+        model_name : Optional[str]
+            The model to use. If None, selects the best available.
+        image_width : int
+            Desired width of the image in pixels.
+        image_height : int
+            Desired height of the image in pixels.
+        preserve_aspect_ratio : bool
             Whether to preserve the aspect ratio of the image.
-        allow_resizing: bool
-            Whether to allow resizing of the image.
-        kwargs: dict
-            Additional arguments to pass to the image generation function.
+        allow_resizing : bool
+            Whether to allow resizing to match model constraints.
+        **kwargs
+            Additional provider-specific arguments.
 
         Returns
         -------
-
         Image
             The generated image.
 
@@ -365,12 +366,12 @@ class BaseApi(ABC):
 
         Parameters
         ----------
-        description: str
-            The description of the video.
-        model_name: Optional[str]
-            The name of the model to use.
-        kwargs: dict
-            Additional arguments to pass to the video generation function.
+        description : str
+            Text description of the video to generate.
+        model_name : Optional[str]
+            The model to use. If None, selects the best available.
+        **kwargs
+            Additional provider-specific arguments.
 
         Returns
         -------
@@ -393,19 +394,19 @@ class BaseApi(ABC):
 
         Parameters
         ----------
-        texts: List[str]
+        texts : Sequence[str]
             The text snippets to embed.
-        model_name: Optional[str]
-            The name of the model to use.
-        dimensions: int
-            The number of dimensions for the embedding.
-        kwargs: dict
-            Additional arguments to pass to the embedding function.
+        model_name : Optional[str]
+            The model to use. If None, selects the best available.
+        dimensions : int
+            Target dimensionality for the embedding vectors.
+        **kwargs
+            Additional provider-specific arguments.
 
         Returns
         -------
         Sequence[Sequence[float]]
-            The embedding of the text.
+            Embedding vectors, one per input text.
 
         """
 
@@ -414,7 +415,20 @@ class BaseApi(ABC):
     def _reduce_embeddings_dimension(
         self, embeddings: Sequence[Sequence[float]], reduced_dim: int
     ) -> Sequence[Sequence[float]]:
+        """Reduce embedding dimensionality using a deterministic random projection.
 
+        Parameters
+        ----------
+        embeddings : Sequence[Sequence[float]]
+            The embeddings to reduce.
+        reduced_dim : int
+            The target dimensionality.
+
+        Returns
+        -------
+        Sequence[Sequence[float]]
+            The reduced-dimensionality embeddings.
+        """
         # Create a DeterministicRandomProjector object:
         drp = DeterministicRandomProjector(
             original_dim=len(embeddings[0]), reduced_dim=reduced_dim
@@ -436,19 +450,19 @@ class BaseApi(ABC):
 
         Parameters
         ----------
-        image_uris: List[str]
-            List of image URIs.
-        model_name: Optional[str]
-            The name of the model to use.
-        dimensions: int
-            The number of dimensions for the embedding.
-        kwargs: dict
-            Additional arguments to pass to the embedding function.
+        image_uris : List[str]
+            List of image URIs or file paths.
+        model_name : Optional[str]
+            The model to use. If None, selects the best available.
+        dimensions : int
+            Target dimensionality for the embedding vectors.
+        **kwargs
+            Additional provider-specific arguments.
 
         Returns
         -------
         Sequence[Sequence[float]]
-            The embeddings of the images.
+            Embedding vectors, one per input image.
 
         """
 
@@ -465,19 +479,19 @@ class BaseApi(ABC):
 
         Parameters
         ----------
-        audio_uris: List[str]
-            List of Audio URIs.
-        model_name: Optional[str]
-            The name of the model to use.
-        dimensions: int
-            The number of dimensions for the embedding.
-        kwargs: dict
-            Additional arguments to pass to the embedding function.
+        audio_uris : List[str]
+            List of audio URIs or file paths.
+        model_name : Optional[str]
+            The model to use. If None, selects the best available.
+        dimensions : int
+            Target dimensionality for the embedding vectors.
+        **kwargs
+            Additional provider-specific arguments.
 
         Returns
         -------
         Sequence[Sequence[float]]
-            The embeddings of the audios.
+            Embedding vectors, one per input audio.
 
         """
 
@@ -496,19 +510,19 @@ class BaseApi(ABC):
 
         Parameters
         ----------
-        video_uris: List[str]
-            List of video URIs.
-        model_name: Optional[str]
-            The name of the model to use.
-        dimensions: int
-            The number of dimensions for the embedding.
-        kwargs: dict
-            Additional arguments to pass to the embedding function.
+        video_uris : List[str]
+            List of video URIs or file paths.
+        model_name : Optional[str]
+            The model to use. If None, selects the best available.
+        dimensions : int
+            Target dimensionality for the embedding vectors.
+        **kwargs
+            Additional provider-specific arguments.
 
         Returns
         -------
         Sequence[Sequence[float]]
-            The embeddings of the videos.
+            Embedding vectors, one per input video.
 
         """
 
@@ -527,19 +541,19 @@ class BaseApi(ABC):
 
         Parameters
         ----------
-        document_uris: List[str]
-            List of document URIs.
-        model_name: Optional[str]
-            The name of the model to use.
-        dimensions: int
-            The number of dimensions for the embedding.
-        kwargs: dict
-            Additional arguments to pass to the embedding function.
+        document_uris : List[str]
+            List of document URIs or file paths.
+        model_name : Optional[str]
+            The model to use. If None, selects the best available.
+        dimensions : int
+            Target dimensionality for the embedding vectors.
+        **kwargs
+            Additional provider-specific arguments.
 
         Returns
         -------
         Sequence[Sequence[float]]
-            The embeddings of the documents.
+            Embedding vectors, one per input document.
 
         """
 
@@ -554,12 +568,12 @@ class BaseApi(ABC):
 
         Parameters
         ----------
-        audio_uri: str
-            Can be: a path to an audio file, a URL to an audio file, or a base64 encoded audio.
-        model_name: Optional[str]
-            The name of the model to use.
-        model_kwargs: dict
-            Additional arguments to pass to the transcription function.
+        audio_uri : str
+            Path, URL, or base64-encoded audio to transcribe.
+        model_name : Optional[str]
+            The model to use. If None, selects the best available.
+        **model_kwargs
+            Additional provider-specific arguments.
 
         Returns
         -------
@@ -585,25 +599,25 @@ class BaseApi(ABC):
 
         Parameters
         ----------
-        image_uri: str
-            Can be: a path to an image file, a URL to an image, or a base64 encoded image.
-        system:
-            System message to use
-        query: str
-            Query to use with image
-        model_name: Optional[str]
-            Model to use
-        temperature: float
-            Temperature to use
-        max_output_tokens: Optional[int]
-            Maximum number of tokens to use
-        number_of_tries: int
-            Number of times to try to send the request to the model
+        image_uri : str
+            Path, URL, or base64-encoded image to describe.
+        system : str
+            System message to guide the description.
+        query : str
+            Query prompt to use with the image.
+        model_name : Optional[str]
+            Model to use. If None, selects the best available.
+        temperature : float
+            Sampling temperature for the response.
+        max_output_tokens : Optional[int]
+            Maximum tokens in the response.
+        number_of_tries : int
+            Number of retry attempts on failure.
 
         Returns
         -------
         str
-            Description of the image
+            Text description of the image.
 
         """
 
@@ -625,25 +639,25 @@ class BaseApi(ABC):
 
         Parameters
         ----------
-        audio_uri: str
-            Can be: a path to an audio file, a URL to an audio file, or a base64 encoded audio.
-        system:
-            System message to use
-        query  : str
-            Query to use with audio
-        model_name   : str
-            Model to use
-        temperature: float
-            Temperature to use
-        max_output_tokens  : int
-            Maximum number of tokens to use
+        audio_uri : str
+            Path, URL, or base64-encoded audio to describe.
+        system : str
+            System message to guide the description.
+        query : str
+            Query prompt to use with the audio.
+        model_name : Optional[str]
+            Model to use.
+        temperature : float
+            Temperature to use.
+        max_output_tokens : Optional[int]
+            Maximum number of tokens to use.
         number_of_tries : int
-            Number of times to try to send the request to the model
+            Number of times to try to send the request to the model.
 
         Returns
         -------
-        str
-            Description of the audio
+        Optional[str]
+            Description of the audio, or None if all attempts fail.
 
         """
 
@@ -663,25 +677,25 @@ class BaseApi(ABC):
 
         Parameters
         ----------
-        video_uri: str
-            Can be: a path to a video file, a URL to a video file, or a base64 encoded video.
-        system:
-            System message to use
-        query  : str
-            Query to use with video
-        model_name   : str
-            Model to use
-        temperature: float
-            Temperature to use
-        max_output_tokens  : int
-            Maximum number of tokens to use
+        video_uri : str
+            Path, URL, or base64-encoded video to describe.
+        system : str
+            System message to guide the description.
+        query : str
+            Query prompt to use with the video.
+        model_name : Optional[str]
+            Model to use.
+        temperature : float
+            Temperature to use.
+        max_output_tokens : Optional[int]
+            Maximum number of tokens to use.
         number_of_tries : int
-            Number of times to try to send the request to the model
+            Number of times to try to send the request to the model.
 
         Returns
         -------
-        str | None
-            Description of the video
+        Optional[str]
+            Description of the video, or None if all attempts fail.
 
         """
 
@@ -703,25 +717,25 @@ class BaseApi(ABC):
 
         Parameters
         ----------
-        document_uri: str
-            Can be: a path to a document file, a URL to a document file, or a base64 encoded document.
-        system:
-            System message to use
-        query  : str
-            Query to use with video
-        model_name   : str
-            Model to use
-        temperature: float
-            Temperature to use
-        max_output_tokens  : int
-            Maximum number of tokens to use
+        document_uri : str
+            Path, URL, or base64-encoded document to describe.
+        system : str
+            System message to guide the description.
+        query : str
+            Query prompt to use with the document.
+        model_name : Optional[str]
+            Model to use.
+        temperature : float
+            Temperature to use.
+        max_output_tokens : Optional[int]
+            Maximum number of tokens to use.
         number_of_tries : int
-            Number of times to try to send the request to the model
+            Number of times to try to send the request to the model.
 
         Returns
         -------
-        str | None
-            Description of the document
+        Optional[str]
+            Description of the document, or None if all attempts fail.
 
         """
 

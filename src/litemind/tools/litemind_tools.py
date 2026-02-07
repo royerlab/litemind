@@ -1,8 +1,16 @@
+"""
+Command-line interface for litemind.
+
+This module defines the ``litemind`` CLI entry point registered via the
+project's ``[project.scripts]`` configuration. It exposes subcommands for
+repository export, model registry validation, and feature discovery.
+"""
+
 import argparse
 import os
 from typing import List, Type
 
-from litemind import API_IMPLEMENTATIONS, DefaultApi
+from litemind import DefaultApi, get_available_apis
 from litemind.apis.base_api import BaseApi
 from litemind.apis.combined_api import CombinedApi
 from litemind.apis.providers.anthropic.anthropic_api import AnthropicApi
@@ -15,11 +23,18 @@ from litemind.tools.commands.scan import discover, scan, validate
 
 def main():
     """
-    The Litemind command-line tools consist of a series of subcommands that can be used to:
-    - Export the entire repository to a single file.
-    - Validate the model registry against live API responses.
-    - Discover features for new/unknown models.
+    Entry point for the ``litemind`` command-line interface.
 
+    Parses command-line arguments and dispatches to the appropriate
+    subcommand:
+
+    - **export** -- Export a repository's source files into a single text file.
+    - **validate** -- Compare the curated model registry against live API
+      responses and report discrepancies.
+    - **discover** -- Probe live APIs to discover feature support for models
+      not yet in the registry.
+    - **scan** -- *(deprecated)* Full feature scan; superseded by *validate*
+      and *discover*.
     """
 
     parser = argparse.ArgumentParser(description="Litemind command-line tool.")
@@ -161,12 +176,28 @@ def main():
 
 
 def _get_api_classes(api_names: List[str]) -> List[Type[BaseApi]]:
-    """Helper to convert API name strings to API classes."""
+    """
+    Convert CLI API name strings to their corresponding API classes.
+
+    When ``"all"`` is present in *api_names*, every available provider API
+    is returned (excluding ``CombinedApi`` and ``DefaultApi``).
+
+    Parameters
+    ----------
+    api_names : List[str]
+        One or more API identifiers. Recognised values are ``"gemini"``,
+        ``"openai"``, ``"claude"``, ``"ollama"``, and ``"all"``.
+
+    Returns
+    -------
+    List[Type[BaseApi]]
+        The resolved API classes corresponding to the requested names.
+    """
     api_classes: List[Type[BaseApi]] = []
 
     # If 'all' is in the list, use all available APIs
     if "all" in api_names:
-        api_classes = list(API_IMPLEMENTATIONS)
+        api_classes = list(get_available_apis())
         # Remove special API classes from the list:
         if CombinedApi in api_classes:
             api_classes.remove(CombinedApi)

@@ -3,19 +3,20 @@ from typing import Type, TypeVar
 
 def extract_json_substring(json_str: str) -> str:
     """
-    Extract a JSON substring from a string.
+    Extract the outermost JSON object from a string.
+
+    Finds the first ``{`` and last ``}`` in the string and returns the
+    substring between them (inclusive).
 
     Parameters
     ----------
-
     json_str : str
-        The string to extract the JSON substring from.
+        The string containing a JSON object.
 
     Returns
     -------
     str
-        The JSON substring.
-
+        The extracted JSON substring.
     """
 
     # Find the first opening brace:
@@ -35,18 +36,22 @@ T = TypeVar("T")
 
 def parse_json(json_str: str, clazz: Type[T]) -> T:
     """
-    Use Pydantic to parse a JSON string into a given class.
+    Parse a JSON string into a Pydantic model instance.
+
+    Extracts the outermost JSON object from the string (between the
+    first ``{`` and last ``}``) and validates it against the given class.
 
     Parameters
     ----------
-    json_str: str
-        The JSON string to parse.
-    clazz: Type[T]
-        The class to parse the JSON string into.
+    json_str : str
+        A string containing a JSON object.
+    clazz : Type[T]
+        A Pydantic model class to parse the JSON into.
 
     Returns
     -------
-
+    T
+        An instance of ``clazz`` populated from the JSON data.
     """
 
     # Cleanup the JSON string:

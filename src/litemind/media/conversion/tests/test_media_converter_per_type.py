@@ -29,11 +29,11 @@ class TestMessageConverterPerType:
         """Setup for each test."""
         self.converter = MediaConverter()
 
+    @pytest.mark.skipif(
+        not is_local_whisper_available(), reason="whisper library not available"
+    )
     def test_convert_audio_media(self):
         """Test conversion of audio media."""
-        # Skip test if local whisper is not available:
-        if not is_local_whisper_available():
-            pytest.skip("Local whisper is not available. Skipping test.")
         self.converter.add_default_converters()
 
         # Create message with audio media
@@ -441,13 +441,9 @@ class TestMessageConverterPerType:
         # Check that the text content is unchanged
         assert converted_text == original_text_content
 
+    @pytest.mark.skipif(not is_ffmpeg_available(), reason="ffmpeg not available")
     def test_convert_video_media(self):
         """Test conversion of video media."""
-
-        # Skip test if ffmpeg is not available:
-        if not is_ffmpeg_available():
-            pytest.skip("ffmpeg is not available. Skipping test.")
-
         # Initialize the converter
         self.converter.add_default_converters()
 

@@ -18,13 +18,26 @@ def convert_messages_for_anthropic(
     cache_support: bool = True,
     media_converter: Optional["MediaConverter"] = None,
 ) -> List["MessageParam"]:
-    """
-    Convert litemind Messages into Anthropic's MessageParam format with support for new built-in tools:
-        [
-          {"role": "user", "content": [{"type": "text", "text": "Hello!"}, {"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": "..."}}]},
-          {"role": "assistant", "content": [{"type": "text", "text": "Hello there!"}]},
-          ...
-        ]
+    """Convert litemind Messages into Anthropic's MessageParam format.
+
+    Handles all block types including text, images, documents (PDF),
+    tool calls/results, thinking blocks, and citations from built-in tools.
+
+    Parameters
+    ----------
+    messages : List[Message]
+        Litemind messages to convert.
+    response_format : Optional[BaseModel]
+        If provided, appends a JSON schema prompt to request structured output.
+    cache_support : bool
+        If True, adds ephemeral cache control to the last content block.
+    media_converter : Optional[MediaConverter]
+        Converter for non-PDF documents to markdown text.
+
+    Returns
+    -------
+    List[MessageParam]
+        Messages in Anthropic API format.
     """
 
     from anthropic.types import MessageParam

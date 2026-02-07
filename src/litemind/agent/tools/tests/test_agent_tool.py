@@ -1,6 +1,6 @@
 import pytest
 
-from litemind import API_IMPLEMENTATIONS
+from litemind import get_available_apis
 from litemind.agent.agent import Agent
 from litemind.agent.messages.message import Message
 from litemind.agent.tools.agent_tool import AgentTool
@@ -8,7 +8,7 @@ from litemind.agent.tools.toolset import ToolSet
 from litemind.apis.model_features import ModelFeatures
 
 
-@pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
+@pytest.mark.parametrize("api_class", get_available_apis())
 def test_tool_agent_translation(api_class):
     # Initialize the OpenAIApi and Agent
     api = api_class()  # Assumes API key is available in the environment
@@ -67,7 +67,7 @@ def test_tool_agent_translation(api_class):
     ), "Agent's conversation should have 3 messages: system, prompt, and assistant's response"
 
 
-@pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
+@pytest.mark.parametrize("api_class", get_available_apis())
 def test_tool_agent(api_class):
     # Initialize the OpenAIApi and Agent for the AgentTool
     api = api_class()  # Assumes API key is available in the environment
@@ -102,7 +102,7 @@ def test_tool_agent(api_class):
     ), "AgentTool response should address the order status"
 
 
-@pytest.mark.parametrize("api_class", API_IMPLEMENTATIONS)
+@pytest.mark.parametrize("api_class", get_available_apis())
 def test_tool_agent_with_internal_tool(api_class):
     # Initialize the OpenAIApi and Agent
     api = api_class()  # Assumes API key is available in the environment
@@ -163,7 +163,9 @@ def test_tool_agent_with_internal_tool(api_class):
     agent_response_str = str(agent_response).lower()
 
     assert (
-        "shipped" in agent_response_str and "12345" in agent_response_str or "order"
+        "shipped" in agent_response_str
+        and "12345" in agent_response_str
+        or "order" in agent_response_str
     ), "AgentTool response should include the status provided by FunctionTool"
 
     # Validate conversation structure

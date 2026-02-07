@@ -32,14 +32,11 @@ def aggregate_chat_response(chunks: Iterable, callback: Callable):
     # Function calls:
     function_calls = []
 
-    # Last chunk for final processing:
-    last_chunk = None
+    # Collect all raw parts for thought-signature preservation:
+    raw_parts = []
 
     # Iterate over the chunks:
     for chunk in chunks:
-
-        # Keep the last chunk:
-        last_chunk = chunk
 
         # Extract text and thinking from the chunk
         chunk_text, chunk_thinking = _extract_content_from_chunk(chunk)
@@ -53,14 +50,21 @@ def aggregate_chat_response(chunks: Iterable, callback: Callable):
         if chunk_thinking:
             aggregated_thinking += chunk_thinking
 
-    # Check for function calls from the final chunk's parts
-    if last_chunk:
-        function_calls = _extract_function_calls_from_chunk(last_chunk)
+        # Extract function calls from every chunk, not just the last one.
+        # Gemini thinking models may return function calls in earlier chunks
+        # while the final chunk is just a finish marker with no parts.
+        chunk_calls = _extract_function_calls_from_chunk(chunk)
+        if chunk_calls:
+            function_calls.extend(chunk_calls)
+
+        # Collect raw parts (including thought signatures) for replay:
+        _collect_raw_parts(chunk, raw_parts)
 
     return {
         "text": aggregated_text,
         "thinking": aggregated_thinking if aggregated_thinking else None,
         "tool_calls": function_calls,
+        "raw_parts": raw_parts if raw_parts else None,
     }
 
 
@@ -113,6 +117,32 @@ def _extract_content_from_chunk(chunk) -> tuple:
                     text_content += part.text
 
     return text_content, thinking_content
+
+
+def _collect_raw_parts(chunk, raw_parts: list):
+    """
+    Collect raw Part objects from a streaming chunk.
+
+    These include thought signatures needed for multi-turn conversations
+    with Gemini thinking models.
+
+    Parameters
+    ----------
+    chunk
+        A streaming response chunk.
+    raw_parts : list
+        List to append raw parts to.
+    """
+    if not hasattr(chunk, "candidates") or not chunk.candidates:
+        return
+
+    for candidate in chunk.candidates:
+        if not hasattr(candidate, "content") or not candidate.content:
+            continue
+        if not hasattr(candidate.content, "parts") or not candidate.content.parts:
+            continue
+        for part in candidate.content.parts:
+            raw_parts.append(part)
 
 
 def _extract_function_calls_from_chunk(chunk) -> list:

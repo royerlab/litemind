@@ -1,3 +1,10 @@
+"""
+Repository export command.
+
+Provides the ``export`` CLI subcommand which concatenates all matching source
+files in a repository into a single text file suitable for ingestion by an LLM.
+"""
+
 import os
 from typing import Optional
 
@@ -14,25 +21,37 @@ def export_repo(
     output_file: Optional[str] = None,
 ) -> str:
     """
-    Exports the whole repository as a single file.
+    Export an entire repository as a single concatenated text file.
+
+    Walks the directory tree rooted at *folder_path*, selects files whose
+    extensions match *allowed_extensions*, and writes their contents into
+    *output_file*. The output file itself is automatically excluded from
+    the export.
 
     Parameters
     ----------
-    folder_path: str
-        The path to the folder containing the Python repository.
-    allowed_extensions: Optional[list[str]]
-        The list of allowed extensions for files to include in the README.
-    excluded_files: Optional[list[str]]
-        The list of files to exclude from the README.
-    output_file: Optional[str]
-        The path to the file to save the entire repository to.
+    folder_path : str
+        Root directory of the repository to export.
+    allowed_extensions : Optional[list[str]]
+        File extensions to include. If ``None``, sensible defaults are
+        applied (see ``default_folder_scanning_parameters``).
+    excluded_files : Optional[list[str]]
+        File or directory names to skip. If ``None``, sensible defaults
+        are applied.
+    output_file : Optional[str]
+        Destination path for the exported text. Defaults to
+        ``"exported.txt"`` when called from the CLI.
 
     Returns
     -------
     str
-        The whole repo as a string
-
+        The concatenated repository contents that were written to
+        *output_file*.
     """
+    # Apply default output file if not specified:
+    if output_file is None:
+        output_file = "exported.txt"
+
     with asection(
         f"Exporting entire repository in {folder_path} to single file: {output_file}"
     ):

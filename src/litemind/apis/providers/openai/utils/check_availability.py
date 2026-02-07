@@ -19,7 +19,8 @@ def check_openai_api_availability(client: Optional = None) -> bool:
 
     Parameters
     ----------
-    client: OpenAI API client
+    client : Optional[OpenAI]
+        OpenAI API client. If None, creates one from the OPENAI_API_KEY env var.
 
     Returns
     -------

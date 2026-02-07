@@ -41,17 +41,19 @@ class AugmentationBase(ABC):
 
         Parameters
         ----------
-        query: Union[str, BaseModel, MediaBase, Information]
-            The query to retrieve informations for. Can be a string, a structured Pydantic model, a MediaBase object, or an Information object.
-        k: int
+        query : Union[str, BaseModel, MediaBase, Information]
+            The query to retrieve informations for. Can be a string, a
+            Pydantic model, a MediaBase object, or an Information object.
+        k : int
             The maximum number of informations to retrieve.
-        threshold: float
-            The score threshold_dict for the augmentation. If the score is below this value, the augmentation will not be used.
+        threshold : float
+            Minimum relevance score. Results below this threshold are
+            excluded.
 
         Returns
         -------
         List[InformationBase]
-            A list of relevant informations.
+            A list of relevant informations, ordered by relevance.
         """
         pass
 
@@ -63,16 +65,19 @@ class AugmentationBase(ABC):
     ) -> Iterator[MediaBase]:
         """
         Retrieve informations relevant to the query as an iterator.
-        This default implementation calls get_relevant_documents and yields from the result.
+
+        The default implementation calls ``get_relevant_informations``
+        and yields from the result.
 
         Parameters
         ----------
-        query: Union[str, BaseModel, MediaBase, Information]
-            The query to retrieve informations for. Can be a string, a structured Pydantic model.
-        k: int
+        query : Union[str, BaseModel, MediaBase, Information]
+            The query to retrieve informations for.
+        k : int
             The maximum number of informations to retrieve.
-        threshold: float
-            The score threshold_dict for the augmentation. If the score is below this value, the augmentation will not be returned.
+        threshold : float
+            Minimum relevance score. Results below this threshold are
+            excluded.
 
         Returns
         -------

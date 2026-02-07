@@ -7,10 +7,10 @@ from litemind.media.types.media_text import Text
 
 
 class FileConverter(BaseConverter):
-    """
-    Converter for File media type.
+    """Converts generic File media to Text with metadata and content preview.
 
-    Converts File media to Text media, this is for file media that are not any of the other known media.
+    This is a low-priority catch-all converter for files not handled by
+    more specific converters.
     """
 
     def rule(self) -> List[Tuple[Type[MediaBase], List[Type[MediaBase]]]]:
@@ -25,5 +25,5 @@ class FileConverter(BaseConverter):
 
         file: File = media
 
-        # Use the Table's built-in method to convert to Text
+        # Use the File's built-in method to convert to Text
         return [file.to_markdown_text_media()]

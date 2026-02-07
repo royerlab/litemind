@@ -20,8 +20,11 @@ from litemind.utils.uri_utils import is_uri
 
 
 class DefaultVectorDatabase(AugmentationDefault, BaseVectorDatabase):
-    """
-    Abstract class for vector databases that use a default embedding function.
+    """Abstract base for vector databases with a default embedding function.
+
+    Provides a multi-modal embedding function that dispatches to the
+    appropriate API method (text, image, audio, etc.) based on the media
+    type of the informations being embedded.
     """
 
     def __init__(
@@ -35,22 +38,24 @@ class DefaultVectorDatabase(AugmentationDefault, BaseVectorDatabase):
         api: BaseApi = None,
     ):
         """
-        Initialize the Qdrant vector database.
+        Initialize the vector database with an embedding function.
 
         Parameters
         ----------
-        name: str
-            The name of the augmentation.
-        description: Optional[str]
+        name : str, optional
+            The name of the augmentation. Defaults to the class name.
+        description : Optional[str]
             A description of the augmentation.
-        embedding_function: Optional[Callable[[List[Information]], List[List[float]]]]
-            A function that takes a list of informations and returns a list of embedding vectors.
-            If not provided, a default embedding function will be used.
-        embedding_length: Optional[int]
-            The length of the embedding vectors.
-        api: BaseApi
-            The API to use for embedding. If not provided, uses litemind's default API.
-
+        embedding_function : Optional[Callable[[List[Information]], List[List[float]]]]
+            A function that takes a list of informations and returns
+            embedding vectors. If not provided, uses the built-in
+            multi-modal embedding function.
+        embedding_length : Optional[int]
+            The dimensionality of the embedding vectors. If not provided,
+            it is auto-detected from a sample embedding.
+        api : BaseApi, optional
+            The API to use for embedding. If not provided, uses
+            ``CombinedApi()`` as the default.
         """
         super().__init__(name=name, description=description)
 
@@ -132,6 +137,27 @@ class DefaultVectorDatabase(AugmentationDefault, BaseVectorDatabase):
     def _raw_embedding_function(
         self, informations: Sequence[Information]
     ) -> List[List[float]]:
+        """
+        Compute embeddings for a batch of same-type informations.
+
+        Dispatches to the appropriate API embedding method based on
+        media type (text, image, audio, video, document, etc.).
+
+        Parameters
+        ----------
+        informations : Sequence[Information]
+            Informations to embed. All must have the same media type.
+
+        Returns
+        -------
+        List[List[float]]
+            The embedding vectors.
+
+        Raises
+        ------
+        ValueError
+            If the list is empty or the media type is unsupported.
+        """
 
         # Check if list is empty:
         if not informations:
@@ -249,10 +275,8 @@ class DefaultVectorDatabase(AugmentationDefault, BaseVectorDatabase):
                 )
 
             else:
-                # If the document is of an unknown type, we raise an error:
-                raise ValueError(
-                    f"Unknown document type or document: {informations[0].type}."
-                )
+                # If the information is of an unknown type, we raise an error:
+                raise ValueError(f"Unknown information type: {informations[0].type}.")
 
         return embeddings
 

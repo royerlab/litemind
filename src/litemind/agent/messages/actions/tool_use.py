@@ -4,24 +4,29 @@ from litemind.agent.messages.actions.action_base import ActionBase
 
 
 class ToolUse(ActionBase):
+    """Represents the result of executing a tool.
+
+    Encapsulates the tool name, the arguments it was called with, the
+    execution result, and the identifier linking it to the original
+    ``ToolCall``.
+    """
 
     def __init__(
         self, tool_name: str, arguments: dict = None, result: Any = None, id: str = None
     ):
         """
-        Object that encapsulates information about tool use.
+        Create a new tool use result.
 
         Parameters
         ----------
-        tool_name: str
-            The name of the tool used.
-        arguments
-            The arguments used with the tool.
-        result: Any
-            The result of the tool use.
-        id:str
-            The id of the tool use message
-
+        tool_name : str
+            The name of the tool that was executed.
+        arguments : dict, optional
+            The arguments the tool was called with. Defaults to an empty dict.
+        result : Any, optional
+            The result returned by the tool execution.
+        id : str, optional
+            The identifier matching the original tool call.
         """
 
         self.tool_name = tool_name

@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Union
 
 
 def recursive_dict_to_attributes(
-    obj: Union[Dict[str, Any], List[Any], Any]
+    obj: Union[Dict[str, Any], List[Any], Any],
 ) -> Union[SimpleNamespace, List[Any], Any]:
     """
     Recursively convert a dictionary to an object with attributes.

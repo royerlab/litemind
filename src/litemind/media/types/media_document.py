@@ -10,11 +10,31 @@ from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_pa
 
 
 class Document(MediaURI):
-    """
-    A media document that stores a multipage document such as a PDF.
+    """Media that stores a multipage document such as a PDF.
+
+    Supports PDF, DOCX, PPTX, and other document formats. Provides methods
+    to extract text, render page images, and convert to Markdown.
     """
 
     def __init__(self, uri: str, extension: Optional[str] = None, **kwargs):
+        """Create a new document media.
+
+        Parameters
+        ----------
+        uri : str
+            The document URI or local file path. Remote HTTP(S) URLs are
+            accepted without extension validation.
+        extension : str, optional
+            File extension override without the leading dot.
+        **kwargs
+            Additional keyword arguments forwarded to ``MediaURI``.
+
+        Raises
+        ------
+        ValueError
+            If the URI is a local file and does not have a recognised
+            document file extension.
+        """
 
         if uri.startswith("http"):
             pass
@@ -32,11 +52,22 @@ class Document(MediaURI):
         self.markdown = None
 
     def load_from_uri(self):
+        """Load the document by converting it to Markdown.
+
+        Populates ``self.markdown`` with the Markdown representation.
+        """
 
         # load the document:
         self.markdown = self.to_markdown()
 
     def extract_text_from_pages(self) -> List[str]:
+        """Extract the text content of each page.
+
+        Returns
+        -------
+        List[str]
+            A list of strings, one per page, containing the extracted text.
+        """
 
         # Download the document file from the URI to a local file:
         local_file = uri_to_local_file_path(self.uri)
@@ -47,6 +78,13 @@ class Document(MediaURI):
         return pages
 
     def take_image_of_each_page(self):
+        """Render each document page as an image.
+
+        Returns
+        -------
+        list
+            A list of image representations, one per page.
+        """
 
         # Download the document file from the URI to a local file:
         local_file = uri_to_local_file_path(self.uri)
@@ -57,6 +95,18 @@ class Document(MediaURI):
         return images
 
     def to_markdown(self, media_converter: Optional["MediaConverter"] = None):
+        """Convert the document content to a Markdown string.
+
+        Parameters
+        ----------
+        media_converter : MediaConverter, optional
+            An optional media converter to use during the conversion.
+
+        Returns
+        -------
+        str
+            The Markdown representation of the document.
+        """
 
         # create a Message from the local document file:
         from litemind.agent.messages.message import Message

@@ -24,6 +24,11 @@ def _get_gemini_models_list(client: "Client"):
     ----------
     client : Client
         The google-genai Client instance.
+
+    Returns
+    -------
+    List[str]
+        Sorted list of model names, prioritized by model family.
     """
     model_list = []
 

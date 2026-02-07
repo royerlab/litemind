@@ -11,6 +11,7 @@ make setup         # Install project with all development dependencies
 make install       # Install project with minimal dependencies
 make test          # Run all tests
 make test-cov      # Run tests with coverage report
+make system-deps   # Install external system dependencies (ffmpeg, etc.)
 make check         # Run all code checks (format + lint + typecheck)
 make format        # Format code with black and isort
 make lint          # Run flake8 linter
@@ -148,11 +149,17 @@ API call → Tool execution (if needed) → Response → Conversation history
 - Type hints throughout
 - Conventional commits: `feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`
 
+## Testing Guidelines
+
+- **Always guard bug fixes with unit tests.** When fixing a bug, add a regression test that would have caught the bug. Place tests in the corresponding `tests/` directory next to the source (e.g., `media/tests/`, `agent/tests/`). Use `unittest.mock` for unit tests that would otherwise require live API calls.
+
 ## Dependency Management
 
-### Running Tests
+### Running Tests and Python Commands
 
-Always use `hatch test` to run tests, not raw `pytest`. The hatch-test environment includes all required optional dependencies:
+**IMPORTANT: Always use `hatch` to run tests, Python commands, and other development tasks.**
+
+The system Python environment is externally managed and pip cannot install packages directly. Use hatch for all Python operations:
 
 ```bash
 # Run all tests
@@ -163,6 +170,18 @@ hatch test -- src/litemind/agent/tests/test_agent.py -v
 
 # Run tests matching a pattern
 hatch test -- -k "tools" src/
+
+# Run arbitrary Python code
+hatch run python -c "from litemind import Agent; print('Works!')"
+
+# Run a Python script
+hatch run python myscript.py
+
+# Install additional packages (into hatch environment)
+hatch run pip install package-name
+
+# Run linting tools
+hatch run pip install flake8 && hatch run flake8 src/
 ```
 
 ### Key Dependency Constraints

@@ -1,22 +1,22 @@
 import socket
 import subprocess
-import traceback
 from time import sleep
 
 from arbol import aprint, asection
 
 
 class OllamaServer:
-    """
-    Class to manage the Ollama server process and related operations.
-    """
+    """Manage the local Ollama server process lifecycle."""
 
     def __init__(self, host="127.0.0.1", port=11434):
-        """
-        Initialize the OllamaServer instance.
+        """Initialize the OllamaServer instance.
 
-        :param host: Host address for the Ollama server.
-        :param port: Port number for the Ollama server.
+        Parameters
+        ----------
+        host : str
+            Host address for the Ollama server.
+        port : int
+            Port number for the Ollama server.
         """
         self.host = host
         self.port = port
@@ -54,20 +54,29 @@ class OllamaServer:
                 self._ollama_process = None
 
     def is_running(self):
-        """
-        Check if the Ollama server is running.
+        """Check if the Ollama server is running.
 
-        :return: True if the server is running, False otherwise.
+        Returns
+        -------
+        bool
+            True if the server is listening on the configured host/port.
         """
         return self._is_listening(self.host, self.port)
 
     def _is_listening(self, ip, port):
-        """
-        Check if a TCP port is open on the given IP address.
+        """Check if a TCP port is open on the given IP address.
 
-        :param ip: IP address to check.
-        :param port: Port number to check.
-        :return: True if the port is open, False otherwise.
+        Parameters
+        ----------
+        ip : str
+            IP address to check.
+        port : int
+            Port number to check.
+
+        Returns
+        -------
+        bool
+            True if the port is open, False otherwise.
         """
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -80,14 +89,15 @@ class OllamaServer:
             finally:
                 sock.close()
         except Exception:
-            traceback.print_exc()
             return False
 
     def get_models(self):
-        """
-        Retrieve the list of available Ollama models.
+        """Retrieve the list of available Ollama models.
 
-        :return: List of model names.
+        Returns
+        -------
+        List[str]
+            List of model names available on the server.
         """
         result = subprocess.run(["ollama", "list"], stdout=subprocess.PIPE, text=True)
         lines = result.stdout.strip().split("\n")

@@ -61,6 +61,18 @@ deprecated_models = [
 
 
 def _get_raw_openai_model_list(client: "OpenAI"):
+    """Fetch the raw model list from the OpenAI API.
+
+    Parameters
+    ----------
+    client : OpenAI
+        The OpenAI client instance.
+
+    Returns
+    -------
+    list
+        Raw list of model objects from the API.
+    """
     from openai import OpenAI
 
     # Explicit typing:
@@ -86,20 +98,20 @@ def get_openai_model_list(
 
     Parameters
     ----------
-    raw_model_list : list
-        Raw list of models.
-    included : str
-        Filter to apply to the list of models. If None, all models are returned.
-        Models must contain at least one of the filters to be included in the list.
-    excluded : str
-        Excluded models. If None, no models are excluded.
-        Models must not contain any of the excluded models to be included in the list.
-    exclude_dated_models: bool
-        If True, remove models with a date in the model id. This is useful to keep only the most recent version of each model.
-    allow_prohibitively_expensive_models: bool
-        If True, allow models that are prohibitively expensive to use, such as o1-pro.
+    raw_model_list : List[Any]
+        Raw list of model objects from the OpenAI API.
+    included : Optional[List[str]]
+        Substrings to include. A model must contain at least one to be kept.
+        If None, uses a default set of common model prefixes.
+    excluded : Optional[List[str]]
+        Substrings to exclude. A model containing any of these is removed.
+        If None, uses a default exclusion list.
+    exclude_dated_models : bool
+        If True, removes models with date suffixes (e.g., ``gpt-4-0613``).
+    allow_prohibitively_expensive_models : bool
+        If True, includes very expensive models like o1-pro.
     verbose : bool
-        Verbosity flag.
+        If True, prints inclusion/exclusion decisions.
 
     Returns
     -------
@@ -205,6 +217,18 @@ def get_openai_model_list(
 
 
 def _remove_dated_models(models):
+    """Remove models with date-based suffixes from the model list.
+
+    Parameters
+    ----------
+    models : list
+        List of model name strings.
+
+    Returns
+    -------
+    list
+        Filtered list with dated model variants removed.
+    """
     nodate_models = []
     for model in models:
 
@@ -232,8 +256,22 @@ def _remove_dated_models(models):
     return nodate_models
 
 
-# Next we sort models so the best ones are at the beginning of the list:
 def model_key(model):
+    """Compute a priority score for sorting OpenAI models.
+
+    Higher scores indicate more capable/newer models. Used as the
+    sort key to put the best models first.
+
+    Parameters
+    ----------
+    model : str
+        The model name.
+
+    Returns
+    -------
+    int
+        Priority score for sorting (higher is better).
+    """
     score = 0
 
     # GPT-5 series (latest)

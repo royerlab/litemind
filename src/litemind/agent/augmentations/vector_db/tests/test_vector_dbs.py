@@ -5,7 +5,7 @@ import uuid
 
 import pytest
 
-from litemind import VECDB_IMPLEMENTATIONS
+from litemind import get_available_vecdbs
 from litemind.agent.augmentations.information.information import Information
 from litemind.agent.augmentations.vector_db.tests.utils.hash_embeddings import (
     simple_hash_embeddings,
@@ -20,7 +20,7 @@ def _get_temp_folder():
     return os.path.join(tempfile.gettempdir(), "vector_db_test" + str(uuid.uuid4()))
 
 
-@pytest.mark.parametrize("vector_db_api", VECDB_IMPLEMENTATIONS)
+@pytest.mark.parametrize("vector_db_api", get_available_vecdbs())
 def test_add_documents(vector_db_api):
     # Create a new document:
     vector_db = vector_db_api(location=_get_temp_folder())
@@ -38,7 +38,7 @@ def test_add_documents(vector_db_api):
     assert doc2.id in doc_ids
 
 
-@pytest.mark.parametrize("vector_db_api", VECDB_IMPLEMENTATIONS)
+@pytest.mark.parametrize("vector_db_api", get_available_vecdbs())
 def test_get_document(vector_db_api):
     # Create a new document:
     vector_db = vector_db_api(location=_get_temp_folder())
@@ -58,7 +58,7 @@ def test_get_document(vector_db_api):
     assert retrieved_doc.metadata == {"author": "Alice"}
 
 
-@pytest.mark.parametrize("vector_db_api", VECDB_IMPLEMENTATIONS)
+@pytest.mark.parametrize("vector_db_api", get_available_vecdbs())
 def test_similarity_search(vector_db_api):
     # Create a new document:
     vector_db = vector_db_api(location=_get_temp_folder())
@@ -78,7 +78,7 @@ def test_similarity_search(vector_db_api):
     assert results[0].content == "Hello world"
 
 
-@pytest.mark.parametrize("vector_db_api", VECDB_IMPLEMENTATIONS)
+@pytest.mark.parametrize("vector_db_api", get_available_vecdbs())
 def test_delete(vector_db_api):
     # Create a new document:
     vector_db = vector_db_api(location=_get_temp_folder())
@@ -98,7 +98,7 @@ def test_delete(vector_db_api):
     assert vector_db.get_information(doc2.id) is not None
 
 
-@pytest.mark.parametrize("vector_db_api", VECDB_IMPLEMENTATIONS)
+@pytest.mark.parametrize("vector_db_api", get_available_vecdbs())
 def test_clear(vector_db_api):
     # Create a new document:
     vector_db = vector_db_api(location=_get_temp_folder())
@@ -118,7 +118,7 @@ def test_clear(vector_db_api):
     assert vector_db.get_information(doc2.id) is None
 
 
-@pytest.mark.parametrize("vector_db_api", VECDB_IMPLEMENTATIONS)
+@pytest.mark.parametrize("vector_db_api", get_available_vecdbs())
 def test_get_relevant_documents(vector_db_api):
     # Create a new document:
     vector_db = vector_db_api(location=_get_temp_folder())
@@ -138,7 +138,7 @@ def test_get_relevant_documents(vector_db_api):
     assert results[0].content == "Hello world"
 
 
-@pytest.mark.parametrize("vector_db_api", VECDB_IMPLEMENTATIONS)
+@pytest.mark.parametrize("vector_db_api", get_available_vecdbs())
 def test_complex_similarity_search(vector_db_api):
     # Create a new document:
     vector_db = vector_db_api(location=_get_temp_folder())
@@ -163,7 +163,7 @@ def test_complex_similarity_search(vector_db_api):
     assert results[0].metadata == {"key": "value3"}
 
 
-@pytest.mark.parametrize("vector_db_api", VECDB_IMPLEMENTATIONS)
+@pytest.mark.parametrize("vector_db_api", get_available_vecdbs())
 def test_vector_db_stress_test(vector_db_api):
     """
     Stress test for vector databases - measures performance with a large number of informations.
@@ -254,7 +254,7 @@ def test_vector_db_stress_test(vector_db_api):
     }
 
 
-@pytest.mark.parametrize("vector_db_api", VECDB_IMPLEMENTATIONS)
+@pytest.mark.parametrize("vector_db_api", get_available_vecdbs())
 def test_persistence(vector_db_api):
     """Test that vector databases can save and load their state."""
     temp_dir = _get_temp_folder()

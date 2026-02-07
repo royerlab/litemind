@@ -8,6 +8,13 @@ from litemind.agent.tools.utils.inspect_function import extract_docstring
 
 
 class FunctionTool(BaseTool):
+    """A tool that wraps an arbitrary Python function.
+
+    The function's type hints are used to generate a JSON schema for the
+    arguments, and the docstring is used as the tool description unless
+    an explicit description is provided.
+    """
+
     def __init__(self, func: Callable, description: Optional[str] = None):
         """
         Initialize a tool that wraps a function.
@@ -44,7 +51,14 @@ class FunctionTool(BaseTool):
         self.arguments_schema, self.arg_and_type = self._generate_arguments_schema()
 
     def _generate_arguments_schema(self) -> Dict[str, Any]:
-        """Generate a JSON schema for the function parameters based on type hints."""
+        """
+        Generate a JSON schema for the function parameters based on type hints.
+
+        Returns
+        -------
+        tuple of (dict, dict)
+            A tuple of (JSON schema dict, parameter-name-to-type-string dict).
+        """
 
         arg_and_type = {}
 
@@ -76,7 +90,19 @@ class FunctionTool(BaseTool):
         return schema, arg_and_type
 
     def _map_type_to_json_schema(self, py_type: Any) -> str:
-        """Map Python types to JSON schema types."""
+        """
+        Map a Python type annotation to its JSON schema type string.
+
+        Parameters
+        ----------
+        py_type : Any
+            A Python type (e.g., int, float, bool, list, dict, str).
+
+        Returns
+        -------
+        str
+            The corresponding JSON schema type string.
+        """
         if py_type in {int, float}:
             return "number"
         elif py_type == bool:

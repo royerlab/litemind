@@ -6,12 +6,15 @@ from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_pa
 @lru_cache()
 def is_local_whisper_available() -> bool:
     """
-    Check if Whisper is available.
+    Check if local Whisper transcription is available.
 
-    Whisper requires both the whisper Python package and ffmpeg
-    to be installed as a system binary.
+    Whisper requires both the ``whisper`` Python package and the
+    ``ffmpeg`` command-line tool to be installed.
 
-    :return: True if Whisper is available, False otherwise.
+    Returns
+    -------
+    bool
+        True if Whisper is available, False otherwise.
     """
 
     try:
@@ -40,9 +43,15 @@ def transcribe_audio_with_local_whisper(
     Parameters
     ----------
     audio_uri : str
-        The URI of the audio file to transcribe.
-    model_name : str
-        The name of the Whisper model to use.
+        The URI of the audio file to transcribe. Can be a local path,
+        ``file://`` URI, or remote URL.
+    model_name : str, optional
+        The Whisper model to use. Default is ``"turbo"``.
+
+    Returns
+    -------
+    str
+        The transcribed text.
     """
 
     # Import Whisper here to avoid circular imports

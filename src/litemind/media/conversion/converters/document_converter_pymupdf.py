@@ -16,9 +16,10 @@ from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_pa
 
 
 class DocumentConverterPymupdf(BaseConverter):
-    """
-    Converter for Document media type.
-    Converts Document media to Text and Image media.
+    """Converts PDF documents to Text and Image media using PyMuPDF.
+
+    Extracts text and renders a page image for each page of the PDF.
+    Only supports PDF files.
     """
 
     def rule(self) -> List[Tuple[Type[MediaBase], List[Type[MediaBase]]]]:
@@ -78,7 +79,13 @@ class DocumentConverterPymupdf(BaseConverter):
 
 @lru_cache()
 def is_pymupdf_available() -> bool:
-    # Check if package pymupdf s available:
+    """Check whether PyMuPDF (``pymupdf`` and ``pymupdf4llm``) is installed.
+
+    Returns
+    -------
+    bool
+        True if both packages are available.
+    """
     try:
         import importlib.util
 
@@ -94,19 +101,29 @@ def is_pymupdf_available() -> bool:
 def extract_text_and_image_from_document(
     document_uri: str, dpi: int = 300
 ) -> List[Tuple[Text, Image]]:
-    """
-    Extract text and generate an image for each page in the document.
+    """Extract text and render an image for each page of a PDF document.
 
     Parameters
     ----------
     document_uri : str
-        The URI or file path of the document to process.
+        The URI or file path of the PDF document.
     dpi : int, optional
-        The resolution for the output images in dots per inch. Default is 300.
+        Resolution for the rendered page images. Default is 300.
 
     Returns
     -------
+    List[Tuple[Text, Image]]
+        A list of (Text, Image) pairs, one per page. The Text contains
+        the extracted page text; the Image is a rendered page image.
 
+    Raises
+    ------
+    ImportError
+        If PyMuPDF is not installed.
+    ValueError
+        If the document is not a PDF file.
+    RuntimeError
+        If the document cannot be opened.
     """
 
     # Check if PyMuPDF is available, if not throw an error!
@@ -159,7 +176,7 @@ def extract_text_and_image_from_document(
             except Exception as e:
                 aprint(f"Error processing page {page_number}: {e}")
                 pages_content.append(
-                    (f"Page {page_number} could not be processed.", None)
+                    (Text(f"Page {page_number} could not be processed."), None)
                 )
                 continue
 

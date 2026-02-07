@@ -19,14 +19,22 @@ IMPORT_RE = re.compile(
 
 
 class TextCompressor:
-    """Text compressor with multiple safe compression schemes.
+    """
+    Text compressor with multiple safe compression schemes.
+
+    Supports several independent schemes that can be selectively enabled
+    or disabled: ``"newlines"``, ``"comments"``, ``"repeats"``,
+    ``"spaces"``, ``"trailing"``, and ``"imports"``.
 
     Parameters
     ----------
-    schemes
-        Iterable of scheme-IDs to activate
-    max_repeats
-        Maximum number of times a character can be repeated (for "repeats" scheme)
+    schemes : iterable of str
+        Scheme IDs to activate. Available schemes: ``"newlines"``,
+        ``"comments"``, ``"repeats"``, ``"spaces"``, ``"trailing"``,
+        ``"imports"``.
+    max_repeats : int, optional
+        Maximum allowed consecutive repetitions of a character
+        (for the ``"repeats"`` scheme). Default is 16.
     """
 
     _ALL_SCHEMES = (
@@ -70,7 +78,19 @@ class TextCompressor:
                 self.active[s] = False
 
     def compress(self, text: str) -> str:
-        """Return compressed text according to the active schemes."""
+        """
+        Compress text by applying all active compression schemes.
+
+        Parameters
+        ----------
+        text : str
+            The input text to compress.
+
+        Returns
+        -------
+        str
+            The compressed text.
+        """
         if not text:
             return text
 
@@ -135,8 +155,8 @@ class TextCompressor:
         code : str
             The original Python source.
         comment_template : str, optional
-            Template for the replacement line.  It receives one
-            argument, `names`, which is a comma-separated string of
+            Template for the replacement line. It receives one
+            argument, ``names``, which is a comma-separated string of
             the imported symbols/modules found in the block.
 
         Returns

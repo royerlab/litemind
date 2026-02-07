@@ -7,9 +7,11 @@ from litemind.media.types.media_text import Text
 
 
 class MessageBlock:
-    """
-    Message blocks are the building blocks of messages.
-    Each message block is a container for media content and its associated attributes.
+    """A building block of a Message, pairing media content with attributes.
+
+    Each message block wraps a single ``MediaBase`` instance (text, image,
+    audio, etc.) along with an arbitrary set of key-value attributes such
+    as ``source``, ``thinking``, or ``redacted``.
     """
 
     def __init__(
@@ -51,8 +53,7 @@ class MessageBlock:
         Returns
         -------
         bool
-        True if this message block has the specified media type.
-
+            True if this message block has the specified media type.
         """
         return isinstance(self.media, block_type)
 
@@ -63,10 +64,8 @@ class MessageBlock:
         Returns
         -------
         Type[MediaBase]
-        The message block type.
-
+            The message block type.
         """
-
         return type(self.media)
 
     def get_type_name(self) -> str:
@@ -86,12 +85,13 @@ class MessageBlock:
 
         Parameters
         ----------
-        attribute_key: str
+        attribute_key : str
             The attribute key to check.
 
         Returns
         -------
-
+        bool
+            True if the attribute exists, False otherwise.
         """
         return attribute_key in self.attributes
 
@@ -179,21 +179,23 @@ class MessageBlock:
 
     def __repr__(self):
         """
-        Return the message block as a string.
+        Return the string representation of the message block.
+
         Returns
         -------
         str
-            The message block as a string.
+            Same as ``__str__``.
         """
         return str(self)
 
     def __len__(self) -> int:
         """
-        Get the length of the content of the message block.
+        Get the length of the underlying media content.
+
         Returns
         -------
         int
-            The length of the content of the message block.
+            The length of the media content.
         """
 
         return len(self.media)

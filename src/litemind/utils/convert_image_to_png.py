@@ -6,19 +6,28 @@ from PIL import Image
 
 def convert_image_to_png(file_path: str) -> str:
     """
-    Convert an image to a PNG file.
-    Uses PIL to open the image in any format and save it as a PNG file.
+    Convert an image to PNG format.
+
+    Opens the image with PIL and saves it as a PNG temporary file.
+    If the file is already a PNG, returns the original path unchanged.
 
     Parameters
     ----------
     file_path : str
-        The path to the image file.
+        The path to the image file to convert.
 
     Returns
     -------
     str
-        The path to the PNG file.
+        The path to the converted PNG file, or the original path if
+        already PNG.
 
+    Raises
+    ------
+    FileNotFoundError
+        If the file does not exist.
+    ValueError
+        If the file is not a valid image.
     """
 
     # Check if the file exists:

@@ -7,8 +7,18 @@ from typing import List, Optional
 
 def human_readable_size(size_in_bytes: int) -> str:
     """
-    Converts a file size in bytes to a human-readable string
-    with spelled-out units (bytes, kilobytes, megabytes, etc.).
+    Convert a file size in bytes to a human-readable string.
+
+    Parameters
+    ----------
+    size_in_bytes : int
+        The file size in bytes.
+
+    Returns
+    -------
+    str
+        A human-readable size string with spelled-out units
+        (e.g., ``"1.50 megabytes"``).
     """
     if size_in_bytes < 1024:
         return f"{size_in_bytes} bytes"
@@ -26,8 +36,17 @@ def human_readable_size(size_in_bytes: int) -> str:
 
 def format_datetime(timestamp: float) -> str:
     """
-    Converts a timestamp (seconds from epoch) to a
-    human-readable datetime string (YYYY-MM-DD HH:MM:SS).
+    Convert a Unix timestamp to a human-readable datetime string.
+
+    Parameters
+    ----------
+    timestamp : float
+        Seconds since the Unix epoch.
+
+    Returns
+    -------
+    str
+        Formatted datetime string in ``"YYYY-MM-DD HH:MM:SS"`` format.
     """
     return datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")
 
@@ -42,30 +61,32 @@ def generate_tree_structure(
 ):
     """
     Generate a tree structure string representation of a folder's contents.
-    This function recursively traverses the folder and its subfolders,
-    filtering files based on allowed extensions, excluded files, and
-    whether to include hidden files or not. It also respects a depth limit
-    for recursion, where None means unlimited depth.
+
+    Recursively traverses the folder and its subfolders, filtering files
+    based on allowed extensions, excluded files, and whether to include
+    hidden files or not. Respects a depth limit for recursion, where
+    None means unlimited depth.
 
     Parameters
     ----------
-    folder_path: str
+    folder_path : str
         The path to the folder to traverse.
-    prefix: str
+    prefix : str
         The prefix to use for each line in the tree structure.
-    allowed_extensions: List[str]
+    allowed_extensions : list of str
         A list of allowed file extensions. If None, all files are included.
-    excluded_files: List[str]
+    excluded_files : list of str
         A list of file names to exclude from the tree structure.
-    include_hidden_files: bool
-        Whether to include hidden files (those starting with a dot) in the tree structure.
-    depth: Optional[int]
+    include_hidden_files : bool
+        Whether to include hidden files (starting with a dot).
+    depth : int or None, optional
         The maximum depth to traverse. If None, there is no limit.
-        If set to 0, it will only show the top-level folder and truncate further contents.
+        If set to 0, only the top-level folder is shown.
 
     Returns
     -------
-
+    str
+        A string representing the tree structure of the folder contents.
     """
     tree_str = ""
 
@@ -137,11 +158,37 @@ def generate_tree_structure(
 
 
 def read_file_content(file_path):
+    """
+    Read and return the text content of a file.
+
+    Parameters
+    ----------
+    file_path : str
+        Path to the file to read.
+
+    Returns
+    -------
+    str
+        The file content as a string, with undecodable characters ignored.
+    """
     with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
         return f.read()
 
 
 def read_binary_file_info(file_path):
+    """
+    Read the first 100 bytes of a binary file.
+
+    Parameters
+    ----------
+    file_path : str
+        Path to the binary file.
+
+    Returns
+    -------
+    tuple of (int, str)
+        A tuple of the number of bytes read and their hex representation.
+    """
     with open(file_path, "rb") as f:
         content = f.read(100)
         return len(content), content.hex()
@@ -158,13 +205,13 @@ def file_info_header(
 
     Parameters
     ----------
-    file_path: str
+    file_path : str
         The path to the file.
-    file_type_label: str
-        A label for the type of file (e.g., "Text", "Binary", etc.).
-    date_and_times: bool
+    file_type_label : str
+        A label for the type of file (e.g., ``"Text"``, ``"Binary"``).
+    date_and_times : bool
         Whether to include modification and creation dates in the header.
-    file_sizes: bool
+    file_sizes : bool
         Whether to include file size in the header.
 
     Returns

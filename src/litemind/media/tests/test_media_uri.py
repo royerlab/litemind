@@ -105,6 +105,22 @@ class TestMediaURI:
         media = MinimalMediaURI(uri="https://example.com/image", extension="jpg")
         assert media.get_extension() == "jpg"
 
+    def test_get_extension_dotless_uri(self):
+        """Test get_extension returns empty string for URIs without a dot in the filename."""
+        media = MinimalMediaURI(uri="https://example.com/api/v1/image")
+        assert media.get_extension() == ""
+
+    def test_get_extension_query_params(self):
+        """Test get_extension strips query parameters and fragments from URI."""
+        media = MinimalMediaURI(uri="https://example.com/file.png?width=100")
+        assert media.get_extension() == "png"
+
+        media = MinimalMediaURI(uri="https://example.com/file.jpg#section")
+        assert media.get_extension() == "jpg"
+
+        media = MinimalMediaURI(uri="https://example.com/file.mp4?v=1#t=0")
+        assert media.get_extension() == "mp4"
+
     def test_has_extension(self):
         """Test has_extension method"""
         # Simple case
@@ -119,6 +135,22 @@ class TestMediaURI:
         # With explicit extension
         media = MinimalMediaURI(uri="https://example.com/image", extension="jpg")
         assert media.has_extension("jpg")
+
+    def test_has_extension_no_substring_match(self):
+        """Test has_extension uses exact match, not substring match.
+
+        Regression test: 'js' must not match '.json' files.
+        """
+        media = MinimalMediaURI(uri="https://example.com/data.json")
+        assert media.has_extension("json")
+        assert not media.has_extension("js")
+        assert not media.has_extension("on")
+
+    def test_has_extension_dotless_uri(self):
+        """Test has_extension returns False for URIs without a file extension."""
+        media = MinimalMediaURI(uri="https://example.com/api/v1/image")
+        assert not media.has_extension("image")
+        assert not media.has_extension("png")
 
     def test_to_remote_or_data_uri(self, setup_test_files, monkeypatch):
         """Test to_remote_or_data_uri method"""

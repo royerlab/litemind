@@ -11,21 +11,23 @@ def process_response_from_anthropic(
     anthropic_response: Any,
     response_format: Optional[Union[BaseModel, str]] = None,
 ) -> Message:
-    """
-    Process Anthropic response, handling all content block types including new built-in tools.
+    """Convert an Anthropic API response into a litemind Message.
+
+    Handles all content block types: text (with citations), tool use/results,
+    server tool use (web search, MCP), thinking/redacted thinking, and
+    structured output conversion.
 
     Parameters
     ----------
     anthropic_response : Any
-        The response from Anthropic API.
-    response_format : Optional[BaseModel | str]
-        The format of the response.
+        The raw response object from the Anthropic API.
+    response_format : Optional[Union[BaseModel, str]]
+        If provided, parses the text response into this Pydantic model.
 
     Returns
     -------
     Message
-        The response message to return.
-
+        Processed response as a litemind Message with role "assistant".
     """
 
     # Initialize the processed response:

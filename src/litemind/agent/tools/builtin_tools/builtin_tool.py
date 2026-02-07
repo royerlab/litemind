@@ -2,8 +2,9 @@ from litemind.agent.tools.base_tool import BaseTool
 
 
 class BuiltinTool(BaseTool):
-    """
-    A tool that represents 'built-in' tools.
-    These are tools that are provided by the API or model itself, such as web search, Python, image generation, etc.
-    This class is used to identify built-in tools and to provide a common interface for them if
+    """Base class for tools provided natively by an API or model.
+
+    Built-in tools (e.g., web search, code execution, image generation)
+    are not executed locally but are handled by the API provider. This
+    class serves as a marker and common interface for such tools.
     """

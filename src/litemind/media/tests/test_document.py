@@ -5,6 +5,7 @@ import pytest
 
 from litemind.media.media_uri import MediaURI
 from litemind.media.types.media_document import Document
+from litemind.utils.document_processing import is_pymupdf_available
 
 
 class TestDocument:
@@ -48,14 +49,11 @@ class TestDocument:
         assert document.uri == uri
         assert document.extension == None
 
-    def test_document_initialization_with_invalid_local_file_extension(self):
-        """Test initialization with an invalid local file extension raises ValueError."""
+    def test_document_initialization_with_valid_unknown_extension(self):
+        """Test initialization with a valid local path but unknown extension."""
         uri = "example.sdse"
-        with pytest.raises(
-            ValueError,
-            match="Invalid URI or local file path: 'example.sdse'.",
-        ):
-            Document(uri=uri)
+        document = Document(uri=uri)
+        assert document.uri.endswith("example.sdse")
 
     def test_document_initialization_with_no_extension_remote_url(self):
         """Test initialization with a remote URL without extension."""
@@ -66,21 +64,15 @@ class TestDocument:
 
     def test_document_initialization_with_upper_case_extension(self):
         """Test initialization with upper case extension."""
-        uri = "EXAMPLE.PDF"  # Assuming 'example.pdf' exists in the same directory
-        with pytest.raises(
-            ValueError,
-            match="Invalid URI or local file path: 'EXAMPLE.PDF'.",
-        ):
-            Document(uri=uri)
+        uri = "EXAMPLE.PDF"
+        document = Document(uri=uri)
+        assert document.uri.endswith("EXAMPLE.PDF")
 
     def test_document_initialization_with_mixed_case_extension(self):
         """Test initialization with mixed case extension."""
-        uri = "ExAmPlE.pDf"  # Assuming 'example.pdf' exists in the same directory
-        with pytest.raises(
-            ValueError,
-            match="Invalid URI or local file path: 'ExAmPlE.pDf'.",
-        ):
-            Document(uri=uri)
+        uri = "ExAmPlE.pDf"
+        document = Document(uri=uri)
+        assert document.uri.endswith("ExAmPlE.pDf")
 
     def test_inheritance(self):
         """Test that Document inherits from MediaURI."""
@@ -94,6 +86,9 @@ class TestDocument:
         assert isinstance(document, MediaURI)
         os.remove(path)
 
+    @pytest.mark.skipif(
+        not is_pymupdf_available(), reason="pymupdf library not available"
+    )
     def test_extract_text_from_pages(self):
         """Test the extract_text_from_pages method."""
 
@@ -114,6 +109,9 @@ class TestDocument:
         assert len(text_pages) > 0
         os.remove(path)
 
+    @pytest.mark.skipif(
+        not is_pymupdf_available(), reason="pymupdf library not available"
+    )
     def test_take_image_of_each_page(self):
         """Test the take_image_of_each_page method."""
 

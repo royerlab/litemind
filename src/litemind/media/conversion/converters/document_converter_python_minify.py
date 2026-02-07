@@ -9,9 +9,11 @@ from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_pa
 
 
 class DocumentConverterPythonMinify(BaseConverter):
-    """
-    Converter for python documents media types.
-    Converts python documents media to Text media after minification.
+    """Converts Python source files to Text after minification.
+
+    Uses ``python_minifier`` to reduce code size before wrapping in a
+    Markdown fenced code block. This is useful for reducing token usage
+    when sending source code to LLMs.
     """
 
     def __init__(
@@ -33,48 +35,44 @@ class DocumentConverterPythonMinify(BaseConverter):
         remove_builtin_exception_brackets: bool = True,
         constant_folding: bool = True,
     ):
-        """
-        Initialize the converter with optional minification parameters.
+        """Initialise the converter with minification options.
 
-        PARAMETERS
+        All parameters correspond to ``python_minifier.minify()`` arguments.
+
+        Parameters
         ----------
         remove_pass : bool
-            Whether to remove pass statements from the code.
+            Remove ``pass`` statements.
         remove_literal_statements : bool
-            Whether to remove literal statements from the code.
+            Remove standalone literal expressions (e.g. docstrings).
         combine_imports : bool
-            Whether to combine import statements.
+            Merge multiple import statements.
         hoist_literals : bool
-            Whether to hoist literal values to the top of the code.
+            Hoist repeated literals to module-level variables.
         rename_locals : bool
-            Whether to rename local variables.
-        preserve_locals : Optional[bool]
-            Whether to preserve local variable names.
+            Shorten local variable names.
+        preserve_locals : list or None
+            Local names to keep unchanged.
         rename_globals : bool
-            Whether to rename global variables.
-        preserve_globals : Optional[bool]
-            Whether to preserve global variable names.
+            Shorten global variable names.
+        preserve_globals : list or None
+            Global names to keep unchanged.
         remove_object_base : bool
-            Whether to remove the base class from objects.
+            Remove explicit ``object`` base class.
         convert_posargs_to_args : bool
-            Whether to convert positional arguments to keyword arguments.
+            Convert positional-only args to regular args.
         preserve_shebang : bool
-            Whether to preserve the shebang line in the code.
+            Keep the shebang line.
         remove_asserts : bool
-            Whether to remove assert statements from the code.
+            Remove ``assert`` statements.
         remove_debug : bool
-            Whether to remove debug statements from the code.
+            Remove ``__debug__``-guarded code.
         remove_explicit_return_none : bool
-            Whether to remove explicit return None statements from the code.
+            Remove ``return None`` at function ends.
         remove_builtin_exception_brackets : bool
-            Whether to remove brackets from built-in exception calls.
+            Remove empty parentheses from exception constructors.
         constant_folding : bool
-            Whether to perform constant folding on the code.
-
-        RETURNS
-        -------
-        None
-
+            Evaluate constant expressions at minify time.
         """
         super().__init__()
         self.kwargs_minify = {
@@ -111,7 +109,7 @@ class DocumentConverterPythonMinify(BaseConverter):
         if not isinstance(media, Document):
             return False
 
-        # Check if the file is a PDF:
+        # Check if the file is Python code:
         file_type = classify_uri(media.uri)
         if file_type not in {"code"} and not media.get_extension() in {"py"}:
             return False

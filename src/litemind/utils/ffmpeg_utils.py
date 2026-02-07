@@ -12,9 +12,19 @@ from numpy import array, frombuffer, uint8
 from litemind.agent.messages.message_block import MessageBlock
 
 
-# function that checks if ffmpeg is available and functional:
 @lru_cache()
 def is_ffmpeg_available():
+    """
+    Check whether ffmpeg is installed and functional.
+
+    Verifies that the ``ffmpeg`` Python package is importable and that
+    the ``ffmpeg`` command-line tool is available on the system PATH.
+
+    Returns
+    -------
+    bool
+        True if ffmpeg is available and functional, False otherwise.
+    """
     try:
         import importlib.util
 
@@ -43,23 +53,28 @@ def convert_video_to_frames_and_audio(
     key_frames: bool = False,
 ) -> List[MessageBlock]:
     """
-    Converts a video into message blocks by splitting it into frames and an audio file, and appending the frames, audio, and video info.
+    Convert a video into message blocks with frames, audio, and metadata.
+
+    Splits the video into image frames and an audio track, then constructs
+    a sequence of ``MessageBlock`` objects containing video metadata, frame
+    images with timestamps, and the audio file.
 
     Parameters
     ----------
-    video_path: str
+    video_path : str
         Path to the video file.
-    message: Optional[Message]
-        The existing Message object to append the video information to. If not provided an empty message is used.
-    frame_interval: int
-        Interval in seconds to sample frames from the video.
-    key_frames: bool
-        Whether to extract key frames instead of sampling at regular intervals.
+    message : Message, optional
+        An existing Message to append to. If None, a new Message is created.
+    frame_interval : int, optional
+        Interval in seconds between sampled frames. Default is 1.
+    key_frames : bool, optional
+        If True, extract only key frames instead of sampling at regular
+        intervals. Default is False.
 
     Returns
     -------
-    List[MessageBlock]
-        The corresponding message blocks for the audio, images and text describing the video
+    list of MessageBlock
+        Message blocks for the video metadata text, frame images, and audio.
     """
 
     # define a temporary folder:
@@ -134,17 +149,19 @@ def convert_video_to_frames_and_audio(
 
 def get_video_info(video_path: str):
     """
-    Get the duration, resolution, codec, bit rate, and frame rate of a video using ffmpeg.
+    Get metadata about a video file using ffmpeg.
 
     Parameters
     ----------
-    video_path: str
+    video_path : str
         Path to the video file.
 
     Returns
     -------
     dict
-        Dictionary containing video information.
+        Dictionary with keys: ``"duration"`` (float, seconds),
+        ``"resolution"`` (tuple of int), ``"codec"`` (str),
+        ``"bit_rate"`` (int, bps), and ``"frame_rate"`` (float, fps).
     """
     import ffmpeg
 
@@ -161,7 +178,9 @@ def get_video_info(video_path: str):
     # Safely parse frame rate (e.g., "30/1" or "24000/1001")
     frame_rate_str = video_info["r_frame_rate"]
     parts = frame_rate_str.split("/")
-    frame_rate = float(parts[0]) / float(parts[1]) if len(parts) == 2 else float(parts[0])
+    frame_rate = (
+        float(parts[0]) / float(parts[1]) if len(parts) == 2 else float(parts[0])
+    )
 
     return {
         "duration": duration,
@@ -183,24 +202,37 @@ def extract_frames_and_audio(
     audio_channels: int = 1,
 ):
     """
-    Extract frames from a video at the specified FPS, or optionally only keyframes.
-    Also extract the audio track as a mono WAV file at the given sample rate.
+    Extract frames and audio from a video file.
 
-    Args:
-        input_video_path (str): Path to the input video file.
-        output_dir (str): Directory where the frames and audio will be written.
-        image_format (str, optional): The format to use for the extracted frames. Defaults to 'png'.
-        fps (float, optional): The frame rate at which to sample video. Defaults to 1.0.
-            Ignored if use_keyframes is True.
-        use_keyframes (bool, optional): If True, extract only keyframes. Defaults to False.
-        audio_filename (str, optional): Name of the output WAV file. Defaults to 'audio.wav'.
-        audio_sample_rate (int, optional): The sampling rate for the output WAV file. Defaults to 16000.
-        audio_channels (int, optional): The number of channels for the output WAV file. Defaults to 1.
+    Extracts frames at the specified FPS (or only keyframes) and the
+    audio track as a WAV file.
 
-    Returns:
-        tuple:
-            - list of str: Sorted list of paths to the extracted frame images.
-            - str: Path to the extracted audio WAV file.
+    Parameters
+    ----------
+    input_video_path : str
+        Path to the input video file.
+    output_dir : str
+        Directory where the frames and audio will be written.
+    image_format : str, optional
+        Format for the extracted frame images. Default is ``"png"``.
+    fps : float, optional
+        Frame rate at which to sample the video. Default is 1.0.
+        Ignored if ``use_keyframes`` is True.
+    use_keyframes : bool, optional
+        If True, extract only keyframes (I-frames). Default is False.
+    audio_filename : str, optional
+        Name of the output WAV file. Default is ``"audio.wav"``.
+    audio_sample_rate : int, optional
+        Sampling rate for the output WAV. Default is 16000.
+    audio_channels : int, optional
+        Number of audio channels. Default is 1 (mono).
+
+    Returns
+    -------
+    tuple of (list of str, str or None)
+        A tuple containing a sorted list of paths to extracted frame
+        images and the path to the extracted audio WAV file (or None
+        if the video has no audio stream).
     """
 
     # Import ffmpeg
@@ -273,6 +305,20 @@ def extract_frames_and_audio(
 
 
 def load_video_as_array(filename):
+    """
+    Load a video file into a numpy array of RGB frames.
+
+    Parameters
+    ----------
+    filename : str
+        Path to the video file.
+
+    Returns
+    -------
+    numpy.ndarray or None
+        A 4-D array of shape ``(num_frames, height, width, 3)`` with
+        dtype uint8, or None if an ffmpeg error occurs.
+    """
     import ffmpeg
 
     try:

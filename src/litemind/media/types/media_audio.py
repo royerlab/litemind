@@ -1,4 +1,5 @@
 import pathlib
+from functools import lru_cache
 from typing import Optional
 
 import numpy
@@ -7,9 +8,29 @@ from litemind.media.media_uri import MediaURI
 from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_path
 
 
-class Audio(MediaURI):
+@lru_cache()
+def is_soundfile_available() -> bool:
+    """Check whether the ``soundfile`` library is installed.
+
+    Returns
+    -------
+    bool
+        True if ``soundfile`` can be imported, False otherwise.
     """
-    A media that stores an audio file
+    try:
+        import soundfile  # noqa: F401
+
+        return True
+    except Exception:
+        return False
+
+
+class Audio(MediaURI):
+    """Media that stores an audio file referenced by URI.
+
+    Audio data can be created from numpy arrays via ``from_data`` or
+    loaded from an existing file. The ``soundfile`` library is used for
+    reading and writing audio data.
     """
 
     @classmethod
@@ -20,29 +41,27 @@ class Audio(MediaURI):
         file_format: Optional[str] = None,
         filepath: Optional[str] = None,
     ):
-        """
-        Create a new audio media from data.
-        This method creates a temporary file on disk and returns an Audio object with the URI of that file.
-        The file is deleted when the Audio object is deleted.
-        The file format is determined by the file extension of the filepath.
+        """Create an Audio media from a numpy array.
+
+        The array is written to disk using ``soundfile`` and wrapped in an
+        Audio media instance.
 
         Parameters
         ----------
-        data: numpy.ndarray
-            The audio data to be saved.
-        sample_rate: int
-            The sample rate of the audio data.
-        file_format: str
-            The file format of the audio data. If None, the format is determined from the filepath. If that fails default is WAV.
-        filepath: str
-            The file path to save the audio data to. If None, a temporary file is created.
-            The file format is determined from the file extension of the filepath.
+        data : numpy.ndarray
+            The audio sample data (1-D for mono, 2-D for multi-channel).
+        sample_rate : int
+            The sample rate in Hz.
+        file_format : str, optional
+            The audio file format (e.g. ``"WAV"``, ``"RAW"``). If None,
+            the format is inferred from *filepath* or defaults to WAV.
+        filepath : str, optional
+            Destination file path. A temporary WAV file is created if None.
 
         Returns
         -------
         Audio
-            The audio media object.
-
+            A new Audio media referencing the saved file.
         """
 
         # Create sound file from data using soundfile:
@@ -73,6 +92,11 @@ class Audio(MediaURI):
         return Audio(uri=audio_uri)
 
     def load_from_uri(self):
+        """Load audio data from the URI into instance attributes.
+
+        Populates ``self.data`` (numpy array), ``self.samplerate`` (int),
+        ``self.num_channels`` (int), and ``self.dtype``.
+        """
 
         # Download the audio file from the URI to a local file:
         local_file = uri_to_local_file_path(self.uri)
@@ -85,6 +109,13 @@ class Audio(MediaURI):
         self.dtype = self.data.dtype
 
     def get_raw_data(self) -> bytes:
+        """Read the raw bytes of the audio file.
+
+        Returns
+        -------
+        bytes
+            The unprocessed file content.
+        """
         # Convert the audio URI to a local file path:
         local_path = uri_to_local_file_path(self.uri)
 
@@ -94,13 +125,17 @@ class Audio(MediaURI):
         return raw_data_bytes
 
     def get_info_markdown(self) -> str:
-        """
-        Get information about the audio file in markdown format.
+        """Get audio file metadata formatted as Markdown.
+
+        Loads the audio data if not already loaded, then returns a Markdown
+        string with filename, duration, sample rate, channels, data type,
+        sample count, and file size.
 
         Returns
         -------
         str
-            Markdown formatted string containing audio file information.
+            Markdown-formatted audio information, or an error message if
+            metadata extraction fails.
         """
         try:
             # Ensure data is loaded

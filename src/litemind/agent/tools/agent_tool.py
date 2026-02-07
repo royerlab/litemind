@@ -7,7 +7,12 @@ from litemind.agent.tools.base_tool import BaseTool
 
 
 class AgentTool(BaseTool):
-    """Tool that wraps an agent, calling it with a prompt and returning structured output."""
+    """A tool that wraps an Agent, allowing it to be used as a sub-agent tool.
+
+    When called, it sends a text prompt to the wrapped agent and returns
+    the agent's response as a plain text string. Optionally retains
+    conversation history between calls.
+    """
 
     def __init__(
         self,
@@ -51,7 +56,19 @@ class AgentTool(BaseTool):
         }
 
     def _execute(self, prompt: str) -> Any:
-        """Execute the agent with a prompt and return a structured output."""
+        """
+        Execute the wrapped agent with the given prompt.
+
+        Parameters
+        ----------
+        prompt : str
+            The text prompt to send to the agent.
+
+        Returns
+        -------
+        str
+            The agent's response as plain text.
+        """
         with asection(f"Executing tool agent '{self.name}'"):
             # Clear the conversation if the agent does not have memory:
             if not self.has_memory:

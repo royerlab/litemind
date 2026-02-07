@@ -6,18 +6,24 @@ def extract_thinking_content(
     text: str, thinking_tags: Optional[List[str]] = None
 ) -> Tuple[str, str]:
     """
-    Extracts content within <thinking>...</thinking> tags and returns the string without the tags and their contents,
-    and the contents of the thinking block. If no tags are present, returns the original string and an empty string.
+    Extract content within thinking-style XML tags from text.
+
+    Searches for tags like ``<thinking>``, ``<thought>``, ``<reasoning>``,
+    etc. and separates the thinking content from the rest of the text.
 
     Parameters
     ----------
     text : str
-        The input string containing the <thinking>...</thinking> tags.
+        The input string potentially containing thinking tags.
+    thinking_tags : list of str, optional
+        Tag names to search for. Defaults to
+        ``["think", "thinking", "thought", "reasoning"]``.
 
     Returns
     -------
     Tuple[str, str]
-        A tuple containing the string without the tags and their contents, and the contents of the thinking block.
+        A tuple of ``(text_without_thinking, thinking_content)``.
+        If no thinking tags are found, returns ``(text, "")``.
     """
 
     # Default thinking tags:

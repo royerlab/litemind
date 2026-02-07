@@ -46,12 +46,12 @@ def is_valid_uri_scheme(scheme: str) -> bool:
     Parameters
     ----------
     scheme : str
-        The URI scheme to validate
+        The URI scheme to validate.
 
     Returns
     -------
     bool
-        True if the scheme is valid, False otherwise
+        True if the scheme is valid, False otherwise.
     """
     if not scheme:
         return False
@@ -70,12 +70,12 @@ def is_valid_uri_netloc(netloc: str) -> bool:
     Parameters
     ----------
     netloc : str
-        The URI netloc to validate
+        The URI netloc to validate.
 
     Returns
     -------
     bool
-        True if the netloc is valid, False otherwise
+        True if the netloc is valid, False otherwise.
     """
     # Empty netloc can be valid for some URIs (like file:///path)
     if not netloc:
@@ -110,12 +110,12 @@ def is_valid_uri_path(path_str: str) -> bool:
     Parameters
     ----------
     path_str : str
-        The URI path string to validate
+        The URI path string to validate.
 
     Returns
     -------
     bool
-        True if the path is valid, False otherwise
+        True if the path is valid, False otherwise.
     """
     # Empty paths are allowed in some URIs
     if path_str is None:
@@ -146,13 +146,19 @@ def is_valid_uri_path(path_str: str) -> bool:
 def is_valid_path(path):
     """
     Check if a file path is syntactically valid.
-    This doesn't check if the path exists, only if it's well-formed.
 
-    Args:
-        path: The file path to check
+    Validates the path syntax without checking whether the file exists.
+    On Windows, also checks for invalid filename characters.
 
-    Returns:
-        bool: True if the path is syntactically valid, False otherwise
+    Parameters
+    ----------
+    path : str
+        The file path to validate.
+
+    Returns
+    -------
+    bool
+        True if the path is syntactically valid, False otherwise.
     """
     # Check if the path is a string
     if not isinstance(path, str):

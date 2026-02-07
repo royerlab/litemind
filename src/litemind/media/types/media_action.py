@@ -3,19 +3,26 @@ from litemind.media.media_default import MediaDefault
 
 
 class Action(MediaDefault):
-    """
-    An Action is a media that describes an 'action' such as a tool call or use, or any other such action.
+    """Media that represents an action such as a tool call or result.
+
+    Used internally by the agent system to embed actions (tool calls,
+    tool results, etc.) within the message stream.
     """
 
     def __init__(self, action: ActionBase, **kwargs):
-        """
-        Create a new object information.
+        """Create a new action media.
 
         Parameters
         ----------
-        action: ActionBase
-            Action
+        action : ActionBase
+            The action instance to wrap.
+        **kwargs
+            Additional keyword arguments forwarded to ``MediaDefault``.
 
+        Raises
+        ------
+        ValueError
+            If *action* is None or not an ``ActionBase`` instance.
         """
 
         super().__init__(**kwargs)
@@ -30,4 +37,11 @@ class Action(MediaDefault):
         self.action: ActionBase = action
 
     def get_content(self) -> ActionBase:
+        """Return the wrapped action instance.
+
+        Returns
+        -------
+        ActionBase
+            The stored action.
+        """
         return self.action

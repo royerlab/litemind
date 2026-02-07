@@ -3,27 +3,35 @@ import inspect
 
 def extract_docstring(func):
     """
-    Returns the docstring of the given function object as a string.
+    Extract the docstring of a function.
 
-    Args:
-        func: A Python function or callable.
+    Parameters
+    ----------
+    func : callable
+        A Python function or callable.
 
-    Returns:
-        A string containing the docstring, or None if there is no docstring.
+    Returns
+    -------
+    str or None
+        The cleaned docstring, or None if the function has no docstring.
     """
     return inspect.getdoc(func)
 
 
 def extract_function_info(func):
     """
-    Returns both the docstring and signature of the given function object.
+    Extract both the signature and docstring of a function.
 
-    Args:
-        func: A Python function or callable.
+    Parameters
+    ----------
+    func : callable
+        A Python function or callable.
 
-    Returns:
-        A tuple of (signature_string, docstring_string).
-        If docstring is missing, docstring_string is None.
+    Returns
+    -------
+    tuple of (str, str or None)
+        A tuple of ``(signature_string, docstring_string)``. The
+        docstring is None if the function has no docstring.
     """
     sig = str(inspect.signature(func))
     doc = inspect.getdoc(func)

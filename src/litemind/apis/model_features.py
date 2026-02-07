@@ -3,8 +3,12 @@ from typing import List, Optional, Set, Type, Union
 
 
 class ModelFeatures(Enum):
-    """
-    Enum class to define the features supported by the models.
+    """Enumeration of all model capabilities that can be queried and required.
+
+    Each member represents a capability that an LLM model may or may not
+    support (e.g., text generation, image input, audio transcription).
+    Features can be provided as strings and are normalised to enum values
+    via ``normalise``.
     """
 
     TextGeneration = "TextGeneration"  # Text generation feature
@@ -39,7 +43,6 @@ class ModelFeatures(Enum):
     VideoConversion = "VideoConversion"  # Model supports video conversion to simpler media, e.g to text, audio and/or images
     DocumentConversion = "DocumentConversion"  # Model supports document conversion to simpler media, e.g to text and/or images
 
-    # Method that takes a single strings, a list of strings, a single ModelFeatures enum or a list of ModelFeatures and normalises to a list of enums of this class, finds the right enums independently of case:
     @staticmethod
     def normalise(
         features: Union[str, List[str], "ModelFeatures", List["ModelFeatures"]],
@@ -49,13 +52,18 @@ class ModelFeatures(Enum):
 
         Parameters
         ----------
-        features: Union[str, List[str], ModelFeatures, List[ModelFeatures]]
-            The features to normalise.
+        features : Union[str, List[str], ModelFeatures, List[ModelFeatures]]
+            The features to normalise. Strings are matched case-insensitively.
 
         Returns
         -------
-        List[ModelFeatures]
-            The normalised list of ModelFeatures enums.
+        Optional[List[ModelFeatures]]
+            The normalised list of ModelFeatures enums, or None if input is None.
+
+        Raises
+        ------
+        ValueError
+            If any feature string does not match a known ModelFeatures member.
 
         """
         # If no feature set is defined then pass-through None:
@@ -120,13 +128,13 @@ class ModelFeatures(Enum):
 
         Parameters
         ----------
-        features: Union[str, List[str], ModelFeatures, List[ModelFeatures]]
+        features : Union[str, List[str], ModelFeatures, List[ModelFeatures]]
             The model features to analyze.
 
         Returns
         -------
-        List[Type[MediaBase]]
-            List of MediaBase-derived classes representing media types the model can process.
+        Set[Type[MediaBase]]
+            Set of MediaBase-derived classes the model can process.
         """
 
         # Normalize the input features to a list of ModelFeatures enums
@@ -165,11 +173,11 @@ class ModelFeatures(Enum):
     ) -> Set["ModelFeatures"]:
         """
         Get the set of ModelFeatures needed to process the given media types.
-        Importanyt note: This does not return Conversion features, only features that reflect native model capabilities.
+        Important note: This does not return Conversion features, only features that reflect native model capabilities.
 
         Parameters
         ----------
-        media_types: List[Type[MediaBase]]
+        media_types : Set[Type[MediaBase]]
             The media types to analyze.
 
         Returns

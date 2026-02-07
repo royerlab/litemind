@@ -5,14 +5,17 @@ if TYPE_CHECKING:
 
 
 def format_tools_for_gemini(toolset) -> Optional[List["Tool"]]:
-    """
-    Convert your custom tool objects into google.genai types.Tool
-    for fine-grained control of parameter schemas and descriptions.
+    """Convert a ToolSet into Gemini's Tool format with FunctionDeclarations.
 
-    Each BaseTool is assumed to have:
-        - name (string)
-        - description (string)
-        - parameters (JSON schema)  # from FunctionTool._generate_parameters_schema()
+    Parameters
+    ----------
+    toolset : Optional[ToolSet]
+        The toolset to convert. If None or empty, returns None.
+
+    Returns
+    -------
+    Optional[List[Tool]]
+        List of google.genai Tool objects, or None if no tools.
     """
 
     from google.genai import types
@@ -21,8 +24,9 @@ def format_tools_for_gemini(toolset) -> Optional[List["Tool"]]:
     if not toolset:
         return None
 
-    # Initialize an empty list of tools:
-    tools = []
+    # Collect all function declarations into a single Tool object.
+    # Gemini expects all declarations in one Tool, not one Tool per function.
+    func_decls = []
 
     # Iterate over the tools in the toolset:
     for tool in toolset.list_tools():
@@ -34,31 +38,44 @@ def format_tools_for_gemini(toolset) -> Optional[List["Tool"]]:
             and tool.arguments_schema["properties"]
         )
         if has_properties:
-            # Create a FunctionDeclaration for each tool:
+            # Create a FunctionDeclaration with parameter schema:
             func_decl = types.FunctionDeclaration(
                 name=tool.name,
                 description=tool.description or "No description",
                 parameters=_create_schema(tool.arguments_schema),
             )
         else:
-            # Create a FunctionDeclaration for each tool:
+            # Gemini requires an explicit empty parameters schema for
+            # no-argument functions, otherwise it returns MALFORMED_FUNCTION_CALL.
             func_decl = types.FunctionDeclaration(
                 name=tool.name,
                 description=tool.description or "No description",
+                parameters=types.Schema(type="OBJECT", properties={}),
             )
 
-        # Wrap it in a Tool
-        tool_obj = types.Tool(function_declarations=[func_decl])
-        tools.append(tool_obj)
+        func_decls.append(func_decl)
 
-    return tools
+    if not func_decls:
+        return None
+
+    return [types.Tool(function_declarations=func_decls)]
 
 
 def _create_schema(json_schema: dict) -> "Schema":
-    """
-    Convert a JSON-schema-like dict (such as tool.parameters) into a google.genai types.Schema.
-    This supports a single level of object properties: "type": "object", "properties": {...}.
-    Extend as needed for nested or more complex structures.
+    """Convert a JSON Schema dict into a google.genai Schema object.
+
+    Supports a single level of object properties. Nested or complex
+    structures may need extension.
+
+    Parameters
+    ----------
+    json_schema : dict
+        JSON Schema dict with ``type``, ``properties``, and ``required`` keys.
+
+    Returns
+    -------
+    Schema
+        A google.genai Schema instance.
     """
     from google.genai import types
 

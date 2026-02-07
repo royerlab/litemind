@@ -10,10 +10,10 @@ from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_pa
 
 
 class DocumentConverterDocling(BaseConverter):
-    """
-    Converter for Table media type.
+    """Converts documents to Text media using the Docling library.
 
-    Converts Table media to Text media.
+    Supports PDF, DOCX, XLSX, PPTX, Markdown, AsciiDoc, and HTML files.
+    Produces one Text media per page of the converted document.
     """
 
     def rule(self) -> List[Tuple[Type[MediaBase], List[Type[MediaBase]]]]:
@@ -69,7 +69,7 @@ class DocumentConverterDocling(BaseConverter):
         # Number of pages:
         num_pages = len(pages_text)
 
-        # Get the preamble for the document, we use the same method as in DocumentConverterDocling for consistency:
+        # Get the preamble for the document:
         preamble = DocumentConverterDocling.get_preamble(media, num_pages)
 
         # Add a header for the document:
@@ -93,7 +93,20 @@ class DocumentConverterDocling(BaseConverter):
 
     @staticmethod
     def get_preamble(media, num_pages: Optional[int] = None):
-        # Introduce the file name and the number of pages:
+        """Build a descriptive header string for a document.
+
+        Parameters
+        ----------
+        media : Document
+            The document media to describe.
+        num_pages : int or None, optional
+            The number of pages. Displayed as ``"unknown"`` if None.
+
+        Returns
+        -------
+        str
+            A multi-line string with filename, type, extension, and page count.
+        """
         # Get the file name:
         file_name = media.get_filename()
         # Get the file extension:
@@ -107,7 +120,7 @@ class DocumentConverterDocling(BaseConverter):
         else:
             num_pages = int(num_pages)
 
-        # Make a premable for all pages that gives the file name and the number of pages:
+        # Make a preamble for all pages that gives the file name and the number of pages:
         preamble = f"\nDocument: {file_name}\nType: {file_type}\nExtension: {file_extension}\nNumber of pages: {num_pages} \n "
 
         return preamble
@@ -115,7 +128,13 @@ class DocumentConverterDocling(BaseConverter):
 
 @lru_cache()
 def is_docling_available() -> bool:
-    # Check if package docling s available:
+    """Check whether the ``docling`` library is installed.
+
+    Returns
+    -------
+    bool
+        True if docling can be found by importlib.
+    """
     try:
         import importlib.util
 
@@ -126,6 +145,16 @@ def is_docling_available() -> bool:
 
 
 def initialize_docling_converter():
+    """Create and configure a Docling DocumentConverter.
+
+    Enables OCR, table extraction, and page image generation for PDFs,
+    and page image generation for DOCX files.
+
+    Returns
+    -------
+    docling.document_converter.DocumentConverter
+        A configured document converter instance.
+    """
     from docling.datamodel.base_models import InputFormat
     from docling.datamodel.pipeline_options import (
         PaginatedPipelineOptions,
@@ -137,7 +166,6 @@ def initialize_docling_converter():
         WordFormatOption,
     )
 
-    """Initialize the docling document converter with appropriate settings for document processing"""
     # Configure pipeline options for PDF
     pdf_pipeline_options = PdfPipelineOptions()
     pdf_pipeline_options.do_ocr = True  # Enable OCR for image-based PDFs
@@ -164,7 +192,7 @@ __default_docling_converter = None
 
 
 def _get_docling_converter():
-    """Get or initialize the docling converter lazily."""
+    """Get or lazily initialise the singleton Docling converter."""
     global __default_docling_converter
     if __default_docling_converter is None:
         __default_docling_converter = initialize_docling_converter()
@@ -172,6 +200,24 @@ def _get_docling_converter():
 
 
 def convert_to_markdown(document_uri: str):
+    """Convert a document to a list of per-page Markdown strings using Docling.
+
+    Parameters
+    ----------
+    document_uri : str
+        The URI or file path of the document to convert.
+
+    Returns
+    -------
+    List[str]
+        One Markdown string per page. If the document has no page
+        structure, a single-element list is returned.
+
+    Raises
+    ------
+    ImportError
+        If docling is not installed.
+    """
     # Check if docling is available, if not throw an error!
     if not is_docling_available():
         raise ImportError(

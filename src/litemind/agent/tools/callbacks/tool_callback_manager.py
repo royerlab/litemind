@@ -4,25 +4,40 @@ from litemind.agent.tools.callbacks.base_tool_callbacks import BaseToolCallbacks
 
 
 class ToolCallbackManager(BaseToolCallbacks):
-    """
-    A manager for tool callbacks that allows adding, removing, and invoking callbacks
-    for tools in a toolset. This class provides methods to manage a collection of
-    tool callbacks, enabling the execution of callback methods when tools start,
-    end, or encounter errors during execution.
-    This class inherits from BaseToolCallbacks and implements methods to handle
-    tool lifecycle events such as start, end, and error handling.
+    """Manages a collection of tool callbacks and dispatches lifecycle events.
+
+    Aggregates multiple ``BaseToolCallbacks`` instances and fans out
+    ``on_tool_start``, ``on_tool_end``, ``on_tool_activity``, and
+    ``on_tool_error`` calls to all registered callbacks.
     """
 
     def __init__(self):
         self.callbacks: List[BaseToolCallbacks] = []
 
     def add_callback(self, callback: BaseToolCallbacks) -> None:
+        """
+        Register a callback if not already present.
+
+        Parameters
+        ----------
+        callback : BaseToolCallbacks
+            The callback to add.
+        """
         if callback not in self.callbacks:
             self.callbacks.append(callback)
 
     def add_callbacks(
         self, callbacks_: Union[Sequence[BaseToolCallbacks], "ApiCallbackManager"]
     ) -> None:
+        """
+        Register multiple callbacks at once.
+
+        Parameters
+        ----------
+        callbacks_ : Union[Sequence[BaseToolCallbacks], ApiCallbackManager]
+            A sequence of callbacks or another callback manager whose
+            callbacks should be added.
+        """
         if isinstance(callbacks_, BaseToolCallbacks):
             self.callbacks.extend(callbacks_.callbacks)
         elif isinstance(callbacks_, Sequence):
@@ -31,6 +46,14 @@ class ToolCallbackManager(BaseToolCallbacks):
                     self.callbacks.append(callback)
 
     def remove_callback(self, callback: BaseToolCallbacks) -> None:
+        """
+        Remove a callback if it is registered.
+
+        Parameters
+        ----------
+        callback : BaseToolCallbacks
+            The callback to remove.
+        """
         if callback in self.callbacks:
             # Remove the callback if it exists
             self.callbacks.remove(callback)

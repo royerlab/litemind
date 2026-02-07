@@ -8,23 +8,30 @@ from litemind.utils.load_table import load_table_from_uri
 
 
 class Table(MediaURI):
-    """
-    A media that stores a table.
+    """Media that stores tabular data backed by a file (CSV, Excel, etc.).
+
+    The underlying data is lazily loaded into a pandas DataFrame on first
+    access. Tables can be created from URIs, DataFrames, numpy arrays,
+    or CSV strings.
     """
 
     def __init__(self, uri: str, extension: Optional[str] = None, **kwargs):
-        """
-        Create a new table media from a DataFrame.
+        """Create a new table media from a file URI.
 
         Parameters
         ----------
         uri : str
-            The URI of the table file.
-        extension: str
-            The extension of the table file.
-        kwargs: Optional
-            Other parameters passed to MediaURI
+            The URI of the table file (e.g. a CSV or Excel file).
+        extension : str, optional
+            The expected file extension. If provided and the URI does not
+            end with this extension, a ValueError is raised.
+        **kwargs
+            Additional keyword arguments forwarded to ``MediaURI``.
 
+        Raises
+        ------
+        ValueError
+            If *extension* is provided but does not match the URI.
         """
 
         # Check that the file extension is valid:
@@ -44,6 +51,26 @@ class Table(MediaURI):
         table: Union["ndarray", "DataFrame", list, tuple],
         filepath: Optional[str] = None,
     ):
+        """Create a Table media from tabular data.
+
+        Parameters
+        ----------
+        table : numpy.ndarray, pandas.DataFrame, list, or tuple
+            The tabular data. Arrays and sequences are converted to a
+            DataFrame automatically.
+        filepath : str, optional
+            Destination CSV file path. A temporary file is created if None.
+
+        Returns
+        -------
+        Table
+            A new Table media referencing the saved CSV file.
+
+        Raises
+        ------
+        ValueError
+            If *table* is not a supported type.
+        """
 
         if filepath is None:
             # Create temporary file:
@@ -78,18 +105,27 @@ class Table(MediaURI):
         # URI:
         table_uri = "file://" + filepath
 
-        # Create Image from
+        # Create Table from URI:
         return Table(uri=table_uri)
 
     @classmethod
     def from_csv_string(cls, csv_table_str: str):
-        """
-        Create a table from a CSV string.
+        """Create a Table media from a CSV-formatted string.
 
         Parameters
         ----------
-        csv_table_str: str
-            The CSV string representing the table.
+        csv_table_str : str
+            The CSV string representing the table data.
+
+        Returns
+        -------
+        Table
+            A new Table media backed by a temporary CSV file.
+
+        Raises
+        ------
+        ValueError
+            If *csv_table_str* is not a string.
         """
 
         from io import StringIO
@@ -113,8 +149,12 @@ class Table(MediaURI):
         return cls.from_table(dataframe)
 
     def load_from_uri(self):
-        """
-        Load the table data from the URI.
+        """Load the table data from the URI into ``self.dataframe``.
+
+        Raises
+        ------
+        ValueError
+            If no URI is set.
         """
 
         # Check if the URI is provided
@@ -125,8 +165,14 @@ class Table(MediaURI):
         self.dataframe = load_table_from_uri(self.uri)
 
     def to_dataframe(self):
-        """
-        Get the table as a DataFrame.
+        """Get the table data as a pandas DataFrame.
+
+        Loads the data from the URI if not already loaded.
+
+        Returns
+        -------
+        pandas.DataFrame
+            The table data.
         """
 
         # If the dataframe is not loaded, load it from the URI:
@@ -136,6 +182,15 @@ class Table(MediaURI):
         return self.dataframe
 
     def to_markdown(self):
+        """Render the table as a Markdown-formatted string.
+
+        Uses the ``tabulate`` library with GitHub-flavoured table format.
+
+        Returns
+        -------
+        str
+            The table rendered as a Markdown fenced code block.
+        """
 
         #
         if self.dataframe is None:
@@ -154,6 +209,13 @@ class Table(MediaURI):
         return markdown
 
     def to_markdown_text_media(self):
+        """Convert the table to a Text media with Markdown formatting.
+
+        Returns
+        -------
+        Text
+            A Text media containing the Markdown table.
+        """
 
         # Get Markdown:
         markdown = self.to_markdown()

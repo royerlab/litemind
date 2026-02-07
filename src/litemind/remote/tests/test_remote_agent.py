@@ -8,9 +8,15 @@ from litemind.agent.agent import Agent
 from litemind.agent.messages.message import Message
 from litemind.apis.base_api import ModelFeatures
 from litemind.media.types.media_audio import Audio
+from litemind.remote import is_rpyc_available
 from litemind.remote.client import Client
 from litemind.remote.server import Server
 from litemind.ressources.media_resources import MediaResources
+
+# Skip all tests in this module if rpyc is not available
+pytestmark = pytest.mark.skipif(
+    not is_rpyc_available(), reason="rpyc library not available"
+)
 
 # -----------------------------------------------------------------------------
 # Helper utilities

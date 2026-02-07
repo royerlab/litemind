@@ -3,14 +3,12 @@ from typing import Any
 
 
 class BaseToolCallbacks(ABC):
-    """
-    Base class for tool callbacks.
-    This class defines the interface for tool callbacks that can be used to
-    monitor the lifecycle of tool usage, including start, end, and error handling.
-    It is intended to be subclassed to implement specific callback behaviors.
-    Subclasses should implement the methods to handle tool start, end, and error events.
-    This class does not implement any functionality itself, but provides a structure
-    for tool callbacks to follow.
+    """Base class for tool lifecycle callbacks.
+
+    Subclass this to implement custom behavior when tools start, finish,
+    encounter errors, or report intermediate activity. All methods are
+    no-ops by default, so subclasses only need to override the events
+    they care about.
     """
 
     def on_tool_start(self, tool: "BaseTool", *args, **kwargs) -> None:
@@ -31,23 +29,24 @@ class BaseToolCallbacks(ABC):
 
     def on_tool_activity(self, tool: "BaseTool", activity_type: str, **kwargs) -> Any:
         """
-        Called when tool is 'doing something' this could be used to monitor the activity of the tool if multiple steps are involved.
-        or if we need to access internal information about the tool's execution.
+        Called when a tool reports intermediate activity.
+
+        Useful for monitoring multi-step tool executions or accessing
+        internal progress information.
 
         Parameters
         ----------
-        tool: BaseTool
-            Tool instance
-        activity_type: str
-            String that describes the type of activity (e.g., "processing", "waiting", etc.)
-        **kwargs: dict
-            Information about the activity, can be anything that is relevant to the activity type.
+        tool : BaseTool
+            The active tool instance.
+        activity_type : str
+            A label describing the activity (e.g., "processing", "waiting").
+        **kwargs
+            Additional context about the activity.
 
         Returns
         -------
         Any
-            Optional return value that can be used to pass information back to the tool.
-
+            An optional value that can be passed back to the tool.
         """
         pass
 

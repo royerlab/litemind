@@ -26,10 +26,11 @@ class BaseVectorDatabase(ABC):
 
         Parameters
         ----------
-        informations: List[Document]
+        informations : List[Information]
             The informations to add to the database.
-        embeddings: Optional[List[List[float]]]
-            The embeddings for the informations. If not provided, they will be computed.
+        embeddings : Optional[List[List[float]]]
+            Pre-computed embedding vectors. If not provided, embeddings
+            are computed automatically.
 
         Returns
         -------
@@ -41,12 +42,12 @@ class BaseVectorDatabase(ABC):
     @abstractmethod
     def get_information(self, information_id: str) -> Optional[Information]:
         """
-        Retrieve a document by ID.
+        Retrieve an information by its ID.
 
         Parameters
         ----------
-        information_id: str
-            The ID of the document to retrieve.
+        information_id : str
+            The ID of the information to retrieve.
 
         Returns
         -------
@@ -63,22 +64,24 @@ class BaseVectorDatabase(ABC):
         threshold: float = 0.0,
     ) -> List[Information]:
         """
-        Perform a similarity search. Return the informations most similar informations to the query.
+        Find informations most similar to the query.
 
         Parameters
         ----------
-        query: Union[str, List[float]]
-            The query string or embedding vector.
-        k: int
+        query : Union[str, BaseModel, MediaBase, Information, List[float]]
+            The query string, media object, Information, or a raw
+            embedding vector.
+        k : int
             The maximum number of results to return.
-        threshold: float
-            The similarity threshold. If the similarity score is below this value,
-            the information will not be included in the results.
+        threshold : float
+            Minimum similarity score. Results below this value are
+            excluded.
 
         Returns
         -------
         List[Information]
-            The most similar informations, ordered by similarity (highest first).
+            The most similar informations, ordered by descending
+            similarity score.
         """
         pass
 
@@ -104,10 +107,12 @@ class BaseVectorDatabase(ABC):
     @abstractmethod
     def save(self) -> None:
         """
-        Save the database state.
-        After calling this method the vector database is guaranteed to be saved i.e. persisted.
-        However, some implementations might keep the database persisted at all times making the use of this method superfluous.
-        It is recommended to call this method after any operation that modifies the database to ensure the changes are saved when using any implementation.
+        Persist the database state to storage.
+
+        Some implementations (e.g., Qdrant) persist automatically,
+        making this a no-op. Others (e.g., in-memory) require an
+        explicit call to save. It is recommended to call this after
+        any modification to ensure portability across implementations.
         """
         pass
 

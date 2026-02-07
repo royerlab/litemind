@@ -9,14 +9,14 @@ class InformationBase(ABC):
     """
     Abstract base class defining the interface for 'pieces of information' used in augmentations.
 
-    This class defines the minimum contract that any document implementation must fulfill
+    This class defines the minimum contract that any information implementation must fulfill
     to work with the augmentation system.
     """
 
     @property
     @abstractmethod
     def content(self) -> MediaBase:
-        """The  content of the information"""
+        """The media content of this information."""
         pass
 
     @property
@@ -48,17 +48,17 @@ class InformationBase(ABC):
     @abstractmethod
     def has_type(self, media_type: Type[MediaBase]) -> bool:
         """
-        Check if the information has a specific type.
+        Check if the information's media matches a specific type.
 
         Parameters
         ----------
-        media_type: str
-            The type to check against.
+        media_type : Type[MediaBase]
+            The media type to check against.
 
         Returns
         -------
         bool
-            True if the information has the specified type, False otherwise.
+            True if the information's media is an instance of the given type.
         """
         pass
 
@@ -114,5 +114,5 @@ class InformationBase(ABC):
 
     @abstractmethod
     def __len__(self) -> int:
-        """Length of the piece of information"""
+        """Length of the piece of information."""
         pass

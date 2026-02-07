@@ -12,7 +12,7 @@ mkdir -p test_reports
 
 # Run tests and generate test report:
 # filtering specific tests: -k "tools"
-pytest --cov-report json:./test_reports/test_coverage.json --md-report --md-report-verbose=1 --md-report-output=./test_reports/test_report.md .
+pytest --cov-report json:./test_reports/test_coverage.json .
 
 # Clean and build the project:
 hatch clean

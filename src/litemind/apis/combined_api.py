@@ -15,12 +15,12 @@ from litemind.media.media_base import MediaBase
 
 
 class CombinedApi(DefaultApi):
-    """
-    A class that combines multiple APIs into a single API.
-    It checks the availability and credentials of each API and adds them to the list.
+    """Unified API that aggregates multiple provider APIs with automatic fallback.
 
-    API Methods will be called on the first available API that supports the required features.
-
+    CombinedApi wraps multiple API providers (OpenAI, Anthropic, Gemini, Ollama)
+    behind a single interface. When a method is called, it delegates to the first
+    available provider that supports the required features. Each provider is
+    validated for availability and credentials during initialization.
     """
 
     def __init__(
@@ -29,17 +29,21 @@ class CombinedApi(DefaultApi):
         api_keys: Optional[Dict[str, str]] = None,
         callback_manager: Optional[ApiCallbackManager] = None,
     ):
-        """
-        Create a new combined API. If no APIs are provided, the default APIs will be used: OpenAIApi, AnthropicApi, OllamaApi, GeminiApi.
+        """Create a new combined API.
+
+        If no APIs are provided, the default APIs are used: OpenAIApi,
+        AnthropicApi, OllamaApi, GeminiApi. Only APIs that pass availability
+        checks and have at least one model are included.
 
         Parameters
         ----------
-        apis: List[BaseApi]
-            A list of APIs to combine.
-        api_keys: Dict[str, str]
-            A dictionary of API keys for each API.
-        callback_manager: ApiCallbackManager
-            A callback manager to handle callbacks.
+        apis : Optional[List[BaseApi]]
+            Specific API instances to combine. If None, uses all available
+            default providers.
+        api_keys : Optional[Dict[str, str]]
+            API keys keyed by class name (e.g., ``{"OpenAIApi": "sk-..."}``).
+        callback_manager : Optional[ApiCallbackManager]
+            Callback manager propagated to all child APIs.
         """
 
         # call the parent constructor:
@@ -182,8 +186,8 @@ class CombinedApi(DefaultApi):
             # return the model list:
             return model_list
 
-        except Exception:
-            raise APIError("Error fetching model list from CombinedApi.")
+        except Exception as e:
+            raise APIError(f"Error fetching model list from CombinedApi: {e}") from e
 
     def get_best_model(
         self,
@@ -797,7 +801,7 @@ class CombinedApi(DefaultApi):
         # if no model name is provided we return the best model as defined in the method above:
         if model_name is None:
             model_name = self.get_best_model(
-                features=[ModelFeatures.TextGeneration, ModelFeatures.Image]
+                features=[ModelFeatures.TextGeneration, ModelFeatures.Document]
             )
 
         # if the model name is not in the model_to_api dictionary we raise an error:

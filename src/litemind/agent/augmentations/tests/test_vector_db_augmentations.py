@@ -4,7 +4,7 @@ import uuid
 
 import pytest
 
-from litemind import VECDB_IMPLEMENTATIONS
+from litemind import get_available_vecdbs
 from litemind.agent.augmentations.augmentation_base import AugmentationBase
 from litemind.agent.augmentations.information.information import Information
 from litemind.agent.augmentations.vector_db.tests.utils.hash_embeddings import (
@@ -18,7 +18,7 @@ def _get_temp_folder():
     return os.path.join(tempfile.gettempdir(), "augmentation_test_" + str(uuid.uuid4()))
 
 
-@pytest.mark.parametrize("vector_db_api", VECDB_IMPLEMENTATIONS)
+@pytest.mark.parametrize("vector_db_api", get_available_vecdbs())
 def test_augmentation_init(vector_db_api):
     """Test initialization with name and description (AugmentationBase behavior)"""
     # Create database with custom name and description
@@ -38,7 +38,7 @@ def test_augmentation_init(vector_db_api):
     assert db.description == "test_augmentation2 Augmentation"
 
 
-@pytest.mark.parametrize("vector_db_api", VECDB_IMPLEMENTATIONS)
+@pytest.mark.parametrize("vector_db_api", get_available_vecdbs())
 def test_get_relevant_documents(vector_db_api):
     """Test the get_relevant_documents method from AugmentationBase"""
     # Create and prepare database
@@ -74,7 +74,7 @@ def test_get_relevant_documents(vector_db_api):
     assert all(isinstance(doc, Information) for doc in results)
 
 
-@pytest.mark.parametrize("vector_db_api", VECDB_IMPLEMENTATIONS)
+@pytest.mark.parametrize("vector_db_api", get_available_vecdbs())
 def test_get_relevant_documents_iterator(vector_db_api):
     """Test the get_relevant_documents_iterator method from AugmentationBase"""
     # Create and prepare database
@@ -106,7 +106,7 @@ def test_get_relevant_documents_iterator(vector_db_api):
     assert all(isinstance(doc, Information) for doc in results)
 
 
-@pytest.mark.parametrize("vector_db_api", VECDB_IMPLEMENTATIONS)
+@pytest.mark.parametrize("vector_db_api", get_available_vecdbs())
 def test_string_representations(vector_db_api):
     """Test the string representation methods from AugmentationBase"""
     db = vector_db_api(name="test_augmentation", location=_get_temp_folder())

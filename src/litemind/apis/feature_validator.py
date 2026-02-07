@@ -52,10 +52,10 @@ class ModelFeatureValidator(MediaResources):
 
         Parameters
         ----------
-        output_dir: str, optional
+        output_dir : str, optional
             Directory to store scan results. Defaults to current directory.
-        print_exception_stacktraces: bool, optional
-            Whether to print exception stack traces during scanning. Defaults to False.
+        print_exception_stacktraces : bool, optional
+            Whether to print exception stack traces during scanning.
         """
 
         # Set the output directory for scan results
@@ -192,12 +192,13 @@ class ModelFeatureValidator(MediaResources):
 
         Parameters
         ----------
-        api_classes: List[Type[BaseApi]]
-            List of API classes to scan
-        model_names: List[str], optional
-            List of specific model names to scan. If None, all models will be scanned (up to models_per_api).
-        models_per_api: int, optional
-            Maximum number of models to scan per API. If None, scan all models.
+        api_classes : List[Type[BaseApi]]
+            List of API classes to scan.
+        model_names : Optional[List[str]]
+            Specific model names to scan. If None, scans all models
+            (up to models_per_api).
+        models_per_api : Optional[int]
+            Maximum number of models to scan per API. If None, scans all.
 
         Returns
         -------
@@ -269,10 +270,10 @@ class ModelFeatureValidator(MediaResources):
 
         Parameters
         ----------
-        api: BaseApi
-            API instance to use for scanning
-        model_name: str
-            Name of the model to scan
+        api : BaseApi
+            API instance to use for scanning.
+        model_name : str
+            Name of the model to scan.
 
         Returns
         -------
@@ -341,16 +342,18 @@ class ModelFeatureValidator(MediaResources):
 
         Parameters
         ----------
-        api_class: Type[BaseApi]
-            The API class to use for testing
-        model_name: str
-            Name of the model to test
-        feature: ModelFeatures
-            The feature to test
-        return_error_info: bool
-            If True, returns a dict with result and error information
-        disable_output: bool
-            If True, disables Arbol output during feature testing. Default is True.
+        api_class : Type[BaseApi]
+            The API class to use for testing.
+        model_name : str
+            Name of the model to test.
+        feature : ModelFeatures
+            The feature to test.
+        return_error_info : bool
+            If True, returns a dict with result and error information.
+        disable_output : bool
+            If True, disables Arbol output during feature testing.
+        allow_media_conversions : bool
+            If True, enables media conversions for the test API instance.
 
         Returns
         -------
@@ -840,7 +843,7 @@ class ModelFeatureValidator(MediaResources):
             return False
 
     def test_mcp_tool(self, api: BaseApi, model_name: str) -> bool:
-        """Test if model supports built-in web search tool."""
+        """Test if model supports built-in MCP (Model Context Protocol) tool."""
         try:
             # Create a ToolSet instance:
             toolset = ToolSet()
@@ -917,7 +920,7 @@ class ModelFeatureValidator(MediaResources):
 
         Parameters
         ----------
-        folder: str, optional
+        folder : str, optional
             Folder to save YAML files to. If None, uses self.output_dir.
 
         Returns
@@ -969,6 +972,18 @@ class ModelFeatureValidator(MediaResources):
     def load_results(
         self, folder: str
     ) -> Dict[type, Dict[str, Dict[ModelFeatures, bool]]]:
+        """Load previously saved scan results from YAML files.
+
+        Parameters
+        ----------
+        folder : str
+            Directory containing scan result YAML files.
+
+        Returns
+        -------
+        Dict[type, Dict[str, Dict[ModelFeatures, bool]]]
+            Merged scan results from all loaded files.
+        """
         loaded = 0
         if not os.path.exists(folder) or not os.path.isdir(folder):
             aprint(

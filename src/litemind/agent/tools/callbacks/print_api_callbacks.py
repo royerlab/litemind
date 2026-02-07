@@ -8,11 +8,10 @@ from litemind.agent.tools.callbacks.base_tool_callbacks import BaseToolCallbacks
 
 
 class PrintApiCallbacks(BaseToolCallbacks):
-    """
-    A callback class that prints tool execution details to the console.
-    This class inherits from BaseToolCallbacks and overrides methods to print
-    information about tool execution, including start, end, and error events.
-    It is useful for debugging and monitoring tool usage in an agent's workflow.
+    """Tool callback that prints execution details to the console via Arbol.
+
+    Useful for debugging and monitoring tool usage. Each lifecycle event
+    (start, activity, end, error) can be independently enabled or disabled.
     """
 
     def __init__(
@@ -24,22 +23,25 @@ class PrintApiCallbacks(BaseToolCallbacks):
         **kwargs,
     ):
         """
-        Initialize the PrintApiCallbacks with options to control printing behavior.
-        This constructor sets up the callback to print messages when tools start,
-        end, or encounter errors. It raises an error if any unknown keyword arguments
+        Initialize the callback with per-event printing controls.
 
         Parameters
         ----------
-        print_on_tool_start: bool
-            Whether to print a message when a tool starts execution.
-        print_on_tool_activity: bool
-            Whether to print a message when a tool is active 'doing something'.
-        print_on_tool_end: bool
-            Whether to print a message when a tool ends execution.
-        print_on_tool_error: bool
-            Whether to print a message when a tool encounters an error.
-        kwargs: dict
-            Additional keyword arguments that are not used by this class.
+        print_on_tool_start : bool
+            Whether to print when a tool starts execution.
+        print_on_tool_activity : bool
+            Whether to print when a tool reports intermediate activity.
+        print_on_tool_end : bool
+            Whether to print when a tool finishes execution.
+        print_on_tool_error : bool
+            Whether to print when a tool encounters an error.
+        **kwargs
+            Rejected; raises ValueError if any unknown arguments are passed.
+
+        Raises
+        ------
+        ValueError
+            If unknown keyword arguments are provided.
         """
         super().__init__()
 

@@ -6,7 +6,7 @@ from typing import List, Union
 
 import pytest
 
-from litemind import VECDB_IMPLEMENTATIONS
+from litemind import get_available_vecdbs
 from litemind.agent.augmentations.information.information import Information
 from litemind.media.types.media_audio import Audio
 from litemind.media.types.media_code import Code
@@ -78,7 +78,7 @@ def multimodal_hash_embeddings(
 class TestMultimodalVectorDB(MediaResources):
     """Test suite for multimodal vector database functionality"""
 
-    @pytest.mark.parametrize("vector_db_api", VECDB_IMPLEMENTATIONS)
+    @pytest.mark.parametrize("vector_db_api", get_available_vecdbs())
     def test_text_informations(self, vector_db_api):
         """Test adding and retrieving text informations"""
         # Create vector database with multimodal embeddings
@@ -111,7 +111,7 @@ class TestMultimodalVectorDB(MediaResources):
         assert all(isinstance(info, Information) for info in results)
         # assert any("Python" in info.content for info in results)
 
-    @pytest.mark.parametrize("vector_db_api", VECDB_IMPLEMENTATIONS)
+    @pytest.mark.parametrize("vector_db_api", get_available_vecdbs())
     def test_json_informations(self, vector_db_api):
         """Test adding and retrieving JSON informations"""
         db = vector_db_api(
@@ -143,7 +143,7 @@ class TestMultimodalVectorDB(MediaResources):
         assert all(isinstance(info, Information) for info in results)
         # assert any("New York" in doc.content for doc in results)
 
-    @pytest.mark.parametrize("vector_db_api", VECDB_IMPLEMENTATIONS)
+    @pytest.mark.parametrize("vector_db_api", get_available_vecdbs())
     def test_code_informations(self, vector_db_api):
         """Test adding and retrieving code informations"""
         db = vector_db_api(
@@ -178,7 +178,7 @@ class TestMultimodalVectorDB(MediaResources):
         assert all(isinstance(info, Information) for info in results)
         # assert any("factorial" in info.media for info in results)
 
-    @pytest.mark.parametrize("vector_db_api", VECDB_IMPLEMENTATIONS)
+    @pytest.mark.parametrize("vector_db_api", get_available_vecdbs())
     def test_image_informations(self, vector_db_api):
         """Test adding and retrieving image informations"""
         db = vector_db_api(
@@ -216,7 +216,7 @@ class TestMultimodalVectorDB(MediaResources):
         assert all(isinstance(info, Information) for info in results)
         assert any("cat" in info.content for info in results)
 
-    @pytest.mark.parametrize("vector_db_api", VECDB_IMPLEMENTATIONS)
+    @pytest.mark.parametrize("vector_db_api", get_available_vecdbs())
     def test_audio_informations(self, vector_db_api):
         """Test adding and retrieving audio informations"""
         db = vector_db_api(
@@ -244,7 +244,7 @@ class TestMultimodalVectorDB(MediaResources):
         assert all(isinstance(info, Information) for info in results)
         assert any("harvard" in info.content.lower() for info in results)
 
-    @pytest.mark.parametrize("vector_db_api", VECDB_IMPLEMENTATIONS)
+    @pytest.mark.parametrize("vector_db_api", get_available_vecdbs())
     def test_video_informations(self, vector_db_api):
         """Test adding and retrieving video informations"""
         db = vector_db_api(
@@ -272,7 +272,7 @@ class TestMultimodalVectorDB(MediaResources):
         assert all(isinstance(info, Information) for info in results)
         assert any("flying" in info.content.lower() for info in results)
 
-    @pytest.mark.parametrize("vector_db_api", VECDB_IMPLEMENTATIONS)
+    @pytest.mark.parametrize("vector_db_api", get_available_vecdbs())
     def test_table_informations(self, vector_db_api):
         """Test adding and retrieving table informations"""
         db = vector_db_api(
@@ -307,7 +307,7 @@ class TestMultimodalVectorDB(MediaResources):
         assert all(isinstance(info, Information) for info in results)
         # assert any("John" in doc.content for doc in results)
 
-    @pytest.mark.parametrize("vector_db_api", VECDB_IMPLEMENTATIONS)
+    @pytest.mark.parametrize("vector_db_api", get_available_vecdbs())
     def test_document_informations(self, vector_db_api):
         """Test adding and retrieving mixed document types"""
         db = vector_db_api(

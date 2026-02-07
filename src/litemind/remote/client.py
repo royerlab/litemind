@@ -4,15 +4,23 @@ from arbol import aprint
 
 
 class Client:
-    """A simple, elegant client for interacting with remote litemind objects."""
+    """Client for interacting with remote litemind objects over RPyC.
+
+    Connects to a ``Server`` instance and retrieves proxy objects that
+    behave like local Python objects. Typical usage is to obtain a remote
+    ``Agent`` and call it as if it were local.
+    """
 
     def __init__(self, host="localhost", port=18861):
         """
-        Initializes the client and connects to the server.
+        Initialize the client and connect to the RPyC server.
 
-        Args:
-            host (str): The hostname of the server.
-            port (int): The port of the server.
+        Parameters
+        ----------
+        host : str, optional
+            The hostname of the server, by default ``"localhost"``.
+        port : int, optional
+            The port of the server, by default ``18861``.
         """
         try:
             import rpyc
@@ -52,13 +60,24 @@ class Client:
 
     def get(self, name):
         """
-        Retrieves a proxy object for a remote agent.
+        Retrieve a proxy object for a named remote object.
 
-        Args:
-            name (str): The name of the remote object.
+        Pings the server to verify connectivity, lists available objects
+        for diagnostics, then fetches and wraps the requested object so
+        that class arguments are transmitted by value rather than as RPyC
+        proxies.
 
-        Returns:
-            A proxy object that behaves like the remote object, or None if not found.
+        Parameters
+        ----------
+        name : str
+            The registered name of the remote object to retrieve.
+
+        Returns
+        -------
+        _ValueWrapper or None
+            A proxy wrapper that behaves like the remote object, or
+            ``None`` if the object was not found or the client is
+            disconnected.
         """
         if not self.is_connected():
             aprint("❌ Not connected to server")
@@ -96,13 +115,25 @@ class Client:
 
     def __getitem__(self, name):
         """
-        Allows dictionary-style access to remote objects.
-        e.g., `client['main_agent']`
+        Allow dictionary-style access to remote objects.
+
+        Parameters
+        ----------
+        name : str
+            The registered name of the remote object.
+
+        Returns
+        -------
+        _ValueWrapper or None
+            The proxy-wrapped remote object, or ``None`` if not found.
         """
         return self.get(name)
 
     def close(self):
-        """Closes the connection to the server."""
+        """Close the connection to the server.
+
+        Safe to call multiple times; does nothing if already closed.
+        """
         if self._connection and not self._connection.closed:
             try:
                 self._connection.close()

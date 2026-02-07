@@ -13,25 +13,32 @@ from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_pa
 
 
 class Video(MediaURI):
-    """
-    A media that stores a video
+    """Media that stores a video file referenced by URI.
+
+    Supports loading video data as numpy arrays and extracting metadata,
+    frames, and audio tracks via ffmpeg.
     """
 
     def __init__(self, uri: str, extension: Optional[str] = None, **kwargs):
-        """
-        Create a new video media.
+        """Create a new video media.
 
         Parameters
         ----------
-        uri: str
-            The video URI.
-        extension: str
-            Extension/Type of the video file in case it is not clear from the URI. This is the extension _without_ the dot -- 'mp4' not '.mp4'.
-        kwargs: dict
-            Other arguments passed to MediaURI.
+        uri : str
+            The video URI or local file path.
+        extension : str, optional
+            File extension override without the leading dot (e.g. ``"mp4"``).
+        **kwargs
+            Additional keyword arguments forwarded to ``MediaURI``.
+
+        Raises
+        ------
+        ValueError
+            If the URI does not have a valid video file extension, or if
+            *extension* is not a recognised video extension.
         """
 
-        # Check that  the file extension is valid:
+        # Check that the file extension is valid:
         if not is_video_file(uri):
             raise ValueError(
                 f"Invalid video URI: '{uri}' (must have a valid video file extension)"
@@ -47,6 +54,11 @@ class Video(MediaURI):
         self.info = None
 
     def load_from_uri(self):
+        """Load the video data from the URI into ``self.array``.
+
+        Also fetches video metadata via ``get_video_info``. Skips loading
+        if data has already been loaded.
+        """
 
         if self.array is not None:
             return
@@ -64,14 +76,15 @@ class Video(MediaURI):
         self.get_video_info()
 
     def get_video_info(self):
-        """
-        Get metadata of the video.
+        """Get video metadata (duration, resolution, codec, etc.).
+
+        Results are cached in ``self.info`` after the first call.
 
         Returns
         -------
         dict
-            Metadata of the video.
-
+            A dictionary containing video metadata such as ``duration``,
+            ``resolution``, ``codec``, ``bit_rate``, and ``frame_rate``.
         """
 
         if self.info is None:
@@ -84,16 +97,15 @@ class Video(MediaURI):
         return self.info
 
     def convert_to_frames_and_audio(self) -> List[MessageBlock]:
-        """
-        Convert the video to frames and audio.
-        This method uses ffmpeg to convert the video to frames and audio,
-        and returns a list of MessageBlock objects.
+        """Extract individual frames and the audio track from the video.
+
+        Uses ffmpeg to decompose the video into a sequence of image frames
+        and an audio file, returned as MessageBlock objects.
 
         Returns
         -------
         List[MessageBlock]
-            A list of MessageBlock objects containing the frames and audio data.
-
+            Message blocks containing the extracted image frames and audio.
         """
 
         # Get the local file path for the URI:

@@ -12,9 +12,10 @@ from litemind.utils.whisper_transcribe_audio import (
 
 
 class AudioConverterWhisperLocal(BaseConverter):
-    """
-    Converter for Audio media type.
-    Converts Audio media to Text media.
+    """Converts Audio media to Text using a local Whisper model.
+
+    Produces a Text media containing audio metadata and the transcription.
+    Requires the Whisper library to be installed locally.
     """
 
     def rule(self) -> List[Tuple[Type[MediaBase], List[Type[MediaBase]]]]:

@@ -1,3 +1,7 @@
+"""
+Shared utilities for the litemind CLI commands.
+"""
+
 from typing import List, Optional, Tuple
 
 
@@ -6,19 +10,27 @@ def default_folder_scanning_parameters(
     excluded_files: Optional[List[str]],
 ) -> Tuple[List[str], List[str]]:
     """
-    Get default folder scanning parameters with fallback values.
+    Return folder scanning parameters, filling in sensible defaults.
+
+    When either argument is ``None`` the function supplies a built-in
+    default list.  Default extensions include ``.py``, ``.md``, ``.txt``,
+    ``.toml``, ``LICENSE``, ``.tests``, and ``.html``.  Default exclusions
+    cover ``litemind.egg-info``, ``dist``, and ``build`` directories.
 
     Parameters
     ----------
     allowed_extensions : Optional[List[str]]
-        List of allowed file extensions. If None, defaults are used.
+        File extensions to include in scanning. If ``None``, the built-in
+        default list is used.
     excluded_files : Optional[List[str]]
-        List of files to exclude. If None, defaults are used.
+        File or directory names to exclude. If ``None``, the built-in
+        default list is used.
 
     Returns
     -------
     Tuple[List[str], List[str]]
-        A tuple of (allowed_extensions, excluded_files) with defaults applied.
+        A ``(allowed_extensions, excluded_files)`` tuple with defaults
+        applied where the caller passed ``None``.
     """
     # Set default values for allowed_extensions and excluded_files:
     if allowed_extensions is None:

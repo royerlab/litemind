@@ -5,11 +5,11 @@ from litemind.agent.tools.callbacks.base_tool_callbacks import BaseToolCallbacks
 
 
 class ToolSet:
-    """
-    A set of tools that can be used by an agent.
-    This class allows you to manage a collection of tools, add new tools, and interact with them.
-    It provides methods to add function tools, agent tools, built-in tools, and manage tool callbacks.
-    It also provides methods to check for the presence of tools, retrieve tools by name, and list all tools.
+    """A managed collection of tools available to an Agent.
+
+    Provides methods to add, remove, and query tools of various types
+    (function tools, agent tools, built-in tools) and to manage tool
+    callbacks across all contained tools.
     """
 
     def __init__(self, tools: Optional[List[BaseTool]] = None):
