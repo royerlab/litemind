@@ -234,7 +234,7 @@ class TestMultimodalRelevantInformations(MediaResources):
         db = vector_db_api(location=_get_temp_folder())
 
         # Get document URIs
-        pdf_doc_uri = self.get_local_test_document_uri("sample.pdf")
+        pdf_doc_uri = self.get_local_test_document_uri("job_ad.pdf")
 
         infos = [
             Information(

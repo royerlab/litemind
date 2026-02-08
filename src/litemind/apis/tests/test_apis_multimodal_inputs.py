@@ -32,7 +32,7 @@ class TestBaseApiImplementationsMultimodalInputs(MediaResources):
 
         print("\n" + default_model_name)
 
-        image_url = "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Einstein_1921_by_F_Schmutzer_-_restoration.jpg/456px-Einstein_1921_by_F_Schmutzer_-_restoration.jpg"
+        image_url = self.get_local_test_image_uri("cat.jpg")
         print(image_url)
 
         messages = []
@@ -63,11 +63,11 @@ class TestBaseApiImplementationsMultimodalInputs(MediaResources):
 
         # Check response:
         assert (
-            "sepia" in response
-            or "chalkboard" in response
-            or "Einstein" in response
-            or "black-and-white" in response
-            or "photograph" in response
+            "cat" in response
+            or "feline" in response
+            or "kitten" in response
+            or "animal" in response
+            or "pet" in response
         )
 
     def test_text_generation_with_png_image_path(self, api_class):

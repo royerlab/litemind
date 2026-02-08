@@ -191,8 +191,7 @@ class TestMessageConverterPerType:
         assert isinstance(pdf_text, str)
         assert len(pdf_text) > 0
 
-        # Check for typical content in your PDF
-        # Adjust these based on your sample.pdf content
+        # Check for typical content from intracktive_preprint.pdf
         assert "cell" in pdf_text
         assert "tracking" in pdf_text
         assert "intracktive" in pdf_text

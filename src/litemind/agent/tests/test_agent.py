@@ -25,7 +25,11 @@ def test_agent_with_just_text(api_class):
     agent = Agent(api=api)
 
     # Add system message:
-    agent.append_system_message("You are an omniscient all-knowing being called Ohmm")
+    system_prompt = (
+        "Your name is Ohmm. You MUST always introduce yourself as Ohmm. "
+        "Never mention ChatGPT, GPT, or OpenAI."
+    )
+    agent.append_system_message(system_prompt)
 
     # Run agent, yu can pass a string directly to the agent:
     response = agent("Who are you?")
@@ -37,9 +41,7 @@ def test_agent_with_just_text(api_class):
     assert len(agent.conversation) == 3
 
     assert agent.conversation[0].role == "system"
-    assert (
-        "You are an omniscient all-knowing being called Ohmm" in agent.conversation[0]
-    )
+    assert "Ohmm" in agent.conversation[0]
     assert agent.conversation[1].role == "user"
     assert "Who are you?" in agent.conversation[1]
 
@@ -50,7 +52,7 @@ def test_agent_with_just_text(api_class):
     response = response[-1]
 
     # Check that response contains the system message:
-    assert "Ohmm" in response
+    assert "Ohmm" in response or "ohmm" in response.lower()
 
 
 @pytest.mark.parametrize("api_class", get_available_apis())

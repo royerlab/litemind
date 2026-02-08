@@ -441,30 +441,19 @@ class OpenAIApi(DefaultApi):
 
             elif block.has_type(Audio):
                 if is_input:
-                    # Use existing get_raw_data method
+                    # OpenAI Responses API doesn't support input_audio content type.
+                    # Transcribe audio first using Whisper, then send as text.
                     try:
-                        audio_data = media.get_raw_data()
-                        import base64
-
-                        audio_b64 = base64.b64encode(audio_data).decode("utf-8")
-
-                        # Determine format from file extension using existing method
-                        filename = media.get_filename()
-                        audio_format = (
-                            "mp3" if filename.lower().endswith(".mp3") else "wav"
-                        )
-
+                        audio_uri = media.uri
+                        transcription = self.transcribe_audio(audio_uri)
                         content.append(
                             {
-                                "type": "input_audio",
-                                "input_audio": {
-                                    "data": audio_b64,
-                                    "format": audio_format,
-                                },
+                                "type": "input_text",
+                                "text": f"[Audio transcription]: {transcription}",
                             }
                         )
                     except Exception:
-                        # Fallback to text description if audio processing fails
+                        # Fallback to text placeholder if transcription fails
                         content.append(
                             {
                                 "type": "input_text",

@@ -350,7 +350,7 @@ class MediaConverter:
                         except Exception as e:
                             aprint("Error during conversion:", e)
                             new_message.append_text(
-                                f"Could not convert {type(media)} to {type(allowed_media_types[0])} because of error {e}."
+                                f"Could not convert {type(media).__name__} to allowed types because of error {e}."
                             )
                             import traceback
 

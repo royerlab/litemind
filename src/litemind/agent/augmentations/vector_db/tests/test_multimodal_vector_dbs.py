@@ -29,10 +29,12 @@ def multimodal_hash_embeddings(
     content: Union[str, bytes, List[str], List[bytes]], dim: int = 128
 ) -> List[List[float]]:
     """
-    A simple embedding function that works with different data types:
-    - For strings: hash the string
-    - For bytes: hash the bytes
-    - For URIs: load the content and hash it
+    A simple embedding function that produces related embeddings for related
+    content using character trigram feature hashing.
+
+    Unlike cryptographic hashing (SHA-256), this approach gives strings that
+    share substrings similar embeddings, which is essential for similarity
+    search to work meaningfully in tests.
 
     Returns a list of embeddings, each with dimension 'dim'
     """
@@ -41,34 +43,47 @@ def multimodal_hash_embeddings(
 
     embeddings = []
     for item in content:
-        if isinstance(item, str):
-            if item.startswith("file://"):
-                # Handle file URI by reading the file and hashing its content
-                file_path = item[7:]
-                try:
-                    with open(file_path, "rb") as f:
-                        data = f.read()
-                    hash_obj = hashlib.sha256(data)
-                except:
-                    # If file can't be opened, hash the URI string
-                    hash_obj = hashlib.sha256(item.encode())
-            else:
-                # Regular string
-                hash_obj = hashlib.sha256(item.encode())
-        else:
-            # For bytes or other binary data
-            hash_obj = hashlib.sha256(
-                item if isinstance(item, bytes) else str(item).encode()
-            )
+        # Extract content from Information objects so embeddings
+        # are based on actual data rather than object repr:
+        if hasattr(item, "media") and hasattr(item.media, "to_markdown"):
+            try:
+                item = item.media.to_markdown()
+            except Exception:
+                item = str(getattr(item, "content", item))
+        elif hasattr(item, "content"):
+            item = str(item.content)
 
-        # Generate a deterministic embedding from the hash
-        hash_digest = hash_obj.digest()
-        # Create a fixed-length embedding by cycling through the hash
-        embedding = []
-        for i in range(dim):
-            val = hash_digest[i % len(hash_digest)] / 255.0  # Normalize to [0, 1]
-            # Make it span [-1, 1] with some minor variations for better vector space
-            embedding.append((val * 2 - 1) * (0.8 + 0.2 * (i % 7) / 7))
+        # Convert to string for text-based embedding
+        if isinstance(item, bytes):
+            text = item.hex()
+        elif isinstance(item, str):
+            text = item
+        else:
+            text = str(item)
+
+        # Character trigram feature hashing:
+        # Related strings share trigrams and thus get similar embeddings.
+        embedding = [0.0] * dim
+        text_lower = text.lower()
+        for i in range(max(1, len(text_lower) - 2)):
+            trigram = text_lower[i : i + 3]
+            # Hash trigram to determine which bucket to increment
+            h = hashlib.sha256(trigram.encode()).digest()
+            bucket = h[0] % dim
+            embedding[bucket] += 1.0
+
+        # Normalize to unit vector
+        norm = sum(x * x for x in embedding) ** 0.5
+        if norm > 0:
+            embedding = [x / norm for x in embedding]
+        else:
+            # Fallback for empty strings: use full-string hash
+            h = hashlib.sha256(text.encode()).digest()
+            for i in range(dim):
+                embedding[i] = (h[i % len(h)] / 255.0) * 2 - 1
+            norm = sum(x * x for x in embedding) ** 0.5
+            if norm > 0:
+                embedding = [x / norm for x in embedding]
 
         embeddings.append(embedding)
 
@@ -160,7 +175,7 @@ class TestMultimodalVectorDB(MediaResources):
             Information(
                 Code(
                     "function factorial(n) {\n    return n <= 1 ? 1 : n * factorial(n-1);\n}",
-                    lang="python",
+                    lang="javascript",
                 ),
                 metadata={"language": "javascript", "index": 2},
             ),
