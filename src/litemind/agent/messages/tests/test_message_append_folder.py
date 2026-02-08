@@ -1,4 +1,5 @@
 import os
+import shutil
 import tempfile
 from pathlib import Path
 
@@ -10,7 +11,8 @@ from litemind.agent.messages.message import Message
 @pytest.fixture
 def test_folder():
     """Create a temporary folder structure for testing."""
-    with tempfile.TemporaryDirectory(delete=False) as tmp_dir:
+    tmp_dir = tempfile.mkdtemp()
+    try:
         # Create a folder structure for testing
         # Main folder
         folder = Path(tmp_dir) / "test_folder"
@@ -39,6 +41,8 @@ def test_folder():
         (hidden_subfolder / "hidden_file.txt").write_text("This is in a hidden folder")
 
         yield str(folder)  # Return the path as a string
+    finally:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
 
 
 def test_append_folder_basic(test_folder):
