@@ -64,8 +64,11 @@ class DefaultVectorDatabase(AugmentationDefault, BaseVectorDatabase):
             name = self.__class__.__name__
         self.name = name
 
-        # If no api is provided, use the default API:
-        if api is None:
+        # Set the embedding function:
+        self.embedding_function = embedding_function or self._default_embedding_function
+
+        # If no api is provided, use the default API (only needed for default embedding):
+        if api is None and embedding_function is None:
             try:
                 from litemind import CombinedApi
 
@@ -76,9 +79,6 @@ class DefaultVectorDatabase(AugmentationDefault, BaseVectorDatabase):
                     "Please provide an API."
                 )
         self.api = api
-
-        # Set the embedding function:
-        self.embedding_function = embedding_function or self._default_embedding_function
 
         # Call the embedding function to get the embedding length if not loaded from disk
         if embedding_length is None:

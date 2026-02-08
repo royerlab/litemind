@@ -69,13 +69,6 @@ class InMemoryVectorDatabase(DefaultVectorDatabase):
             api=api,
         )
 
-        if api is None:
-            from litemind import CombinedApi
-
-            self.api = CombinedApi()
-        else:
-            self.api = api
-
         # Store location for saving
         self.location = location
 

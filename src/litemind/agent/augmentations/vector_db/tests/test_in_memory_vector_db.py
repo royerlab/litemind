@@ -1,5 +1,7 @@
+import hashlib
 import shutil
 import tempfile
+from typing import List, Union
 
 import pytest
 
@@ -8,6 +10,46 @@ from litemind.agent.augmentations.vector_db.in_memory_vector_db import (
     InMemoryVectorDatabase,
 )
 from litemind.media.types.media_text import Text
+
+
+def _simple_hash_embeddings(
+    content: Union[str, bytes, List[str], List[bytes]], dim: int = 128
+) -> List[List[float]]:
+    """Hash-based embedding function for offline tests."""
+    if not isinstance(content, list):
+        content = [content]
+
+    embeddings = []
+    for item in content:
+        if hasattr(item, "content"):
+            text = str(item.content)
+        elif isinstance(item, bytes):
+            text = item.hex()
+        else:
+            text = str(item)
+
+        # Trigram feature hashing for meaningful similarity
+        embedding = [0.0] * dim
+        text_lower = text.lower()
+        for i in range(max(1, len(text_lower) - 2)):
+            trigram = text_lower[i : i + 3]
+            h = hashlib.sha256(trigram.encode()).digest()
+            bucket = h[0] % dim
+            embedding[bucket] += 1.0
+
+        norm = sum(x * x for x in embedding) ** 0.5
+        if norm > 0:
+            embedding = [x / norm for x in embedding]
+        else:
+            h = hashlib.sha256(text.encode()).digest()
+            for i in range(dim):
+                embedding[i] = (h[i % len(h)] / 255.0) * 2 - 1
+            norm = sum(x * x for x in embedding) ** 0.5
+            if norm > 0:
+                embedding = [x / norm for x in embedding]
+
+        embeddings.append(embedding)
+    return embeddings
 
 
 class TestInMemoryVectorDatabase:
@@ -29,7 +71,12 @@ class TestInMemoryVectorDatabase:
 
     def test_save_load(self, test_infos, db_dir):
         # Create a database and add informations
-        db1 = InMemoryVectorDatabase(name="TestDB", location=db_dir)
+        db1 = InMemoryVectorDatabase(
+            name="TestDB",
+            location=db_dir,
+            embedding_function=_simple_hash_embeddings,
+            embedding_length=128,
+        )
         db1.add_informations(test_infos)
 
         # Perform a search to verify it works
@@ -41,7 +88,12 @@ class TestInMemoryVectorDatabase:
         db1.save()
 
         # Create a new database instance pointing to the same location
-        db2 = InMemoryVectorDatabase(name="TestDB", location=db_dir)
+        db2 = InMemoryVectorDatabase(
+            name="TestDB",
+            location=db_dir,
+            embedding_function=_simple_hash_embeddings,
+            embedding_length=128,
+        )
 
         # Verify informations were loaded
         assert len(db2.informations) == len(test_infos)
@@ -69,6 +121,11 @@ class TestInMemoryVectorDatabase:
         db2.save()
 
         # Load again and verify the new document is there
-        db3 = InMemoryVectorDatabase(name="TestDB", location=db_dir)
+        db3 = InMemoryVectorDatabase(
+            name="TestDB",
+            location=db_dir,
+            embedding_function=_simple_hash_embeddings,
+            embedding_length=128,
+        )
         assert len(db3.informations) == len(test_infos) + 1
         assert "info4" in db3.informations

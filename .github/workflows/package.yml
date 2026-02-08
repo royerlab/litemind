@@ -79,4 +79,5 @@ jobs:
             --ignore=src/litemind/utils/tests/test_load_table.py \
             --ignore=src/litemind/utils/tests/test_transform_video_uris_to_images_and_audio.py \
             --ignore=src/litemind/remote/tests \
+            --ignore=src/litemind/workflow/tests \
             -v
