@@ -90,13 +90,15 @@ model_families:
       AudioTranscription: true
 
   audio-family:
+    # Note: audio-preview models only work with Chat Completions API,
+    # not the Responses API that this provider uses for text generation.
     features:
-      TextGeneration: true
       Audio: true
 
   realtime-family:
+    # Note: realtime models only work with the Realtime API,
+    # not the Responses API that this provider uses for text generation.
     features:
-      TextGeneration: true
       Audio: true
 
 models:
