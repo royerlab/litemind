@@ -9,7 +9,7 @@ This top-level package exposes the main user-facing classes and lazy
 availability checks for API backends and vector databases.
 """
 
-__version__ = "2026.2.8.2"
+__version__ = "2026.2.10"
 
 from arbol import aprint, asection
 
