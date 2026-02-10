@@ -1,7 +1,10 @@
 import traceback
-from typing import Any, List, Optional
+from typing import TYPE_CHECKING, Any, List, Optional
 
 from arbol import aprint
+
+if TYPE_CHECKING:
+    from openai import OpenAI
 
 deprecated_models = [
     # 2025 – latest wave
@@ -275,7 +278,9 @@ def model_key(model):
     score = 0
 
     # GPT-5 series (latest)
-    if "gpt-5.2" in model:
+    if "gpt-5.3" in model:
+        score += 165
+    elif "gpt-5.2" in model:
         score += 160
     elif "gpt-5.1" in model:
         score += 155

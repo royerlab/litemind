@@ -1,12 +1,12 @@
 # Google Gemini Model Registry
 # Curated model capabilities and metadata for Google Gemini API
-# Last updated: 2026-01-27
+# Last updated: 2026-02-10
 # Cross-referenced with live API response
 
 metadata:
   provider: GeminiApi
   registry_version: "2.0"
-  last_updated: "2026-01-27"
+  last_updated: "2026-02-10"
 
 model_families:
   gemini-3-family:
@@ -103,6 +103,8 @@ models:
     extends: gemini-3-family
     features:
       NativeImageGeneration: true
+    context_window: 65536
+    max_output_tokens: 32768
     notes: "Gemini 3 Pro with native multimodal image generation (uses generate_content, not generate_images)"
 
   models/gemini-3-flash-preview:
@@ -123,6 +125,8 @@ models:
 
   models/gemini-2.5-pro-preview-tts:
     extends: tts-family
+    context_window: 8192
+    max_output_tokens: 16384
     notes: "TTS preview model"
 
   # ===========================================
@@ -146,10 +150,14 @@ models:
     extends: gemini-2.5-flash-family
     features:
       NativeImageGeneration: true
+    context_window: 65536
+    max_output_tokens: 32768
     notes: "Gemini 2.5 Flash with native multimodal image generation (uses generate_content, not generate_images)"
 
   models/gemini-2.5-flash-preview-tts:
     extends: tts-family
+    context_window: 8192
+    max_output_tokens: 16384
     notes: "TTS preview model"
 
   # Gemini 2.5 Flash-Lite (Stable - cost optimized)
@@ -170,23 +178,29 @@ models:
   # Native Audio Models
   models/gemini-2.5-flash-native-audio-latest:
     extends: audio-family
+    context_window: 131072
+    max_output_tokens: 8192
     notes: "Native audio model for Live API - latest"
 
   models/gemini-2.5-flash-native-audio-preview-09-2025:
     extends: audio-family
+    context_window: 131072
+    max_output_tokens: 8192
     notes: "Native audio model for Live API from September 2025"
 
   models/gemini-2.5-flash-native-audio-preview-12-2025:
     extends: audio-family
+    context_window: 131072
+    max_output_tokens: 8192
     notes: "Native audio model for Live API with improved function calling"
 
   # ===========================================
-  # Gemini 2.0 Series (Still available)
+  # Gemini 2.0 Series (Deprecated - shutdown March 31, 2026)
   # ===========================================
 
   models/gemini-2.0-flash:
     extends: gemini-2.0-flash-family
-    notes: "Gemini 2.0 Flash - predecessor to 2.5"
+    notes: "Gemini 2.0 Flash - deprecated, shutdown March 31, 2026"
 
   models/gemini-2.0-flash-001:
     extends: gemini-2.0-flash-family

@@ -109,10 +109,19 @@ class TestBaseApiImplementationsTextGeneration(MediaResources):
             Message(role="assistant", text="("),
         ]
 
-        # Get the completion:
-        response = api_instance.generate_text(
-            model_name=model_name, messages=messages, temperature=0.0
-        )
+        # Get the completion (some models like Claude Opus 4.6 don't support prefill):
+        from litemind.apis.exceptions import APIError
+
+        try:
+            response = api_instance.generate_text(
+                model_name=model_name, messages=messages, temperature=0.0
+            )
+        except APIError as e:
+            if "prefill" in str(e).lower():
+                pytest.skip(
+                    f"Model {model_name} does not support assistant message prefill."
+                )
+            raise
 
         # Print all messages:
         print("\n")

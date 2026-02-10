@@ -70,6 +70,7 @@ class AnthropicApi(DefaultApi):
         allow_media_conversions: bool = True,
         allow_media_conversions_with_models: bool = True,
         callback_manager: Optional[ApiCallbackManager] = None,
+        enable_long_context: bool = True,
         **anthropic_api_kwargs,
     ):
         """
@@ -87,6 +88,12 @@ class AnthropicApi(DefaultApi):
             If True, the API will allow media conversions using models that support the required features.
         callback_manager: ApiCallbackManager
             A callback manager to handle callbacks.
+        enable_long_context : bool
+            If True, includes '-1m' model variants in model listings for supported
+            models (Opus 4.6, Sonnet 4.5, Sonnet 4). Selecting a '-1m' variant
+            automatically sends the context-1m beta header for 1M token context.
+            Long context pricing applies to requests exceeding 200K tokens.
+            Default is True.
         **anthropic_api_kwargs
             Additional keyword arguments to pass to the Anthropic client.
         """
@@ -121,6 +128,9 @@ class AnthropicApi(DefaultApi):
         # Save base URL:
         self.base_url = base_url
 
+        # Save long context setting:
+        self.enable_long_context = enable_long_context
+
         # Save additional kwargs:
         self.anthropic_api_kwargs = anthropic_api_kwargs
 
@@ -143,7 +153,9 @@ class AnthropicApi(DefaultApi):
             )
 
             # Fetch the raw model list:
-            self._model_list = _get_anthropic_models_list(self.client)
+            self._model_list = _get_anthropic_models_list(
+                self.client, enable_long_context=self.enable_long_context
+            )
 
         except Exception as e:
             # Print stack trace:
@@ -164,9 +176,13 @@ class AnthropicApi(DefaultApi):
         else:
             client = self.client
 
-        # get model list without thinking models:
+        # get model list without thinking or -1m variant models:
         model_list = list(self._model_list)
-        model_list = [model for model in model_list if "thinking" not in model]
+        model_list = [
+            model
+            for model in model_list
+            if "thinking" not in model and "-1m" not in model
+        ]
 
         # Get one model name:
         model_name = model_list[0]
@@ -281,10 +297,29 @@ class AnthropicApi(DefaultApi):
         ):
             return True
 
+        # For registry lookup, try exact name first. If model not in registry,
+        # strip thinking suffix (handles combined -1m-thinking-* models
+        # like claude-opus-4-6-1m-thinking-high → claude-opus-4-6-1m)
+        has_thinking_suffix = any(
+            model_name.endswith(s)
+            for s in [
+                "-thinking-max",
+                "-thinking-high",
+                "-thinking-mid",
+                "-thinking-low",
+            ]
+        )
+        registry_name = model_name
+        if not self.model_registry.get_model_info(self.__class__, registry_name):
+            registry_name = self._strip_thinking_suffix(model_name)
+
         # Check feature support from the registry:
         for feature in features:
+            # Models with a thinking suffix always support Thinking
+            if feature == ModelFeatures.Thinking and has_thinking_suffix:
+                continue
             if not self.model_registry.supports_feature(
-                self.__class__, model_name, feature
+                self.__class__, registry_name, feature
             ):
                 # If the model does not support the feature, we return False:
                 return False
@@ -293,7 +328,12 @@ class AnthropicApi(DefaultApi):
 
     def _strip_thinking_suffix(self, model_name: str) -> str:
         """Strip thinking suffix from model name for registry lookup."""
-        for suffix in ["-thinking-high", "-thinking-mid", "-thinking-low"]:
+        for suffix in [
+            "-thinking-max",
+            "-thinking-high",
+            "-thinking-mid",
+            "-thinking-low",
+        ]:
             if model_name.endswith(suffix):
                 return model_name[: -len(suffix)]
         return model_name
@@ -323,31 +363,14 @@ class AnthropicApi(DefaultApi):
         # All modern models (3.5+, 3.7, 4, 4.5) support caching
         return True
 
-    def _has_web_search_support(self, model_name: str) -> bool:
-        """Check if model supports built-in web search via registry."""
-        base_model = self._strip_thinking_suffix(model_name)
-        return self.model_registry.supports_feature(
-            self.__class__, base_model, ModelFeatures.WebSearchTool
-        )
+    def _uses_adaptive_thinking(self, model_name: str) -> bool:
+        """Check if model uses adaptive thinking instead of budget_tokens.
 
-    def _has_mcp_support(self, model_name: str) -> bool:
-        """Check if model supports MCP connector via registry."""
-        base_model = self._strip_thinking_suffix(model_name)
-        return self.model_registry.supports_feature(
-            self.__class__, base_model, ModelFeatures.MCPTool
-        )
-
-    def _has_thinking_support(self, model_name: str) -> bool:
-        """Check if model supports extended thinking via registry."""
-        # Thinking variants always support thinking
-        if any(
-            model_name.endswith(s)
-            for s in ["-thinking-high", "-thinking-mid", "-thinking-low"]
-        ):
-            return True
-        return self.model_registry.supports_feature(
-            self.__class__, model_name, ModelFeatures.Thinking
-        )
+        Currently only Claude Opus 4.6 supports adaptive thinking.
+        Older models require type: "enabled" with budget_tokens.
+        """
+        base = self._strip_thinking_suffix(model_name).lower()
+        return "claude-opus-4-6" in base
 
     # ------------------------------- #
     def max_num_input_tokens(self, model_name: Optional[str] = None) -> int:
@@ -355,11 +378,14 @@ class AnthropicApi(DefaultApi):
         Maximum context window (input tokens) for an Anthropic Claude model.
         Uses the model registry for accurate, curated values.
         Falls back to 200K for unknown models.
+
+        Models with the '-1m' suffix return 1M tokens (from registry).
+        Base models without '-1m' return 200K tokens (default).
         """
         if model_name is None:
             model_name = self.get_best_model()
 
-        # Strip thinking suffix for registry lookup
+        # Strip thinking suffix for registry lookup (keep -1m suffix)
         base_model = self._strip_thinking_suffix(model_name)
 
         # Try registry first (most accurate source)
@@ -545,34 +571,50 @@ class AnthropicApi(DefaultApi):
         if max_num_output_tokens is None:
             max_num_output_tokens = self.max_num_output_tokens(model_name)
 
-        # Handle thinking mode - strip suffix and configure thinking budget
+        # Handle thinking mode - strip suffix and configure thinking
+        # Opus 4.6 uses adaptive thinking + effort parameter (budget_tokens deprecated)
+        # Older models use enabled thinking + budget_tokens
         original_model_name = model_name
-        if model_name.endswith("-thinking-high"):
-            # High: Use half of available output tokens for thinking
-            base_model = model_name.replace("-thinking-high", "")
-            available_output = self.max_num_output_tokens(base_model)
-            budget_tokens = max(_THINKING_BUDGET_MIN, available_output // 2)
-            thinking = {"type": "enabled", "budget_tokens": budget_tokens}
-            model_name = base_model
+        thinking = NotGiven()
+        output_config = NotGiven()
+        thinking_level = None
+
+        # Detect thinking level from suffix:
+        for suffix, level in [
+            ("-thinking-max", "max"),
+            ("-thinking-high", "high"),
+            ("-thinking-mid", "mid"),
+            ("-thinking-low", "low"),
+        ]:
+            if model_name.endswith(suffix):
+                thinking_level = level
+                model_name = model_name[: -len(suffix)]
+                break
+
+        if thinking_level:
             temperature = 1.0
-        elif model_name.endswith("-thinking-mid"):
-            # Mid: Use third of available output tokens for thinking
-            base_model = model_name.replace("-thinking-mid", "")
-            available_output = self.max_num_output_tokens(base_model)
-            budget_tokens = max(_THINKING_BUDGET_MIN, available_output // 3)
-            thinking = {"type": "enabled", "budget_tokens": budget_tokens}
-            model_name = base_model
-            temperature = 1.0
-        elif model_name.endswith("-thinking-low"):
-            # Low: Use quarter of available output tokens for thinking
-            base_model = model_name.replace("-thinking-low", "")
-            available_output = self.max_num_output_tokens(base_model)
-            budget_tokens = max(_THINKING_BUDGET_MIN, available_output // 4)
-            thinking = {"type": "enabled", "budget_tokens": budget_tokens}
-            model_name = base_model
-            temperature = 1.0
-        else:
-            thinking = NotGiven()
+            if self._uses_adaptive_thinking(model_name):
+                # Opus 4.6+: adaptive thinking with effort parameter
+                thinking = {"type": "adaptive"}
+                effort_map = {
+                    "max": "max",
+                    "high": "high",
+                    "mid": "medium",
+                    "low": "low",
+                }
+                output_config = {"effort": effort_map[thinking_level]}
+            else:
+                # Older models: budget_tokens approach
+                budget_divisors = {"high": 2, "mid": 3, "low": 4}
+                if thinking_level == "max":
+                    # max effort not supported on older models, fall back to high
+                    thinking_level = "high"
+                available_output = self.max_num_output_tokens(model_name)
+                budget_tokens = max(
+                    _THINKING_BUDGET_MIN,
+                    available_output // budget_divisors[thinking_level],
+                )
+                thinking = {"type": "enabled", "budget_tokens": budget_tokens}
 
         # Format tools and MCP servers for Anthropic API
         anthropic_tools, mcp_servers, beta_headers = (
@@ -596,6 +638,18 @@ class AnthropicApi(DefaultApi):
             )
             existing_features = [f for f in existing_features if f]  # Remove empty
             existing_features.append("interleaved-thinking-2025-05-14")
+            beta_headers["anthropic-beta"] = ",".join(existing_features)
+
+        # Handle long context -1m suffix: strip suffix and add beta header
+        if model_name.endswith("-1m"):
+            model_name = model_name[:-3]  # Strip -1m suffix
+            existing_features = (
+                beta_headers.get("anthropic-beta", "").split(",")
+                if beta_headers
+                else []
+            )
+            existing_features = [f for f in existing_features if f]  # Remove empty
+            existing_features.append("context-1m-2025-08-07")
             beta_headers["anthropic-beta"] = ",".join(existing_features)
 
         # List of new messages part of the response:
@@ -625,6 +679,12 @@ class AnthropicApi(DefaultApi):
                     "extra_headers": beta_headers if beta_headers else NotGiven(),
                     **kwargs,
                 }
+
+                # Add output_config for adaptive thinking (Opus 4.6+).
+                # Uses extra_body for SDK compatibility (output_config is
+                # not a typed parameter in all SDK versions):
+                if output_config is not NotGiven():
+                    request_params["extra_body"] = {"output_config": output_config}
 
                 # Add tool_choice if specified and tools are present
                 if tool_choice is not None and anthropic_tools != NotGiven():

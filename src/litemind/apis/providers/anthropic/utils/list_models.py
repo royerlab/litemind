@@ -1,7 +1,15 @@
 from typing import List
 
+# Models that support 1M context via the context-1m beta header:
+_LONG_CONTEXT_PATTERNS = ["claude-opus-4-6", "claude-sonnet-4-5", "claude-sonnet-4-2"]
 
-def _get_anthropic_models_list(client, max_num_models: int = 100) -> List[str]:
+# Models that support -thinking-max (adaptive thinking with max effort):
+_MAX_THINKING_PATTERNS = ["claude-opus-4-6"]
+
+
+def _get_anthropic_models_list(
+    client, max_num_models: int = 100, enable_long_context: bool = True
+) -> List[str]:
     # List Anthropic models:
     from anthropic.types import ModelInfo
 
@@ -15,57 +23,87 @@ def _get_anthropic_models_list(client, max_num_models: int = 100) -> List[str]:
     if "claude-3-sonnet-20240229" in model_list:
         model_list.remove("claude-3-sonnet-20240229")
 
-    # IF claude 3.7 is available, then add reasoning variant:
-    if any("claude-3-7" in m for m in model_list):
-        # get the model with claude-3-7 in its name from the list:
-        claude_3_7_model = [m for m in model_list if "claude-3-7" in m][0]
+    # Add thinking variants for each model family:
+    _add_thinking_variants(model_list)
 
-        # Insert claude-3.7-thinking in place of claude-3.7, pushing the rest of the list down:
-        model_list.insert(
-            model_list.index(claude_3_7_model), claude_3_7_model + "-thinking-high"
-        )
-        model_list.insert(
-            model_list.index(claude_3_7_model), claude_3_7_model + "-thinking-mid"
-        )
-        model_list.insert(
-            model_list.index(claude_3_7_model), claude_3_7_model + "-thinking-low"
-        )
-
-    # If claude-opus-4 is available, then add reasoning variants:
-    if any("claude-opus-4" in m for m in model_list):
-        # get the model with claude-4 in its name from the list:
-        claude_opus_4_model = [m for m in model_list if "claude-opus-4" in m][0]
-
-        # Insert claude-opus-4-thinking in place of claude-4, pushing the rest of the list down:
-        model_list.insert(
-            model_list.index(claude_opus_4_model),
-            claude_opus_4_model + "-thinking-high",
-        )
-        model_list.insert(
-            model_list.index(claude_opus_4_model), claude_opus_4_model + "-thinking-mid"
-        )
-        model_list.insert(
-            model_list.index(claude_opus_4_model), claude_opus_4_model + "-thinking-low"
-        )
-
-    # If claude-sonnet-4 is available, then add reasoning variants:
-    if any("claude-sonnet-4" in m for m in model_list):
-        # get the model with claude-sonnet-4 in its name from the list:
-        claude_sonnet_4_model = [m for m in model_list if "claude-sonnet-4" in m][0]
-
-        # Insert claude-sonnet-4-thinking in place of claude-sonnet-4, pushing the rest of the list down:
-        model_list.insert(
-            model_list.index(claude_sonnet_4_model),
-            claude_sonnet_4_model + "-thinking-high",
-        )
-        model_list.insert(
-            model_list.index(claude_sonnet_4_model),
-            claude_sonnet_4_model + "-thinking-mid",
-        )
-        model_list.insert(
-            model_list.index(claude_sonnet_4_model),
-            claude_sonnet_4_model + "-thinking-low",
-        )
+    # Add -1m (long context) variants for models that support 1M context:
+    if enable_long_context:
+        _add_long_context_variants(model_list)
 
     # Return model list:
     return model_list
+
+
+def _add_thinking_variants(model_list: List[str]) -> None:
+    """Add thinking suffix variants for supported models.
+
+    All models get -thinking-low/mid/high.
+    Opus 4.6 also gets -thinking-max (exclusive max effort).
+    Variants are inserted AFTER the base model so that the base model
+    remains the default (first) choice when auto-selecting.
+    """
+    for pattern in [
+        "claude-opus-4-6",
+        "claude-opus-4-5",
+        "claude-sonnet-4-5",
+        "claude-3-7",
+    ]:
+        matches = [m for m in model_list if pattern in m]
+        if matches:
+            model = matches[0]
+            idx = model_list.index(model)
+            # Insert after base model: base, low, mid, high, [max]
+            model_list.insert(idx + 1, model + "-thinking-low")
+            model_list.insert(idx + 2, model + "-thinking-mid")
+            model_list.insert(idx + 3, model + "-thinking-high")
+
+            # Add -thinking-max for models that support it (Opus 4.6):
+            if any(p in model for p in _MAX_THINKING_PATTERNS):
+                high_idx = model_list.index(model + "-thinking-high")
+                model_list.insert(high_idx + 1, model + "-thinking-max")
+
+
+def _add_long_context_variants(model_list: List[str]) -> None:
+    """Add -1m suffix variants for models that support 1M context via beta header.
+
+    For each matching base model, adds (after all its thinking variants):
+    - base-1m (long context variant)
+    - base-1m-thinking-low/mid/high (only if base has thinking variants)
+    - base-1m-thinking-max (for Opus 4.6 only, if base has thinking variants)
+    """
+    # Collect insertion groups: (group_end_index, [variants_to_insert])
+    # Each group inserts a contiguous block at a unique position.
+    insertions = []
+
+    for model in list(model_list):
+        # Skip models that are already variants (thinking or -1m):
+        if "-thinking" in model or "-1m" in model:
+            continue
+
+        # Check if this model matches any long context pattern:
+        if any(pattern in model for pattern in _LONG_CONTEXT_PATTERNS):
+            base_index = model_list.index(model)
+            has_max = any(p in model for p in _MAX_THINKING_PATTERNS)
+            has_thinking = (model + "-thinking-high") in model_list
+
+            # Find the end of this model's group (base + thinking variants):
+            thinking_count = sum(
+                1 for m in model_list if m.startswith(model + "-thinking-")
+            )
+            group_end = base_index + thinking_count + 1
+
+            variants = [model + "-1m"]
+            # Only add -1m-thinking-* variants if base model has thinking variants:
+            if has_thinking:
+                variants.append(model + "-1m-thinking-low")
+                variants.append(model + "-1m-thinking-mid")
+                variants.append(model + "-1m-thinking-high")
+                if has_max:
+                    variants.append(model + "-1m-thinking-max")
+
+            insertions.append((group_end, variants))
+
+    # Insert from the end backward so earlier insertions don't shift later ones:
+    for insert_index, variants in reversed(insertions):
+        for i, variant in enumerate(variants):
+            model_list.insert(insert_index + i, variant)

@@ -1,12 +1,12 @@
 # OpenAI Model Registry
 # Curated model capabilities and metadata for OpenAI API
-# Last updated: 2026-01-27
+# Last updated: 2026-02-10
 # Cross-referenced with live API response
 
 metadata:
   provider: OpenAIApi
   registry_version: "2.0"
-  last_updated: "2026-01-27"
+  last_updated: "2026-02-10"
 
 model_families:
   gpt-5-family:
@@ -17,8 +17,8 @@ model_families:
       Tools: true
       MCPTool: true
       WebSearchTool: true
-    context_window: 1000000
-    max_output_tokens: 65536
+    context_window: 400000
+    max_output_tokens: 128000
 
   gpt-4.1-family:
     features:
@@ -130,6 +130,10 @@ models:
     extends: gpt-5-family
     notes: "GPT-5 professional variant"
 
+  gpt-5-codex-mini:
+    extends: gpt-5-family
+    notes: "GPT-5 codex cost-effective variant"
+
   gpt-5-search-api:
     extends: gpt-5-family
     notes: "GPT-5 search-optimized"
@@ -171,6 +175,11 @@ models:
   gpt-5.2-pro:
     extends: gpt-5-family
     notes: "GPT-5.2 professional variant"
+
+  # GPT-5.3 Series
+  gpt-5.3-codex:
+    extends: gpt-5-family
+    notes: "GPT-5.3 most capable agentic coding model (Feb 2026)"
 
   # ===========================================
   # GPT-4.1 Series
@@ -256,6 +265,18 @@ models:
   o3-high:
     extends: o-series-family
     notes: "O3 with high reasoning effort"
+
+  o3-pro-low:
+    extends: o-series-family
+    notes: "O3-pro with low reasoning effort (high-compute reasoning)"
+
+  o3-pro-medium:
+    extends: o-series-family
+    notes: "O3-pro with medium reasoning effort (high-compute reasoning)"
+
+  o3-pro-high:
+    extends: o-series-family
+    notes: "O3-pro with high reasoning effort (high-compute reasoning)"
 
   o3-mini-low:
     extends: o-series-family

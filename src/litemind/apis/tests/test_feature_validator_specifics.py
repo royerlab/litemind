@@ -81,15 +81,24 @@ def test_scan_anthropic_api_check_specifics(scanner):
 
     # Query supported features for specific models
     model_feature_map = {
-        "claude-opus-4-20250514": [
+        "claude-opus-4-6": [
             ModelFeatures.WebSearchTool,
             ModelFeatures.MCPTool,
             ModelFeatures.TextGeneration,
             ModelFeatures.StructuredTextGeneration,
             ModelFeatures.Image,
+            ModelFeatures.Document,
+            ModelFeatures.Tools,
+            (ModelFeatures.Thinking,),  # base model does NOT have thinking
+        ],
+        "claude-opus-4-6-thinking-high": [
+            ModelFeatures.TextGeneration,
+            ModelFeatures.Thinking,
+            ModelFeatures.StructuredTextGeneration,
+            ModelFeatures.Image,
             ModelFeatures.Tools,
         ],
-        "claude-3-5-sonnet-20240620": [
+        "claude-3-5-haiku-20241022": [
             ModelFeatures.TextGeneration,
             ModelFeatures.StructuredTextGeneration,
             ModelFeatures.Image,
@@ -122,16 +131,19 @@ def test_scan_gemini_api_check_specifics(scanner):
 
     # Query supported features for specific models
     model_feature_map = {
-        "models/gemini-1.5-pro": [
+        "models/gemini-2.5-pro": [
             ModelFeatures.TextGeneration,
             ModelFeatures.StructuredTextGeneration,
+            ModelFeatures.Thinking,
             ModelFeatures.Image,
             ModelFeatures.Tools,
         ],
-        "models/gemini-1.5-flash": [
+        "models/gemini-2.5-flash": [
             ModelFeatures.TextGeneration,
             ModelFeatures.StructuredTextGeneration,
+            ModelFeatures.Thinking,
             ModelFeatures.Image,
+            ModelFeatures.Tools,
         ],
     }
 
@@ -142,7 +154,7 @@ def _check_features(scanner, api: Type[BaseApi], model_feature_map):
     for model_name, expected_features in model_feature_map.items():
         # Check if the model is available
         if model_name not in api().list_models():
-            pytest.skip(f"Model {model_name} not available in OpenAI API.")
+            pytest.skip(f"Model {model_name} not available in {api.__name__}.")
 
         # Check for expected features:
         for feature in expected_features:
