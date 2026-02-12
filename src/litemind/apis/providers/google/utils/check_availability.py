@@ -1,3 +1,5 @@
+"""Utilities for checking Gemini API availability and credential validity."""
+
 from typing import TYPE_CHECKING
 
 from arbol import aprint

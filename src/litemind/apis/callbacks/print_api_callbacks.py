@@ -1,3 +1,12 @@
+"""Callback implementation that prints API events to stdout via Arbol.
+
+This module provides ``PrintApiCallbacks``, a concrete ``BaseApiCallbacks``
+subclass that prints each API event (text generation, embedding, media
+description, etc.) using the Arbol logging library. Individual event types
+can be enabled or disabled through constructor parameters, making it useful
+for debugging and development.
+"""
+
 from pprint import pformat
 from typing import Any, List, Sequence
 
@@ -36,6 +45,55 @@ class PrintApiCallbacks(BaseApiCallbacks):
         print_document_description: bool = False,
         **kwargs,
     ):
+        """Initialize the print callback with per-event enable flags.
+
+        Parameters
+        ----------
+        print_model_list : bool
+            Whether to print model list events.
+        print_best_model_selected : bool
+            Whether to print best model selection events.
+        print_text_generation : bool
+            Whether to print text generation events.
+        print_text_streaming : bool
+            Whether to print text streaming fragment events.
+        print_audio_transcription : bool
+            Whether to print audio transcription events.
+        print_document_conversion : bool
+            Whether to print document conversion events.
+        print_video_conversion : bool
+            Whether to print video conversion events.
+        print_audio_generation : bool
+            Whether to print audio generation events.
+        print_image_generation : bool
+            Whether to print image generation events.
+        print_text_embedding : bool
+            Whether to print text embedding events.
+        print_image_embedding : bool
+            Whether to print image embedding events.
+        print_audio_embedding : bool
+            Whether to print audio embedding events.
+        print_video_embedding : bool
+            Whether to print video embedding events.
+        print_document_embedding : bool
+            Whether to print document embedding events.
+        print_image_description : bool
+            Whether to print image description events.
+        print_audio_description : bool
+            Whether to print audio description events.
+        print_video_description : bool
+            Whether to print video description events.
+        print_document_description : bool
+            Whether to print document description events.
+        **kwargs
+            Unexpected keyword arguments. Raises ``ValueError`` if any are
+            provided.
+
+        Raises
+        ------
+        ValueError
+            If any unknown keyword arguments are passed.
+        """
         super().__init__()
         self.print_model_list = print_model_list
         self.print_best_model_selected = print_best_model_selected

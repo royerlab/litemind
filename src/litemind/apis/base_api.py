@@ -1,3 +1,12 @@
+"""Abstract base class defining the interface for all LLM provider APIs.
+
+This module declares ``BaseApi``, the top-level abstract class that every
+provider implementation (OpenAI, Anthropic, Gemini, Ollama) must inherit.
+It specifies the full contract for text generation, media embedding, audio
+transcription, image/audio/video/document description, and credential
+verification.
+"""
+
 from abc import ABC, abstractmethod
 from typing import List, Optional, Sequence, Type, Union
 

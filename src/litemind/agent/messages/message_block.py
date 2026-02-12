@@ -1,3 +1,11 @@
+"""Message block module providing the MessageBlock class.
+
+A MessageBlock pairs a single ``MediaBase`` instance (text, image, audio,
+video, etc.) with an arbitrary set of key-value attributes such as
+``source``, ``thinking``, or ``redacted``. Message blocks are the atomic
+building blocks of a ``Message``.
+"""
+
 import copy
 from typing import Any, Type
 

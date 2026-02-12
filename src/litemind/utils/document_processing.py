@@ -1,3 +1,9 @@
+"""Utilities for extracting text, images, and metadata from documents.
+
+Supports PDF, DOCX, and other document formats via PyMuPDF and Docling
+converters.
+"""
+
 import io
 import os
 from functools import lru_cache
@@ -380,6 +386,15 @@ def extract_text_and_image_from_document(
         A list of tuples, each containing:
             - The extracted text from the page (str).
             - A PIL Image object representing the page.
+
+    Raises
+    ------
+    ImportError
+        If pymupdf is not installed.
+    RuntimeError
+        If the document cannot be opened.
+    NotImplementedError
+        If the document is not a PDF.
     """
 
     if document_uri.endswith(".pdf"):

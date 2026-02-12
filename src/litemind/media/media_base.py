@@ -1,3 +1,10 @@
+"""Abstract base class defining the interface for all media types in litemind.
+
+Every concrete media type (Text, Image, Audio, etc.) must implement the
+``MediaBase`` interface. This module provides the root of the media type
+hierarchy.
+"""
+
 from abc import ABC, abstractmethod
 from typing import Any
 

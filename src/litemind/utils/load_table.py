@@ -1,3 +1,5 @@
+"""Utilities for loading tabular data files into pandas DataFrames."""
+
 from os import path
 
 from arbol import aprint

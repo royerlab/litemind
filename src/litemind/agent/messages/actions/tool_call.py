@@ -1,3 +1,10 @@
+"""Tool call module for representing LLM-initiated tool execution requests.
+
+A ``ToolCall`` captures the tool name, arguments, and a unique identifier
+that the framework uses to match the call to its corresponding ``ToolUse``
+result.
+"""
+
 from litemind.agent.messages.actions.action_base import ActionBase
 
 
@@ -27,11 +34,26 @@ class ToolCall(ActionBase):
         self.id = id
 
     def __str__(self):
+        """Return a concise string showing the tool call as a function invocation.
+
+        Returns
+        -------
+        str
+            A string in the form ``tool_name(arg1=val1, arg2=val2)``.
+        """
         args = self.arguments or {}
         arguments = ", ".join([f"{key}={value}" for key, value in args.items()])
         return f"{self.tool_name}({arguments})"
 
     def __repr__(self):
+        """Return a detailed string representation of the tool call.
+
+        Returns
+        -------
+        str
+            A string in the form
+            ``ToolCall(tool=..., arguments=..., id=...)``.
+        """
         args = self.arguments or {}
         arguments = ", ".join([f"{key}={value}" for key, value in args.items()])
         return f"ToolCall(tool={self.tool_name}, arguments={arguments}, id={self.id})"

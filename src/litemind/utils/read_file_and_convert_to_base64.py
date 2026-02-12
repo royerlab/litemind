@@ -1,9 +1,11 @@
+"""Utilities for reading files and converting them to base64-encoded strings."""
+
 import base64
 
 
 def read_file_and_convert_to_base64(file_path: str) -> str:
     """
-    Get the Base64 encoding of the file at the given path.
+    Read a file and return its contents as a base64-encoded string.
 
     Parameters
     ----------
@@ -13,8 +15,7 @@ def read_file_and_convert_to_base64(file_path: str) -> str:
     Returns
     -------
     str
-        The Base64 encoding of the file.
-
+        The base64-encoded contents of the file.
     """
     with open(file_path, "rb") as file:
         file_data = file.read()
@@ -25,19 +26,18 @@ def read_file_and_convert_to_base64(file_path: str) -> str:
 
 def base64_to_data_uri(base64_string: str, media_type: str) -> str:
     """
-    Convert a Base64 string to a data URI.
+    Convert a base64 string to a data URI.
 
     Parameters
     ----------
     base64_string : str
-        The Base64 string to convert.
+        The base64-encoded data.
     media_type : str
-        The media type of the data.
+        The MIME type of the data (e.g., ``"image/png"``).
 
     Returns
     -------
     str
-        The data URI.
-
+        The data URI in the format ``data:<media_type>;base64,<data>``.
     """
     return f"data:{media_type};base64,{base64_string}"

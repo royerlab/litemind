@@ -1,3 +1,12 @@
+"""Message module providing multimodal message containers for LLM conversations.
+
+A Message is a role-tagged container holding an ordered list of MessageBlock
+instances. Each block wraps a single media item (text, image, audio, video,
+document, table, code, JSON, or tool action). Messages support rich
+construction helpers for appending diverse media types and provide
+conversion, compression, and reporting utilities.
+"""
+
 import copy
 import fnmatch
 import os
@@ -44,6 +53,15 @@ from litemind.utils.uri_utils import is_uri
 
 
 class Message:
+    """A multimodal message in an LLM conversation.
+
+    A Message is associated with a role (``'system'``, ``'user'``,
+    ``'assistant'``, or ``'tool'``) and contains an ordered list of
+    ``MessageBlock`` instances. Helper methods allow easy construction
+    of messages from text, images, audio, video, documents, tables,
+    code, JSON, Pydantic objects, folders, archives, and tool actions.
+    """
+
     def __init__(
         self,
         text: Optional[str] = None,

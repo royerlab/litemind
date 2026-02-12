@@ -1,3 +1,5 @@
+"""URI and file path validation utilities following RFC 3986."""
+
 import os.path
 from urllib.parse import urlparse
 
@@ -5,6 +7,9 @@ from urllib.parse import urlparse
 def is_uri(uri_str: str) -> bool:
     """
     Check if the given string is a valid URI.
+
+    Validates the scheme, netloc, and path components according to
+    RFC 3986. Requires at least a scheme with either a netloc or a path.
 
     Parameters
     ----------
@@ -43,6 +48,9 @@ def is_valid_uri_scheme(scheme: str) -> bool:
     """
     Validate a URI scheme according to RFC 3986.
 
+    A valid scheme starts with a letter and contains only letters,
+    digits, ``+``, ``.``, or ``-``.
+
     Parameters
     ----------
     scheme : str
@@ -65,12 +73,15 @@ def is_valid_uri_scheme(scheme: str) -> bool:
 
 def is_valid_uri_netloc(netloc: str) -> bool:
     """
-    Validate a URI netloc according to RFC 3986.
+    Validate a URI network location component according to RFC 3986.
+
+    Checks for illegal characters, validates userinfo if present,
+    and ensures port numbers are numeric.
 
     Parameters
     ----------
     netloc : str
-        The URI netloc to validate.
+        The URI netloc (e.g., ``"user@host:port"``) to validate.
 
     Returns
     -------
@@ -106,6 +117,9 @@ def is_valid_uri_netloc(netloc: str) -> bool:
 def is_valid_uri_path(path_str: str) -> bool:
     """
     Validate a URI path component according to RFC 3986.
+
+    Checks for backslashes (not allowed) and ensures percent-encoded
+    sequences are properly formed (``%`` followed by two hex digits).
 
     Parameters
     ----------

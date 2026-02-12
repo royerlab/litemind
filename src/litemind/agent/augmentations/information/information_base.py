@@ -1,3 +1,12 @@
+"""Abstract base class for pieces of information used in augmentations.
+
+This module defines ``InformationBase``, the minimal contract that any
+information implementation must fulfil to work with the augmentation and
+vector database system. It declares abstract properties for content,
+metadata, and scoring, as well as methods for embedding computation and
+conversion to message blocks.
+"""
+
 from abc import ABC, abstractmethod
 from typing import Callable, List, Optional, Type
 

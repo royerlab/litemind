@@ -1,3 +1,5 @@
+"""Utilities for checking Anthropic API availability and credential validity."""
+
 from arbol import aprint
 
 # Cache the result of the check_anthropic_api_availability function
@@ -11,6 +13,23 @@ def clear_availability_cache():
 
 
 def check_anthropic_api_availability(client: "Anthropic", model_name: str):
+    """Check if the Anthropic API is available by sending a test message.
+
+    Results are cached after the first successful or failed check. Use
+    ``clear_availability_cache`` to reset the cache.
+
+    Parameters
+    ----------
+    client : Anthropic
+        An initialized Anthropic client instance.
+    model_name : str
+        The model name to use for the availability test.
+
+    Returns
+    -------
+    bool
+        True if the API responded successfully, False otherwise.
+    """
     # Use the global variable
     global _cached_check_anthropic_api_availability
 

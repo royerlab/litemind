@@ -1,3 +1,10 @@
+"""Media conversion pipeline for transforming messages with arbitrary media types.
+
+Provides the :class:`MediaConverter` class which maintains an ordered list of
+:class:`BaseConverter` instances and applies them to message blocks, converting
+unsupported media types into allowed ones.
+"""
+
 from typing import List, Optional, Sequence, Set, Type
 
 from arbol import aprint
@@ -20,6 +27,7 @@ class MediaConverter:
     """
 
     def __init__(self):
+        """Initialise the media converter pipeline with an empty converter list."""
         # List of media converters
         self.media_converters: List[BaseConverter] = []
 

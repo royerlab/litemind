@@ -1,3 +1,10 @@
+"""Generic file media type for litemind.
+
+Provides the ``File`` class which wraps arbitrary files (binaries, archives,
+and other types not covered by dedicated media classes) and converts them
+into LLM-friendly text descriptions including metadata and content previews.
+"""
+
 from typing import Optional
 
 from litemind.media.media_uri import MediaURI

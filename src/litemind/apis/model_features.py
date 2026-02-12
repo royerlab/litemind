@@ -1,3 +1,13 @@
+"""Enumeration of model capabilities for feature-based model selection.
+
+This module defines the ``ModelFeatures`` enum, which enumerates all
+capabilities that an LLM model may support (e.g., text generation, image
+input, audio transcription, tool calling). It also provides utility methods
+for normalising feature specifications from strings, mapping features to
+media types, and determining which features are needed for a given set of
+media types.
+"""
+
 from enum import Enum
 from typing import List, Optional, Set, Type, Union
 
@@ -208,7 +218,9 @@ class ModelFeatures(Enum):
         return features_needed
 
     def __str__(self):
+        """Return the feature name as a human-readable string."""
         return self.name
 
     def __repr__(self):
+        """Return the feature name as a developer-readable representation."""
         return self.name

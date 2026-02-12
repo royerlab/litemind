@@ -1,3 +1,13 @@
+"""
+Task abstraction for agent-driven workflows.
+
+Provides the :class:`Task` abstract base class, which represents a single
+unit of work executed by an :class:`~litemind.agent.agent.Agent`.  Tasks can
+declare dependencies on other tasks, forming a directed acyclic graph (DAG).
+Results and prompts are persisted to disk so that completed tasks are not
+re-executed on subsequent runs.
+"""
+
 import os
 from abc import ABC, abstractmethod
 from functools import lru_cache
@@ -315,6 +325,16 @@ class Task(ABC):
             return
 
     def _store_prompt(self, prompt: str):
+        """Persist the prompt markdown to disk.
+
+        Overwrites any existing prompt file and invalidates the
+        :meth:`_load_prompt` cache so subsequent reads return fresh data.
+
+        Parameters
+        ----------
+        prompt : str
+            The prompt markdown string to write.
+        """
         # Clear the cache since we're updating the prompt file
         self._load_prompt.cache_clear()
         # if the file exists already, then delete it:
@@ -327,6 +347,16 @@ class Task(ABC):
 
     @lru_cache(maxsize=None)
     def _load_prompt(self) -> str:
+        """Load the prompt markdown from disk.
+
+        Results are cached via :func:`functools.lru_cache` so that repeated
+        reads within the same run do not hit the filesystem.
+
+        Returns
+        -------
+        str
+            The prompt markdown string read from the prompt file.
+        """
         # load the prompt string from a file called <task_name>.prompt.md in the folder:
         with open(self._get_prompt_file_path(), "r") as f:
             prompt = f.read()
@@ -334,6 +364,15 @@ class Task(ABC):
         return prompt
 
     def _store_result(self, result: str):
+        """Persist the task result to disk.
+
+        Overwrites any existing result file.
+
+        Parameters
+        ----------
+        result : str
+            The result markdown string to write.
+        """
         # if file exists already then delete it:
         if os.path.exists(self._get_result_file_path()):
             os.remove(self._get_result_file_path())
@@ -343,6 +382,13 @@ class Task(ABC):
         aprint(f"Result stored in '{self._get_result_file_path()}'.")
 
     def _load_result(self) -> str:
+        """Load the task result from disk.
+
+        Returns
+        -------
+        str
+            The result markdown string read from the result file.
+        """
         # load the result string from a file called <task_name>.txt in the folder:
         with open(self._get_result_file_path(), "r") as f:
             result = f.read()
@@ -350,12 +396,33 @@ class Task(ABC):
         return result
 
     def _get_prompt_file_path(self) -> str:
+        """Return the filesystem path for this task's prompt file.
+
+        Returns
+        -------
+        str
+            Path of the form ``<folder>/<name>.prompt.md``.
+        """
         return os.path.join(self.folder, f"{self.name}.prompt.md")
 
     def _get_result_file_path(self) -> str:
+        """Return the filesystem path for this task's result file.
+
+        Returns
+        -------
+        str
+            Path of the form ``<folder>/<name>.md``.
+        """
         return os.path.join(self.folder, f"{self.name}.md")
 
     def _get_pdf_file_path(self) -> str:
+        """Return the filesystem path for this task's PDF output file.
+
+        Returns
+        -------
+        str
+            Path of the form ``<folder>/<name>.pdf``.
+        """
         return os.path.join(self.folder, f"{self.name}.pdf")
 
     def get_folder_name(self) -> str:
@@ -369,5 +436,13 @@ class Task(ABC):
         """
         return os.path.basename(self.folder)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
+        """Return a developer-friendly string representation of the task.
+
+        Returns
+        -------
+        str
+            A string showing the task name, assigned agent, and
+            dependency mapping.
+        """
         return f"Task(name={self.name}, agent={self.agent}, dependencies={self.dependencies})"

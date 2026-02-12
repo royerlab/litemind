@@ -1,4 +1,12 @@
-# server.py
+"""
+RPyC server for exposing litemind objects to remote clients.
+
+Provides the :class:`Server` class which registers arbitrary Python objects
+(typically :class:`~litemind.agent.agent.Agent` instances) and serves them
+over RPyC so that remote :class:`~litemind.remote.client.Client` instances
+can call them as if they were local.
+"""
+
 import threading
 from typing import Dict, Optional
 
@@ -29,12 +37,24 @@ class ObjectService(rpyc.Service):
         aprint(f"🏗️ ObjectService initialized with {len(exposed_objects)} objects")
 
     def on_connect(self, conn):
-        """Log when a client connects to the service."""
+        """Handle a new client connection.
+
+        Parameters
+        ----------
+        conn : rpyc.Connection
+            The RPyC connection object for the newly connected client.
+        """
         super().on_connect(conn)
         aprint("🔗 Client connected")
 
     def on_disconnect(self, conn):
-        """Log when a client disconnects from the service."""
+        """Handle a client disconnection.
+
+        Parameters
+        ----------
+        conn : rpyc.Connection
+            The RPyC connection object for the disconnecting client.
+        """
         super().on_disconnect(conn)
         aprint("🔌 Client disconnected")
 
@@ -220,17 +240,49 @@ class Server:
 
 
 class _ServerWrapper:
-    """
-    Server-side wrapper that materializes RPyC netref arguments before passing
-    them to the wrapped object. Uses obtain() to ensure complex objects are
-    properly copied by value.
+    """Server-side wrapper that materialises RPyC netref arguments before forwarding.
+
+    When a client sends arguments to a remote callable, RPyC transmits them
+    as proxy references (netrefs).  This wrapper intercepts ``__call__`` and
+    uses ``rpyc.utils.classic.obtain()`` to pull every argument by value so
+    that the wrapped object receives ordinary local Python objects.
+
+    Parameters
+    ----------
+    wrapped_obj : object
+        The local Python object to be wrapped.
     """
 
     def __init__(self, wrapped_obj):
+        """
+        Initialise the wrapper around a local object.
+
+        Parameters
+        ----------
+        wrapped_obj : object
+            The local Python object to wrap.
+        """
         self._wrapped_obj = wrapped_obj
 
     def __call__(self, *args, **kwargs):
-        """Materialize remote arguments and call the wrapped object."""
+        """Materialise remote arguments and call the wrapped object.
+
+        All positional and keyword arguments are pulled by value using
+        ``rpyc.utils.classic.obtain()`` before being forwarded to the
+        wrapped callable.
+
+        Parameters
+        ----------
+        *args : object
+            Positional arguments (potentially RPyC netrefs) to materialise.
+        **kwargs : object
+            Keyword arguments (potentially RPyC netrefs) to materialise.
+
+        Returns
+        -------
+        object
+            The return value of the wrapped callable.
+        """
         import rpyc.utils.classic
 
         # Materialize all arguments from netrefs to local copies
@@ -253,9 +305,31 @@ class _ServerWrapper:
         return self._wrapped_obj(*processed_args, **processed_kwargs)
 
     def __getattr__(self, name):
-        """Forward all other attribute access to the wrapped object."""
+        """Forward attribute access to the wrapped object.
+
+        Parameters
+        ----------
+        name : str
+            The attribute name to look up on the wrapped object.
+
+        Returns
+        -------
+        object
+            The attribute value from the wrapped object.
+        """
         return getattr(self._wrapped_obj, name)
 
     def __getitem__(self, key):
-        """Forward item access to the wrapped object (for dict-like objects)."""
+        """Forward item access to the wrapped object for dict-like interfaces.
+
+        Parameters
+        ----------
+        key : object
+            The key to look up on the wrapped object.
+
+        Returns
+        -------
+        object
+            The value associated with *key* on the wrapped object.
+        """
         return self._wrapped_obj[key]

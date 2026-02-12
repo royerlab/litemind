@@ -1,3 +1,10 @@
+"""Abstract base class defining the tool lifecycle callback interface.
+
+This module provides ``BaseToolCallbacks``, which declares no-op hooks
+for each stage of tool execution: start, activity, end, and error.
+Subclasses override only the events they need to handle.
+"""
+
 from abc import ABC
 from typing import Any
 

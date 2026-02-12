@@ -1,3 +1,5 @@
+"""Google Gemini API implementation for the litemind unified API layer."""
+
 import os
 from typing import List, Optional, Sequence, Set, Type, Union
 
@@ -44,7 +46,18 @@ _SUPPORTED_ASPECT_RATIOS = {
 
 
 def _snap_to_aspect_ratio(aspect_ratio: float) -> str:
-    """Snap to closest supported Gemini aspect ratio."""
+    """Snap a numeric aspect ratio to the closest supported Gemini ratio string.
+
+    Parameters
+    ----------
+    aspect_ratio : float
+        The desired aspect ratio (width / height).
+
+    Returns
+    -------
+    str
+        The closest supported aspect ratio string (e.g., "16:9", "1:1").
+    """
     closest = min(_SUPPORTED_ASPECT_RATIOS.keys(), key=lambda r: abs(r - aspect_ratio))
     return _SUPPORTED_ASPECT_RATIOS[closest]
 
@@ -132,6 +145,19 @@ class GeminiApi(DefaultApi):
             raise APINotAvailableError(f"Error initializing Gemini client: {e}")
 
     def check_availability_and_credentials(self, api_key: Optional[str] = None) -> bool:
+        """Check if the Gemini API is available and credentials are valid.
+
+        Parameters
+        ----------
+        api_key : Optional[str]
+            Unused for Gemini (client is already configured). Accepted for
+            interface compatibility.
+
+        Returns
+        -------
+        bool
+            True if the API is available and responding, False otherwise.
+        """
 
         # Check the availability of the API using the client:
         result = check_gemini_api_availability(self.client)
@@ -152,6 +178,27 @@ class GeminiApi(DefaultApi):
         ] = None,
         media_types: Optional[Set[Type[MediaBase]]] = None,
     ) -> List[str]:
+        """List available Gemini models, optionally filtered by features.
+
+        Parameters
+        ----------
+        features : Optional[Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]]
+            Required features to filter models by.
+        non_features : Optional[Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]]
+            Features that models must NOT have.
+        media_types : Optional[Set[Type[MediaBase]]]
+            Required media type support to filter by.
+
+        Returns
+        -------
+        List[str]
+            List of model name strings matching the criteria.
+
+        Raises
+        ------
+        APIError
+            If fetching the model list fails.
+        """
 
         try:
             # Normalise the features:
@@ -195,6 +242,24 @@ class GeminiApi(DefaultApi):
         media_types: Optional[Sequence[Type[MediaBase]]] = None,
         exclusion_filters: Optional[Union[str, List[str]]] = None,
     ) -> Optional[str]:
+        """Select the best available Gemini model matching the given criteria.
+
+        Parameters
+        ----------
+        features : Optional[Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]]
+            Required features the model must support.
+        non_features : Optional[Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]]
+            Features the model must NOT support.
+        media_types : Optional[Sequence[Type[MediaBase]]]
+            Required media type support.
+        exclusion_filters : Optional[Union[str, List[str]]]
+            Substring patterns to exclude from model names.
+
+        Returns
+        -------
+        Optional[str]
+            The name of the best matching model, or None if no match found.
+        """
 
         # Normalise the features:
         features = ModelFeatures.normalise(features)
@@ -229,6 +294,22 @@ class GeminiApi(DefaultApi):
         media_types: Optional[Sequence[Type[MediaBase]]] = None,
         model_name: Optional[str] = None,
     ) -> bool:
+        """Check whether a model supports all of the requested features.
+
+        Parameters
+        ----------
+        features : Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
+            Features to check for.
+        media_types : Optional[Sequence[Type[MediaBase]]]
+            Media types the model must support.
+        model_name : Optional[str]
+            Specific model to check. If None, uses ``get_best_model``.
+
+        Returns
+        -------
+        bool
+            True if the model supports all requested features.
+        """
 
         # Normalise the features:
         features = ModelFeatures.normalise(features)
@@ -257,7 +338,18 @@ class GeminiApi(DefaultApi):
         return True
 
     def _has_thinking_support(self, model_name: str) -> bool:
-        """Check if model supports thinking via registry."""
+        """Check if a model supports native thinking via the model registry.
+
+        Parameters
+        ----------
+        model_name : str
+            The model name to check.
+
+        Returns
+        -------
+        bool
+            True if the model supports the Thinking feature.
+        """
         return self.model_registry.supports_feature(
             self.__class__, model_name, ModelFeatures.Thinking
         )
@@ -305,6 +397,21 @@ class GeminiApi(DefaultApi):
             )
 
     def max_num_input_tokens(self, model_name: Optional[str] = None) -> int:
+        """Return the maximum context window (input tokens) for a Gemini model.
+
+        Uses the model registry for accurate, curated values. Falls back to
+        1M tokens for unknown models.
+
+        Parameters
+        ----------
+        model_name : Optional[str]
+            The model to query. If None, uses ``get_best_model``.
+
+        Returns
+        -------
+        int
+            Maximum number of input tokens the model accepts.
+        """
         if model_name is None:
             model_name = self.get_best_model()
         model_info = self.model_registry.get_model_info(self.__class__, model_name)
@@ -313,6 +420,21 @@ class GeminiApi(DefaultApi):
         return _DEFAULT_CONTEXT_WINDOW
 
     def max_num_output_tokens(self, model_name: Optional[str] = None) -> int:
+        """Return the maximum output tokens a Gemini model may generate.
+
+        Uses the model registry for accurate, curated values. Falls back to
+        65K tokens for unknown models.
+
+        Parameters
+        ----------
+        model_name : Optional[str]
+            The model to query. If None, uses ``get_best_model``.
+
+        Returns
+        -------
+        int
+            Maximum number of output tokens the model can produce.
+        """
         if model_name is None:
             model_name = self.get_best_model()
         model_info = self.model_registry.get_model_info(self.__class__, model_name)
@@ -331,6 +453,40 @@ class GeminiApi(DefaultApi):
         response_format: Optional[BaseModel] = None,
         **kwargs,
     ) -> List[Message]:
+        """Generate text using the Gemini API with tool and thinking support.
+
+        Converts litemind messages to Gemini format, handles native thinking
+        configuration, streaming, structured output, and iterative tool-use loops.
+
+        Parameters
+        ----------
+        messages : List[Message]
+            Conversation messages including system, user, and assistant messages.
+        model_name : Optional[str]
+            Model to use. If None, auto-selects based on message content.
+        temperature : float
+            Sampling temperature (0.0 to 1.0).
+        max_num_output_tokens : Optional[int]
+            Maximum tokens in the response. If None, uses the model default.
+        toolset : Optional[ToolSet]
+            Tools available for the model to call.
+        use_tools : bool
+            Whether to execute tool calls returned by the model.
+        response_format : Optional[BaseModel]
+            Pydantic model for structured JSON output.
+        **kwargs
+            Additional keyword arguments passed to the generation config.
+
+        Returns
+        -------
+        List[Message]
+            New messages generated during this call (responses and tool results).
+
+        Raises
+        ------
+        APIError
+            If the Gemini API call fails.
+        """
 
         from google.genai import types
 
@@ -491,6 +647,37 @@ class GeminiApi(DefaultApi):
         allow_resizing: bool = True,
         **kwargs,
     ) -> PilImage:
+        """Generate an image using the Gemini Imagen API.
+
+        Parameters
+        ----------
+        positive_prompt : str
+            Text description of the desired image.
+        negative_prompt : Optional[str]
+            Text description of what to avoid in the image.
+        model_name : str
+            Imagen model to use. If None, auto-selects one with ImageGeneration support.
+        image_width : int
+            Desired image width in pixels. Used to compute aspect ratio.
+        image_height : int
+            Desired image height in pixels. Used to compute aspect ratio.
+        preserve_aspect_ratio : bool
+            Whether to preserve the requested aspect ratio.
+        allow_resizing : bool
+            Whether to allow resizing the generated image.
+        **kwargs
+            Additional keyword arguments passed to callbacks.
+
+        Returns
+        -------
+        PIL.Image.Image
+            The generated PIL image.
+
+        Raises
+        ------
+        ValueError
+            If the generated image cannot be extracted from the response.
+        """
 
         if model_name is None:
             model_name = self.get_best_model(features=ModelFeatures.ImageGeneration)
@@ -562,6 +749,25 @@ class GeminiApi(DefaultApi):
         dimensions: int = 512,
         **kwargs,
     ) -> Sequence[Sequence[float]]:
+        """Generate text embeddings using the Gemini embedding API.
+
+        Parameters
+        ----------
+        texts : Sequence[str]
+            The texts to embed.
+        model_name : Optional[str]
+            Embedding model to use. If None, auto-selects one with
+            TextEmbeddings support.
+        dimensions : int
+            Desired dimensionality of the output embeddings.
+        **kwargs
+            Additional keyword arguments passed to callbacks.
+
+        Returns
+        -------
+        Sequence[Sequence[float]]
+            A list of embedding vectors, one per input text.
+        """
 
         # Get the best model if not provided:
         if model_name is None:

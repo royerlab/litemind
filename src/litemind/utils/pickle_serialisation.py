@@ -1,3 +1,5 @@
+"""Mixin class for pickle-based serialization with base64 encoding support."""
+
 import base64
 import pickle
 from typing import Type, TypeVar

@@ -1,3 +1,10 @@
+"""Action media type for embedding tool calls and results in messages.
+
+Provides the ``Action`` class which wraps an ``ActionBase`` instance
+(such as a tool call or tool result) as a media object within the
+litemind message system.
+"""
+
 from litemind.agent.messages.actions.action_base import ActionBase
 from litemind.media.media_default import MediaDefault
 

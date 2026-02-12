@@ -1,3 +1,10 @@
+"""Document-to-text converter for Python source files using minification.
+
+Provides :class:`DocumentConverterPythonMinify` which reads Python source
+files, minifies them with ``python_minifier``, and wraps the result in a
+Markdown fenced code block to reduce token usage.
+"""
+
 from typing import List, Tuple, Type
 
 from litemind.media.conversion.converters.base_converter import BaseConverter
@@ -97,10 +104,29 @@ class DocumentConverterPythonMinify(BaseConverter):
         }
 
     def rule(self) -> List[Tuple[Type[MediaBase], List[Type[MediaBase]]]]:
+        """Declare that this converter transforms Document to Text.
+
+        Returns
+        -------
+        List[Tuple[Type[MediaBase], List[Type[MediaBase]]]]
+            A single rule mapping Document to Text.
+        """
         return [(Document, [Text])]
 
     def can_convert(self, media: MediaBase) -> bool:
+        """Check whether the given media is a Python source Document.
 
+        Parameters
+        ----------
+        media : MediaBase
+            The media to check.
+
+        Returns
+        -------
+        bool
+            True if the media is a Document with a ``.py`` extension or
+            classified as code.
+        """
         # Check is the media is None:
         if media is None:
             return False
@@ -118,7 +144,24 @@ class DocumentConverterPythonMinify(BaseConverter):
         return True
 
     def convert(self, media: MediaBase) -> List[MediaBase]:
+        """Minify a Python source file and wrap it in a Markdown code block.
 
+        Parameters
+        ----------
+        media : MediaBase
+            The Document media containing a Python source file.
+
+        Returns
+        -------
+        List[MediaBase]
+            A single-element list containing a Text media with the minified
+            Python code wrapped in a Markdown fenced code block.
+
+        Raises
+        ------
+        ValueError
+            If *media* is not a Document or does not have a ``.py`` extension.
+        """
         # Check if the media is a Document:
         if not isinstance(media, Document):
             raise ValueError(f"Expected Document media, got {type(media)}")

@@ -1,3 +1,14 @@
+"""Default vector database base with multi-modal embedding support.
+
+This module provides ``DefaultVectorDatabase``, an abstract class that
+combines ``AugmentationDefault`` (query normalization) with
+``BaseVectorDatabase`` (storage interface) and adds a default multi-modal
+embedding function. The embedding function dispatches to the appropriate
+API method (text, image, audio, video, document, table) based on the
+media type of the informations being embedded, so that concrete
+implementations only need to handle storage and retrieval.
+"""
+
 import json
 from typing import Callable, List, Optional, Sequence
 

@@ -1,3 +1,5 @@
+"""Resolve file URIs, URLs, data URIs, and base64 strings to local file paths."""
+
 import base64
 import binascii
 import mimetypes

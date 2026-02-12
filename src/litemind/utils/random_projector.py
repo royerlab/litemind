@@ -1,3 +1,5 @@
+"""Deterministic random projection for dimensionality reduction of embeddings."""
+
 from typing import List, Sequence, Union
 
 import numpy as np

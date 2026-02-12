@@ -1,3 +1,10 @@
+"""Utilities for inspecting Python functions and extracting metadata.
+
+Provides helper functions to retrieve a function's docstring and signature,
+used primarily by ``FunctionTool`` to auto-generate tool descriptions and
+argument schemas from wrapped callables.
+"""
+
 import inspect
 
 

@@ -1,3 +1,10 @@
+"""Multi-dimensional (nD) image media type for litemind.
+
+Provides the ``NdImage`` class which wraps multi-dimensional image data
+(numpy arrays, TIFF stacks, etc.) and generates 2-D maximum intensity
+projections for LLM consumption.
+"""
+
 from typing import List, Optional, Union
 
 from litemind.media.media_uri import MediaURI

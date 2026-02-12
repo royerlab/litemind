@@ -1,3 +1,10 @@
+"""Plain text media type for litemind.
+
+Provides the ``Text`` class which wraps a simple string as a media object,
+serving as the most fundamental media type and the common target for most
+media converters.
+"""
+
 from litemind.media.media_default import MediaDefault
 
 

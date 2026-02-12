@@ -1,3 +1,9 @@
+"""Utility for formatting litemind tools into Ollama's tool schema.
+
+Converts a litemind ``ToolSet`` into the JSON-based tool definition
+format expected by the Ollama chat API for function-calling support.
+"""
+
 from typing import Dict, List
 
 from litemind.agent.tools.toolset import ToolSet

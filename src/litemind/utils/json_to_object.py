@@ -1,3 +1,5 @@
+"""Utility for parsing JSON strings into Pydantic objects and appending them to messages."""
+
 from typing import Optional, Union
 
 from pydantic import BaseModel

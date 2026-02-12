@@ -76,40 +76,129 @@ class MediaResources:
 
     @staticmethod
     def get_local_test_image_uri(image_name: str) -> str:
-        """Return a ``file://`` URI for a test image."""
+        """Return a ``file://`` URI for a test image.
+
+        Parameters
+        ----------
+        image_name : str
+            Filename of the image inside the ``images/`` sub-directory.
+
+        Returns
+        -------
+        str
+            A ``file://`` URI pointing at the image resource.
+        """
         return MediaResources.get_local_test_file_uri("images", image_name)
 
     @staticmethod
     def get_local_test_ndimage_uri(image_name: str) -> str:
-        """Return a ``file://`` URI for a test n-dimensional image."""
+        """Return a ``file://`` URI for a test n-dimensional image.
+
+        Parameters
+        ----------
+        image_name : str
+            Filename of the n-dimensional image inside the ``ndimages/``
+            sub-directory.
+
+        Returns
+        -------
+        str
+            A ``file://`` URI pointing at the n-dimensional image resource.
+        """
         return MediaResources.get_local_test_file_uri("ndimages", image_name)
 
     @staticmethod
     def get_local_test_audio_uri(audio_name: str) -> str:
-        """Return a ``file://`` URI for a test audio file."""
+        """Return a ``file://`` URI for a test audio file.
+
+        Parameters
+        ----------
+        audio_name : str
+            Filename of the audio file inside the ``audio/`` sub-directory.
+
+        Returns
+        -------
+        str
+            A ``file://`` URI pointing at the audio resource.
+        """
         return MediaResources.get_local_test_file_uri("audio", audio_name)
 
     @staticmethod
     def get_local_test_video_uri(video_name: str) -> str:
-        """Return a ``file://`` URI for a test video file."""
+        """Return a ``file://`` URI for a test video file.
+
+        Parameters
+        ----------
+        video_name : str
+            Filename of the video file inside the ``videos/`` sub-directory.
+
+        Returns
+        -------
+        str
+            A ``file://`` URI pointing at the video resource.
+        """
         return MediaResources.get_local_test_file_uri("videos", video_name)
 
     @staticmethod
     def get_local_test_document_uri(doc_name: str) -> str:
-        """Return a ``file://`` URI for a test document."""
+        """Return a ``file://`` URI for a test document.
+
+        Parameters
+        ----------
+        doc_name : str
+            Filename of the document inside the ``documents/`` sub-directory.
+
+        Returns
+        -------
+        str
+            A ``file://`` URI pointing at the document resource.
+        """
         return MediaResources.get_local_test_file_uri("documents", doc_name)
 
     @staticmethod
     def get_local_test_table_uri(table_name: str) -> str:
-        """Return a ``file://`` URI for a test table file."""
+        """Return a ``file://`` URI for a test table file.
+
+        Parameters
+        ----------
+        table_name : str
+            Filename of the table inside the ``tables/`` sub-directory.
+
+        Returns
+        -------
+        str
+            A ``file://`` URI pointing at the table resource.
+        """
         return MediaResources.get_local_test_file_uri("tables", table_name)
 
     @staticmethod
     def get_local_test_archive_uri(archive_name: str) -> str:
-        """Return a ``file://`` URI for a test archive file."""
+        """Return a ``file://`` URI for a test archive file.
+
+        Parameters
+        ----------
+        archive_name : str
+            Filename of the archive inside the ``archives/`` sub-directory.
+
+        Returns
+        -------
+        str
+            A ``file://`` URI pointing at the archive resource.
+        """
         return MediaResources.get_local_test_file_uri("archives", archive_name)
 
     @staticmethod
     def get_local_test_other_uri(file_name: str) -> str:
-        """Return a ``file://`` URI for a miscellaneous test file."""
+        """Return a ``file://`` URI for a miscellaneous test file.
+
+        Parameters
+        ----------
+        file_name : str
+            Filename of the file inside the ``others/`` sub-directory.
+
+        Returns
+        -------
+        str
+            A ``file://`` URI pointing at the file resource.
+        """
         return MediaResources.get_local_test_file_uri("others", file_name)

@@ -1,3 +1,5 @@
+"""Anthropic API implementation for the litemind unified API layer."""
+
 import os
 from typing import List, Optional, Sequence, Type, Union
 
@@ -165,7 +167,19 @@ class AnthropicApi(DefaultApi):
             raise APINotAvailableError(f"Error initializing Anthropic client: {e}")
 
     def check_availability_and_credentials(self, api_key: Optional[str] = None) -> bool:
-        """Check if the API is available and credentials are valid."""
+        """Check if the Anthropic API is available and credentials are valid.
+
+        Parameters
+        ----------
+        api_key : Optional[str]
+            If provided, creates a new client with this key for the check.
+            Otherwise uses the existing client.
+
+        Returns
+        -------
+        bool
+            True if the API is available and responding, False otherwise.
+        """
         # Check if the API key is provided:
         if api_key is not None:
             from anthropic import Anthropic
@@ -205,6 +219,27 @@ class AnthropicApi(DefaultApi):
         ] = None,
         media_types: Optional[Sequence[Type[MediaBase]]] = None,
     ) -> List[str]:
+        """List available Anthropic models, optionally filtered by features.
+
+        Parameters
+        ----------
+        features : Optional[Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]]
+            Required features to filter models by.
+        non_features : Optional[Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]]
+            Features that models must NOT have.
+        media_types : Optional[Sequence[Type[MediaBase]]]
+            Required media type support to filter by.
+
+        Returns
+        -------
+        List[str]
+            List of model name strings matching the criteria.
+
+        Raises
+        ------
+        APIError
+            If fetching the model list fails.
+        """
 
         try:
             # Normalize the features:
@@ -245,6 +280,24 @@ class AnthropicApi(DefaultApi):
         media_types: Optional[Sequence[Type[MediaBase]]] = None,
         exclusion_filters: Optional[Union[str, List[str]]] = None,
     ) -> Optional[str]:
+        """Select the best available Anthropic model matching the given criteria.
+
+        Parameters
+        ----------
+        features : Optional[Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]]
+            Required features the model must support.
+        non_features : Optional[Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]]
+            Features the model must NOT support.
+        media_types : Optional[Sequence[Type[MediaBase]]]
+            Required media type support.
+        exclusion_filters : Optional[Union[str, List[str]]]
+            Substring patterns to exclude from model names.
+
+        Returns
+        -------
+        Optional[str]
+            The name of the best matching model, or None if no match found.
+        """
 
         # Normalise the features:
         features = ModelFeatures.normalise(features)
@@ -279,6 +332,22 @@ class AnthropicApi(DefaultApi):
         media_types: Optional[Sequence[Type[MediaBase]]] = None,
         model_name: Optional[str] = None,
     ) -> bool:
+        """Check whether a model supports all of the requested features.
+
+        Parameters
+        ----------
+        features : Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
+            Features to check for.
+        media_types : Optional[Sequence[Type[MediaBase]]]
+            Media types the model must support.
+        model_name : Optional[str]
+            Specific model to check. If None, uses ``get_best_model``.
+
+        Returns
+        -------
+        bool
+            True if the model supports all requested features.
+        """
 
         # Normalise the features:
         features = ModelFeatures.normalise(features)
@@ -327,7 +396,19 @@ class AnthropicApi(DefaultApi):
         return True
 
     def _strip_thinking_suffix(self, model_name: str) -> str:
-        """Strip thinking suffix from model name for registry lookup."""
+        """Strip thinking suffix from model name for registry lookup.
+
+        Parameters
+        ----------
+        model_name : str
+            Model name that may contain a thinking suffix.
+
+        Returns
+        -------
+        str
+            Model name with the thinking suffix removed, or the original
+            name if no suffix was found.
+        """
         for suffix in [
             "-thinking-max",
             "-thinking-high",
@@ -339,10 +420,21 @@ class AnthropicApi(DefaultApi):
         return model_name
 
     def _has_cache_support(self, model_name: str) -> bool:
-        """Check if model supports prompt caching.
+        """Check if a model supports prompt caching.
 
-        Supported: Claude 3.5+, 3.7+, 4+, 4.5+ (all variants)
-        Not supported: Claude 2.x, Claude 3 base (3-opus, 3-sonnet, 3-haiku without .5 or .7)
+        Supported: Claude 3.5+, 3.7+, 4+, 4.5+ (all variants).
+        Not supported: Claude 2.x, Claude 3 base (3-opus, 3-sonnet, 3-haiku
+        without .5 or .7).
+
+        Parameters
+        ----------
+        model_name : str
+            The model name to check.
+
+        Returns
+        -------
+        bool
+            True if the model supports prompt caching.
         """
         name = model_name.lower()
 
@@ -364,23 +456,41 @@ class AnthropicApi(DefaultApi):
         return True
 
     def _uses_adaptive_thinking(self, model_name: str) -> bool:
-        """Check if model uses adaptive thinking instead of budget_tokens.
+        """Check if a model uses adaptive thinking instead of budget_tokens.
 
         Currently only Claude Opus 4.6 supports adaptive thinking.
-        Older models require type: "enabled" with budget_tokens.
+        Older models require ``type: "enabled"`` with ``budget_tokens``.
+
+        Parameters
+        ----------
+        model_name : str
+            The model name to check (thinking suffix should already be stripped).
+
+        Returns
+        -------
+        bool
+            True if the model supports adaptive thinking.
         """
         base = self._strip_thinking_suffix(model_name).lower()
         return "claude-opus-4-6" in base
 
     # ------------------------------- #
     def max_num_input_tokens(self, model_name: Optional[str] = None) -> int:
-        """
-        Maximum context window (input tokens) for an Anthropic Claude model.
-        Uses the model registry for accurate, curated values.
-        Falls back to 200K for unknown models.
+        """Return the maximum context window (input tokens) for a Claude model.
 
-        Models with the '-1m' suffix return 1M tokens (from registry).
-        Base models without '-1m' return 200K tokens (default).
+        Uses the model registry for accurate, curated values. Falls back to
+        200K for unknown models. Models with the ``-1m`` suffix return 1M
+        tokens (from registry).
+
+        Parameters
+        ----------
+        model_name : Optional[str]
+            The model to query. If None, uses ``get_best_model``.
+
+        Returns
+        -------
+        int
+            Maximum number of input tokens the model accepts.
         """
         if model_name is None:
             model_name = self.get_best_model()
@@ -397,10 +507,20 @@ class AnthropicApi(DefaultApi):
         return _DEFAULT_CONTEXT_WINDOW
 
     def max_num_output_tokens(self, model_name: Optional[str] = None) -> int:
-        """
-        Maximum output tokens Claude may generate in one response.
-        Uses the model registry for accurate, curated values.
-        Falls back to 8K for unknown models.
+        """Return the maximum output tokens a Claude model may generate.
+
+        Uses the model registry for accurate, curated values. Falls back to
+        8K for unknown models.
+
+        Parameters
+        ----------
+        model_name : Optional[str]
+            The model to query. If None, uses ``get_best_model``.
+
+        Returns
+        -------
+        int
+            Maximum number of output tokens the model can produce.
         """
         if model_name is None:
             model_name = self.get_best_model()
@@ -417,13 +537,28 @@ class AnthropicApi(DefaultApi):
         return _DEFAULT_MAX_OUTPUT_TOKENS
 
     def _format_tools_and_mcp_for_anthropic(self, toolset: ToolSet) -> tuple:
-        """
-        Format tools and MCP servers for Anthropic API.
+        """Format tools and MCP servers for the Anthropic API.
+
+        Separates custom function tools, built-in web search tools, and MCP
+        server configurations into their respective Anthropic API formats.
+
+        Parameters
+        ----------
+        toolset : ToolSet
+            The toolset containing function tools, built-in tools, and MCP tools.
 
         Returns
         -------
         tuple
-            (anthropic_tools, mcp_servers, beta_headers)
+            A 3-tuple of ``(anthropic_tools, mcp_servers, beta_headers)`` where
+            ``anthropic_tools`` is a list of tool definitions (or ``NotGiven``),
+            ``mcp_servers`` is a list of MCP server configs, and
+            ``beta_headers`` is a dict of beta feature headers to send.
+
+        Raises
+        ------
+        ValueError
+            If an unsupported built-in tool type is encountered.
         """
         from anthropic import NotGiven
 
@@ -516,6 +651,44 @@ class AnthropicApi(DefaultApi):
         tool_choice: Optional[Union[str, dict]] = None,
         **kwargs,
     ) -> List[Message]:
+        """Generate text using the Anthropic API with tool and thinking support.
+
+        Converts litemind messages to Anthropic format, handles extended thinking
+        mode, MCP and web search built-in tools, streaming, and iterative
+        tool-use loops.
+
+        Parameters
+        ----------
+        messages : List[Message]
+            Conversation messages including system, user, and assistant messages.
+        model_name : Optional[str]
+            Model to use. If None, auto-selects based on message content.
+        temperature : float
+            Sampling temperature (0.0 to 1.0). Overridden to 1.0 for thinking mode.
+        max_num_output_tokens : Optional[int]
+            Maximum tokens in the response. If None, uses the model default.
+        toolset : Optional[ToolSet]
+            Tools available for the model to call.
+        use_tools : bool
+            Whether to execute tool calls returned by the model.
+        response_format : Optional[BaseModel]
+            Pydantic model for structured JSON output.
+        tool_choice : Optional[Union[str, dict]]
+            Tool selection strategy: "auto", "any", "none", a tool name, or
+            an Anthropic tool_choice dict.
+        **kwargs
+            Additional keyword arguments passed to the Anthropic API.
+
+        Returns
+        -------
+        List[Message]
+            New messages generated during this call (responses and tool results).
+
+        Raises
+        ------
+        APIError
+            If the Anthropic API call fails.
+        """
 
         # Local variables for extended features with defaults
         use_code_execution = False  # Could be enabled via toolset or kwargs in future

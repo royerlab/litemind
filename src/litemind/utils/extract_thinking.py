@@ -1,3 +1,5 @@
+"""Utilities for extracting thinking/reasoning content from XML-tagged text."""
+
 import re
 from typing import List, Optional, Tuple
 

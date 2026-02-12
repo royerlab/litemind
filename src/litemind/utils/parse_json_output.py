@@ -1,3 +1,5 @@
+"""Utilities for extracting and parsing JSON from text output."""
+
 from typing import Type, TypeVar
 
 

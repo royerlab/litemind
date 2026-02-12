@@ -1,3 +1,11 @@
+"""Abstract base class for augmentations in the litemind agentic framework.
+
+This module defines ``AugmentationBase``, the interface that all augmentation
+implementations must satisfy. Augmentations provide additional context to
+large language models by retrieving relevant pieces of information based on
+a query, enabling Retrieval-Augmented Generation (RAG) workflows.
+"""
+
 from abc import ABC, abstractmethod
 from typing import Iterator, List, Optional, Union
 
@@ -87,7 +95,21 @@ class AugmentationBase(ABC):
         pass
 
     def __repr__(self):
+        """Return a detailed string representation of the augmentation.
+
+        Returns
+        -------
+        str
+            A string of the form ``ClassName(name='augmentation_name')``.
+        """
         return f"{self.__class__.__name__}(name='{self.name}')"
 
     def __str__(self):
+        """Return the name of the augmentation.
+
+        Returns
+        -------
+        str
+            The augmentation name.
+        """
         return self.name

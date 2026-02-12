@@ -1,3 +1,11 @@
+"""Utility for processing Ollama chat responses into litemind messages.
+
+Converts an Ollama ``ChatResponse`` (or stream thereof) into a litemind
+``Message`` object, extracting text content, thinking blocks (delimited
+by ``<thinking>`` tags), tool calls, and optional structured output
+parsed from JSON.
+"""
+
 from typing import Iterator, Optional, Union
 
 from pydantic import BaseModel

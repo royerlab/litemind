@@ -1,3 +1,12 @@
+"""Default partial implementation of the augmentation interface.
+
+This module provides ``AugmentationDefault``, a convenience base class that
+sits between ``AugmentationBase`` and concrete augmentation implementations.
+It normalizes heterogeneous query types (strings, Pydantic models, media
+objects, and ``Information`` instances) into ``MediaBase`` objects and
+supplies a default iterator-based retrieval method.
+"""
+
 from typing import Iterator, Optional, Union
 
 from pydantic import BaseModel

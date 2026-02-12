@@ -1,3 +1,10 @@
+"""JSON media type for litemind.
+
+Provides the ``Json`` class which wraps structured JSON data (parsed from a
+string or supplied as a Python dictionary) as a media object. Supports
+conversion to Markdown code blocks and Text media for LLM consumption.
+"""
+
 from typing import Optional, Union
 
 from litemind.media.media_default import MediaDefault
@@ -98,6 +105,13 @@ class Json(MediaDefault):
         return Text(self.to_markdown_string())
 
     def __str__(self):
+        """Return the JSON data serialised as a compact JSON string.
+
+        Returns
+        -------
+        str
+            The JSON content as a string.
+        """
         import json as js
 
         # Dump json as a string:
@@ -106,12 +120,35 @@ class Json(MediaDefault):
         return json_str
 
     def __repr__(self):
+        """Return the JSON data serialised as a compact JSON string.
+
+        Equivalent to ``__str__``.
+
+        Returns
+        -------
+        str
+            The JSON content as a string.
+        """
         return str(self)
 
     def __len__(self) -> int:
+        """Return the length of the string representation of the JSON data.
+
+        Returns
+        -------
+        int
+            Number of characters in ``str(self.json)``.
+        """
         return len(str(self.json))
 
     def __hash__(self) -> int:
+        """Return a hash of the JSON data using sorted keys for consistency.
+
+        Returns
+        -------
+        int
+            Hash value computed from the deterministic JSON serialisation.
+        """
         import json as js
 
         # Use sorted keys for consistent hashing of dicts

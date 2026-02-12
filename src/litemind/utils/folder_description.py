@@ -1,3 +1,5 @@
+"""Utilities for generating human-readable folder descriptions and tree structures."""
+
 import fnmatch
 import os
 from datetime import datetime
@@ -73,12 +75,13 @@ def generate_tree_structure(
         The path to the folder to traverse.
     prefix : str
         The prefix to use for each line in the tree structure.
-    allowed_extensions : list of str
+    allowed_extensions : list of str, optional
         A list of allowed file extensions. If None, all files are included.
-    excluded_files : list of str
-        A list of file names to exclude from the tree structure.
-    include_hidden_files : bool
-        Whether to include hidden files (starting with a dot).
+    excluded_files : list of str, optional
+        A list of file name patterns to exclude from the tree structure.
+    include_hidden_files : bool, optional
+        Whether to include hidden files (starting with a dot). Default
+        is False.
     depth : int or None, optional
         The maximum depth to traverse. If None, there is no limit.
         If set to 0, only the top-level folder is shown.
@@ -157,7 +160,7 @@ def generate_tree_structure(
     return tree_str
 
 
-def read_file_content(file_path):
+def read_file_content(file_path: str) -> str:
     """
     Read and return the text content of a file.
 
@@ -175,7 +178,7 @@ def read_file_content(file_path):
         return f.read()
 
 
-def read_binary_file_info(file_path):
+def read_binary_file_info(file_path: str):
     """
     Read the first 100 bytes of a binary file.
 
@@ -209,10 +212,11 @@ def file_info_header(
         The path to the file.
     file_type_label : str
         A label for the type of file (e.g., ``"Text"``, ``"Binary"``).
-    date_and_times : bool
+    date_and_times : bool, optional
         Whether to include modification and creation dates in the header.
-    file_sizes : bool
-        Whether to include file size in the header.
+        Default is True.
+    file_sizes : bool, optional
+        Whether to include file size in the header. Default is True.
 
     Returns
     -------

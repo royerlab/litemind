@@ -1,3 +1,5 @@
+"""Audio transcription using OpenAI's local Whisper model."""
+
 from functools import lru_cache
 
 from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_path

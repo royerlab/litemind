@@ -1,3 +1,10 @@
+"""Utility for checking OpenAI API availability and credential validity.
+
+Provides a cached availability check that sends a minimal test request to
+the OpenAI Response API to verify that the API key is valid and the
+service is reachable.
+"""
+
 import os
 from typing import Optional
 

@@ -1,3 +1,10 @@
+"""Demo script for OpenAI deep-research agent with web search.
+
+Demonstrates how to configure an ``Agent`` with the OpenAI API, a
+deep-research model variant, and the built-in web search tool to perform
+a live information retrieval task (e.g., a weather report).
+"""
+
 from arbol import aprint, asection
 
 from litemind import OpenAIApi
@@ -6,8 +13,11 @@ from litemind.agent.tools.toolset import ToolSet
 
 
 def demo_deep_research_main():
-    """
-    Test deep research agent with OpenAI API.
+    """Run a deep-research agent demo using the OpenAI API.
+
+    Initialises an ``Agent`` backed by the ``o4-mini-deep-research-medium``
+    model with web search enabled, sends a simple weather query, and
+    prints the response.
     """
 
     # Initialize the OpenAI API:

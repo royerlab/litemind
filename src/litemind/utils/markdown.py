@@ -1,3 +1,6 @@
+"""Utilities for extracting content from markdown-formatted text."""
+
+
 def extract_outermost_markdown_block(text: str) -> str:
     """
     Extract content between the first ```markdown (or ```md) and the last ``` in the text.

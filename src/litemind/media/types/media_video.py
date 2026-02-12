@@ -1,3 +1,11 @@
+"""Video media type for litemind.
+
+Provides the ``Video`` class which wraps a video file referenced by URI.
+Supports loading video data as numpy arrays, extracting metadata (duration,
+resolution, codec), and decomposing videos into image frames and audio tracks
+via ffmpeg.
+"""
+
 from typing import List, Optional
 
 from litemind.agent.messages.message_block import MessageBlock

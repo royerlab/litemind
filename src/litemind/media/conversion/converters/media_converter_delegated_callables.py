@@ -1,3 +1,10 @@
+"""API-delegated media converter using LLM provider describe methods.
+
+Provides :class:`MediaConverterApi` which converts Image, Audio, Video,
+and Document media to Text descriptions by delegating to the underlying
+LLM provider API's ``describe_*`` methods.
+"""
+
 from typing import List, Tuple, Type
 
 from litemind.apis.base_api import BaseApi

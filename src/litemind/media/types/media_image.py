@@ -1,3 +1,10 @@
+"""Image media type for litemind.
+
+Provides the ``Image`` class which wraps a 2-D image referenced by URI.
+Images can be created from files, numpy arrays, or PIL Image objects and
+converted between formats (PNG, JPEG).
+"""
+
 from typing import Optional
 
 import numpy

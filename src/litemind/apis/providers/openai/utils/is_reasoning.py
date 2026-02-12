@@ -1,3 +1,10 @@
+"""Utilities for identifying OpenAI reasoning models and their parameter constraints.
+
+Provides helper functions to determine whether a given OpenAI model name
+corresponds to an o-series reasoning model (o1, o3, o4, o5) and whether
+the model supports the ``temperature`` parameter.
+"""
+
 import re
 
 

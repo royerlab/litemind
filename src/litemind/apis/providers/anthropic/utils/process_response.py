@@ -1,3 +1,5 @@
+"""Processing of Anthropic API responses into litemind Message objects."""
+
 from typing import Any, List, Optional, Union
 
 from anthropic.types import WebSearchResultBlock

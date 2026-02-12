@@ -1,3 +1,5 @@
+"""Conversion of litemind ToolSet to Anthropic tool parameter format."""
+
 from typing import List, Optional
 
 from litemind.agent.tools.toolset import ToolSet

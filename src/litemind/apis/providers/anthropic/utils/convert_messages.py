@@ -1,3 +1,5 @@
+"""Conversion of litemind Messages to Anthropic API message format."""
+
 from typing import List, Optional
 
 from pydantic import BaseModel

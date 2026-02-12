@@ -1,3 +1,10 @@
+"""Main agent module providing the Agent class for agentic AI interactions.
+
+The Agent orchestrates conversation state, tool execution, augmentation-based
+retrieval (RAG), and LLM API calls. It automatically selects a suitable model
+based on requested features and maintains a conversation history.
+"""
+
 from typing import List, Optional, Sequence, Union
 
 from arbol import aprint, asection
@@ -343,12 +350,44 @@ class Agent:
             aprint(str(augmentation_message))
 
     def __getitem__(self, item) -> Message:
+        """Retrieve a message from the conversation by index.
+
+        Parameters
+        ----------
+        item : int
+            The index of the message to retrieve.
+
+        Returns
+        -------
+        Message
+            The message at the specified index in the conversation.
+        """
         return self.conversation[item]
 
     def __len__(self):
+        """Return the number of messages in the conversation.
+
+        Returns
+        -------
+        int
+            The total number of messages (system and standard) in the
+            conversation.
+        """
         return len(self.conversation)
 
     def __iadd__(self, other: Message):
+        """Append a message to the agent's conversation using the ``+=`` operator.
+
+        Parameters
+        ----------
+        other : Message
+            The message to append.
+
+        Returns
+        -------
+        Agent
+            The agent itself, for chaining.
+        """
         self.conversation.append(other)
         return self
 
@@ -560,7 +599,21 @@ class Agent:
         return messages
 
     def __repr__(self):
+        """Return a concise string representation of the agent.
+
+        Returns
+        -------
+        str
+            A string in the form ``Name(model=..., api=...)``.
+        """
         return f"{self.name}(model={self.model}, api={self.api.__class__.__name__})"
 
     def __str__(self):
+        """Return the human-readable string representation of the agent.
+
+        Returns
+        -------
+        str
+            Same as ``__repr__``.
+        """
         return self.__repr__()

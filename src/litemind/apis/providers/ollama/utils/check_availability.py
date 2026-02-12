@@ -1,3 +1,9 @@
+"""Utility for checking Ollama server availability.
+
+Provides a cached availability check that queries the Ollama server's
+model list endpoint to verify that the server is running and reachable.
+"""
+
 from arbol import aprint
 
 # Cache the result of the check_ollama_api_availability function

@@ -1,3 +1,9 @@
+"""Abstract base class for media converters in the conversion pipeline.
+
+Defines the :class:`BaseConverter` interface that all concrete converters
+must implement, including ``rule()``, ``can_convert()``, and ``convert()``.
+"""
+
 from abc import ABC, abstractmethod
 from typing import List, Tuple, Type
 

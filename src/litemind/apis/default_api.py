@@ -1,3 +1,13 @@
+"""Standard implementation of BaseApi providing media description, embedding, and conversion.
+
+This module defines ``DefaultApi``, the intermediate base class that all
+concrete provider implementations (OpenAI, Anthropic, Gemini, Ollama) inherit
+from. It implements the ``describe_*`` methods (image, audio, video, document)
+by constructing ``Message`` objects with media content and delegating to
+``generate_text``. It also provides local models (whisper-local, fastembed)
+and automatic media conversion capabilities via ``MediaConverter``.
+"""
+
 import copy
 import json
 from functools import lru_cache
@@ -557,14 +567,54 @@ class DefaultApi(BaseApi):
         return allowed_media_types
 
     def max_num_input_tokens(self, model_name: Optional[str] = None) -> int:
+        """Get the maximum number of input tokens for local models.
+
+        Parameters
+        ----------
+        model_name : Optional[str]
+            The model to query (currently ignored).
+
+        Returns
+        -------
+        int
+            Default token limit of 1000 for local models.
+        """
         # TODO: we need to figure out what to do here:
         return 1000
 
     def max_num_output_tokens(self, model_name: Optional[str] = None) -> int:
+        """Get the maximum number of output tokens for local models.
+
+        Parameters
+        ----------
+        model_name : Optional[str]
+            The model to query (currently ignored).
+
+        Returns
+        -------
+        int
+            Default token limit of 1000 for local models.
+        """
         # TODO: we need to figure out what to do here:
         return 1000
 
     def count_tokens(self, text: str, model_name: Optional[str] = None) -> int:
+        """Estimate token count using a word-to-token heuristic.
+
+        Uses a ratio of 1 word to 1.33 tokens as a rough approximation.
+
+        Parameters
+        ----------
+        text : str
+            The text to count tokens in.
+        model_name : Optional[str]
+            The model whose tokenizer to use (currently ignored).
+
+        Returns
+        -------
+        int
+            Estimated number of tokens.
+        """
         # TODO: use list of messages as input instead so we can consider multimodal tokens in count.
 
         # Use the following conversion from word to token: 1 word to 1.33 tokens
@@ -582,7 +632,41 @@ class DefaultApi(BaseApi):
         response_format: Optional[BaseModel] = None,
         **kwargs,
     ) -> List[Message]:
+        """Validate inputs for text generation.
 
+        This base implementation only performs input validation. Concrete
+        provider subclasses must call ``super().generate_text(...)`` first
+        and then perform the actual model invocation.
+
+        Parameters
+        ----------
+        messages : List[Message]
+            The list of messages to send to the model.
+        model_name : Optional[str]
+            The model to use. If None, uses the best available model.
+        temperature : float
+            Sampling temperature (0.0 = deterministic). Must be between 0 and 2.
+        max_num_output_tokens : Optional[int]
+            Maximum tokens in the response. Must be a positive integer.
+        toolset : Optional[ToolSet]
+            The toolset available for function calling.
+        use_tools : bool
+            If True, executes tool calls automatically.
+        response_format : Optional[BaseModel]
+            Pydantic model for structured output parsing.
+        **kwargs
+            Additional provider-specific arguments.
+
+        Returns
+        -------
+        List[Message]
+            None; this base implementation returns implicitly after validation.
+
+        Raises
+        ------
+        ValueError
+            If any input parameters are invalid.
+        """
         if not isinstance(messages, list):
             raise ValueError("Messages must be a list of Message objects.")
         if not all(isinstance(m, Message) for m in messages):
@@ -640,6 +724,31 @@ class DefaultApi(BaseApi):
         return messages
 
     def _get_best_model_for_text_generation(self, messages, toolset, response_format):
+        """Select the best model for a text generation request.
+
+        Determines the required features based on the presence of tools,
+        structured response format, and media types in the messages, then
+        calls ``get_best_model`` with those requirements.
+
+        Parameters
+        ----------
+        messages : List[Message]
+            The messages to be sent, used to detect required media types.
+        toolset : Optional[ToolSet]
+            If provided, the ``Tools`` feature is required.
+        response_format : Optional[BaseModel]
+            If provided, the ``StructuredTextGeneration`` feature is required.
+
+        Returns
+        -------
+        str
+            The name of the best available model.
+
+        Raises
+        ------
+        FeatureNotAvailableError
+            If no model satisfies the required features.
+        """
         # We Require the minimum features for text generation:
         features = [ModelFeatures.TextGeneration]
         # If tools are provided, we also require tools:
@@ -763,7 +872,13 @@ class DefaultApi(BaseApi):
         model_name: Optional[str] = None,
         **kwargs,
     ) -> str:
+        """Generate audio. Not supported by the default API.
 
+        Raises
+        ------
+        NotImplementedError
+            Always, since DefaultApi does not support audio generation.
+        """
         raise NotImplementedError("Audio generation is not supported by this API.")
 
     def generate_image(
@@ -777,13 +892,25 @@ class DefaultApi(BaseApi):
         allow_resizing: bool = True,
         **kwargs,
     ) -> Image:
+        """Generate an image. Not supported by the default API.
 
+        Raises
+        ------
+        NotImplementedError
+            Always, since DefaultApi does not support image generation.
+        """
         raise NotImplementedError("Image generation is not supported by this API.")
 
     def generate_video(
         self, description: str, model_name: Optional[str] = None, **kwargs
     ) -> str:
+        """Generate a video. Not supported by the default API.
 
+        Raises
+        ------
+        NotImplementedError
+            Always, since DefaultApi does not support video generation.
+        """
         raise NotImplementedError("Video generation is not supported by this API.")
 
     def embed_texts(
@@ -793,7 +920,30 @@ class DefaultApi(BaseApi):
         dimensions: int = 512,
         **kwargs,
     ) -> Sequence[Sequence[float]]:
+        """Embed text using the fastembed library.
 
+        Parameters
+        ----------
+        texts : Sequence[str]
+            The text snippets to embed.
+        model_name : Optional[str]
+            The model to use. Must be "fastembed" or None.
+        dimensions : int
+            Target dimensionality for the embedding vectors.
+        **kwargs
+            Additional arguments forwarded to fastembed.
+
+        Returns
+        -------
+        Sequence[Sequence[float]]
+            Embedding vectors, one per input text.
+
+        Raises
+        ------
+        FeatureNotAvailableError
+            If fastembed is not installed or the model does not support
+            text embedding.
+        """
         # if no model is passed get a default model with text embedding support:
         if model_name is None:
             model_name = self.get_best_model(features=ModelFeatures.TextEmbeddings)
@@ -830,7 +980,20 @@ class DefaultApi(BaseApi):
     def _reduce_embeddings_dimension(
         self, embeddings: Sequence[Sequence[float]], reduced_dim: int
     ) -> Sequence[Sequence[float]]:
+        """Reduce embedding dimensionality using a deterministic random projection.
 
+        Parameters
+        ----------
+        embeddings : Sequence[Sequence[float]]
+            The embeddings to reduce.
+        reduced_dim : int
+            The target dimensionality.
+
+        Returns
+        -------
+        Sequence[Sequence[float]]
+            The reduced-dimensionality embeddings.
+        """
         # Create a DeterministicRandomProjector object:
         drp = DeterministicRandomProjector(
             original_dim=len(embeddings[0]), reduced_dim=reduced_dim
@@ -846,7 +1009,29 @@ class DefaultApi(BaseApi):
         dimensions: int = 512,
         **kwargs,
     ) -> Sequence[Sequence[float]]:
+        """Embed images by first describing them, then embedding the descriptions.
 
+        Parameters
+        ----------
+        image_uris : List[str]
+            List of image URIs or file paths.
+        model_name : Optional[str]
+            Embedding model to use. If None, selects the best available.
+        dimensions : int
+            Target dimensionality for the embedding vectors.
+        **kwargs
+            Additional arguments forwarded to ``describe_image``.
+
+        Returns
+        -------
+        Sequence[Sequence[float]]
+            Embedding vectors, one per input image.
+
+        Raises
+        ------
+        FeatureNotAvailableError
+            If no model supporting images or image conversion is available.
+        """
         # If no model is passed get a default model with image support:
         if model_name is None:
             model_name = self.get_best_model(features=ModelFeatures.ImageEmbeddings)
@@ -907,7 +1092,31 @@ class DefaultApi(BaseApi):
         dimensions: int = 512,
         **kwargs,
     ) -> Sequence[Sequence[float]]:
+        """Embed audio files by first describing or transcribing them, then embedding.
 
+        Parameters
+        ----------
+        audio_uris : List[str]
+            List of audio URIs or file paths.
+        model_name : Optional[str]
+            Embedding model to use. If None, selects the best available.
+        dimensions : int
+            Target dimensionality for the embedding vectors.
+        **kwargs
+            Additional arguments forwarded to ``describe_audio`` or
+            ``transcribe_audio``.
+
+        Returns
+        -------
+        Sequence[Sequence[float]]
+            Embedding vectors, one per input audio.
+
+        Raises
+        ------
+        FeatureNotAvailableError
+            If no model supporting audio description or transcription is
+            available.
+        """
         # If no model is passed get a default model with text embedding support:
         if model_name is None:
             model_name = self.get_best_model(features=[ModelFeatures.TextEmbeddings])
@@ -987,7 +1196,29 @@ class DefaultApi(BaseApi):
         dimensions: int = 512,
         **kwargs,
     ) -> Sequence[Sequence[float]]:
+        """Embed videos by first describing them, then embedding the descriptions.
 
+        Parameters
+        ----------
+        video_uris : List[str]
+            List of video URIs or file paths.
+        model_name : Optional[str]
+            Embedding model to use. If None, selects the best available.
+        dimensions : int
+            Target dimensionality for the embedding vectors.
+        **kwargs
+            Additional arguments forwarded to ``describe_video``.
+
+        Returns
+        -------
+        Sequence[Sequence[float]]
+            Embedding vectors, one per input video.
+
+        Raises
+        ------
+        FeatureNotAvailableError
+            If no model supporting video description is available.
+        """
         # If no model is passed get a default model with text embedding support:
         if model_name is None:
             model_name = self.get_best_model(features=[ModelFeatures.TextEmbeddings])
@@ -1048,7 +1279,29 @@ class DefaultApi(BaseApi):
         dimensions: int = 512,
         **kwargs,
     ) -> Sequence[Sequence[float]]:
+        """Embed documents by first describing them, then embedding the descriptions.
 
+        Parameters
+        ----------
+        document_uris : List[str]
+            List of document URIs or file paths.
+        model_name : Optional[str]
+            Embedding model to use. If None, selects the best available.
+        dimensions : int
+            Target dimensionality for the embedding vectors.
+        **kwargs
+            Additional arguments forwarded to ``describe_document``.
+
+        Returns
+        -------
+        Sequence[Sequence[float]]
+            Embedding vectors, one per input document.
+
+        Raises
+        ------
+        FeatureNotAvailableError
+            If no model supporting document description is available.
+        """
         # If no model is passed get a default model with text embedding support:
         if model_name is None:
             model_name = self.get_best_model(features=[ModelFeatures.TextEmbeddings])
@@ -1105,7 +1358,31 @@ class DefaultApi(BaseApi):
     def transcribe_audio(
         self, audio_uri: str, model_name: Optional[str] = None, **model_kwargs
     ) -> str:
+        """Transcribe audio using the local whisper model.
 
+        Parameters
+        ----------
+        audio_uri : str
+            Path, URL, or base64-encoded audio to transcribe.
+        model_name : Optional[str]
+            The model to use. If None, selects the best available
+            audio transcription model.
+        **model_kwargs
+            Additional arguments forwarded to the whisper transcription.
+
+        Returns
+        -------
+        str
+            The transcription text.
+
+        Raises
+        ------
+        FeatureNotAvailableError
+            If no audio transcription model is available or whisper is not
+            installed.
+        NotImplementedError
+            If the model name is not "whisper-local".
+        """
         # If model is not provided, get the best model:
         if model_name is None:
             model_name = self.get_best_model(
@@ -1154,7 +1431,40 @@ class DefaultApi(BaseApi):
         max_output_tokens: Optional[int] = None,
         number_of_tries: int = 4,
     ) -> str:
+        """Describe an image by sending it to a vision-capable model.
 
+        Constructs a message with the image and query, sends it to the
+        model, and retries on refusal or empty responses.
+
+        Parameters
+        ----------
+        image_uri : str
+            Path, URL, or base64-encoded image to describe.
+        system : str
+            System message to guide the description.
+        query : str
+            Query prompt to use with the image.
+        model_name : Optional[str]
+            Model to use. If None, selects the best image-capable model.
+        temperature : float
+            Sampling temperature for the response.
+        max_output_tokens : Optional[int]
+            Maximum tokens in the response.
+        number_of_tries : int
+            Number of retry attempts on failure or refusal.
+
+        Returns
+        -------
+        str
+            Text description of the image, or None if all attempts fail.
+
+        Raises
+        ------
+        FeatureNotAvailableError
+            If no model supporting images is available.
+        APIError
+            If an unrecoverable error occurs during description.
+        """
         with asection(
             f"Asking model {model_name} to describe a given image: '{image_uri}':"
         ):
@@ -1292,7 +1602,40 @@ class DefaultApi(BaseApi):
         max_output_tokens: Optional[int] = None,
         number_of_tries: int = 4,
     ) -> Optional[str]:
+        """Describe an audio file by sending it to an audio-capable model.
 
+        Constructs a message with the audio and query, sends it to the
+        model, and retries on empty responses.
+
+        Parameters
+        ----------
+        audio_uri : str
+            Path, URL, or base64-encoded audio to describe.
+        system : str
+            System message to guide the description.
+        query : str
+            Query prompt to use with the audio.
+        model_name : Optional[str]
+            Model to use. If None, selects the best audio-capable model.
+        temperature : float
+            Sampling temperature for the response.
+        max_output_tokens : Optional[int]
+            Maximum tokens in the response.
+        number_of_tries : int
+            Number of retry attempts on failure.
+
+        Returns
+        -------
+        Optional[str]
+            Text description of the audio, or None if all attempts fail.
+
+        Raises
+        ------
+        FeatureNotAvailableError
+            If no model supporting audio is available.
+        APIError
+            If an unrecoverable error occurs during description.
+        """
         with asection(
             f"Asking model {model_name} to describe a given audio: '{audio_uri}':"
         ):
@@ -1408,7 +1751,40 @@ class DefaultApi(BaseApi):
         max_output_tokens: Optional[int] = None,
         number_of_tries: int = 4,
     ) -> Optional[str]:
+        """Describe a video by sending it to a video-capable model.
 
+        Constructs a message with the video and query, sends it to the
+        model, and retries on empty responses.
+
+        Parameters
+        ----------
+        video_uri : str
+            Path, URL, or base64-encoded video to describe.
+        system : str
+            System message to guide the description.
+        query : str
+            Query prompt to use with the video.
+        model_name : Optional[str]
+            Model to use. If None, selects the best video-capable model.
+        temperature : float
+            Sampling temperature for the response.
+        max_output_tokens : Optional[int]
+            Maximum tokens in the response.
+        number_of_tries : int
+            Number of retry attempts on failure.
+
+        Returns
+        -------
+        Optional[str]
+            Text description of the video, or None if all attempts fail.
+
+        Raises
+        ------
+        FeatureNotAvailableError
+            If no model supporting video is available.
+        APIError
+            If an unrecoverable error occurs during description.
+        """
         with asection(
             f"Asking model {model_name} to describe a given video: '{video_uri}':"
         ):
@@ -1521,7 +1897,40 @@ class DefaultApi(BaseApi):
         max_output_tokens: Optional[int] = None,
         number_of_tries: int = 4,
     ) -> Optional[str]:
+        """Describe a document by sending it to a document-capable model.
 
+        Constructs a message with the document and query, sends it to the
+        model, and retries on empty responses.
+
+        Parameters
+        ----------
+        document_uri : str
+            Path, URL, or base64-encoded document to describe.
+        system : str
+            System message to guide the description.
+        query : str
+            Query prompt to use with the document.
+        model_name : Optional[str]
+            Model to use. If None, selects the best document-capable model.
+        temperature : float
+            Sampling temperature for the response.
+        max_output_tokens : Optional[int]
+            Maximum tokens in the response.
+        number_of_tries : int
+            Number of retry attempts on failure.
+
+        Returns
+        -------
+        Optional[str]
+            Text description of the document, or None if all attempts fail.
+
+        Raises
+        ------
+        FeatureNotAvailableError
+            If no model supporting documents is available.
+        APIError
+            If an unrecoverable error occurs during description.
+        """
         with asection(
             f"Asking model {model_name} to describe a given document: '{document_uri}':"
         ):

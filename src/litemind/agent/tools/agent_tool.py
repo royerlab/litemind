@@ -1,3 +1,10 @@
+"""Agent tool that wraps an Agent instance as a callable sub-agent tool.
+
+This module provides the ``AgentTool`` class, which allows an ``Agent`` to
+be used as a tool by another agent. When invoked, it forwards a text prompt
+to the wrapped agent and returns the response as plain text.
+"""
+
 from typing import Any, Optional
 
 from arbol import asection

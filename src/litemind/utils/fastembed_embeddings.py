@@ -1,3 +1,5 @@
+"""Text embedding generation using the FastEmbed library with dimensionality reduction."""
+
 from functools import lru_cache
 from typing import List, Optional, Sequence
 

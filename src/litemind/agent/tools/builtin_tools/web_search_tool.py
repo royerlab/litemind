@@ -1,3 +1,11 @@
+"""Built-in tool for web search via an API provider.
+
+This module provides the ``BuiltinWebSearchTool`` class, which carries
+configuration parameters (context size, search limit, domain restrictions)
+that the API provider uses to perform web searches on behalf of the model.
+The tool itself is not executed locally.
+"""
+
 from typing import Any, List
 
 from litemind.agent.tools.builtin_tools.builtin_tool import BuiltinTool

@@ -1,3 +1,6 @@
+"""Utilities for configuring ffmpeg binary paths from imageio-ffmpeg."""
+
+
 def _set_ffmpeg_binary():
     """
     Configure ffmpeg and ffprobe binary paths from imageio-ffmpeg.
