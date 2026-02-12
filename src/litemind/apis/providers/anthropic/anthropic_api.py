@@ -464,7 +464,7 @@ class AnthropicApi(DefaultApi):
         Parameters
         ----------
         model_name : str
-            The model name to check (thinking suffix should already be stripped).
+            The model name to check (thinking suffix is stripped internally).
 
         Returns
         -------

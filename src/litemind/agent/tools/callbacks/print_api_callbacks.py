@@ -2,8 +2,7 @@
 
 This module provides ``PrintApiCallbacks``, a concrete
 ``BaseToolCallbacks`` subclass that logs tool start, activity, end,
-and error events using the Arbol logging library. Each event type can
-be independently enabled or disabled.
+and error events using the Arbol logging library.
 """
 
 from pprint import pformat
@@ -18,8 +17,7 @@ from litemind.agent.tools.callbacks.base_tool_callbacks import BaseToolCallbacks
 class PrintApiCallbacks(BaseToolCallbacks):
     """Tool callback that prints execution details to the console via Arbol.
 
-    Useful for debugging and monitoring tool usage. Each lifecycle event
-    (start, activity, end, error) can be independently enabled or disabled.
+    Useful for debugging and monitoring tool usage.
     """
 
     def __init__(
@@ -63,7 +61,7 @@ class PrintApiCallbacks(BaseToolCallbacks):
             raise ValueError(f"Unknown arguments: {pformat(kwargs)}")
 
     def on_tool_start(self, tool: BaseTool, *args, **kwargs) -> None:
-        """Print tool start information if ``print_on_tool_start`` is enabled.
+        """Print tool start information via Arbol.
 
         Parameters
         ----------
@@ -77,7 +75,7 @@ class PrintApiCallbacks(BaseToolCallbacks):
         aprint(f"Tool Start: {tool.name} with args: {args} and kwargs: {kwargs}")
 
     def on_tool_activity(self, tool: "BaseTool", activity_type: str, **kwargs) -> Any:
-        """Print tool activity information if ``print_on_tool_activity`` is enabled.
+        """Print tool activity information via Arbol.
 
         Parameters
         ----------
@@ -91,7 +89,7 @@ class PrintApiCallbacks(BaseToolCallbacks):
         aprint(f"Tool Activity: {tool.name} is {activity_type} with info: {kwargs}")
 
     def on_tool_end(self, tool: BaseTool, result: Any) -> None:
-        """Print tool completion information if ``print_on_tool_end`` is enabled.
+        """Print tool completion information via Arbol.
 
         Parameters
         ----------
@@ -103,7 +101,7 @@ class PrintApiCallbacks(BaseToolCallbacks):
         aprint(f"Tool End: {tool.name} with result: {result}")
 
     def on_tool_error(self, tool: BaseTool, exception: Exception) -> None:
-        """Print tool error information if ``print_on_tool_error`` is enabled.
+        """Print tool error information via Arbol.
 
         Parameters
         ----------

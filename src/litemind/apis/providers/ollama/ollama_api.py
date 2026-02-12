@@ -669,7 +669,7 @@ class OllamaApi(DefaultApi):
 
         If the model's native embedding dimension differs from the
         requested ``dimensions``, the vectors are resized automatically
-        using PCA-based dimensionality reduction or zero-padding.
+        using deterministic random projection.
 
         Parameters
         ----------

@@ -660,7 +660,8 @@ class DefaultApi(BaseApi):
         Returns
         -------
         List[Message]
-            None; this base implementation returns implicitly after validation.
+            Subclass implementations return the model's response messages.
+            This base implementation returns None after validation.
 
         Raises
         ------
@@ -1455,7 +1456,7 @@ class DefaultApi(BaseApi):
 
         Returns
         -------
-        str
+        Optional[str]
             Text description of the image, or None if all attempts fail.
 
         Raises
