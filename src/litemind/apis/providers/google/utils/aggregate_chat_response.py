@@ -1,3 +1,5 @@
+"""Aggregation of streaming Gemini API response chunks."""
+
 from typing import Callable, Iterable
 
 

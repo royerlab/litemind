@@ -1,3 +1,9 @@
+"""Video processing utilities using ffmpeg.
+
+Provides functions for extracting frames and audio from videos, loading
+video data as numpy arrays, and querying video metadata.
+"""
+
 import os
 
 # _set_ffmpeg_binary()
@@ -13,7 +19,7 @@ from litemind.agent.messages.message_block import MessageBlock
 
 
 @lru_cache()
-def is_ffmpeg_available():
+def is_ffmpeg_available() -> bool:
     """
     Check whether ffmpeg is installed and functional.
 
@@ -147,7 +153,7 @@ def convert_video_to_frames_and_audio(
     return message.blocks
 
 
-def get_video_info(video_path: str):
+def get_video_info(video_path: str) -> dict:
     """
     Get metadata about a video file using ffmpeg.
 
@@ -246,7 +252,7 @@ def extract_frames_and_audio(
     frame_pattern = os.path.join(output_dir, f"frame_%06d.{image_format}")
 
     # Extract frames
-    # If use_keyframes is True, select only I-frames (a.k_dict.a. keyframes).
+    # If use_keyframes is True, select only I-frames (a.k.a. keyframes).
     if use_keyframes:
         # In some cases, you can add `eq(pict_type,I)*eq(key,1)` or `eq(pict_type\, I)` as a filter.
         # `vsync='vfr'` helps preserve variable frame rates correctly when using 'select'.
@@ -304,7 +310,7 @@ def extract_frames_and_audio(
     return extracted_frames, audio_output_path
 
 
-def load_video_as_array(filename):
+def load_video_as_array(filename: str):
     """
     Load a video file into a numpy array of RGB frames.
 

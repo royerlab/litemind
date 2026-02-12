@@ -1,3 +1,10 @@
+"""Function tool that wraps an arbitrary Python callable for use by an Agent.
+
+This module provides the ``FunctionTool`` class, which inspects a Python
+function's type hints and docstring to automatically generate a JSON schema
+for its arguments and a description suitable for LLM tool calling.
+"""
+
 import inspect
 from typing import Any, Callable, Dict, Optional
 

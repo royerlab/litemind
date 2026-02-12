@@ -1,3 +1,10 @@
+"""Conversation module for managing ordered sequences of messages.
+
+A Conversation stores system messages separately from standard
+(user/assistant/tool) messages so that system messages can be
+consistently placed at the beginning of the list sent to the LLM API.
+"""
+
 from typing import List, Sequence, Union
 
 from litemind.agent.messages.message import Message
@@ -153,10 +160,32 @@ class Conversation:
         return self.get_all_messages()[item]
 
     def __len__(self):
+        """Return the total number of messages in the conversation.
+
+        Returns
+        -------
+        int
+            The combined count of system and standard messages.
+        """
         return len(self.get_all_messages())
 
     def __str__(self):
+        """Return a string representation of all messages in the conversation.
+
+        Returns
+        -------
+        str
+            A string representation of the list of all messages, with
+            system messages first followed by standard messages.
+        """
         return str(self.get_all_messages())
 
     def __repr__(self):
+        """Return the string representation of the conversation.
+
+        Returns
+        -------
+        str
+            Same as ``__str__``.
+        """
         return self.__str__()

@@ -1,3 +1,12 @@
+"""Abstract base class defining callback hooks for API operations.
+
+This module provides ``BaseApiCallbacks``, an abstract class that defines
+no-op hooks for every API event (availability checks, model listing, text
+generation, embedding, media description, etc.). Subclass it and override
+the desired methods to receive notifications about API activity. Instances
+are registered with ``ApiCallbackManager`` for dispatch.
+"""
+
 from abc import ABC
 from typing import Any, List, Sequence
 

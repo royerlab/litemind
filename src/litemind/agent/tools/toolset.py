@@ -1,3 +1,11 @@
+"""Managed collection of tools available to an Agent.
+
+This module provides the ``ToolSet`` class, a list-like container that
+holds ``BaseTool`` instances and offers convenience methods for adding
+function tools, agent tools, and built-in tools, as well as managing
+callbacks across all contained tools.
+"""
+
 from typing import Callable, List, Optional, Type, Union
 
 from litemind.agent.tools.base_tool import BaseTool
@@ -318,35 +326,126 @@ class ToolSet:
         return [t.name for t in self.tools]
 
     def __getitem__(self, item) -> BaseTool:
+        """Retrieve a tool by index.
+
+        Parameters
+        ----------
+        item : int
+            The index of the tool to retrieve.
+
+        Returns
+        -------
+        BaseTool
+            The tool at the given index.
+        """
         return self.tools[item]
 
     def __len__(self) -> int:
+        """Return the number of tools in the set.
+
+        Returns
+        -------
+        int
+            The number of tools.
+        """
         return len(self.tools)
 
     def __iter__(self):
+        """Iterate over the tools in the set.
+
+        Returns
+        -------
+        iterator
+            An iterator over the ``BaseTool`` instances.
+        """
         return iter(self.tools)
 
     def __contains__(self, item) -> bool:
+        """Check whether a tool instance is in the set.
+
+        Parameters
+        ----------
+        item : BaseTool
+            The tool instance to look for.
+
+        Returns
+        -------
+        bool
+            True if the tool is present, False otherwise.
+        """
         return item in self.tools
 
     def __delitem__(self, key):
+        """Delete a tool by index.
+
+        Parameters
+        ----------
+        key : int
+            The index of the tool to delete.
+        """
         del self.tools[key]
 
     def __setitem__(self, key, value):
+        """Replace a tool at the given index.
+
+        Parameters
+        ----------
+        key : int
+            The index at which to set the tool.
+        value : BaseTool
+            The tool to place at the given index.
+        """
         self.tools[key] = value
 
     def __iadd__(self, other: BaseTool):
+        """Add a tool in place using the ``+=`` operator.
+
+        Parameters
+        ----------
+        other : BaseTool
+            The tool to add.
+
+        Returns
+        -------
+        ToolSet
+            This tool set (modified in place).
+        """
         self.add_tool(other)
         return self
 
     def __add__(self, other: BaseTool) -> "ToolSet":
+        """Create a new ToolSet with an additional tool using the ``+`` operator.
+
+        Parameters
+        ----------
+        other : BaseTool
+            The tool to append.
+
+        Returns
+        -------
+        ToolSet
+            A new ``ToolSet`` containing all existing tools plus ``other``.
+        """
         new_toolset = ToolSet(tools=list(self.tools))
         new_toolset.add_tool(other)
         return new_toolset
 
     def __str__(self):
+        """Return a concise string listing tool names.
+
+        Returns
+        -------
+        str
+            A string of the form ``ToolSet([name1, name2, ...])``.
+        """
         return f"ToolSet({[t.name for t in self.tools]})"
 
     def __repr__(self):
-        # provide all information available about tools:
+        """Return a detailed string representation including full tool details.
+
+        Returns
+        -------
+        str
+            A string of the form ``ToolSet([tool1_repr, tool2_repr, ...])``.
+        """
         return f"ToolSet({self.tools})"

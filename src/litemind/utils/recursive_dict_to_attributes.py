@@ -1,3 +1,5 @@
+"""Recursive conversion of nested dictionaries to attribute-accessible objects."""
+
 from types import SimpleNamespace
 from typing import Any, Dict, List, Union
 

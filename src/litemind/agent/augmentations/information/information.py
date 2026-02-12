@@ -1,3 +1,13 @@
+"""Concrete implementation of a piece of information for augmentations.
+
+This module provides the ``Information`` class, the primary data unit stored
+in vector databases and retrieved during Retrieval-Augmented Generation.
+Information objects wrap a ``MediaBase`` media item together with optional
+metadata, a text summary, and a vector embedding. They support hierarchical
+parent-child relationships, enabling representation of complex structures
+such as documents with chapters or code repositories with nested files.
+"""
+
 import uuid
 from typing import Any, Callable, List, Optional, Type
 
@@ -107,30 +117,86 @@ class Information(InformationBase, PickleSerializable):
             child.parent = self
 
     def has_type(self, media_type: Type[MediaBase]) -> bool:
+        """Check if the information's media matches a specific type.
+
+        Parameters
+        ----------
+        media_type : Type[MediaBase]
+            The media type to check against.
+
+        Returns
+        -------
+        bool
+            True if the information's media is an instance of the given type.
+        """
         return isinstance(self.media, media_type)
 
     @property
     def type(self) -> Type[MediaBase]:
+        """The concrete type of the media contained in this information.
+
+        Returns
+        -------
+        Type[MediaBase]
+            The class of the underlying media object.
+        """
         return type(self.media)
 
     @property
     def content(self) -> Any:
+        """The raw content extracted from the underlying media object.
+
+        Returns
+        -------
+        Any
+            The content returned by ``media.get_content()``. The concrete
+            type depends on the media subclass (e.g., ``str`` for ``Text``,
+            a URI for ``Image``).
+        """
         return self.media.get_content()
 
     @property
     def metadata(self) -> dict:
+        """Metadata associated with this information.
+
+        Returns
+        -------
+        dict
+            A dictionary containing metadata about the information.
+        """
         return self._metadata
 
     @property
     def id(self) -> str:
+        """A unique identifier for this information.
+
+        Returns
+        -------
+        str
+            The UUID string identifying this information.
+        """
         return self._id
 
     @property
     def score(self) -> Optional[float]:
+        """A relevance score, typically assigned during retrieval.
+
+        Returns
+        -------
+        Optional[float]
+            The relevance score, or None if not yet scored.
+        """
         return self._score
 
     @score.setter
     def score(self, value: Optional[float]):
+        """Set the relevance score for this information.
+
+        Parameters
+        ----------
+        value : Optional[float]
+            The new relevance score to assign.
+        """
         self._score = value
 
     def set_id(self, value: str) -> None:
@@ -327,6 +393,14 @@ class Information(InformationBase, PickleSerializable):
         )
 
     def __copy__(self):
+        """Create a shallow copy of this information.
+
+        Returns
+        -------
+        Information
+            A new ``Information`` instance with the same media, summary,
+            metadata, id, and score. Children are not copied.
+        """
         return Information(
             media=self.media,
             summary=self.summary,
@@ -336,19 +410,76 @@ class Information(InformationBase, PickleSerializable):
         )
 
     def __contains__(self, item):
+        """Check if an item is contained within the underlying media.
+
+        Parameters
+        ----------
+        item : Any
+            The item to search for within the media content.
+
+        Returns
+        -------
+        bool
+            True if ``item`` is found in the media.
+        """
         return item in self.media
 
     def __str__(self) -> str:
+        """Return a string representation of the information's media.
+
+        Returns
+        -------
+        str
+            The string representation of the underlying media object.
+        """
         return str(self.media)
 
     def __hash__(self) -> int:
+        """Return a hash based on the underlying media object.
+
+        Returns
+        -------
+        int
+            A hash value derived from the media.
+        """
         return hash(self.media)
 
     def __eq__(self, other) -> bool:
+        """Test equality based on media content.
+
+        Parameters
+        ----------
+        other : Information
+            Another information to compare against.
+
+        Returns
+        -------
+        bool
+            True if both informations have equal media content.
+        """
         return self.media == other.media
 
     def __ne__(self, other) -> bool:
+        """Test inequality based on media content.
+
+        Parameters
+        ----------
+        other : Information
+            Another information to compare against.
+
+        Returns
+        -------
+        bool
+            True if the informations have different media content.
+        """
         return not self == other
 
     def __len__(self) -> int:
+        """Return the length of the underlying media.
+
+        Returns
+        -------
+        int
+            The length of the media content (e.g., character count for text).
+        """
         return len(self.media)

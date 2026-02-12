@@ -1,3 +1,16 @@
+"""OpenAI Response API provider implementation.
+
+This module implements the ``OpenAIApi`` class, which wraps OpenAI's newer
+Response API (as opposed to the older Chat Completions API). It supports
+text generation, audio transcription/generation, image generation, and
+text embeddings through a unified interface that conforms to
+``BaseApi``/``DefaultApi``.
+
+The Response API is stateful and provides built-in tools like web search,
+file search, and computer use, making it simpler and more flexible than
+the chat completions endpoint.
+"""
+
 import base64
 import json
 import os
@@ -73,16 +86,28 @@ class OpenAIApi(DefaultApi):
 
         Parameters
         ----------
-        api_key: Optional[str]
-            The API key for OpenAI. If not provided, we'll read from OPENAI_API_KEY env var.
-        base_url: Optional[str]
+        api_key : Optional[str]
+            The API key for OpenAI. If not provided, the value of the
+            ``OPENAI_API_KEY`` environment variable is used.
+        base_url : Optional[str]
             The base URL for the OpenAI or compatible API.
-        allow_media_conversions: bool
-            If True, the API will allow media conversions using the default media converter.
-        allow_media_conversions_with_models: bool
-            If True, the API will allow media conversions using models that support the required features.
-        kwargs: dict
-            Additional options passed to `OpenAI(...)`.
+        allow_media_conversions : bool
+            If True, the API will allow media conversions using the
+            default media converter.
+        allow_media_conversions_with_models : bool
+            If True, the API will allow media conversions using models
+            that support the required features.
+        callback_manager : Optional[ApiCallbackManager]
+            Optional callback manager for lifecycle event notifications.
+        **kwargs
+            Additional options passed to ``OpenAI(...)``.
+
+        Raises
+        ------
+        APIError
+            If no API key is provided or found in the environment.
+        APINotAvailableError
+            If the OpenAI client cannot be initialized.
         """
 
         super().__init__(
@@ -139,7 +164,19 @@ class OpenAIApi(DefaultApi):
             )
 
     def check_availability_and_credentials(self, api_key: Optional[str] = None) -> bool:
-        """Check if the API is available and credentials are valid."""
+        """Check if the OpenAI API is available and credentials are valid.
+
+        Parameters
+        ----------
+        api_key : Optional[str]
+            An alternative API key to check. If None, the client's
+            existing key is used.
+
+        Returns
+        -------
+        bool
+            True if the API is reachable and the credentials are valid.
+        """
 
         # Check if the API key is provided:
         if api_key is not None:
@@ -165,7 +202,27 @@ class OpenAIApi(DefaultApi):
         ] = None,
         media_types: Optional[Sequence[Type[MediaBase]]] = None,
     ) -> List[str]:
-        """List available models that support the Response API."""
+        """List available OpenAI models that support the Response API.
+
+        Parameters
+        ----------
+        features : Optional[Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]]
+            Required model features to filter by.
+        non_features : Optional[Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]]
+            Features that models must *not* have.
+        media_types : Optional[Sequence[Type[MediaBase]]]
+            Media types the models must support.
+
+        Returns
+        -------
+        List[str]
+            Sorted list of model name strings matching the criteria.
+
+        Raises
+        ------
+        APIError
+            If the model list cannot be retrieved.
+        """
 
         try:
             # Normalise the features:
@@ -206,7 +263,27 @@ class OpenAIApi(DefaultApi):
         media_types: Optional[Sequence[Type[MediaBase]]] = None,
         exclusion_filters: Optional[Union[str, List[str]]] = None,
     ) -> Optional[str]:
-        """Get the best model that supports the required features."""
+        """Get the best available model that supports the required features.
+
+        Models are ranked by capability (newer/larger models score higher)
+        and the top-ranked model that satisfies all constraints is returned.
+
+        Parameters
+        ----------
+        features : Optional[Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]]
+            Required model features.
+        non_features : Optional[Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]]
+            Features that the model must *not* have.
+        media_types : Optional[Sequence[Type[MediaBase]]]
+            Media types the model must support.
+        exclusion_filters : Optional[Union[str, List[str]]]
+            Substring patterns to exclude from model names.
+
+        Returns
+        -------
+        Optional[str]
+            The name of the best matching model, or None if no model matches.
+        """
 
         # Normalise the features:
         features = ModelFeatures.normalise(features)
@@ -241,7 +318,26 @@ class OpenAIApi(DefaultApi):
         media_types: Optional[Sequence[Type[MediaBase]]] = None,
         model_name: Optional[str] = None,
     ) -> bool:
-        """Check if a model supports the given features."""
+        """Check if a specific model supports the given features.
+
+        Checks the model registry and the parent class fallback models for
+        feature support.
+
+        Parameters
+        ----------
+        features : Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
+            The features to check for.
+        media_types : Optional[Sequence[Type[MediaBase]]]
+            Media types the model must support.
+        model_name : Optional[str]
+            The model to check. If None, the best model for the given
+            features is selected automatically.
+
+        Returns
+        -------
+        bool
+            True if the model supports all requested features.
+        """
 
         # Normalise the features:
         features = ModelFeatures.normalise(features)
@@ -273,7 +369,21 @@ class OpenAIApi(DefaultApi):
         return True
 
     def max_num_input_tokens(self, model_name: Optional[str] = None) -> int:
-        """Get the maximum number of input tokens for the given model."""
+        """Get the maximum number of input tokens for the given model.
+
+        Consults the model registry first; falls back to 128,000 for
+        unknown models.
+
+        Parameters
+        ----------
+        model_name : Optional[str]
+            The model to query. If None, the best available model is used.
+
+        Returns
+        -------
+        int
+            Maximum number of input tokens (context window size).
+        """
         if model_name is None:
             model_name = self.get_best_model()
 
@@ -286,7 +396,21 @@ class OpenAIApi(DefaultApi):
         return 128_000
 
     def max_num_output_tokens(self, model_name: Optional[str] = None) -> int:
-        """Get the maximum number of output tokens for the given model."""
+        """Get the maximum number of output tokens for the given model.
+
+        Consults the model registry first; falls back to 16,384 for
+        unknown models.
+
+        Parameters
+        ----------
+        model_name : Optional[str]
+            The model to query. If None, the best available model is used.
+
+        Returns
+        -------
+        int
+            Maximum number of output tokens the model can generate.
+        """
         if model_name is None:
             model_name = self.get_best_model()
 
@@ -301,21 +425,28 @@ class OpenAIApi(DefaultApi):
     def _convert_messages_to_response_input(
         self, messages: List[Message], is_tool_followup: bool = False
     ) -> Union[str, List[dict]]:
-        """
-        Convert Litemind messages to Response API input format.
+        """Convert litemind messages to Response API input format.
 
-        The Response API can accept either:
-        1. A simple string for single-turn interactions
-        2. An array of conversation items for multi-turn conversations
+        The Response API can accept either a simple string for single-turn
+        interactions, or an array of conversation items for multi-turn
+        conversations. This method selects the appropriate format
+        automatically.
 
         Parameters
         ----------
         messages : List[Message]
-            The messages to convert
+            The messages to convert.
         is_tool_followup : bool
-            True if this is a follow-up call with tool results in the same Response API session.
-            When False, tool messages are converted to conversation items.
-            When True, this method should not be called (use function_call_outputs directly).
+            True if this is a follow-up call with tool results in the same
+            Response API session. When False, tool messages are converted
+            to descriptive user messages. When True, this method should
+            not be called (use ``function_call_outputs`` directly).
+
+        Returns
+        -------
+        Union[str, List[dict]]
+            A plain string for simple single-turn input, or a list of
+            conversation item dictionaries for multi-turn conversations.
         """
 
         if len(messages) == 1 and len(messages[0].blocks) == 1:
@@ -391,17 +522,33 @@ class OpenAIApi(DefaultApi):
     def _convert_message_blocks_to_response_content(
         self, blocks: List[MessageBlock], is_input: bool = True, is_system: bool = False
     ) -> List[dict]:
-        """
-        Convert message blocks to Response API content format.
+        """Convert message blocks to Response API content format.
+
+        Transforms each ``MessageBlock`` into a dictionary suitable for the
+        Response API. Text, image, audio, video, and action blocks are
+        handled, with appropriate ``input_*`` or ``output_*`` type keys
+        depending on message direction.
 
         Parameters
         ----------
         blocks : List[MessageBlock]
-            The message blocks to convert
+            The message blocks to convert.
         is_input : bool
-            True for input content (user messages), False for output content (assistant messages)
+            True for input content (user messages), False for output
+            content (assistant messages).
         is_system : bool
-            True if this is a system message (adds [SYSTEM] prefix to text)
+            True if this is a system message (adds a ``[SYSTEM]`` prefix
+            to text content).
+
+        Returns
+        -------
+        List[dict]
+            List of content item dictionaries for the Response API.
+
+        Raises
+        ------
+        ValueError
+            If a message block contains an unsupported media type.
         """
         from litemind.media.types.media_audio import Audio
         from litemind.media.types.media_video import Video
@@ -504,7 +651,25 @@ class OpenAIApi(DefaultApi):
     def _convert_response_to_messages(
         self, response, response_format: Optional[BaseModel] = None
     ) -> List[Message]:
-        """Convert Response API output to Litemind messages with proper structured output handling."""
+        """Convert Response API output to litemind messages.
+
+        Processes assistant text, function calls, and built-in tool calls
+        from the Response API output items. Structured output is parsed
+        into Pydantic model instances when ``response_format`` is provided.
+
+        Parameters
+        ----------
+        response : object
+            The raw response object from the Response API.
+        response_format : Optional[BaseModel]
+            If provided, text that looks like JSON is parsed into an
+            instance of this Pydantic model.
+
+        Returns
+        -------
+        List[Message]
+            List of litemind ``Message`` objects extracted from the response.
+        """
 
         messages = []
 
@@ -561,7 +726,22 @@ class OpenAIApi(DefaultApi):
         return messages
 
     def _format_tools_for_response_api(self, toolset: ToolSet) -> List[dict]:
-        """Format tools for the Response API."""
+        """Format custom function tools for the Response API.
+
+        Converts each non-builtin tool in the toolset into a dictionary
+        with ``type``, ``name``, ``description``, and ``parameters`` keys
+        suitable for the Response API's ``tools`` parameter.
+
+        Parameters
+        ----------
+        toolset : ToolSet
+            The toolset containing tools to format.
+
+        Returns
+        -------
+        List[dict]
+            List of tool definition dictionaries.
+        """
         tools = []
 
         for tool in toolset.list_tools():
@@ -953,7 +1133,29 @@ class OpenAIApi(DefaultApi):
     def transcribe_audio(
         self, audio_uri: str, model_name: Optional[str] = None, **kwargs
     ) -> str:
-        """Transcribe audio using OpenAI's Whisper API."""
+        """Transcribe audio using OpenAI's Whisper or GPT-4o transcription API.
+
+        Parameters
+        ----------
+        audio_uri : str
+            URI pointing to the audio file (local ``file://`` path or
+            remote URL).
+        model_name : Optional[str]
+            The transcription model to use. If None, the best available
+            transcription model is selected automatically.
+        **kwargs
+            Additional keyword arguments passed to the transcription API.
+
+        Returns
+        -------
+        str
+            The transcribed text.
+
+        Raises
+        ------
+        APIError
+            If the specified model does not support audio transcription.
+        """
 
         # If no model name is provided, use the best model:
         if model_name is None:
@@ -998,7 +1200,29 @@ class OpenAIApi(DefaultApi):
         model_name: Optional[str] = None,
         **kwargs,
     ) -> str:
-        """Generate audio using OpenAI's TTS API."""
+        """Generate audio from text using OpenAI's text-to-speech API.
+
+        Parameters
+        ----------
+        text : str
+            The text to convert to speech.
+        voice : Optional[str]
+            The voice to use (e.g., ``'onyx'``, ``'alloy'``). Defaults to
+            ``'onyx'`` if not specified.
+        audio_format : Optional[str]
+            Output audio format (e.g., ``'mp3'``, ``'wav'``). Defaults to
+            ``'mp3'`` if not specified.
+        model_name : Optional[str]
+            The TTS model to use. If None, the best available audio
+            generation model is selected automatically.
+        **kwargs
+            Additional keyword arguments passed to the audio speech API.
+
+        Returns
+        -------
+        str
+            A ``file://`` URI pointing to the generated audio file.
+        """
 
         # If no model name is provided, use the best model:
         if model_name is None:
@@ -1064,7 +1288,46 @@ class OpenAIApi(DefaultApi):
         allow_resizing: bool = True,
         **kwargs,
     ) -> "Image":
-        """Generate image using OpenAI's image generation API."""
+        """Generate an image using OpenAI's image generation API.
+
+        Supports DALL-E 2, DALL-E 3, and GPT-Image models. The requested
+        image dimensions are mapped to the closest supported size for the
+        chosen model.
+
+        Parameters
+        ----------
+        positive_prompt : str
+            Description of the desired image content.
+        negative_prompt : Optional[str]
+            Description of what the image should *not* contain.
+        model_name : str
+            The image generation model to use. If None, the best available
+            model is selected automatically.
+        image_width : int
+            Desired image width in pixels.
+        image_height : int
+            Desired image height in pixels.
+        preserve_aspect_ratio : bool
+            If True, the image is resized while preserving aspect ratio
+            when the closest allowed size differs from the requested size.
+        allow_resizing : bool
+            If True, the image is resized to the closest supported
+            resolution when the exact size is not available.
+        **kwargs
+            Additional keyword arguments passed to the image generation API.
+
+        Returns
+        -------
+        Image
+            A PIL ``Image`` object of the generated image.
+
+        Raises
+        ------
+        ValueError
+            If the model is not supported for image generation, the
+            requested size is not allowed and resizing is disabled, or
+            the API response does not contain image data.
+        """
 
         # Make prompt from positive and negative prompts:
         if negative_prompt:
@@ -1220,7 +1483,25 @@ class OpenAIApi(DefaultApi):
         dimensions: int = 512,
         **kwargs,
     ) -> Sequence[Sequence[float]]:
-        """Generate text embeddings using OpenAI's embeddings API."""
+        """Generate text embeddings using OpenAI's embeddings API.
+
+        Parameters
+        ----------
+        texts : Sequence[str]
+            The texts to embed.
+        model_name : Optional[str]
+            The embedding model to use. If None, the best available
+            embedding model is selected automatically.
+        dimensions : int
+            The desired dimensionality of the embedding vectors.
+        **kwargs
+            Additional keyword arguments passed to the embeddings API.
+
+        Returns
+        -------
+        Sequence[Sequence[float]]
+            A sequence of embedding vectors, one per input text.
+        """
 
         # Get the best model if not provided:
         if model_name is None:

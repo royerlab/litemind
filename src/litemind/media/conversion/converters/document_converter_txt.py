@@ -1,3 +1,10 @@
+"""Fallback document-to-text converter for text-based files.
+
+Provides :class:`DocumentConverterTxt` which reads plain text, code, and
+script files directly and wraps them in a Markdown fenced code block.
+This converter is intended as a low-priority fallback.
+"""
+
 from typing import List, Tuple, Type
 
 from litemind.media.conversion.converters.base_converter import BaseConverter
@@ -17,10 +24,30 @@ class DocumentConverterTxt(BaseConverter):
     """
 
     def rule(self) -> List[Tuple[Type[MediaBase], List[Type[MediaBase]]]]:
+        """Declare that this converter transforms Document to Text.
+
+        Returns
+        -------
+        List[Tuple[Type[MediaBase], List[Type[MediaBase]]]]
+            A single rule mapping Document to Text.
+        """
         return [(Document, [Text])]
 
     def can_convert(self, media: MediaBase) -> bool:
+        """Check whether the given media is a text-based Document.
 
+        Supports documents classified as ``text``, ``code``, or ``script``.
+
+        Parameters
+        ----------
+        media : MediaBase
+            The media to check.
+
+        Returns
+        -------
+        bool
+            True if the media is a Document with a text-based file type.
+        """
         # Check is the media is None:
         if media is None:
             return False
@@ -38,7 +65,24 @@ class DocumentConverterTxt(BaseConverter):
         return True
 
     def convert(self, media: MediaBase) -> List[MediaBase]:
+        """Read a text-based Document and wrap its content in a Markdown code block.
 
+        Parameters
+        ----------
+        media : MediaBase
+            The Document media to convert.
+
+        Returns
+        -------
+        List[MediaBase]
+            A single-element list containing a Text media with the file
+            content wrapped in a Markdown fenced code block.
+
+        Raises
+        ------
+        ValueError
+            If *media* is not a Document instance.
+        """
         if not isinstance(media, Document):
             raise ValueError(f"Expected Document media, got {type(media)}")
 

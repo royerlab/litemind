@@ -1,3 +1,13 @@
+"""Qdrant-backed vector database implementation.
+
+This module provides ``QdrantVectorDatabase``, a vector database that
+delegates storage and similarity search to a Qdrant server (either
+remote or local on-disk). Informations are serialized into Qdrant
+point payloads via Base64 encoding, and cosine similarity is used for
+nearest-neighbour search. The ``qdrant-client`` package must be
+installed to use this backend.
+"""
+
 import os
 import uuid
 from typing import Callable, List, Optional, Union

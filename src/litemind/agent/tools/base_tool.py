@@ -1,3 +1,12 @@
+"""Abstract base class defining the interface for all Agent tools.
+
+This module provides ``BaseTool``, the root class for function tools,
+agent tools, and built-in tools. It defines a uniform interface with a
+name, description, arguments schema, and callback manager, and routes
+execution through ``__call__`` so that lifecycle callbacks are always
+invoked.
+"""
+
 from abc import ABC, abstractmethod
 from typing import Any
 
@@ -41,9 +50,25 @@ class BaseTool(ABC):
         self.callbacks = ToolCallbackManager()
 
     def __repr__(self):
+        """Return a detailed string representation of the tool.
+
+        Returns
+        -------
+        str
+            A string of the form ``name(description=...)``.
+        """
         return f"{self.name}(description={self.description})"
 
     def __str__(self):
+        """Return the string representation of the tool.
+
+        Delegates to ``__repr__``.
+
+        Returns
+        -------
+        str
+            The same string returned by ``__repr__``.
+        """
         return self.__repr__()
 
     def is_builtin(self) -> bool:
@@ -95,21 +120,34 @@ class BaseTool(ABC):
         pass
 
     def __call__(self, *args, **kwargs) -> Any:
-        """
-        Allow calling the tool as a function.
+        """Execute the tool as a callable, invoking lifecycle callbacks.
+
+        This is the primary entry point for running a tool. It fires
+        ``on_tool_start`` before execution, ``on_tool_end`` after success,
+        and ``on_tool_error`` if an exception is raised. Only keyword
+        arguments are accepted.
 
         Parameters
         ----------
         *args
-            Positional arguments (not supported)
+            Positional arguments are **not** supported and will raise
+            ``ValueError``.
         **kwargs
-            Arbitrary keyword arguments to pass to the tool
+            Keyword arguments forwarded to the underlying ``_execute``
+            method.
 
         Returns
         -------
         Any
-            The result of the tool function.
+            The result produced by ``_execute``.
 
+        Raises
+        ------
+        ValueError
+            If positional arguments are provided.
+        Exception
+            Any exception raised by ``_execute`` is re-raised after the
+            ``on_tool_error`` callback is invoked.
         """
 
         if args:

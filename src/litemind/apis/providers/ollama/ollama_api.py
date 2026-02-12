@@ -1,3 +1,17 @@
+"""Ollama API provider implementation.
+
+This module implements the ``OllamaApi`` class, which wraps the Ollama
+local inference server to provide text generation, text embeddings, and
+optional image understanding through a unified interface conforming to
+``BaseApi``/``DefaultApi``.
+
+Ollama models run locally and do not require API keys. The server must
+be running (typically at ``http://localhost:11434``) before this API can
+be used. Models are identified by their Ollama name (e.g.,
+``llama3:latest``), and thinking-mode variants are created automatically
+by appending ``-thinking`` to each model name.
+"""
+
 from functools import lru_cache
 from typing import Dict, List, Optional, Sequence, Set, Type, Union
 
@@ -52,22 +66,33 @@ class OllamaApi(DefaultApi):
         callback_manager: Optional[ApiCallbackManager] = None,
         **kwargs,
     ):
-        """
-        Initialize the Ollama API client.
+        """Initialize the Ollama API client.
 
         Parameters
         ----------
-        host: Optional[str]
-            The host for the Ollama client (default is `http://localhost:11434`).
-        headers:
-            Additional headers to pass to the client.
-        allow_media_conversions: bool
-            If True, the API will allow media conversions using the default media converter.
-        allow_media_conversions_with_models: bool
-            If True, the API will allow media conversions using models that support the required features in addition to the default media converter.
-            To use this the allow_media_conversions parameter must be True.
-        kwargs:
-            Additional options passed to the `Client(...)`.
+        host : Optional[str]
+            The host URL for the Ollama server (default is
+            ``http://localhost:11434``).
+        headers : Optional[Dict[str, str]]
+            Additional HTTP headers to pass to the Ollama client.
+        allow_media_conversions : bool
+            If True, the API will allow media conversions using the
+            default media converter.
+        allow_media_conversions_with_models : bool
+            If True, the API will allow media conversions using models
+            that support the required features, in addition to the
+            default media converter. Requires ``allow_media_conversions``
+            to be True.
+        callback_manager : Optional[ApiCallbackManager]
+            Optional callback manager for lifecycle event notifications.
+        **kwargs
+            Additional options passed to the Ollama ``Client(...)``.
+
+        Raises
+        ------
+        APINotAvailableError
+            If the Ollama server is not reachable or the client cannot
+            be initialised.
         """
 
         super().__init__(
@@ -96,6 +121,22 @@ class OllamaApi(DefaultApi):
             raise APINotAvailableError(f"Ollama server is not available: {e}")
 
     def check_availability_and_credentials(self, api_key: Optional[str] = None) -> bool:
+        """Check if the Ollama server is available and responding.
+
+        Since Ollama runs locally, no API key validation is performed.
+        The ``api_key`` parameter is accepted for interface compatibility
+        but is ignored.
+
+        Parameters
+        ----------
+        api_key : Optional[str]
+            Ignored. Ollama does not require API keys.
+
+        Returns
+        -------
+        bool
+            True if the Ollama server is reachable.
+        """
 
         # Check if the Ollama API is available:
         result = check_ollama_api_availability(self.client)
@@ -116,6 +157,27 @@ class OllamaApi(DefaultApi):
         ] = None,
         media_types: Optional[Sequence[Type[MediaBase]]] = None,
     ) -> List[str]:
+        """List available Ollama models, optionally filtered by features.
+
+        Parameters
+        ----------
+        features : Optional[Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]]
+            Required model features to filter by.
+        non_features : Optional[Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]]
+            Features that models must *not* have.
+        media_types : Optional[Sequence[Type[MediaBase]]]
+            Media types the models must support.
+
+        Returns
+        -------
+        List[str]
+            List of model name strings matching the criteria.
+
+        Raises
+        ------
+        APIError
+            If the model list cannot be retrieved from Ollama.
+        """
 
         try:
             # Normalise the features:
@@ -155,6 +217,27 @@ class OllamaApi(DefaultApi):
         media_types: Optional[Sequence[Type[MediaBase]]] = None,
         exclusion_filters: Optional[Union[str, List[str]]] = None,
     ) -> Optional[str]:
+        """Get the best available Ollama model for the required features.
+
+        Models are sorted by size (largest first), so the first matching
+        model is the most capable one available.
+
+        Parameters
+        ----------
+        features : Optional[Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]]
+            Required model features.
+        non_features : Optional[Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]]
+            Features that the model must *not* have.
+        media_types : Optional[Sequence[Type[MediaBase]]]
+            Media types the model must support.
+        exclusion_filters : Optional[Union[str, List[str]]]
+            Substring patterns to exclude from model names.
+
+        Returns
+        -------
+        Optional[str]
+            The name of the best matching model, or None if no model matches.
+        """
 
         # Normalise the features:
         features = ModelFeatures.normalise(features)
@@ -189,6 +272,26 @@ class OllamaApi(DefaultApi):
         media_types: Optional[Sequence[Type[MediaBase]]] = None,
         model_name: Optional[str] = None,
     ) -> bool:
+        """Check if a specific Ollama model supports the given features.
+
+        Checks the model registry and the parent class fallback models
+        for feature support.
+
+        Parameters
+        ----------
+        features : Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
+            The features to check for.
+        media_types : Optional[Sequence[Type[MediaBase]]]
+            Media types the model must support.
+        model_name : Optional[str]
+            The model to check. If None, the best model for the given
+            features is selected automatically.
+
+        Returns
+        -------
+        bool
+            True if the model supports all requested features.
+        """
 
         # Normalise the features:
         features = ModelFeatures.normalise(features)
@@ -217,15 +320,60 @@ class OllamaApi(DefaultApi):
         return True
 
     def _is_ollama_model(self, model_name: str) -> bool:
+        """Check if a model name looks like an Ollama model.
+
+        Ollama model names contain a colon separator (e.g.,
+        ``llama3:latest``).
+
+        Parameters
+        ----------
+        model_name : str
+            The model name to check.
+
+        Returns
+        -------
+        bool
+            True if the name contains a colon.
+        """
         return ":" in model_name
 
     def _has_thinking_support(self, model_name: str) -> bool:
+        """Check if a model name indicates thinking-mode support.
+
+        Thinking-mode variants are identified by the ``-thinking`` suffix
+        (e.g., ``llama3:latest-thinking``).
+
+        Parameters
+        ----------
+        model_name : str
+            The model name to check.
+
+        Returns
+        -------
+        bool
+            True if the model name ends with ``-thinking``.
+        """
         if model_name.endswith("-thinking"):
             return True
         return False
 
     @lru_cache
     def _has_tool_support(self, model_name: str) -> bool:
+        """Check if an Ollama model supports tool/function calling.
+
+        Inspects the model's Modelfile template for the ``.Tools``
+        template directive. Results are cached for performance.
+
+        Parameters
+        ----------
+        model_name : str
+            The Ollama model name to check.
+
+        Returns
+        -------
+        bool
+            True if the model template contains tool-calling support.
+        """
         if not self._is_ollama_model(model_name):
             # All Ollama models support text generation and contain ':'
             return False
@@ -238,6 +386,23 @@ class OllamaApi(DefaultApi):
 
     @lru_cache
     def max_num_input_tokens(self, model_name: Optional[str] = None) -> int:
+        """Get the maximum context length for the given Ollama model.
+
+        Queries the model's metadata for the ``context_length`` parameter.
+        Results are cached for performance. Falls back to 2,500 if the
+        information cannot be retrieved.
+
+        Parameters
+        ----------
+        model_name : Optional[str]
+            The model to query. If None, the best text-generation model
+            is used.
+
+        Returns
+        -------
+        int
+            Maximum number of input tokens (context window size).
+        """
         from ollama import ResponseError
 
         if model_name is None:
@@ -258,6 +423,23 @@ class OllamaApi(DefaultApi):
 
     @lru_cache
     def max_num_output_tokens(self, model_name: Optional[str] = None) -> int:
+        """Get the maximum number of output tokens for the given Ollama model.
+
+        Queries the model's metadata for the ``max_tokens`` parameter.
+        Results are cached for performance. Falls back to 4,096 if the
+        information cannot be retrieved.
+
+        Parameters
+        ----------
+        model_name : Optional[str]
+            The model to query. If None, the best text-generation model
+            is used.
+
+        Returns
+        -------
+        int
+            Maximum number of output tokens the model can generate.
+        """
         from ollama import ResponseError
 
         if model_name is None:
@@ -266,7 +448,7 @@ class OllamaApi(DefaultApi):
         try:
             model_info = self.client.show(model_name).modelinfo
 
-            # search key hat contains 'max_tokens'
+            # search key that contains 'max_tokens'
             for key in model_info.keys():
                 if "max_tokens" in key:
                     return model_info[key]
@@ -287,6 +469,43 @@ class OllamaApi(DefaultApi):
         response_format: Optional["BaseModel"] = None,
         **kwargs,
     ) -> List[Message]:
+        """Generate text using the Ollama chat API with streaming.
+
+        Supports multi-turn conversations, tool calling with automatic
+        execution loops, thinking-mode models, and optional structured
+        output via a Pydantic ``response_format``.
+
+        Parameters
+        ----------
+        messages : List[Message]
+            The input messages for the conversation.
+        model_name : Optional[str]
+            The Ollama model to use (e.g., ``llama3:latest``). If None,
+            the best available text-generation model is selected.
+        temperature : Optional[float]
+            Sampling temperature for text generation.
+        max_num_output_tokens : Optional[int]
+            Maximum number of tokens to generate.
+        toolset : Optional[ToolSet]
+            Tools to make available to the model for function calling.
+        use_tools : bool
+            Whether to execute tool calls returned by the model.
+        response_format : Optional[BaseModel]
+            Pydantic model for structured JSON output.
+        **kwargs
+            Additional keyword arguments passed to the Ollama chat API.
+
+        Returns
+        -------
+        List[Message]
+            The newly generated response messages (may include tool-use
+            messages if tools were invoked).
+
+        Raises
+        ------
+        APIError
+            If the Ollama API returns an error during generation.
+        """
 
         # validate inputs:
         super().generate_text(
@@ -446,6 +665,29 @@ class OllamaApi(DefaultApi):
         dimensions: int = 512,
         **kwargs,
     ) -> Sequence[Sequence[float]]:
+        """Generate text embeddings using an Ollama embedding model.
+
+        If the model's native embedding dimension differs from the
+        requested ``dimensions``, the vectors are resized automatically
+        using deterministic random projection.
+
+        Parameters
+        ----------
+        texts : Sequence[str]
+            The texts to embed.
+        model_name : Optional[str]
+            The embedding model to use. If None, the best available
+            embedding model is selected automatically.
+        dimensions : int
+            The desired dimensionality of the embedding vectors.
+        **kwargs
+            Additional keyword arguments.
+
+        Returns
+        -------
+        Sequence[Sequence[float]]
+            A sequence of embedding vectors, one per input text.
+        """
 
         # Get the best model if not provided:
         if model_name is None:

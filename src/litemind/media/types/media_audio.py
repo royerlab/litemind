@@ -1,3 +1,10 @@
+"""Audio media type for litemind.
+
+Provides the ``Audio`` class for storing audio files referenced by URI.
+Audio data can be created from numpy arrays, loaded from files, or
+downloaded from remote URLs. Uses ``soundfile`` for reading and writing.
+"""
+
 import pathlib
 from functools import lru_cache
 from typing import Optional

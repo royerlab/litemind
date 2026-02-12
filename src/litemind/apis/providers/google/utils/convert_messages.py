@@ -1,3 +1,5 @@
+"""Conversion of litemind Messages to Gemini Content objects."""
+
 import io
 import time
 from typing import TYPE_CHECKING, List

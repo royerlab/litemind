@@ -1,3 +1,10 @@
+"""Document media type for litemind.
+
+Provides the ``Document`` class for storing multipage documents (PDF,
+DOCX, PPTX, etc.) referenced by URI. Supports text extraction, page
+image rendering, and Markdown conversion.
+"""
+
 from typing import List, Optional
 
 from litemind.media.media_uri import MediaURI

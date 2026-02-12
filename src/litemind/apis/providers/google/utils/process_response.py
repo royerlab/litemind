@@ -1,3 +1,5 @@
+"""Processing of Gemini API responses into litemind Message objects."""
+
 from typing import Any, Optional, Union
 
 from pydantic import BaseModel

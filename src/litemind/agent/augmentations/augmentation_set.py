@@ -1,3 +1,12 @@
+"""A managed collection of augmentations for Retrieval-Augmented Generation.
+
+This module defines ``AugmentationSet``, a container that holds multiple
+``AugmentationBase`` instances and provides methods to search them
+individually or to combine their results into a single ranked list.
+Each augmentation can have its own retrieval settings (``k`` and
+``threshold``).
+"""
+
 from typing import Dict, List, Optional, Union
 
 from arbol import aprint
@@ -256,21 +265,74 @@ class AugmentationSet:
         return infos
 
     def __getitem__(self, item) -> AugmentationBase:
+        """Retrieve an augmentation by index.
+
+        Parameters
+        ----------
+        item : int
+            The index of the augmentation to retrieve.
+
+        Returns
+        -------
+        AugmentationBase
+            The augmentation at the given index.
+        """
         return self.augmentations[item]
 
     def __len__(self) -> int:
+        """Return the number of augmentations in the set.
+
+        Returns
+        -------
+        int
+            The number of augmentations.
+        """
         return len(self.augmentations)
 
     def __iter__(self):
+        """Iterate over the augmentations in the set.
+
+        Returns
+        -------
+        Iterator[AugmentationBase]
+            An iterator over the augmentations.
+        """
         return iter(self.augmentations)
 
     def __contains__(self, item: Union[AugmentationBase, str]) -> bool:
+        """Check whether an augmentation is in the set.
+
+        Parameters
+        ----------
+        item : Union[AugmentationBase, str]
+            An augmentation instance or a name string to search for.
+
+        Returns
+        -------
+        bool
+            True if the augmentation (or an augmentation with the given name)
+            is present in the set.
+        """
         if isinstance(item, str):
             return any(aug.name == item for aug in self.augmentations)
         return item in self.augmentations
 
     def __str__(self) -> str:
+        """Return a human-readable string listing the augmentation names.
+
+        Returns
+        -------
+        str
+            A string of the form ``AugmentationSet(['name1', 'name2', ...])``.
+        """
         return f"AugmentationSet({[aug.name for aug in self.augmentations]})"
 
     def __repr__(self) -> str:
+        """Return a detailed string representation of the augmentation set.
+
+        Returns
+        -------
+        str
+            Same as ``__str__``.
+        """
         return self.__str__()

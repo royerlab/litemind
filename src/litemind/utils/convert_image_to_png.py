@@ -1,3 +1,5 @@
+"""Utilities for converting images to PNG format."""
+
 import os
 import tempfile
 

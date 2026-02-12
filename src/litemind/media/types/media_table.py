@@ -1,3 +1,10 @@
+"""Tabular data media type for litemind.
+
+Provides the ``Table`` class which wraps tabular data backed by a file
+(CSV, Excel, etc.). Tables can be created from URIs, pandas DataFrames,
+numpy arrays, or CSV strings, and rendered as Markdown for LLM consumption.
+"""
+
 from typing import Optional, Union
 
 from pandas import DataFrame
@@ -91,7 +98,7 @@ class Table(MediaURI):
         # At this point `table` should be a DataFrame:
         elif not isinstance(table, DataFrame):
             raise ValueError(
-                f"Parameter `dataframe` must be a pandas DataFrame or an array-like object, not {type(table)}"
+                f"Parameter `table` must be a pandas DataFrame or an array-like object, not {type(table)}"
             )
 
         # Save dataframe to file:

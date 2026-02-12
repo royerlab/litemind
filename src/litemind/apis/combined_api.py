@@ -1,3 +1,13 @@
+"""Unified API that aggregates multiple provider APIs with automatic fallback.
+
+This module provides ``CombinedApi``, which wraps multiple LLM provider APIs
+(OpenAI, Anthropic, Gemini, Ollama) behind a single ``DefaultApi`` interface.
+Each call is delegated to the first available provider that supports the
+required features. Providers are validated for availability and credentials
+during initialization, and a model-to-API mapping allows transparent routing
+of requests.
+"""
+
 from typing import Dict, List, Optional, Sequence, Type, Union
 
 from arbol import aprint
@@ -139,7 +149,19 @@ class CombinedApi(DefaultApi):
     def check_availability_and_credentials(
         self, api_key: Optional[str] = None
     ) -> Optional[bool]:
+        """Check whether any combined API has available models.
 
+        Parameters
+        ----------
+        api_key : Optional[str]
+            Ignored; availability is determined by the presence of
+            registered models.
+
+        Returns
+        -------
+        bool
+            True if at least one model is registered across all APIs.
+        """
         # By definition, if we have added a model it is available.
         result = len(self.model_to_api) > 0
 
@@ -159,7 +181,27 @@ class CombinedApi(DefaultApi):
         ] = None,
         media_types: Optional[Sequence[Type[MediaBase]]] = None,
     ) -> List[str]:
+        """List all models across combined APIs, optionally filtered by features.
 
+        Parameters
+        ----------
+        features : Optional[Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]]
+            Required features to filter models by.
+        non_features : Optional[Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]]
+            Features to exclude from the results.
+        media_types : Optional[Sequence[Type[MediaBase]]]
+            Media types the returned models must support.
+
+        Returns
+        -------
+        List[str]
+            List of matching model names from all combined APIs.
+
+        Raises
+        ------
+        APIError
+            If an error occurs while fetching the model list.
+        """
         try:
             # Normalise the features:
             features = ModelFeatures.normalise(features)
@@ -200,7 +242,28 @@ class CombinedApi(DefaultApi):
         media_types: Optional[Sequence[Type[MediaBase]]] = None,
         exclusion_filters: Optional[List[str]] = None,
     ) -> Optional[str]:
+        """Select the best model from any combined API matching the criteria.
 
+        Iterates through provider APIs in priority order and returns the first
+        model satisfying all feature, non-feature, media type, and exclusion
+        constraints.
+
+        Parameters
+        ----------
+        features : Optional[Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]]
+            Required features the model must support.
+        non_features : Optional[Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]]
+            Features the model must not have.
+        media_types : Optional[Sequence[Type[MediaBase]]]
+            Media types the model must be able to process.
+        exclusion_filters : Optional[List[str]]
+            Substrings that, if found in a model name, exclude it.
+
+        Returns
+        -------
+        Optional[str]
+            The best matching model name, or None if no model matches.
+        """
         for api in self.apis:
             try:
 
@@ -238,7 +301,29 @@ class CombinedApi(DefaultApi):
         media_types: Optional[Sequence[Type[MediaBase]]] = None,
         model_name: Optional[str] = None,
     ) -> bool:
+        """Check if a model supports the given features and media types.
 
+        Delegates to the provider API that owns the model.
+
+        Parameters
+        ----------
+        features : Union[str, List[str], ModelFeatures, Sequence[ModelFeatures]]
+            The features to check for.
+        media_types : Optional[Sequence[Type[MediaBase]]]
+            Media types the model must support.
+        model_name : Optional[str]
+            The model to check. If None, checks any available model.
+
+        Returns
+        -------
+        bool
+            True if the model supports the requested features and media types.
+
+        Raises
+        ------
+        ValueError
+            If the model name is not found in any combined API.
+        """
         # Normalise the features:
         features = ModelFeatures.normalise(features)
 
@@ -273,7 +358,23 @@ class CombinedApi(DefaultApi):
         return has_support
 
     def max_num_input_tokens(self, model_name: Optional[str] = None) -> int:
+        """Get the maximum number of input tokens for a model.
 
+        Parameters
+        ----------
+        model_name : Optional[str]
+            The model to query. If None, uses the best available model.
+
+        Returns
+        -------
+        int
+            The maximum number of input tokens.
+
+        Raises
+        ------
+        ValueError
+            If the model is not found in any combined API.
+        """
         # if no model name is provided we return the best model as defined in the method above:
         if model_name is None:
             model_name = self.get_best_model()
@@ -289,7 +390,23 @@ class CombinedApi(DefaultApi):
         return api.max_num_input_tokens(model_name=model_name)
 
     def max_num_output_tokens(self, model_name: Optional[str] = None) -> int:
+        """Get the maximum number of output tokens for a model.
 
+        Parameters
+        ----------
+        model_name : Optional[str]
+            The model to query. If None, uses the best available model.
+
+        Returns
+        -------
+        int
+            The maximum number of output tokens.
+
+        Raises
+        ------
+        ValueError
+            If the model is not found in any combined API.
+        """
         # if no model name is provided we return the best model as defined in the method above:
         if model_name is None:
             model_name = self.get_best_model()
@@ -305,7 +422,26 @@ class CombinedApi(DefaultApi):
         return api.max_num_output_tokens(model_name=model_name)
 
     def count_tokens(self, text: str, model_name: Optional[str] = None) -> int:
+        """Count the number of tokens in the given text using the model's tokenizer.
 
+        Parameters
+        ----------
+        text : str
+            The text to tokenize and count.
+        model_name : Optional[str]
+            The model whose tokenizer to use. If None, uses the best
+            available model.
+
+        Returns
+        -------
+        int
+            The number of tokens.
+
+        Raises
+        ------
+        ValueError
+            If the model is not found in any combined API.
+        """
         # if no model name is provided we return the best model as defined in the method above:
         if model_name is None:
             model_name = self.get_best_model()
@@ -331,7 +467,37 @@ class CombinedApi(DefaultApi):
         response_format: Optional[BaseModel] = None,
         **kwargs,
     ) -> List[Message]:
+        """Generate text by delegating to the appropriate provider API.
 
+        Parameters
+        ----------
+        messages : List[Message]
+            The list of messages to send to the model.
+        model_name : Optional[str]
+            The model to use. If None, selects the best text generation model.
+        temperature : float
+            Sampling temperature (0.0 = deterministic).
+        max_num_output_tokens : Optional[int]
+            Maximum tokens in the response.
+        toolset : Optional[ToolSet]
+            The toolset available for function calling.
+        use_tools : bool
+            If True, executes tool calls automatically.
+        response_format : Optional[BaseModel]
+            Pydantic model for structured output parsing.
+        **kwargs
+            Additional provider-specific arguments.
+
+        Returns
+        -------
+        List[Message]
+            Response messages from the provider.
+
+        Raises
+        ------
+        ValueError
+            If the resolved model is not found in any combined API.
+        """
         # if no model name is provided we return the best model as defined in the method above:
         if model_name is None:
             model_name = self.get_best_model(ModelFeatures.TextGeneration)
@@ -368,7 +534,31 @@ class CombinedApi(DefaultApi):
         model_name: Optional[str] = None,
         **kwargs,
     ) -> str:
+        """Generate audio by delegating to the appropriate provider API.
 
+        Parameters
+        ----------
+        text : str
+            The text to convert to audio.
+        voice : Optional[str]
+            The voice to use for synthesis.
+        audio_format : Optional[str]
+            Audio file format (e.g., "mp3", "wav").
+        model_name : Optional[str]
+            The model to use. If None, selects the best audio generation model.
+        **kwargs
+            Additional provider-specific arguments.
+
+        Returns
+        -------
+        str
+            URI of the generated audio file.
+
+        Raises
+        ------
+        ValueError
+            If the resolved model is not found in any combined API.
+        """
         # if no model name is provided we return the best model as defined in the method above:
         if model_name is None:
             model_name = self.get_best_model(ModelFeatures.AudioGeneration)
@@ -405,7 +595,37 @@ class CombinedApi(DefaultApi):
         allow_resizing: bool = True,
         **kwargs,
     ) -> Image:
+        """Generate an image by delegating to the appropriate provider API.
 
+        Parameters
+        ----------
+        positive_prompt : str
+            The prompt describing what to generate.
+        negative_prompt : Optional[str]
+            Prompt specifying what not to generate.
+        model_name : Optional[str]
+            The model to use. If None, selects the best image generation model.
+        image_width : int
+            Desired width in pixels.
+        image_height : int
+            Desired height in pixels.
+        preserve_aspect_ratio : bool
+            Whether to preserve the aspect ratio.
+        allow_resizing : bool
+            Whether to allow resizing to match model constraints.
+        **kwargs
+            Additional provider-specific arguments.
+
+        Returns
+        -------
+        Image
+            The generated PIL Image.
+
+        Raises
+        ------
+        ValueError
+            If the resolved model is not found in any combined API.
+        """
         # if no model name is provided we return the best model as defined in the method above:
         if model_name is None:
             model_name = self.get_best_model(ModelFeatures.ImageGeneration)
@@ -454,7 +674,29 @@ class CombinedApi(DefaultApi):
         dimensions: int = 512,
         **kwargs,
     ) -> Sequence[Sequence[float]]:
+        """Embed texts by delegating to the appropriate provider API.
 
+        Parameters
+        ----------
+        texts : Sequence[str]
+            The text snippets to embed.
+        model_name : Optional[str]
+            The model to use. If None, selects the best text embedding model.
+        dimensions : int
+            Target dimensionality for the embedding vectors.
+        **kwargs
+            Additional provider-specific arguments.
+
+        Returns
+        -------
+        Sequence[Sequence[float]]
+            Embedding vectors, one per input text.
+
+        Raises
+        ------
+        ValueError
+            If the resolved model is not found in any combined API.
+        """
         # if no model name is provided we return the best model as defined in the method above:
         if model_name is None:
             model_name = self.get_best_model(ModelFeatures.TextEmbeddings)
@@ -485,7 +727,29 @@ class CombinedApi(DefaultApi):
         dimensions: int = 512,
         **kwargs,
     ) -> Sequence[Sequence[float]]:
+        """Embed images by delegating to the appropriate provider API.
 
+        Parameters
+        ----------
+        image_uris : List[str]
+            List of image URIs or file paths.
+        model_name : Optional[str]
+            The model to use. If None, selects the best image embedding model.
+        dimensions : int
+            Target dimensionality for the embedding vectors.
+        **kwargs
+            Additional provider-specific arguments.
+
+        Returns
+        -------
+        Sequence[Sequence[float]]
+            Embedding vectors, one per input image.
+
+        Raises
+        ------
+        ValueError
+            If the resolved model is not found in any combined API.
+        """
         # if no model name is provided we return the best model as defined in the method above:
         if model_name is None:
             model_name = self.get_best_model(ModelFeatures.ImageEmbeddings)
@@ -518,7 +782,29 @@ class CombinedApi(DefaultApi):
         dimensions: int = 512,
         **kwargs,
     ) -> Sequence[Sequence[float]]:
+        """Embed audio files by delegating to the appropriate provider API.
 
+        Parameters
+        ----------
+        audio_uris : List[str]
+            List of audio URIs or file paths.
+        model_name : Optional[str]
+            The model to use. If None, selects the best audio embedding model.
+        dimensions : int
+            Target dimensionality for the embedding vectors.
+        **kwargs
+            Additional provider-specific arguments.
+
+        Returns
+        -------
+        Sequence[Sequence[float]]
+            Embedding vectors, one per input audio.
+
+        Raises
+        ------
+        ValueError
+            If the resolved model is not found in any combined API.
+        """
         # if no model name is provided we return the best model as defined in the method above:
         if model_name is None:
             model_name = self.get_best_model(ModelFeatures.AudioEmbeddings)
@@ -549,7 +835,29 @@ class CombinedApi(DefaultApi):
         dimensions: int = 512,
         **kwargs,
     ) -> Sequence[Sequence[float]]:
+        """Embed videos by delegating to the appropriate provider API.
 
+        Parameters
+        ----------
+        video_uris : List[str]
+            List of video URIs or file paths.
+        model_name : Optional[str]
+            The model to use. If None, selects the best video embedding model.
+        dimensions : int
+            Target dimensionality for the embedding vectors.
+        **kwargs
+            Additional provider-specific arguments.
+
+        Returns
+        -------
+        Sequence[Sequence[float]]
+            Embedding vectors, one per input video.
+
+        Raises
+        ------
+        ValueError
+            If the resolved model is not found in any combined API.
+        """
         # if no model name is provided we return the best model as defined in the method above:
         if model_name is None:
             model_name = self.get_best_model(ModelFeatures.VideoEmbeddings)
@@ -580,7 +888,29 @@ class CombinedApi(DefaultApi):
         dimensions: int = 512,
         **kwargs,
     ) -> Sequence[Sequence[float]]:
+        """Embed documents by delegating to the appropriate provider API.
 
+        Parameters
+        ----------
+        document_uris : List[str]
+            List of document URIs or file paths.
+        model_name : Optional[str]
+            The model to use. If None, selects the best document embedding model.
+        dimensions : int
+            Target dimensionality for the embedding vectors.
+        **kwargs
+            Additional provider-specific arguments.
+
+        Returns
+        -------
+        Sequence[Sequence[float]]
+            Embedding vectors, one per input document.
+
+        Raises
+        ------
+        ValueError
+            If the resolved model is not found in any combined API.
+        """
         # if no model name is provided we return the best model as defined in the method above:
         if model_name is None:
             model_name = self.get_best_model(ModelFeatures.DocumentEmbeddings)
@@ -614,7 +944,35 @@ class CombinedApi(DefaultApi):
         max_output_tokens: Optional[int] = None,
         number_of_tries: int = 4,
     ) -> str:
+        """Describe an image by delegating to the appropriate provider API.
 
+        Parameters
+        ----------
+        image_uri : str
+            Path, URL, or base64-encoded image to describe.
+        system : str
+            System message to guide the description.
+        query : str
+            Query prompt to use with the image.
+        model_name : Optional[str]
+            Model to use. If None, selects the best image-capable model.
+        temperature : float
+            Sampling temperature for the response.
+        max_output_tokens : Optional[int]
+            Maximum tokens in the response.
+        number_of_tries : int
+            Number of retry attempts on failure.
+
+        Returns
+        -------
+        str
+            Text description of the image.
+
+        Raises
+        ------
+        ValueError
+            If the resolved model is not found in any combined API.
+        """
         # if no model name is provided we return the best model as defined in the method above:
         if model_name is None:
             model_name = self.get_best_model(
@@ -665,7 +1023,35 @@ class CombinedApi(DefaultApi):
         max_output_tokens: Optional[int] = None,
         number_of_tries: int = 4,
     ) -> str:
+        """Describe an audio file by delegating to the appropriate provider API.
 
+        Parameters
+        ----------
+        audio_uri : str
+            Path, URL, or base64-encoded audio to describe.
+        system : str
+            System message to guide the description.
+        query : str
+            Query prompt to use with the audio.
+        model_name : Optional[str]
+            Model to use. If None, selects the best audio-capable model.
+        temperature : float
+            Sampling temperature for the response.
+        max_output_tokens : Optional[int]
+            Maximum tokens in the response.
+        number_of_tries : int
+            Number of retry attempts on failure.
+
+        Returns
+        -------
+        str
+            Text description of the audio.
+
+        Raises
+        ------
+        ValueError
+            If the resolved model is not found in any combined API.
+        """
         # if no model name is provided we return the best model as defined in the method above:
         if model_name is None:
             model_name = self.get_best_model(
@@ -709,6 +1095,27 @@ class CombinedApi(DefaultApi):
     def transcribe_audio(
         self, audio_uri: str, model_name: Optional[str] = None, **model_kwargs
     ) -> str:
+        """Transcribe audio by delegating to the appropriate provider API.
+
+        Parameters
+        ----------
+        audio_uri : str
+            Path, URL, or base64-encoded audio to transcribe.
+        model_name : Optional[str]
+            The model to use. If None, selects the best transcription model.
+        **model_kwargs
+            Additional provider-specific arguments.
+
+        Returns
+        -------
+        str
+            The transcription of the audio.
+
+        Raises
+        ------
+        ValueError
+            If the resolved model is not found in any combined API.
+        """
         # if no model name is provided we return the best model as defined in the method above:
         if model_name is None:
             model_name = self.get_best_model(
@@ -746,7 +1153,35 @@ class CombinedApi(DefaultApi):
         max_output_tokens: Optional[int] = None,
         number_of_tries: int = 4,
     ) -> str:
+        """Describe a video by delegating to the appropriate provider API.
 
+        Parameters
+        ----------
+        video_uri : str
+            Path, URL, or base64-encoded video to describe.
+        system : str
+            System message to guide the description.
+        query : str
+            Query prompt to use with the video.
+        model_name : Optional[str]
+            Model to use. If None, selects the best video-capable model.
+        temperature : float
+            Sampling temperature for the response.
+        max_output_tokens : Optional[int]
+            Maximum tokens in the response.
+        number_of_tries : int
+            Number of retry attempts on failure.
+
+        Returns
+        -------
+        str
+            Text description of the video.
+
+        Raises
+        ------
+        ValueError
+            If the resolved model is not found in any combined API.
+        """
         # if no model name is provided we return the best model as defined in the method above:
         if model_name is None:
             model_name = self.get_best_model(
@@ -797,7 +1232,35 @@ class CombinedApi(DefaultApi):
         max_output_tokens: Optional[int] = None,
         number_of_tries: int = 4,
     ) -> str:
+        """Describe a document by delegating to the appropriate provider API.
 
+        Parameters
+        ----------
+        document_uri : str
+            Path, URL, or base64-encoded document to describe.
+        system : str
+            System message to guide the description.
+        query : str
+            Query prompt to use with the document.
+        model_name : Optional[str]
+            Model to use. If None, selects the best document-capable model.
+        temperature : float
+            Sampling temperature for the response.
+        max_output_tokens : Optional[int]
+            Maximum tokens in the response.
+        number_of_tries : int
+            Number of retry attempts on failure.
+
+        Returns
+        -------
+        str
+            Text description of the document.
+
+        Raises
+        ------
+        ValueError
+            If the resolved model is not found in any combined API.
+        """
         # if no model name is provided we return the best model as defined in the method above:
         if model_name is None:
             model_name = self.get_best_model(

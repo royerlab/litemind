@@ -1,3 +1,9 @@
+"""Utilities for extracting archive files to temporary directories.
+
+Supports ZIP, tar.gz, tar.bz2, tar.xz, 7z, and RAR formats with path
+traversal protection.
+"""
+
 import os
 
 from litemind.utils.normalise_uri_to_local_file_path import uri_to_local_file_path
@@ -25,7 +31,20 @@ def _is_safe_path(base_dir: str, path: str) -> bool:
 
 
 def _safe_extract_zip(zip_ref, dest_dir: str) -> None:
-    """Safely extract zip archive with path traversal protection."""
+    """Safely extract a zip archive with path traversal protection.
+
+    Parameters
+    ----------
+    zip_ref : zipfile.ZipFile
+        An open ZipFile object to extract.
+    dest_dir : str
+        The destination directory for extraction.
+
+    Raises
+    ------
+    ValueError
+        If path traversal is detected in any archive member.
+    """
     for member in zip_ref.namelist():
         if not _is_safe_path(dest_dir, member):
             raise ValueError(f"Attempted path traversal in archive: {member}")
@@ -33,7 +52,20 @@ def _safe_extract_zip(zip_ref, dest_dir: str) -> None:
 
 
 def _safe_extract_tar(tar_ref, dest_dir: str) -> None:
-    """Safely extract tar archive with path traversal protection."""
+    """Safely extract a tar archive with path traversal protection.
+
+    Parameters
+    ----------
+    tar_ref : tarfile.TarFile
+        An open TarFile object to extract.
+    dest_dir : str
+        The destination directory for extraction.
+
+    Raises
+    ------
+    ValueError
+        If path traversal is detected in any archive member.
+    """
     for member in tar_ref.getmembers():
         if not _is_safe_path(dest_dir, member.name):
             raise ValueError(f"Attempted path traversal in archive: {member.name}")
@@ -41,7 +73,20 @@ def _safe_extract_tar(tar_ref, dest_dir: str) -> None:
 
 
 def _safe_extract_7z(archive, dest_dir: str) -> None:
-    """Safely extract 7z archive with path traversal protection."""
+    """Safely extract a 7z archive with path traversal protection.
+
+    Parameters
+    ----------
+    archive : py7zr.SevenZipFile
+        An open SevenZipFile object to extract.
+    dest_dir : str
+        The destination directory for extraction.
+
+    Raises
+    ------
+    ValueError
+        If path traversal is detected in any archive member.
+    """
     for name in archive.getnames():
         if not _is_safe_path(dest_dir, name):
             raise ValueError(f"Attempted path traversal in archive: {name}")

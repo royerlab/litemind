@@ -1,3 +1,9 @@
+"""Registry of all concrete media type classes.
+
+Provides a single function to lazily import and return every media type,
+avoiding circular import issues at module load time.
+"""
+
 from typing import List, Type
 
 

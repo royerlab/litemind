@@ -1,3 +1,10 @@
+"""URI-based media type for litemind.
+
+Provides the ``MediaURI`` abstract class for media objects whose content is
+referenced by a URI (``file://``, ``http://``, ``https://``). Handles URI
+normalisation, local file resolution, base64 encoding, and MIME type detection.
+"""
+
 import os
 from abc import abstractmethod
 from typing import Optional

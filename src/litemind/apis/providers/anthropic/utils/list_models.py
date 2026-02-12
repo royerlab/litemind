@@ -1,3 +1,5 @@
+"""Utilities for listing and enumerating Anthropic model variants."""
+
 from typing import List
 
 # Models that support 1M context via the context-1m beta header:
@@ -10,6 +12,27 @@ _MAX_THINKING_PATTERNS = ["claude-opus-4-6"]
 def _get_anthropic_models_list(
     client, max_num_models: int = 100, enable_long_context: bool = True
 ) -> List[str]:
+    """Fetch available Anthropic models and generate thinking/long-context variants.
+
+    Queries the Anthropic models API, removes deprecated models, and appends
+    thinking suffix variants (``-thinking-low``, ``-thinking-mid``,
+    ``-thinking-high``, ``-thinking-max``) and long-context ``-1m`` variants
+    for supported model families.
+
+    Parameters
+    ----------
+    client : Anthropic
+        An initialized Anthropic client instance.
+    max_num_models : int
+        Maximum number of models to retrieve from the API.
+    enable_long_context : bool
+        If True, adds ``-1m`` variants for models that support 1M context.
+
+    Returns
+    -------
+    List[str]
+        List of model ID strings including generated variants.
+    """
     # List Anthropic models:
     from anthropic.types import ModelInfo
 
@@ -37,10 +60,16 @@ def _get_anthropic_models_list(
 def _add_thinking_variants(model_list: List[str]) -> None:
     """Add thinking suffix variants for supported models.
 
-    All models get -thinking-low/mid/high.
-    Opus 4.6 also gets -thinking-max (exclusive max effort).
-    Variants are inserted AFTER the base model so that the base model
-    remains the default (first) choice when auto-selecting.
+    All supported models get ``-thinking-low``, ``-thinking-mid``, and
+    ``-thinking-high`` variants. Opus 4.6 also gets ``-thinking-max``
+    (adaptive thinking with max effort). Variants are inserted after the
+    base model so that the base model remains the default (first) choice
+    when auto-selecting.
+
+    Parameters
+    ----------
+    model_list : List[str]
+        Model list to modify in place by inserting thinking variants.
     """
     for pattern in [
         "claude-opus-4-6",
@@ -64,12 +93,18 @@ def _add_thinking_variants(model_list: List[str]) -> None:
 
 
 def _add_long_context_variants(model_list: List[str]) -> None:
-    """Add -1m suffix variants for models that support 1M context via beta header.
+    """Add ``-1m`` suffix variants for models that support 1M context.
 
     For each matching base model, adds (after all its thinking variants):
-    - base-1m (long context variant)
-    - base-1m-thinking-low/mid/high (only if base has thinking variants)
-    - base-1m-thinking-max (for Opus 4.6 only, if base has thinking variants)
+
+    - ``base-1m`` (long context variant)
+    - ``base-1m-thinking-low/mid/high`` (only if base has thinking variants)
+    - ``base-1m-thinking-max`` (for Opus 4.6 only, if base has thinking variants)
+
+    Parameters
+    ----------
+    model_list : List[str]
+        Model list to modify in place by inserting long-context variants.
     """
     # Collect insertion groups: (group_end_index, [variants_to_insert])
     # Each group inserts a contiguous block at a unique position.

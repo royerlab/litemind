@@ -1,3 +1,11 @@
+"""Default implementation of the ``MediaBase`` interface.
+
+Provides ``MediaDefault``, a concrete base class that implements common
+media operations (``to_message_block``, equality, hashing, string
+representation) so that concrete media subclasses only need to implement
+``get_content``.
+"""
+
 from litemind.media.media_base import MediaBase
 from litemind.utils.pickle_serialisation import PickleSerializable
 

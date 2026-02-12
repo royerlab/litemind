@@ -1,3 +1,16 @@
+"""In-memory vector database backed by a KD-tree for similarity search.
+
+This module provides ``InMemoryVectorDatabase``, a vector database that
+keeps all informations and their embeddings in memory using a
+``scipy.spatial.cKDTree`` for efficient nearest-neighbour lookups. It is
+well suited for prototyping, testing, and moderate-sized datasets.
+
+The database can optionally be persisted to disk. If a ``location`` is
+given at construction time and files already exist there, the database is
+loaded from disk. Calling ``save()`` writes the current state back to
+disk, and ``close()`` triggers a save before releasing resources.
+"""
+
 import copy
 import os
 import pickle
@@ -92,13 +105,35 @@ class InMemoryVectorDatabase(DefaultVectorDatabase):
             return
 
     def _database_exists(self, location: str) -> bool:
-        """Check if database files exist at the specified location."""
+        """Check if a previously saved database exists at the given location.
+
+        A valid database requires both a ``metadata.pkl`` file and a
+        ``vectors.npy`` file to be present in the directory.
+
+        Parameters
+        ----------
+        location : str
+            Filesystem path to the directory that may contain saved
+            database files.
+
+        Returns
+        -------
+        bool
+            True if both ``metadata.pkl`` and ``vectors.npy`` exist at
+            the location.
+        """
         metadata_path = os.path.join(location, "metadata.pkl")
         vectors_path = os.path.join(location, "vectors.npy")
         return os.path.exists(metadata_path) and os.path.exists(vectors_path)
 
     def _load(self) -> None:
-        """Load the database from disk."""
+        """Load the database state from disk.
+
+        Reads ``metadata.pkl`` and ``vectors.npy`` from ``self.location``,
+        restoring informations, index mappings, and embedding vectors.
+        The KD-tree is rebuilt after loading. If loading fails for any
+        reason, the database is reset to an empty state.
+        """
         try:
             # Ensure directory exists
             if not os.path.exists(self.location):
@@ -460,5 +495,9 @@ class InMemoryVectorDatabase(DefaultVectorDatabase):
             traceback.print_stack()
 
     def close(self) -> None:
-        """Close the database"""
+        """Close the database by persisting its current state to disk.
+
+        Delegates to ``save()`` so that all informations and embeddings
+        are written to the configured ``location`` (if one was provided).
+        """
         self.save()

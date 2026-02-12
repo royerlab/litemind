@@ -1,3 +1,10 @@
+"""Pydantic object media type for litemind.
+
+Provides the ``Object`` class which wraps a Pydantic ``BaseModel`` instance
+as a media object. The wrapped model is serialised to JSON for display,
+hashing, and conversion to other media types.
+"""
+
 from typing import Any
 
 from pydantic import BaseModel
@@ -107,10 +114,31 @@ class Object(MediaDefault):
         return Text(self.to_markdown_string())
 
     def __str__(self) -> str:
+        """Return the JSON serialisation of the wrapped Pydantic object.
+
+        Returns
+        -------
+        str
+            The JSON string produced by ``model_dump_json()``.
+        """
         return self.to_json_string()
 
     def __len__(self) -> int:
+        """Return the length of the JSON serialisation.
+
+        Returns
+        -------
+        int
+            Number of characters in the JSON string.
+        """
         return len(self.to_json_string())
 
     def __hash__(self) -> int:
+        """Return a hash of the JSON serialisation.
+
+        Returns
+        -------
+        int
+            Hash value computed from the JSON string.
+        """
         return hash(self.to_json_string())

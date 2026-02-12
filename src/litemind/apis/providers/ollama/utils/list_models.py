@@ -1,3 +1,10 @@
+"""Utility for fetching and sorting the Ollama model list.
+
+Retrieves locally available models from the Ollama server, sorts them
+by size (largest/most capable first), and creates ``-thinking`` suffixed
+variants for each model to enable thinking/reasoning mode.
+"""
+
 from typing import List
 
 
@@ -17,7 +24,7 @@ def _get_ollama_models_list(client) -> List[str]:
     List[str]
         Model names sorted by size (largest first), with thinking variants.
     """
-    # Get the ls of models:
+    # Get the list of models:
     model_list = list(client.list().models)
 
     # Get the list of models:

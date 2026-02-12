@@ -1,3 +1,5 @@
+"""Conversion of litemind ToolSet to Gemini tool and schema format."""
+
 from typing import TYPE_CHECKING, List, Optional
 
 if TYPE_CHECKING:

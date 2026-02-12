@@ -1,3 +1,11 @@
+"""Utility for aggregating streaming Ollama chat responses.
+
+Provides a function to merge a stream of ``ChatResponse`` chunks from
+Ollama's streaming chat API into a single consolidated ``ChatResponse``
+object, accumulating text content, tool calls, and images while invoking
+a callback for each text fragment received.
+"""
+
 from typing import Callable, Iterable
 
 

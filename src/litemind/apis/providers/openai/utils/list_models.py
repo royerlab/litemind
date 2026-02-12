@@ -1,3 +1,12 @@
+"""Utilities for fetching, filtering, and sorting OpenAI model lists.
+
+Provides functions to retrieve the raw model catalogue from the OpenAI
+API and to filter it into a curated, priority-sorted list of supported
+models. Deprecated, dated-snapshot, and prohibitively expensive models
+are removed by default. Reasoning models (o-series) are expanded into
+``-low``, ``-medium``, and ``-high`` reasoning-effort variants.
+"""
+
 import traceback
 from typing import TYPE_CHECKING, Any, List, Optional
 

@@ -74,6 +74,18 @@ class ModelFeatureValidator(MediaResources):
 
     @staticmethod
     def _snake_case(name: str) -> str:
+        """Convert a CamelCase string to snake_case.
+
+        Parameters
+        ----------
+        name : str
+            The CamelCase string to convert.
+
+        Returns
+        -------
+        str
+            The snake_case version of the input string.
+        """
         import re
 
         s1 = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", name)
@@ -81,10 +93,37 @@ class ModelFeatureValidator(MediaResources):
 
     @staticmethod
     def _api_class_to_name(api_class: type) -> str:
+        """Convert an API class to its string name.
+
+        Parameters
+        ----------
+        api_class : type
+            The API class to convert.
+
+        Returns
+        -------
+        str
+            The class name as a string.
+        """
         return api_class.__name__
 
     @staticmethod
     def _api_name_to_class(api_name: str) -> Optional[Type[BaseApi]]:
+        """Resolve an API class name string to the actual class.
+
+        Searches loaded modules for a ``BaseApi`` subclass with the given
+        name, prioritizing litemind provider modules.
+
+        Parameters
+        ----------
+        api_name : str
+            The class name string (e.g., "OpenAIApi").
+
+        Returns
+        -------
+        Optional[Type[BaseApi]]
+            The resolved API class, or None if not found.
+        """
         import sys
 
         # BaseApi is imported at the top of the file
@@ -130,10 +169,39 @@ class ModelFeatureValidator(MediaResources):
 
     @staticmethod
     def _feature_to_name(feature: ModelFeatures) -> str:
+        """Convert a ModelFeatures enum value to its string name.
+
+        Parameters
+        ----------
+        feature : ModelFeatures
+            The feature enum value to convert.
+
+        Returns
+        -------
+        str
+            The feature name as a string.
+        """
         return feature.name
 
     @staticmethod
     def _name_to_feature(feature_name: str) -> ModelFeatures:
+        """Convert a feature name string to a ModelFeatures enum value.
+
+        Parameters
+        ----------
+        feature_name : str
+            The feature name to look up.
+
+        Returns
+        -------
+        ModelFeatures
+            The corresponding ModelFeatures enum value.
+
+        Raises
+        ------
+        KeyError
+            If the feature name does not match any ModelFeatures member.
+        """
         return ModelFeatures[feature_name]
 
     def get_supported_features(

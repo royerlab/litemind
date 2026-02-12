@@ -1,3 +1,9 @@
+"""Document-to-text-and-image converter using PyMuPDF.
+
+Provides :class:`DocumentConverterPymupdf` which extracts text and renders
+page images from PDF documents using the PyMuPDF (fitz) library.
+"""
+
 from functools import lru_cache
 from typing import List, Tuple, Type
 
@@ -23,10 +29,30 @@ class DocumentConverterPymupdf(BaseConverter):
     """
 
     def rule(self) -> List[Tuple[Type[MediaBase], List[Type[MediaBase]]]]:
+        """Declare that this converter transforms Document to Text and Image.
+
+        Returns
+        -------
+        List[Tuple[Type[MediaBase], List[Type[MediaBase]]]]
+            A single rule mapping Document to Text and Image.
+        """
         return [(Document, [Text, Image])]
 
     def can_convert(self, media: MediaBase) -> bool:
+        """Check whether the given media is a PDF Document.
 
+        Only PDF files are supported by this converter.
+
+        Parameters
+        ----------
+        media : MediaBase
+            The media to check.
+
+        Returns
+        -------
+        bool
+            True if the media is a Document with a PDF file type or extension.
+        """
         # Check is the media is None:
         if media is None:
             return False
@@ -45,7 +71,27 @@ class DocumentConverterPymupdf(BaseConverter):
         return False
 
     def convert(self, media: MediaBase) -> List[MediaBase]:
+        """Convert a PDF Document to Text and Image media per page.
 
+        Each page produces a Text media with the extracted text and an
+        Image media with the rendered page.
+
+        Parameters
+        ----------
+        media : MediaBase
+            The Document media to convert.
+
+        Returns
+        -------
+        List[MediaBase]
+            A preamble Text followed by interleaved Text and Image media
+            for each page.
+
+        Raises
+        ------
+        ValueError
+            If *media* is not a Document instance.
+        """
         if not isinstance(media, Document):
             raise ValueError(f"Expected Document media, got {type(media)}")
 

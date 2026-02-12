@@ -1,3 +1,10 @@
+"""Utility for managing the local Ollama server process lifecycle.
+
+Provides the ``OllamaServer`` class to start, stop, and query the
+Ollama inference server as a subprocess. Useful for programmatically
+managing the server in development, testing, or CI/CD environments.
+"""
+
 import socket
 import subprocess
 from time import sleep

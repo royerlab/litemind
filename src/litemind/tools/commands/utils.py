@@ -1,5 +1,8 @@
 """
 Shared utilities for the litemind CLI commands.
+
+Provides helper functions used by multiple CLI subcommands, such as
+default folder-scanning parameters for repository export.
 """
 
 from typing import List, Optional, Tuple

@@ -66,13 +66,29 @@ class TextCompressor:
         self.max_repeats = max_repeats
 
     def enable(self, *scheme_ids: str) -> None:
-        """Enable specific compression schemes."""
+        """
+        Enable specific compression schemes.
+
+        Parameters
+        ----------
+        *scheme_ids : str
+            One or more scheme IDs to enable. Unknown IDs are silently
+            ignored.
+        """
         for s in scheme_ids:
             if s in self._ALL_SCHEMES:
                 self.active[s] = True
 
     def disable(self, *scheme_ids: str) -> None:
-        """Disable specific compression schemes."""
+        """
+        Disable specific compression schemes.
+
+        Parameters
+        ----------
+        *scheme_ids : str
+            One or more scheme IDs to disable. Unknown IDs are silently
+            ignored.
+        """
         for s in scheme_ids:
             if s in self._ALL_SCHEMES:
                 self.active[s] = False

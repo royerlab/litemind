@@ -1,3 +1,12 @@
+"""Abstract base class for vector database implementations.
+
+This module defines ``BaseVectorDatabase``, the interface that all vector
+database backends must implement. Vector databases store ``Information``
+objects alongside their vector embeddings and enable semantic similarity
+search, forming the storage backbone for Retrieval-Augmented Generation
+(RAG) augmentations in litemind.
+"""
+
 from abc import ABC, abstractmethod
 from typing import List, Optional, Union
 

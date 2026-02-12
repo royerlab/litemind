@@ -1,3 +1,5 @@
+"""Utility for identifying Gemini models with built-in reasoning support."""
+
 import re
 
 # Compile once on import
@@ -18,9 +20,20 @@ _GEMINI_REASONING_RE = re.compile(
 
 
 def is_gemini_reasoning_model(model_name: str) -> bool:
-    """
-    True ⇔ `model_name` supports Gemini’s built-in thinking/reasoning trace.
+    """Check whether a Gemini model supports built-in thinking/reasoning traces.
 
+    Parameters
+    ----------
+    model_name : str
+        The Gemini model name (with or without ``models/`` prefix).
+
+    Returns
+    -------
+    bool
+        True if the model supports native thinking/reasoning.
+
+    Examples
+    --------
     >>> is_gemini_reasoning_model("gemini-2.5-pro-preview-05-06")
     True
     >>> is_gemini_reasoning_model("gemini-nano")

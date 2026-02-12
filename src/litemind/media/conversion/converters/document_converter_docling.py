@@ -1,3 +1,10 @@
+"""Document-to-text converter using the Docling library.
+
+Provides :class:`DocumentConverterDocling` which converts PDF, DOCX, XLSX,
+PPTX, Markdown, AsciiDoc, and HTML documents into per-page Text media using
+the Docling document conversion library.
+"""
+
 from functools import lru_cache
 from typing import List, Optional, Tuple, Type
 
@@ -17,10 +24,31 @@ class DocumentConverterDocling(BaseConverter):
     """
 
     def rule(self) -> List[Tuple[Type[MediaBase], List[Type[MediaBase]]]]:
+        """Declare that this converter transforms Document to Text.
+
+        Returns
+        -------
+        List[Tuple[Type[MediaBase], List[Type[MediaBase]]]]
+            A single rule mapping Document to Text.
+        """
         return [(Document, [Text])]
 
     def can_convert(self, media: MediaBase) -> bool:
+        """Check whether the given media is a supported Document type.
 
+        Supports PDF, DOCX, XLSX, PPTX, Markdown, AsciiDoc, HTML, and
+        XHTML files.
+
+        Parameters
+        ----------
+        media : MediaBase
+            The media to check.
+
+        Returns
+        -------
+        bool
+            True if the media is a Document with a supported file type.
+        """
         # Check is the media is None:
         if media is None:
             return False
@@ -56,7 +84,24 @@ class DocumentConverterDocling(BaseConverter):
         return False
 
     def convert(self, media: MediaBase) -> List[MediaBase]:
+        """Convert a Document to a list of per-page Text media using Docling.
 
+        Parameters
+        ----------
+        media : MediaBase
+            The Document media to convert.
+
+        Returns
+        -------
+        List[MediaBase]
+            A list of Text media: a preamble header followed by one Text
+            per page of the document.
+
+        Raises
+        ------
+        ValueError
+            If *media* is not a Document instance.
+        """
         if not isinstance(media, Document):
             raise ValueError(f"Expected Document media, got {type(media)}")
 
@@ -192,7 +237,13 @@ __default_docling_converter = None
 
 
 def _get_docling_converter():
-    """Get or lazily initialise the singleton Docling converter."""
+    """Get or lazily initialise the singleton Docling converter.
+
+    Returns
+    -------
+    docling.document_converter.DocumentConverter
+        The shared Docling converter instance.
+    """
     global __default_docling_converter
     if __default_docling_converter is None:
         __default_docling_converter = initialize_docling_converter()

@@ -1,3 +1,11 @@
+"""Utility for converting litemind messages to Ollama chat format.
+
+Transforms litemind ``Message`` objects (containing text, images, and
+tool actions) into the dictionary-based message format expected by the
+Ollama chat API. Optionally appends a JSON schema prompt for structured
+output when a ``response_format`` Pydantic model is provided.
+"""
+
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel

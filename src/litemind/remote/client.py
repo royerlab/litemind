@@ -1,3 +1,11 @@
+"""
+RPyC client for remote litemind object access.
+
+Provides the :class:`Client` class which connects to a :class:`~litemind.remote.server.Server`
+instance and retrieves proxy-wrapped remote objects (e.g. agents) that can be
+used as if they were local Python objects.
+"""
+
 import inspect
 
 from arbol import aprint
@@ -143,16 +151,53 @@ class Client:
 
 
 class _ValueWrapper:
-    """
-    Wrapper that forces by-value transmission for classes using RPyC's obtain().
-    This prevents classes from being sent as proxies, which would fail issubclass() checks.
+    """Client-side wrapper that forces by-value transmission for class arguments.
+
+    RPyC normally transmits objects as proxy references (netrefs). When a
+    Python **class** is passed as an argument this way, ``issubclass()`` and
+    ``isinstance()`` checks on the server side will fail.  This wrapper
+    intercepts ``__call__`` and uses ``rpyc.utils.classic.obtain()`` to
+    materialise class-typed keyword arguments before forwarding them to the
+    remote object.
+
+    Parameters
+    ----------
+    remote_obj : object
+        The RPyC netref to the remote object being wrapped.
     """
 
     def __init__(self, remote_obj):
+        """
+        Initialise the wrapper around a remote RPyC object.
+
+        Parameters
+        ----------
+        remote_obj : object
+            The RPyC netref to the remote object being wrapped.
+        """
         self._remote_obj = remote_obj
 
     def __call__(self, *args, **kwargs):
-        """Handle method calls, using obtain() to force by-value transmission for classes."""
+        """Call the remote object, materialising class-typed keyword arguments.
+
+        Positional arguments are forwarded as-is. Keyword arguments whose
+        values are Python classes are pulled by value using
+        ``rpyc.utils.classic.obtain()`` so that server-side type checks
+        succeed.
+
+        Parameters
+        ----------
+        *args : object
+            Positional arguments forwarded to the remote callable.
+        **kwargs : object
+            Keyword arguments forwarded to the remote callable. Values
+            that are Python classes are materialised by value first.
+
+        Returns
+        -------
+        object
+            The return value of the remote callable.
+        """
 
         # Process arguments to force by-value transmission for classes
         processed_args = list(args)  # Keep args as-is for now
@@ -175,9 +220,31 @@ class _ValueWrapper:
         return self._remote_obj(*processed_args, **processed_kwargs)
 
     def __getattr__(self, name):
-        """Forward all other attribute access to the remote object."""
+        """Forward attribute access to the remote object.
+
+        Parameters
+        ----------
+        name : str
+            The attribute name to look up on the remote object.
+
+        Returns
+        -------
+        object
+            The attribute value from the remote object.
+        """
         return getattr(self._remote_obj, name)
 
     def __getitem__(self, key):
-        """Forward item access to the remote object (for dict-like objects)."""
+        """Forward item access to the remote object for dict-like interfaces.
+
+        Parameters
+        ----------
+        key : object
+            The key to look up on the remote object.
+
+        Returns
+        -------
+        object
+            The value associated with *key* on the remote object.
+        """
         return self._remote_obj[key]

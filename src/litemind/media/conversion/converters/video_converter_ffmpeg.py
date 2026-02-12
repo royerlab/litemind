@@ -1,3 +1,10 @@
+"""Video-to-frames-and-audio converter using ffmpeg.
+
+Provides :class:`VideoConverterFfmpeg` which decomposes Video media into
+Text metadata, sampled Image frames, and an optional Audio track using
+the ffmpeg command-line tool.
+"""
+
 import os
 import tempfile
 from typing import List, Tuple, Type
@@ -23,12 +30,52 @@ class VideoConverterFfmpeg(BaseConverter):
     """
 
     def rule(self) -> List[Tuple[Type[MediaBase], List[Type[MediaBase]]]]:
+        """Declare that this converter transforms Video to Text and Image.
+
+        Returns
+        -------
+        List[Tuple[Type[MediaBase], List[Type[MediaBase]]]]
+            A single rule mapping Video to Text and Image.
+        """
         return [(Video, [Text, Image])]
 
     def can_convert(self, media: MediaBase) -> bool:
+        """Check whether the given media is a Video instance.
+
+        Parameters
+        ----------
+        media : MediaBase
+            The media to check.
+
+        Returns
+        -------
+        bool
+            True if the media is a non-None Video instance.
+        """
         return media is not None and isinstance(media, Video)
 
     def convert(self, media: MediaBase) -> List[MediaBase]:
+        """Convert Video media to metadata Text, Image frames, and Audio.
+
+        Delegates to :func:`convert_video_to_info_frames_and_audio` to
+        decompose the video into its constituent parts.
+
+        Parameters
+        ----------
+        media : MediaBase
+            The Video media to convert.
+
+        Returns
+        -------
+        List[MediaBase]
+            A list containing a Text summary, alternating Text/Image pairs
+            for each sampled frame, and optionally an Audio track.
+
+        Raises
+        ------
+        ValueError
+            If *media* is not a Video instance.
+        """
         if not isinstance(media, Video):
             raise ValueError(f"Expected Video media, got {type(media)}")
 

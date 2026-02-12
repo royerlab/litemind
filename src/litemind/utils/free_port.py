@@ -1,20 +1,21 @@
+"""Utility for finding a free network port."""
+
 from typing import Tuple
 
 
 def find_free_port() -> Tuple[str, int]:
-    """Finds and returns a free port and its associated host.
+    """Find and return a free port and its associated host.
 
-    This utility function temporarily binds a socket to an ephemeral port
-    chosen by the operating system (by specifying port 0). It then
-    retrieves the assigned port number, closes the socket to release it,
-    and returns the port number. This is useful for running tests or services
-    on a dynamically assigned port to avoid conflicts.
+    Temporarily binds a socket to an ephemeral port chosen by the
+    operating system, retrieves the assigned port number, then closes
+    the socket to release it. Useful for running tests or services on
+    dynamically assigned ports to avoid conflicts.
 
     Returns
     -------
     Tuple[str, int]
-        A tuple containing the host address (str) and a free port number (int).
-
+        A tuple containing the host address (str) and a free port
+        number (int).
     """
     # Import Python's built-in library for low-level network operations.
     import socket

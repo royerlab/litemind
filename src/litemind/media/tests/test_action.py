@@ -21,12 +21,12 @@ class TestAction:
 
     def test_init_invalid_none(self):
         """Test initialization with None raises ValueError."""
-        with pytest.raises(ValueError, match="Object cannot be None"):
+        with pytest.raises(ValueError, match="Action cannot be None"):
             Action(action=None)
 
     def test_init_with_non_action(self):
         """Test initialization with non-pydantic object raises ValueError."""
-        with pytest.raises(ValueError, match="Object must be an ActionBase"):
+        with pytest.raises(ValueError, match="Action must be an ActionBase"):
             Action(action="not a model")
 
     def test_str(self, sample_tool_use):

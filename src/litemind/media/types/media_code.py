@@ -1,3 +1,10 @@
+"""Source code media type for litemind.
+
+Provides the ``Code`` class for storing source code snippets with an
+associated programming language identifier. Supports Markdown rendering
+with syntax-highlighted fenced code blocks.
+"""
+
 from litemind.media.media_default import MediaDefault
 from litemind.media.types.media_text import Text
 

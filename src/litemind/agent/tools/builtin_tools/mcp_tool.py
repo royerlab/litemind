@@ -1,3 +1,11 @@
+"""Built-in tool for connecting to a Model Context Protocol (MCP) server.
+
+This module provides the ``BuiltinMCPTool`` class, which carries MCP
+server connection parameters (name, URL, headers, allowed tools) so that
+an API provider can communicate with the server on behalf of the model.
+The tool itself is not executed locally.
+"""
+
 from typing import Any, Dict, List, Optional
 
 from litemind.agent.tools.builtin_tools.builtin_tool import BuiltinTool

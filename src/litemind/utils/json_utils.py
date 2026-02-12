@@ -1,3 +1,9 @@
+"""JSON serialization and deserialization utilities.
+
+Provides a mixin class for automatic JSON serialization of Python objects,
+with support for nested objects, dates, and sets.
+"""
+
 import datetime
 import inspect
 import json
@@ -140,9 +146,28 @@ class JSONSerializable:
 
 
 class _JSONEncoder(json.JSONEncoder):
-    """Custom JSON encoder that handles dates, sets, and objects with ``to_dict``."""
+    """Custom JSON encoder that handles dates, sets, and objects with ``to_dict``.
+
+    Extends the standard ``json.JSONEncoder`` to serialize
+    ``datetime.datetime``, ``datetime.date``, ``set``, and any object
+    that provides a ``to_dict()`` method.
+    """
 
     def default(self, obj: Any) -> Any:
+        """Return a serializable representation of the given object.
+
+        Parameters
+        ----------
+        obj : Any
+            The object to serialize.
+
+        Returns
+        -------
+        Any
+            A JSON-serializable representation: ISO-format string for
+            dates, list for sets, dict for objects with ``to_dict()``,
+            or delegates to the parent encoder.
+        """
         # Handle dates and times
         if isinstance(obj, (datetime.datetime, datetime.date)):
             return obj.isoformat()

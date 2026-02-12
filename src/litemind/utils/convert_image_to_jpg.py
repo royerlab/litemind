@@ -1,3 +1,5 @@
+"""Utilities for converting images to JPEG format."""
+
 import tempfile
 
 from PIL import Image

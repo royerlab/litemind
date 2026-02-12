@@ -1,3 +1,5 @@
+"""Utility for determining MIME media types from URIs."""
+
 from typing import Optional
 
 
