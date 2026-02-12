@@ -47,10 +47,10 @@ class BaseApi(ABC):
     def check_availability_and_credentials(
         self, api_key: Optional[str] = None
     ) -> Optional[bool]:
-        """
-        Check if this API is available and whether credentials are valid.
-        If no API key is provided, checks if the API key available in the environment is valid.
-        If no API key is required, returns None.
+        """Check if this API is available and whether credentials are valid.
+
+        If no API key is provided, checks the key available in the
+        environment. If no API key is required, returns None.
 
         Parameters
         ----------
@@ -77,11 +77,10 @@ class BaseApi(ABC):
         ] = None,
         media_types: Optional[Sequence[Type[MediaBase]]] = None,
     ) -> List[str]:
-        """
-        Get the list of models available that satisfy a set of capability requirements:
-        - The model must support the given features.
-        - The model must not support any of the non-features.
-        - The model must support the given media types.
+        """List models that satisfy the given capability requirements.
+
+        Filters models so that each returned model supports all requested
+        *features*, none of the *non_features*, and all *media_types*.
 
         Parameters
         ----------
@@ -112,11 +111,10 @@ class BaseApi(ABC):
         media_types: Optional[Sequence[Type[MediaBase]]] = None,
         exclusion_filters: Optional[List[str]] = None,
     ) -> Optional[str]:
-        """
-        Get the name of the best possible model that satisfies a set of capability requirements:
-        - The model must support the given features.
-        - The model must not support any of the non-features.
-        - The model must support the given media types.
+        """Get the best model that satisfies the given capability requirements.
+
+        Returns the highest-ranked model that supports all requested
+        *features*, none of the *non_features*, and all *media_types*.
 
         Parameters
         ----------
@@ -144,19 +142,24 @@ class BaseApi(ABC):
         media_types: Optional[Sequence[Type[MediaBase]]] = None,
         model_name: Optional[str] = None,
     ) -> bool:
-        """
-        Check if the given model supports the given features and media types.
-        If no model is provided the default, and ideally, best model, is used.
-        In that case this function returns True if any model supports the given features and media types.
+        """Check if the given model supports the given features and media types.
 
-        Note: The difference between requesting a model that supports the feature Audio versus requesting a model
-        that can receive an Audio media is subtle but important: the Audio feature means that the model supports
-        audio _natively_. However, litemind's auto media conversion feature can handle audio files that carry voice,
-        for example using audio transcription (e.g. via Whisper).
-        In that case, the model can carry Audio media in messages, but it does not support the Audio feature,
-        because it does not support audio natively... You can check if a model supports audio _conversion_
-        by checking for the ModelFeatures.AudioConversion feature.
+        If no model is provided, the default (and ideally best) model is used.
+        In that case this method returns True if any model supports the
+        requested features and media types.
 
+        Notes
+        -----
+        The difference between requesting a model that supports the
+        ``Audio`` feature versus requesting a model that can receive an
+        ``Audio`` media is subtle but important: the ``Audio`` feature
+        means that the model supports audio *natively*.  However,
+        litemind's automatic media conversion can handle audio files
+        that carry voice — for example, via Whisper transcription.  In
+        that case, the model can carry ``Audio`` media in messages but
+        does not support the ``Audio`` feature.  You can check for
+        audio *conversion* support with
+        ``ModelFeatures.AudioConversion``.
 
         Parameters
         ----------
@@ -177,8 +180,7 @@ class BaseApi(ABC):
 
     @abstractmethod
     def get_model_features(self, model_name: str) -> List[ModelFeatures]:
-        """
-        Get the features of the given model.
+        """Get the features of the given model.
 
         Parameters
         ----------
@@ -229,8 +231,7 @@ class BaseApi(ABC):
 
     @abstractmethod
     def count_tokens(self, text: str, model_name: Optional[str] = None) -> int:
-        """
-        Count the number of tokens in the given text.
+        """Count the number of tokens in the given text.
 
         Parameters
         ----------
@@ -259,8 +260,7 @@ class BaseApi(ABC):
         response_format: Optional[BaseModel] = None,
         **kwargs,
     ) -> List[Message]:
-        """
-        Generate a text completion using the given model for a given list of messages and parameters.
+        """Generate text from the given messages using the specified model.
 
         Parameters
         ----------
@@ -300,8 +300,7 @@ class BaseApi(ABC):
         model_name: Optional[str] = None,
         **kwargs,
     ) -> str:
-        """
-        Generate an audio file using the model.
+        """Generate an audio file from text using the model.
 
         Parameters
         ----------
@@ -336,8 +335,7 @@ class BaseApi(ABC):
         allow_resizing: bool = True,
         **kwargs,
     ) -> Image:
-        """
-        Generate an image using the default or given model.
+        """Generate an image using the default or given model.
 
         Parameters
         ----------
@@ -370,8 +368,7 @@ class BaseApi(ABC):
     def generate_video(
         self, description: str, model_name: Optional[str] = None, **kwargs
     ) -> str:
-        """
-        Generate a video using the model.
+        """Generate a video using the model.
 
         Parameters
         ----------
@@ -398,8 +395,7 @@ class BaseApi(ABC):
         dimensions: int = 512,
         **kwargs,
     ) -> Sequence[Sequence[float]]:
-        """
-        Embed text using the model.
+        """Embed text using the model.
 
         Parameters
         ----------
@@ -454,8 +450,7 @@ class BaseApi(ABC):
         dimensions: int = 512,
         **kwargs,
     ) -> Sequence[Sequence[float]]:
-        """
-        Embed images using the given model.
+        """Embed images using the given model.
 
         Parameters
         ----------
@@ -483,8 +478,7 @@ class BaseApi(ABC):
         dimensions: int = 512,
         **kwargs,
     ) -> Sequence[Sequence[float]]:
-        """
-        Embed audios using the given model.
+        """Embed audio files using the given model.
 
         Parameters
         ----------
@@ -514,8 +508,7 @@ class BaseApi(ABC):
         dimensions: int = 512,
         **kwargs,
     ) -> Sequence[Sequence[float]]:
-        """
-        Embed videos using the given model.
+        """Embed videos using the given model.
 
         Parameters
         ----------
@@ -545,8 +538,7 @@ class BaseApi(ABC):
         dimensions: int = 512,
         **kwargs,
     ) -> Sequence[Sequence[float]]:
-        """
-        Embed documents using the given model.
+        """Embed documents using the given model.
 
         Parameters
         ----------
@@ -572,8 +564,7 @@ class BaseApi(ABC):
     def transcribe_audio(
         self, audio_uri: str, model_name: Optional[str] = None, **model_kwargs
     ) -> str:
-        """
-        Transcribe an audio file using the model.
+        """Transcribe an audio file using the model.
 
         Parameters
         ----------
@@ -603,8 +594,7 @@ class BaseApi(ABC):
         max_output_tokens: Optional[int] = None,
         number_of_tries: int = 4,
     ) -> str:
-        """
-        Describe an image using the model.
+        """Describe an image using the model.
 
         Parameters
         ----------
@@ -643,8 +633,7 @@ class BaseApi(ABC):
         max_output_tokens: Optional[int] = None,
         number_of_tries: int = 4,
     ) -> Optional[str]:
-        """
-        Describe an audio file using the model.
+        """Describe an audio file using the model.
 
         Parameters
         ----------
@@ -681,8 +670,7 @@ class BaseApi(ABC):
         max_output_tokens: Optional[int] = None,
         number_of_tries: int = 4,
     ) -> Optional[str]:
-        """
-        Describe a video file using the model.
+        """Describe a video file using the model.
 
         Parameters
         ----------
@@ -721,8 +709,7 @@ class BaseApi(ABC):
         max_output_tokens: Optional[int] = None,
         number_of_tries: int = 4,
     ) -> Optional[str]:
-        """
-        Describe a document using the model.
+        """Describe a document using the model.
 
         Parameters
         ----------
