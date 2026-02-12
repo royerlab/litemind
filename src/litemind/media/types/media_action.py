@@ -34,11 +34,11 @@ class Action(MediaDefault):
 
         super().__init__(**kwargs)
 
-        # Validate Object here:
+        # Validate action:
         if action is None:
-            raise ValueError("Object cannot be None")
+            raise ValueError("Action cannot be None")
         elif not isinstance(action, ActionBase):
-            raise ValueError(f"Object must be an ActionBase, got {type(action)}")
+            raise ValueError(f"Action must be an ActionBase, got {type(action)}")
 
         # Set attributes:
         self.action: ActionBase = action

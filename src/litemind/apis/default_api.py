@@ -1333,7 +1333,7 @@ class DefaultApi(BaseApi):
             # Append the description to the list:
             document_descriptions.append(description)
 
-        # Embed the video descriptions:
+        # Embed the document descriptions:
         document_embeddings = self.embed_texts(
             texts=document_descriptions, model_name=model_name, dimensions=dimensions
         )
@@ -1938,7 +1938,7 @@ class DefaultApi(BaseApi):
             aprint(f"Model: '{model_name}'")
             aprint(f"Max tokens: '{max_output_tokens}'")
 
-            # If no model is passed get a default model with video support:
+            # If no model is passed get a default model with document support:
             if model_name is None:
                 model_name = self.get_best_model(
                     features=[ModelFeatures.TextGeneration, ModelFeatures.Document]

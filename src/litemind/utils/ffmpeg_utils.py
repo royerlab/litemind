@@ -252,7 +252,7 @@ def extract_frames_and_audio(
     frame_pattern = os.path.join(output_dir, f"frame_%06d.{image_format}")
 
     # Extract frames
-    # If use_keyframes is True, select only I-frames (a.k_dict.a. keyframes).
+    # If use_keyframes is True, select only I-frames (a.k.a. keyframes).
     if use_keyframes:
         # In some cases, you can add `eq(pict_type,I)*eq(key,1)` or `eq(pict_type\, I)` as a filter.
         # `vsync='vfr'` helps preserve variable frame rates correctly when using 'select'.

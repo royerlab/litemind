@@ -448,7 +448,7 @@ class OllamaApi(DefaultApi):
         try:
             model_info = self.client.show(model_name).modelinfo
 
-            # search key hat contains 'max_tokens'
+            # search key that contains 'max_tokens'
             for key in model_info.keys():
                 if "max_tokens" in key:
                     return model_info[key]

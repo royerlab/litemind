@@ -24,7 +24,7 @@ def _get_ollama_models_list(client) -> List[str]:
     List[str]
         Model names sorted by size (largest first), with thinking variants.
     """
-    # Get the ls of models:
+    # Get the list of models:
     model_list = list(client.list().models)
 
     # Get the list of models:

@@ -98,7 +98,7 @@ class Table(MediaURI):
         # At this point `table` should be a DataFrame:
         elif not isinstance(table, DataFrame):
             raise ValueError(
-                f"Parameter `dataframe` must be a pandas DataFrame or an array-like object, not {type(table)}"
+                f"Parameter `table` must be a pandas DataFrame or an array-like object, not {type(table)}"
             )
 
         # Save dataframe to file:

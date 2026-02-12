@@ -42,7 +42,7 @@ def process_response_from_ollama(
     """
 
     # Initialize the processed response:
-    processed_reponse = Message(role="assistant")
+    processed_response = Message(role="assistant")
 
     # Text content:
     text_content = ""
@@ -60,11 +60,11 @@ def process_response_from_ollama(
     text_message, thinking = extract_thinking_content(text_message)
 
     if thinking is not None and len(thinking) > 0:
-        processed_reponse.append_thinking(thinking)
+        processed_response.append_thinking(thinking)
 
     # Append the text message to the processed response:
     if text_message.strip():
-        processed_reponse.append_text(text_message)
+        processed_response.append_text(text_message)
 
     # Append the text message to the text content:
     text_content += text_message
@@ -79,15 +79,15 @@ def process_response_from_ollama(
             function_name = func_info.get("name", "")
             arguments = func_info.get("arguments", {})
 
-            processed_reponse.append_tool_call(
+            processed_response.append_tool_call(
                 tool_name=function_name, arguments=arguments, id=""
             )
 
     # If response_format is provided, try to parse the text content
     if response_format and not is_tool_use:
-        processed_reponse = json_to_object(
-            processed_reponse, response_format, text_content
+        processed_response = json_to_object(
+            processed_response, response_format, text_content
         )
 
     # If no tool calls or no toolset, just return the text content
-    return processed_reponse
+    return processed_response
