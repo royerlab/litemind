@@ -159,7 +159,7 @@ class CombinedApi(DefaultApi):
 
         Returns
         -------
-        bool
+        Optional[bool]
             True if at least one model is registered across all APIs.
         """
         # By definition, if we have added a model it is available.

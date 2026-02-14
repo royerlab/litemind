@@ -593,7 +593,7 @@ class BaseApi(ABC):
         temperature: float = 0,
         max_output_tokens: Optional[int] = None,
         number_of_tries: int = 4,
-    ) -> str:
+    ) -> Optional[str]:
         """Describe an image using the model.
 
         Parameters
@@ -615,8 +615,8 @@ class BaseApi(ABC):
 
         Returns
         -------
-        str
-            Text description of the image.
+        Optional[str]
+            Text description of the image, or None if all attempts fail.
 
         """
 

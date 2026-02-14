@@ -1353,7 +1353,7 @@ class DefaultApi(BaseApi):
             document_uris=document_uris, embeddings=document_embeddings, **kwargs
         )
 
-        # Return the video embeddings:
+        # Return the document embeddings:
         return document_embeddings
 
     def transcribe_audio(
@@ -1431,7 +1431,7 @@ class DefaultApi(BaseApi):
         temperature: float = 0,
         max_output_tokens: Optional[int] = None,
         number_of_tries: int = 4,
-    ) -> str:
+    ) -> Optional[str]:
         """Describe an image by sending it to a vision-capable model.
 
         Constructs a message with the image and query, sends it to the
