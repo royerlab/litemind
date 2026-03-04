@@ -74,14 +74,18 @@ def convert_messages_for_anthropic(
                         anthropic_citations = []
                         for citation in citations:
                             if citation.get("type") == "web_search_citation":
-                                anthropic_citations.append(
-                                    {
-                                        "type": "web_search_result_location",
-                                        "url": citation.get("url", ""),
-                                        "title": citation.get("title", ""),
-                                        "cited_text": citation.get("cited_text", ""),
-                                    }
-                                )
+                                cit_dict = {
+                                    "type": "web_search_result_location",
+                                    "url": citation.get("url", ""),
+                                    "title": citation.get("title", ""),
+                                    "cited_text": citation.get("cited_text", ""),
+                                }
+                                # Preserve encrypted_index for round-tripping
+                                if "encrypted_index" in citation:
+                                    cit_dict["encrypted_index"] = citation[
+                                        "encrypted_index"
+                                    ]
+                                anthropic_citations.append(cit_dict)
 
                         if anthropic_citations:
                             text_block["citations"] = anthropic_citations
@@ -194,34 +198,61 @@ def convert_messages_for_anthropic(
                     # Get the tool use object:
                     tool_use: ToolUse = tool_action
 
-                    # Add the tool result to the content:
-                    content.append(
-                        {
-                            "type": "tool_result",
-                            "tool_use_id": tool_use.id,
-                            "content": [
-                                {
-                                    "type": "text",
-                                    "text": tool_use.result,
-                                }
-                            ],
-                        }
-                    )
+                    # Check if this is a server tool result (web search, MCP)
+                    # that should be preserved in native format for round-tripping
+                    raw_result = block.attributes.get("raw_server_tool_result")
+                    if raw_result:
+                        # Emit native block type (web_search_tool_result, mcp_tool_result)
+                        # Shallow copy to prevent cache_control mutation on the original
+                        content.append(dict(raw_result))
+                    else:
+                        # Regular tool result for custom tools
+                        result_text = (
+                            tool_use.result
+                            if isinstance(tool_use.result, str)
+                            else str(tool_use.result)
+                        )
+                        content.append(
+                            {
+                                "type": "tool_result",
+                                "tool_use_id": tool_use.id,
+                                "content": [
+                                    {
+                                        "type": "text",
+                                        "text": result_text,
+                                    }
+                                ],
+                            }
+                        )
 
                 elif isinstance(tool_action, ToolCall):
 
                     # Get the tool call object:
                     tool_call: ToolCall = tool_action
 
-                    # Add regular tool_use block
-                    content.append(
-                        {
-                            "id": tool_call.id,
-                            "type": "tool_use",
-                            "name": tool_call.tool_name,
-                            "input": tool_call.arguments,
-                        }
-                    )
+                    # Check if this is a server tool call (web search, MCP)
+                    # that should be preserved in native format for round-tripping
+                    server_type = block.attributes.get("server_tool_type")
+                    if server_type:
+                        # Emit native block type (server_tool_use, mcp_tool_use)
+                        content.append(
+                            {
+                                "type": server_type,
+                                "id": tool_call.id,
+                                "name": tool_call.tool_name,
+                                "input": tool_call.arguments,
+                            }
+                        )
+                    else:
+                        # Add regular tool_use block
+                        content.append(
+                            {
+                                "id": tool_call.id,
+                                "type": "tool_use",
+                                "name": tool_call.tool_name,
+                                "input": tool_call.arguments,
+                            }
+                        )
 
                 else:
                     raise ValueError(

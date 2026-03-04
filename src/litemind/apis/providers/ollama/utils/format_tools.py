@@ -23,7 +23,10 @@ def format_tools_for_ollama(toolset: ToolSet) -> List[Dict]:
         List of tool definitions in Ollama's expected format.
     """
     ollama_tools = []
-    for tool in toolset.tools:  # Adjust as needed if your toolset differs
+    for tool in toolset.list_tools():
+        # Skip built-in tools - Ollama doesn't support them natively
+        if tool.is_builtin():
+            continue
         ollama_tools.append(
             {
                 "type": "function",
