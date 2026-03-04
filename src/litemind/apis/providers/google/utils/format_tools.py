@@ -33,6 +33,10 @@ def format_tools_for_gemini(toolset) -> Optional[List["Tool"]]:
     # Iterate over the tools in the toolset:
     for tool in toolset.list_tools():
 
+        # Skip built-in tools - Gemini doesn't support them natively
+        if tool.is_builtin():
+            continue
+
         # Check if there are any parameters (defensive check for "properties" key):
         has_properties = (
             tool.arguments_schema

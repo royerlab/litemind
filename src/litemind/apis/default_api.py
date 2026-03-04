@@ -815,55 +815,62 @@ class DefaultApi(BaseApi):
             preprocessed_messages.append(tool_use_message)
         new_messages.append(tool_use_message)
 
-        # Get the tool calls:
-        tool_calls = [b.media.get_content() for b in response if b.has_type(Action)]
+        # Iterate through action blocks to find tool calls:
+        for block in response.blocks:
+            if not block.has_type(Action):
+                continue
+            tool_call = block.media.get_content()
+            if not isinstance(tool_call, ToolCall):
+                continue
 
-        # Iterate through tool calls:
-        for tool_call in tool_calls:
-            if isinstance(tool_call, ToolCall):
+            # Skip server tool calls (web search, MCP) - handled by API provider
+            if block.attributes.get("server_tool_type"):
+                continue
 
-                # Get tool function name:
-                tool_name = tool_call.tool_name
+            # Get tool function name:
+            tool_name = tool_call.tool_name
 
-                # Get the corresponding tool in toolset:
-                tool: Optional[BaseTool] = (
-                    toolset.get_tool(tool_name) if toolset else None
+            # Get the corresponding tool in toolset:
+            tool: Optional[BaseTool] = toolset.get_tool(tool_name) if toolset else None
+
+            # Skip built-in tools - they cannot be executed locally
+            if tool and tool.is_builtin():
+                continue
+
+            # Get the input arguments:
+            tool_arguments = tool_call.arguments
+
+            if tool:
+                try:
+                    # Execute the tool
+                    result = tool(**tool_arguments)
+
+                    # If not a string, convert from JSON:
+                    if not isinstance(result, str):
+                        result = json.dumps(result, default=str)
+
+                except Exception as e:
+                    result = f"Function '{tool_name}' error: {e}"
+
+                # Append the tool call result to the messages:
+                tool_use_message.append_tool_use(
+                    tool_name=tool_name,
+                    arguments=tool_arguments,
+                    result=result,
+                    id=tool_call.id,
                 )
 
-                # Get the input arguments:
-                tool_arguments = tool_call.arguments
-
-                if tool:
-                    try:
-                        # Execute the tool
-                        result = tool(**tool_arguments)
-
-                        # If not a string, convert from JSON:
-                        if not isinstance(result, str):
-                            result = json.dumps(result, default=str)
-
-                    except Exception as e:
-                        result = f"Function '{tool_name}' error: {e}"
-
-                    # Append the tool call result to the messages:
-                    tool_use_message.append_tool_use(
-                        tool_name=tool_name,
-                        arguments=tool_arguments,
-                        result=result,
-                        id=tool_call.id,
-                    )
-
-                else:
-                    # Append the tool call result to the messages:
-                    tool_use_error_message = (
-                        f"(Tool '{tool_name}' use requested, but tool not found.)"
-                    )
-                    tool_use_message.append_tool_use(
-                        tool_name=tool_name,
-                        arguments=tool_arguments,
-                        result=tool_use_error_message,
-                        id=tool_call.id,
-                    )
+            else:
+                # Append the tool call result to the messages:
+                tool_use_error_message = (
+                    f"(Tool '{tool_name}' use requested, but tool not found.)"
+                )
+                tool_use_message.append_tool_use(
+                    tool_name=tool_name,
+                    arguments=tool_arguments,
+                    result=tool_use_error_message,
+                    id=tool_call.id,
+                )
 
     def generate_audio(
         self,

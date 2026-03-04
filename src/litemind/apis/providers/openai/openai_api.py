@@ -1046,6 +1046,10 @@ class OpenAIApi(DefaultApi):
                             toolset.get_tool(tool_name) if toolset else None
                         )
 
+                        # Skip built-in tools - they are handled by the API
+                        if tool and tool.is_builtin():
+                            continue
+
                         if tool:
                             try:
                                 # Execute the tool

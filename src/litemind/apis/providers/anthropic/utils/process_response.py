@@ -2,7 +2,6 @@
 
 from typing import Any, List, Optional, Union
 
-from anthropic.types import WebSearchResultBlock
 from pydantic import BaseModel
 
 from litemind.agent.messages.message import Message
@@ -73,14 +72,17 @@ def process_response_from_anthropic(
                         hasattr(citation, "type")
                         and citation.type == "web_search_result_location"
                     ):
-                        citation_info.append(
-                            {
-                                "type": "web_search_citation",
-                                "url": getattr(citation, "url", ""),
-                                "title": getattr(citation, "title", ""),
-                                "cited_text": getattr(citation, "cited_text", ""),
-                            }
-                        )
+                        cit_dict = {
+                            "type": "web_search_citation",
+                            "url": getattr(citation, "url", ""),
+                            "title": getattr(citation, "title", ""),
+                            "cited_text": getattr(citation, "cited_text", ""),
+                        }
+                        # Preserve encrypted_index for round-tripping
+                        encrypted_index = getattr(citation, "encrypted_index", None)
+                        if encrypted_index is not None:
+                            cit_dict["encrypted_index"] = encrypted_index
+                        citation_info.append(cit_dict)
 
                 if citation_info:
                     last_block.attributes["citations"] = citation_info
@@ -95,28 +97,87 @@ def process_response_from_anthropic(
         elif block.type == "server_tool_use":
             # Handle built-in server tools (web search, MCP, code execution)
             # These are automatically executed by Anthropic, but we track them
-            processed_response.append_tool_call(
+            # Mark as server tool so convert_messages can round-trip correctly
+            block_ref = processed_response.append_tool_call(
                 tool_name=block.name, arguments=block.input, id=block.id
             )
+            block_ref.attributes["server_tool_type"] = "server_tool_use"
             is_tool_use = True
 
         elif block.type == "mcp_tool_use":
             # Handle MCP tool use (similar to server_tool_use)
-            processed_response.append_tool_call(
+            # Mark as server tool so convert_messages can round-trip correctly
+            block_ref = processed_response.append_tool_call(
                 tool_name=block.name, arguments=block.input, id=block.id
             )
+            block_ref.attributes["server_tool_type"] = "mcp_tool_use"
             is_tool_use = True
 
         elif block.type == "web_search_tool_result":
-            # Handle web search results
-            search_results: List[WebSearchResultBlock] = block.content
+            # Handle web search results.
+            # content can be either:
+            # - A list of WebSearchResultBlock (success)
+            # - A single error object with type "web_search_tool_result_error"
+            block_content = block.content
 
-            processed_response.append_tool_use(
+            # Normalize: if content is not a list, wrap it in one
+            if not isinstance(block_content, list):
+                block_content = [block_content]
+
+            # Convert results to a human-readable string
+            result_lines = []
+            raw_content = []
+            for sr in block_content:
+                if hasattr(sr, "type") and sr.type == "web_search_result":
+                    title = getattr(sr, "title", "")
+                    url = getattr(sr, "url", "")
+                    result_lines.append(f"- {title}: {url}")
+                    # Store raw content as serializable dicts for round-tripping
+                    sr_dict = {"type": "web_search_result"}
+                    for attr in [
+                        "url",
+                        "title",
+                        "encrypted_content",
+                        "page_age",
+                    ]:
+                        val = getattr(sr, attr, None)
+                        if val is not None:
+                            sr_dict[attr] = val
+                    raw_content.append(sr_dict)
+                elif hasattr(sr, "type") and sr.type == "web_search_tool_result_error":
+                    # Handle error results from web search
+                    error_code = getattr(sr, "error_code", "unknown")
+                    result_lines.append(f"(web search error: {error_code})")
+                    raw_content.append(
+                        {
+                            "type": "web_search_tool_result_error",
+                            "error_code": error_code,
+                        }
+                    )
+                else:
+                    result_lines.append(str(sr))
+                    # Store unknown types as-is for round-tripping if possible
+                    if hasattr(sr, "model_dump"):
+                        raw_content.append(sr.model_dump())
+                    elif hasattr(sr, "__dict__"):
+                        raw_content.append(sr.__dict__)
+
+            combined_results = (
+                "\n".join(result_lines) if result_lines else "(no results)"
+            )
+
+            block_ref = processed_response.append_tool_use(
                 tool_name="web_search",
                 arguments={},
-                result=search_results,
+                result=combined_results,
                 id=block.tool_use_id,
             )
+            # Store raw block data for round-tripping (preserves encrypted_content)
+            block_ref.attributes["raw_server_tool_result"] = {
+                "type": "web_search_tool_result",
+                "tool_use_id": block.tool_use_id,
+                "content": raw_content,
+            }
 
         elif block.type == "mcp_tool_result":
             # Handle MCP tool results
@@ -130,12 +191,23 @@ def process_response_from_anthropic(
             )
 
             # Append the combined text to the processed response
-            processed_response.append_tool_use(
+            block_ref = processed_response.append_tool_use(
                 tool_name="mcp_tool",
                 arguments={},
                 result=combined_text,
                 id=block.tool_use_id,
             )
+            # Store raw block data for round-tripping
+            raw_mcp_content = [
+                {"type": "text", "text": r.text}
+                for r in mcp_tool_results
+                if r.type == "text"
+            ]
+            block_ref.attributes["raw_server_tool_result"] = {
+                "type": "mcp_tool_result",
+                "tool_use_id": block.tool_use_id,
+                "content": raw_mcp_content,
+            }
 
         elif block.type == "thinking":
             # Handle thinking blocks (existing functionality)
