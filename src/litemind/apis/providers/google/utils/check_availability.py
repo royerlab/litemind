@@ -43,7 +43,7 @@ def check_gemini_api_availability(client: "Client"):
     try:
         # Minimal call: generate a short response
         resp = client.models.generate_content(
-            model="models/gemini-2.0-flash",
+            model="models/gemini-2.5-flash",
             contents="Hello, What is your name? (short answer please)",
         )
 
