@@ -2,13 +2,10 @@
 
 Transforms litemind ``Message`` objects (containing text, images, and
 tool actions) into the dictionary-based message format expected by the
-Ollama chat API. Optionally appends a JSON schema prompt for structured
-output when a ``response_format`` Pydantic model is provided.
+Ollama chat API.
 """
 
-from typing import Any, Dict, List, Optional
-
-from pydantic import BaseModel
+from typing import Any, Dict, List
 
 from litemind.agent.messages.actions.action_base import ActionBase
 from litemind.agent.messages.actions.tool_call import ToolCall
@@ -20,19 +17,16 @@ from litemind.media.types.media_text import Text
 
 
 def convert_messages_for_ollama(
-    messages: List[Message], response_format: Optional[BaseModel] = None
+    messages: List[Message],
 ) -> List[Dict[str, Any]]:
     """Convert litemind Messages into Ollama's chat message format.
 
-    Handles text, images (as local file paths), tool calls/results,
-    and optional structured output via response_format.
+    Handles text, images (as local file paths), tool calls/results.
 
     Parameters
     ----------
     messages : List[Message]
         Litemind messages to convert.
-    response_format : Optional[BaseModel]
-        If provided, appends a JSON schema prompt for structured output.
 
     Returns
     -------
@@ -103,6 +97,9 @@ def convert_messages_for_ollama(
                     # Set the role to 'tool':
                     message_dict["role"] = "tool"
 
+                    # Set the tool name for proper tool result attribution (ollama >= 0.5.2):
+                    message_dict["tool_name"] = tool_use.tool_name
+
                     # Append the tool use results to the message dictionary:
                     message_dict["content"] = tool_use.pretty_string()
 
@@ -121,7 +118,6 @@ def convert_messages_for_ollama(
                                 "name": tool_call.tool_name,
                                 "arguments": tool_call.arguments,
                             },
-                            "type": "function_call",
                         }
                     )
 
@@ -138,15 +134,5 @@ def convert_messages_for_ollama(
 
             else:
                 raise ValueError(f"Block type {block.get_type_name()} not supported")
-
-    if response_format:
-        # Create a message dictionary for the response format:
-        message_dict = {
-            "role": "user",
-            "content": f"Provide the answer in JSON adhering to the following schema:\n{response_format.model_json_schema()}\n",
-        }
-
-        # Appends the message to the list of messages:
-        ollama_messages.append(message_dict)
 
     return ollama_messages

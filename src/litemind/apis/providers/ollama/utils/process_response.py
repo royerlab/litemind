@@ -53,11 +53,18 @@ def process_response_from_ollama(
     # The top-level content from Ollama
     ollama_message = ollama_response["message"]
 
-    # Get text message:
-    text_message = ollama_message.get("content", "")
+    # Get text message (content can be None for tool-call-only responses):
+    text_message = ollama_message.get("content", "") or ""
 
-    # Extract thinking block from Ollama message:
-    text_message, thinking = extract_thinking_content(text_message)
+    # Check for native thinking field first (ollama >= 0.5.0 with think=True),
+    # fall back to parsing <thinking> tags from content for older servers:
+    native_thinking = ollama_message.get("thinking", None)
+    if native_thinking:
+        # Native thinking field is available — use it directly:
+        thinking = native_thinking
+    else:
+        # Fall back to extracting thinking from <thinking> XML tags in content:
+        text_message, thinking = extract_thinking_content(text_message)
 
     if thinking is not None and len(thinking) > 0:
         processed_response.append_thinking(thinking)

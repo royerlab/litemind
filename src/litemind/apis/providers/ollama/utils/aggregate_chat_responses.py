@@ -57,6 +57,7 @@ def aggregate_chat_responses(
 
     # Ensure these are not None, for safe usage below
     aggregator.message.content = aggregator.message.content or ""
+    aggregator.message.thinking = getattr(aggregator.message, "thinking", None) or ""
     aggregator.message.tool_calls = aggregator.message.tool_calls or []
     aggregator.message.images = aggregator.message.images or []
 
@@ -68,6 +69,11 @@ def aggregate_chat_responses(
             fragment = chunk.message.content
             aggregator.message.content += fragment
             callback(fragment=fragment)
+
+        # -- message.thinking: accumulate thinking content
+        thinking = getattr(chunk.message, "thinking", None)
+        if thinking:
+            aggregator.message.thinking += thinking
 
         # -- message.tool_calls: extend
         if chunk.message.tool_calls:

@@ -1,30 +1,26 @@
 # Ollama Model Registry
 # Curated model capabilities and metadata for Ollama API
-# Last updated: 2026-01-27
+# Last updated: 2026-03-10
 # Note: Ollama models are locally hosted and capabilities may vary by installation
+#
+# Model names can be exact (e.g., "deepseek-r1:32b") or base names without tags
+# (e.g., "llama3.3") to match any tag variant of that model. The OllamaApi
+# adapter tries exact match first, then falls back to base name matching.
+#
+# Capability data sourced from live Ollama `show` capabilities field and
+# official documentation at https://docs.ollama.com/capabilities/
 
 metadata:
   provider: OllamaApi
-  registry_version: "2.0"
-  last_updated: "2026-01-27"
+  registry_version: "3.0"
+  last_updated: "2026-03-10"
 
 model_families:
+  # --- Vision + Text families ---
   llama-vision-family:
     features:
       TextGeneration: true
       Image: true
-      TextEmbeddings: true
-
-  llama-text-family:
-    features:
-      TextGeneration: true
-      StructuredTextGeneration: true
-      TextEmbeddings: true
-
-  deepseek-family:
-    features:
-      TextGeneration: true
-      StructuredTextGeneration: true
       TextEmbeddings: true
 
   gemma-vision-family:
@@ -33,29 +29,424 @@ model_families:
       StructuredTextGeneration: true
       Image: true
 
-  phi-family:
+  qwen-vision-family:
     features:
       TextGeneration: true
       StructuredTextGeneration: true
+      Image: true
+      Tools: true
+
+  # --- Multimodal + Tools families (Llama 4) ---
+  llama4-family:
+    features:
+      TextGeneration: true
+      StructuredTextGeneration: true
+      Image: true
+      Tools: true
       TextEmbeddings: true
 
-  qwq-family:
+  # --- Text-only families ---
+  llama-text-family:
     features:
       TextGeneration: true
       StructuredTextGeneration: true
       TextEmbeddings: true
       Tools: true
 
+  deepseek-family:
+    features:
+      TextGeneration: true
+      StructuredTextGeneration: true
+      TextEmbeddings: true
+
+  qwen-family:
+    features:
+      TextGeneration: true
+      StructuredTextGeneration: true
+      TextEmbeddings: true
+      Tools: true
+
+  phi-family:
+    features:
+      TextGeneration: true
+      StructuredTextGeneration: true
+      TextEmbeddings: true
+
+  mistral-family:
+    features:
+      TextGeneration: true
+      StructuredTextGeneration: true
+      TextEmbeddings: true
+      Tools: true
+
+  command-r-family:
+    features:
+      TextGeneration: true
+      StructuredTextGeneration: true
+      TextEmbeddings: true
+      Tools: true
+
+  glm-family:
+    features:
+      TextGeneration: true
+      StructuredTextGeneration: true
+      Tools: true
+
+  # --- Compact text-only (no tools, no vision) ---
+  compact-text-family:
+    features:
+      TextGeneration: true
+      StructuredTextGeneration: true
+
+  # --- Embedding-only families ---
   embedding-family:
     features:
       TextEmbeddings: true
 
+  # --- Transcription-only families ---
   transcription-family:
     features:
       AudioTranscription: true
 
 models:
-  # DeepSeek R1 Series
+  # =====================
+  # Llama 4 Series (multimodal MoE, vision + tools)
+  # =====================
+  llama4:
+    extends: llama4-family
+    notes: "Llama 4 base (matches all tag variants)"
+
+  llama4:scout:
+    extends: llama4-family
+    notes: "Llama 4 Scout 109B MoE (17B active)"
+
+  llama4:maverick:
+    extends: llama4-family
+    notes: "Llama 4 Maverick 400B MoE (17B active)"
+
+  # =====================
+  # Llama 3.3 Series (text-only, tool-capable)
+  # =====================
+  llama3.3:
+    extends: llama-text-family
+    notes: "Llama 3.3 base (matches all tag variants)"
+
+  llama3.3:70b:
+    extends: llama-text-family
+    notes: "Llama 3.3 70B parameter model"
+
+  llama3.3:70b-thinking:
+    extends: llama-text-family
+    features:
+      Thinking: true
+      TextEmbeddings: false
+    notes: "Llama 3.3 70B with thinking mode"
+
+  # =====================
+  # Llama 3.2 Vision Series (vision, no tools)
+  # =====================
+  llama3.2-vision:
+    extends: llama-vision-family
+    notes: "Llama 3.2 Vision base (matches all tag variants)"
+
+  llama3.2-vision:11b:
+    extends: llama-vision-family
+    notes: "Llama 3.2 Vision 11B"
+
+  llama3.2-vision:11b-thinking:
+    extends: llama-vision-family
+    features:
+      Thinking: true
+      TextEmbeddings: false
+    notes: "Llama 3.2 Vision 11B with thinking mode"
+
+  llama3.2-vision:90b:
+    extends: llama-vision-family
+    notes: "Llama 3.2 Vision 90B"
+
+  llama3.2-vision:90b-thinking:
+    extends: llama-vision-family
+    features:
+      Thinking: true
+      TextEmbeddings: false
+    notes: "Llama 3.2 Vision 90B with thinking mode"
+
+  # =====================
+  # Llama 3.1 Series (text-only, tool-capable)
+  # =====================
+  llama3.1:
+    extends: llama-text-family
+    notes: "Llama 3.1 base (matches all tag variants)"
+
+  llama3.1:8b:
+    extends: llama-text-family
+    notes: "Llama 3.1 8B"
+
+  llama3.1:70b:
+    extends: llama-text-family
+    notes: "Llama 3.1 70B"
+
+  # =====================
+  # Qwen 2.5 Series (tool-capable)
+  # =====================
+  qwen2.5:
+    extends: qwen-family
+    notes: "Qwen 2.5 base (matches all tag variants)"
+
+  qwen2.5:7b:
+    extends: qwen-family
+    notes: "Qwen 2.5 7B"
+
+  qwen2.5:14b:
+    extends: qwen-family
+    notes: "Qwen 2.5 14B"
+
+  qwen2.5:32b:
+    extends: qwen-family
+    notes: "Qwen 2.5 32B"
+
+  qwen2.5:72b:
+    extends: qwen-family
+    notes: "Qwen 2.5 72B"
+
+  qwen2.5:72b-thinking:
+    extends: qwen-family
+    features:
+      Thinking: true
+      TextEmbeddings: false
+    notes: "Qwen 2.5 72B with thinking mode"
+
+  qwen2.5-coder:
+    extends: qwen-family
+    notes: "Qwen 2.5 Coder base (code-specialized, tool-capable)"
+
+  # =====================
+  # Qwen 2.5 VL Series (vision, no tools)
+  # =====================
+  qwen2.5vl:
+    extends: llama-vision-family
+    notes: "Qwen 2.5 VL base (vision, no tools)"
+
+  qwen2.5vl:72b:
+    extends: llama-vision-family
+    notes: "Qwen 2.5 VL 72B (vision, no tools)"
+
+  # =====================
+  # Qwen 3 Series (tool-capable, native thinking)
+  # =====================
+  qwen3:
+    extends: qwen-family
+    notes: "Qwen 3 base (matches all tag variants, native thinking)"
+
+  qwen3:8b:
+    extends: qwen-family
+    notes: "Qwen 3 8B"
+
+  qwen3:14b:
+    extends: qwen-family
+    notes: "Qwen 3 14B"
+
+  qwen3:30b:
+    extends: qwen-family
+    notes: "Qwen 3 30B"
+
+  qwen3:32b:
+    extends: qwen-family
+    notes: "Qwen 3 32B"
+
+  qwen3:32b-thinking:
+    extends: qwen-family
+    features:
+      Thinking: true
+      TextEmbeddings: false
+    notes: "Qwen 3 32B with thinking mode"
+
+  qwen3:235b:
+    extends: qwen-family
+    notes: "Qwen 3 235B MoE"
+
+  # =====================
+  # Qwen 3 VL Series (vision + tool-capable + native thinking)
+  # Confirmed: capabilities=['completion', 'thinking', 'tools', 'vision']
+  # =====================
+  qwen3-vl:
+    extends: qwen-vision-family
+    features:
+      Thinking: true
+    notes: "Qwen 3 VL base (vision, tools, native thinking)"
+
+  qwen3-vl:8b:
+    extends: qwen-vision-family
+    features:
+      Thinking: true
+    notes: "Qwen 3 VL 8B"
+
+  # =====================
+  # Qwen 3.5 Series (vision + tools + native thinking — most capable Qwen)
+  # Confirmed: capabilities=['completion', 'thinking', 'tools', 'vision']
+  # =====================
+  qwen3.5:
+    extends: qwen-vision-family
+    features:
+      Thinking: true
+    notes: "Qwen 3.5 base (vision, tools, native thinking, 256K ctx)"
+
+  qwen3.5:9b:
+    extends: qwen-vision-family
+    features:
+      Thinking: true
+    notes: "Qwen 3.5 9B (default)"
+
+  qwen3.5:27b:
+    extends: qwen-vision-family
+    features:
+      Thinking: true
+    notes: "Qwen 3.5 27B"
+
+  # =====================
+  # Qwen3-Coder Series (tool-capable code model)
+  # Confirmed: capabilities=['completion', 'tools']
+  # =====================
+  qwen3-coder:
+    extends: qwen-family
+    notes: "Qwen3 Coder base (code-specialized, tool-capable, 256K ctx)"
+
+  qwen3-coder:30b:
+    extends: qwen-family
+    notes: "Qwen3 Coder 30B MoE (3.3B active)"
+
+  # =====================
+  # Qwen3-Next Series (tool-capable, thinking)
+  # =====================
+  qwen3-next:
+    extends: qwen-family
+    notes: "Qwen3 Next base (hybrid attention, 256K ctx)"
+
+  qwen3-next:80b:
+    extends: qwen-family
+    notes: "Qwen3 Next 80B MoE"
+
+  # =====================
+  # Qwen3-Embedding Series
+  # =====================
+  qwen3-embedding:
+    extends: embedding-family
+    notes: "Qwen3 Embedding model"
+
+  # =====================
+  # GLM Series (Zhipu AI)
+  # =====================
+
+  # GLM-4.7-Flash: tools + thinking, 30B MoE
+  # Confirmed: capabilities=['completion', 'thinking', 'tools']
+  glm-4.7-flash:
+    extends: glm-family
+    features:
+      Thinking: true
+    notes: "GLM-4.7-Flash 30B MoE (tools, native thinking, 198K ctx)"
+
+  # GLM-OCR: vision + tools, tiny model
+  glm-ocr:
+    extends: glm-family
+    features:
+      Image: true
+    notes: "GLM-OCR 0.9B (vision OCR, tools, 128K ctx)"
+
+  # GLM4: text-only, no tools
+  # Confirmed: capabilities=['completion']
+  glm4:
+    extends: compact-text-family
+    notes: "GLM4 base (text-only, no tools)"
+
+  glm4:9b:
+    extends: compact-text-family
+    notes: "GLM4 9B"
+
+  # =====================
+  # Marco-o1 (Alibaba AIDC-AI reasoning model)
+  # Confirmed: capabilities=['completion']
+  # =====================
+  marco-o1:
+    extends: compact-text-family
+    notes: "Marco-o1 reasoning model (text-only)"
+
+  marco-o1:7b:
+    extends: compact-text-family
+    notes: "Marco-o1 7B"
+
+  # =====================
+  # InternLM Series (Shanghai AI Lab)
+  # =====================
+  internlm2:
+    extends: compact-text-family
+    notes: "InternLM 2.5 base (1M context)"
+
+  # =====================
+  # Yi Series (01.AI)
+  # =====================
+  yi:
+    extends: compact-text-family
+    notes: "Yi base (bilingual EN/ZH)"
+
+  yi-coder:
+    extends: compact-text-family
+    notes: "Yi-Coder base (code-focused)"
+
+  # =====================
+  # QWQ Series (reasoning model, tool-capable)
+  # Confirmed: capabilities=['completion', 'tools']
+  # =====================
+  qwq:
+    extends: qwen-family
+    notes: "QWQ base (matches all tag variants)"
+
+  qwq:latest:
+    extends: qwen-family
+    notes: "QWQ model"
+
+  qwq:latest-thinking:
+    extends: qwen-family
+    features:
+      Thinking: true
+      TextEmbeddings: false
+    notes: "QWQ with thinking mode"
+
+  # =====================
+  # DeepSeek R1 Series (no tools; newer tags have native thinking, older do not)
+  # Confirmed: latest (8b) has capabilities=['completion', 'thinking']
+  # Confirmed: 32b/70b have capabilities=['completion'] only
+  # Older tags use <think> tags in content, handled by our fallback parser
+  # =====================
+  deepseek-r1:
+    extends: deepseek-family
+    notes: "DeepSeek R1 base (matches all tag variants)"
+
+  deepseek-r1:latest:
+    extends: deepseek-family
+    notes: "DeepSeek R1 default (8b, has native thinking)"
+
+  deepseek-r1:7b:
+    extends: deepseek-family
+    notes: "DeepSeek R1 7B parameter model"
+
+  deepseek-r1:7b-thinking:
+    extends: deepseek-family
+    features:
+      Thinking: true
+      TextEmbeddings: false
+    notes: "DeepSeek R1 7B with thinking mode"
+
+  deepseek-r1:14b:
+    extends: deepseek-family
+    notes: "DeepSeek R1 14B parameter model"
+
+  deepseek-r1:14b-thinking:
+    extends: deepseek-family
+    features:
+      Thinking: true
+      TextEmbeddings: false
+    notes: "DeepSeek R1 14B with thinking mode"
+
   deepseek-r1:32b:
     extends: deepseek-family
     notes: "DeepSeek R1 32B parameter model"
@@ -78,7 +469,33 @@ models:
       TextEmbeddings: false
     notes: "DeepSeek R1 70B with thinking mode"
 
-  # Gemma3 Series
+  # =====================
+  # DeepSeek V3 Series (non-reasoning base model)
+  # =====================
+  deepseek-v3:
+    extends: deepseek-family
+    notes: "DeepSeek V3 base model"
+
+  # =====================
+  # Gemma 3 Series (vision on 4B+, no tools)
+  # Confirmed: capabilities=['completion', 'vision'] (27b), ['completion'] (1b)
+  # =====================
+  gemma3:
+    extends: gemma-vision-family
+    notes: "Gemma 3 base (matches all tag variants, vision on 4B+)"
+
+  gemma3:1b:
+    extends: compact-text-family
+    notes: "Gemma 3 1B (text-only, no vision at this size)"
+
+  gemma3:4b:
+    extends: gemma-vision-family
+    notes: "Gemma 3 4B parameter model"
+
+  gemma3:12b:
+    extends: gemma-vision-family
+    notes: "Gemma 3 12B parameter model"
+
   gemma3:27b:
     extends: gemma-vision-family
     notes: "Gemma 3 27B parameter model"
@@ -99,7 +516,141 @@ models:
       Thinking: true
     notes: "Gemma 3 27B with thinking mode"
 
-  # LLaVA Series (Vision models)
+  # =====================
+  # Gemma 3n Series (compact, no tools/vision)
+  # Confirmed: capabilities=['completion']
+  # =====================
+  gemma3n:
+    extends: compact-text-family
+    notes: "Gemma 3n compact base"
+
+  gemma3n:e4b:
+    extends: compact-text-family
+    notes: "Gemma 3n E4B compact model"
+
+  # =====================
+  # Phi 4 Series (no tools on base phi4)
+  # Confirmed: phi4 capabilities=['completion']
+  # =====================
+  phi4:
+    extends: phi-family
+    notes: "Phi 4 base (matches all tag variants)"
+
+  phi4:latest:
+    extends: phi-family
+    notes: "Phi 4 model"
+
+  phi4:latest-thinking:
+    extends: phi-family
+    features:
+      Thinking: true
+      TextEmbeddings: false
+    notes: "Phi 4 with thinking mode"
+
+  phi4-mini:
+    extends: phi-family
+    features:
+      Tools: true
+    notes: "Phi 4 Mini (has native tool calling)"
+
+  phi4-reasoning:
+    extends: phi-family
+    features:
+      Thinking: true
+    notes: "Phi 4 Reasoning model"
+
+  phi4-reasoning-plus:
+    extends: phi-family
+    features:
+      Thinking: true
+    notes: "Phi 4 Reasoning Plus model"
+
+  # =====================
+  # Mistral / Mixtral / Codestral Series (tool-capable)
+  # Confirmed: mistral:7b capabilities=['completion', 'tools']
+  # =====================
+  mistral:
+    extends: mistral-family
+    notes: "Mistral base (matches all tag variants)"
+
+  mistral:7b:
+    extends: mistral-family
+    notes: "Mistral 7B"
+
+  mistral-nemo:
+    extends: mistral-family
+    notes: "Mistral Nemo 12B"
+
+  mistral-small:
+    extends: mistral-family
+    notes: "Mistral Small base"
+
+  mistral-small:24b:
+    extends: mistral-family
+    notes: "Mistral Small 24B"
+
+  mistral-large:
+    extends: mistral-family
+    notes: "Mistral Large base"
+
+  magistral-small:
+    extends: mistral-family
+    features:
+      Thinking: true
+    notes: "Magistral Small 24B (reasoning model)"
+
+  mixtral:
+    extends: mistral-family
+    notes: "Mixtral MoE base (matches all tag variants)"
+
+  mixtral:8x7b:
+    extends: mistral-family
+    notes: "Mixtral 8x7B MoE"
+
+  mixtral:8x22b:
+    extends: mistral-family
+    notes: "Mixtral 8x22B MoE"
+
+  codestral:
+    extends: mistral-family
+    notes: "Codestral code model"
+
+  # =====================
+  # Command R Series (tool-capable)
+  # Confirmed: command-r capabilities=['completion', 'tools']
+  # =====================
+  command-r:
+    extends: command-r-family
+    notes: "Command R base (matches all tag variants)"
+
+  command-r-plus:
+    extends: command-r-family
+    notes: "Command R+ base (matches all tag variants)"
+
+  command-r:35b:
+    extends: command-r-family
+    notes: "Command R 35B"
+
+  command-r-plus:104b:
+    extends: command-r-family
+    notes: "Command R+ 104B"
+
+  # =====================
+  # LLaVA Series (Vision models, legacy)
+  # Confirmed: capabilities=['completion', 'vision']
+  # =====================
+  llava:
+    extends: llama-vision-family
+    features:
+      StructuredTextGeneration: false
+    notes: "LLaVA base (matches all tag variants)"
+
+  llava-llama3:
+    extends: llama-vision-family
+    features:
+      StructuredTextGeneration: false
+    notes: "LLaVA Llama 3 base"
+
   llava-llama3:latest:
     extends: llama-vision-family
     features:
@@ -128,31 +679,9 @@ models:
       TextEmbeddings: false
     notes: "LLaVA 34B with thinking mode"
 
-  # Phi4 Series
-  phi4:latest:
-    extends: phi-family
-    notes: "Phi 4 model"
-
-  phi4:latest-thinking:
-    extends: phi-family
-    features:
-      Thinking: true
-      TextEmbeddings: false
-    notes: "Phi 4 with thinking mode"
-
-  # QWQ Series
-  qwq:latest:
-    extends: qwq-family
-    notes: "QWQ model"
-
-  qwq:latest-thinking:
-    extends: qwq-family
-    features:
-      Thinking: true
-      TextEmbeddings: false
-    notes: "QWQ with thinking mode"
-
+  # =====================
   # Local/Special Models
+  # =====================
   whisper-local:
     extends: transcription-family
     notes: "Local whisper transcription"
@@ -160,3 +689,23 @@ models:
   fastembed:
     extends: embedding-family
     notes: "Fast local embedding model"
+
+  nomic-embed-text:
+    extends: embedding-family
+    notes: "Nomic embedding model (1024 dims, 8192 ctx)"
+
+  mxbai-embed-large:
+    extends: embedding-family
+    notes: "MixedBread AI embedding model (1024 dims)"
+
+  all-minilm:
+    extends: embedding-family
+    notes: "All-MiniLM embedding model (384 dims)"
+
+  snowflake-arctic-embed:
+    extends: embedding-family
+    notes: "Snowflake Arctic embedding model (1024 dims)"
+
+  bge-large:
+    extends: embedding-family
+    notes: "BGE Large embedding model (1024 dims)"

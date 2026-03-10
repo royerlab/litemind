@@ -311,9 +311,7 @@ class OllamaApi(DefaultApi):
             return True
 
         for feature in features:
-            if not self.model_registry.supports_feature(
-                self.__class__, model_name, feature
-            ):
+            if not self._registry_supports_feature(model_name, feature):
                 # If the model does not support the feature, we return False:
                 return False
 
@@ -337,6 +335,78 @@ class OllamaApi(DefaultApi):
         """
         return ":" in model_name
 
+    def _registry_supports_feature(
+        self, model_name: str, feature: ModelFeatures
+    ) -> bool:
+        """Check the registry for feature support with prefix fallback.
+
+        Tries the exact model name first, then progressively shorter
+        prefixes to match base model families. For example,
+        ``llama3.3:70b-q4_K_M`` will try: exact name, then
+        ``llama3.3:70b``, then ``llama3.3``.
+
+        Parameters
+        ----------
+        model_name : str
+            The Ollama model name to check.
+        feature : ModelFeatures
+            The feature to check for.
+
+        Returns
+        -------
+        bool
+            True if the model (or a matching prefix) supports the feature.
+        """
+        # Synthetic -thinking variants can only do text generation and thinking —
+        # they must not report embedding support since embed_texts does not strip
+        # the -thinking suffix and the model name would be invalid for embeddings:
+        if model_name.endswith("-thinking") and feature == ModelFeatures.TextEmbeddings:
+            return False
+
+        # Try exact match first — if the model is explicitly registered,
+        # trust its feature data without falling back to less specific entries:
+        if self.model_registry.get_model_info(self.__class__, model_name) is not None:
+            return self.model_registry.supports_feature(
+                self.__class__, model_name, feature
+            )
+
+        # Model not explicitly registered — try progressively shorter prefixes:
+        if ":" in model_name:
+            # Try stripping quantization suffixes from the tag (e.g., "70b-q4_K_M" -> "70b"):
+            base_name = model_name.split(":")[0]
+            tag = model_name.split(":")[1]
+            # Remove the -thinking suffix before stripping quantization:
+            is_thinking = tag.endswith("-thinking")
+            if is_thinking:
+                tag = tag[: -len("-thinking")]
+            # Strip common quantization suffixes (e.g., -q4_K_M, -fp16):
+            parts = tag.split("-")
+            if len(parts) > 1 and (
+                parts[-1].startswith("q") or parts[-1] in ("fp16", "fp32")
+            ):
+                simplified_tag = "-".join(parts[:-1])
+                if is_thinking:
+                    simplified_tag += "-thinking"
+                simplified_name = f"{base_name}:{simplified_tag}"
+                if (
+                    self.model_registry.get_model_info(self.__class__, simplified_name)
+                    is not None
+                ):
+                    return self.model_registry.supports_feature(
+                        self.__class__, simplified_name, feature
+                    )
+
+            # Try just the base model name (without tag):
+            if (
+                self.model_registry.get_model_info(self.__class__, base_name)
+                is not None
+            ):
+                return self.model_registry.supports_feature(
+                    self.__class__, base_name, feature
+                )
+
+        return False
+
     def _has_thinking_support(self, model_name: str) -> bool:
         """Check if a model name indicates thinking-mode support.
 
@@ -358,11 +428,43 @@ class OllamaApi(DefaultApi):
         return False
 
     @lru_cache
+    def _has_native_thinking(self, model_name: str) -> bool:
+        """Check if the Ollama model supports native thinking via ``think=True``.
+
+        Queries the ``capabilities`` field from ``show()``. Only models
+        with ``"thinking"`` in their capabilities support the native
+        ``think`` parameter. Results are cached.
+
+        Parameters
+        ----------
+        model_name : str
+            The Ollama model name (without ``-thinking`` suffix).
+
+        Returns
+        -------
+        bool
+            True if the model has native thinking support.
+        """
+        if not self._is_ollama_model(model_name):
+            return False
+
+        try:
+            show_response = self.client.show(model_name)
+            capabilities = getattr(show_response, "capabilities", None)
+            if capabilities is not None:
+                return "thinking" in capabilities
+        except Exception:
+            pass
+
+        return False
+
+    @lru_cache
     def _has_tool_support(self, model_name: str) -> bool:
         """Check if an Ollama model supports tool/function calling.
 
-        Inspects the model's Modelfile template for the ``.Tools``
-        template directive. Results are cached for performance.
+        First checks the ``capabilities`` field from ``show()`` (available
+        in newer Ollama servers), then falls back to inspecting the model's
+        Modelfile template for the ``.Tools`` directive. Results are cached.
 
         Parameters
         ----------
@@ -372,15 +474,22 @@ class OllamaApi(DefaultApi):
         Returns
         -------
         bool
-            True if the model template contains tool-calling support.
+            True if the model supports tool-calling.
         """
         if not self._is_ollama_model(model_name):
             # All Ollama models support text generation and contain ':'
             return False
 
         try:
-            model_template = self.client.show(model_name).template
-            return ".Tools" in model_template
+            show_response = self.client.show(model_name)
+
+            # Try the capabilities field first (newer Ollama servers):
+            capabilities = getattr(show_response, "capabilities", None)
+            if capabilities is not None:
+                return "tools" in capabilities
+
+            # Fall back to template inspection:
+            return ".Tools" in (show_response.template or "")
         except Exception:
             return False
 
@@ -412,9 +521,10 @@ class OllamaApi(DefaultApi):
             model_info = self.client.show(model_name).modelinfo
 
             # search key that contains 'context_length'
-            for key in model_info.keys():
-                if "context_length" in key:
-                    return model_info[key]
+            if model_info:
+                for key in model_info.keys():
+                    if "context_length" in key:
+                        return model_info[key]
         except ResponseError as e:
             aprint(f"Model {model_name} not found in Ollama: {e.error}")
 
@@ -449,9 +559,10 @@ class OllamaApi(DefaultApi):
             model_info = self.client.show(model_name).modelinfo
 
             # search key that contains 'max_tokens'
-            for key in model_info.keys():
-                if "max_tokens" in key:
-                    return model_info[key]
+            if model_info:
+                for key in model_info.keys():
+                    if "max_tokens" in key:
+                        return model_info[key]
         except ResponseError as e:
             aprint(f"Model {model_name} not found in Ollama: {e.error}")
 
@@ -546,34 +657,35 @@ class OllamaApi(DefaultApi):
             ),
         )
 
-        # If this is a thinking model then we need to add a system message about thinking:
-        if self._has_thinking_support(model_name):
+        # Determine if thinking mode should be enabled:
+        use_thinking = self._has_thinking_support(model_name)
+        use_native_thinking = False
 
+        if use_thinking:
             # Remove the -thinking postfix from the model name:
             if model_name.endswith("-thinking"):
                 model_name = model_name[:-9]
 
-            # Find the first system message in  preprocessed_messages:
-            system_message = next(
-                (m for m in preprocessed_messages if m.role == "system"), None
-            )
-            # Append the instruction to the system message:
-            if not system_message:
-                # Create a new empty system message and add it at the beginning:
-                system_message = Message(role="system", text="")
-                preprocessed_messages.insert(0, system_message)
+            # Check if the model supports native think parameter:
+            if self._has_native_thinking(model_name):
+                use_native_thinking = True
+            else:
+                # Fall back to system prompt injection for models without native thinking:
+                system_message = next(
+                    (m for m in preprocessed_messages if m.role == "system"), None
+                )
+                if not system_message:
+                    system_message = Message(role="system", text="")
+                    preprocessed_messages.insert(0, system_message)
 
-            # Find the first text block in the system message:
-            for block in system_message.blocks:
-                if block.has_type(Text):
-                    text: str = block.media.text
-
-                    # Append the instruction to the text block:
-                    text += "\n"
-                    text += "Think carefully step-by-step before responding: restate the input, analyze it, consider options, make a plan, and proceed methodically to your conclusion. \n"
-                    text += "All reasoning (thinking) which precedes the final answer must be enclosed within thinking tags: <thinking> reasoning goes here... </thinking> final answer here...\n\n"
-                    block.media.text = text
-                    break
+                for block in system_message.blocks:
+                    if block.has_type(Text):
+                        text: str = block.media.text
+                        text += "\n"
+                        text += "Think carefully step-by-step before responding: restate the input, analyze it, consider options, make a plan, and proceed methodically to your conclusion. \n"
+                        text += "All reasoning (thinking) which precedes the final answer must be enclosed within thinking tags: <thinking> reasoning goes here... </thinking> final answer here...\n\n"
+                        block.media.text = text
+                        break
 
         # Get max num of output tokens for model if not provided:
         if max_num_output_tokens is None:
@@ -581,6 +693,11 @@ class OllamaApi(DefaultApi):
 
         # Convert toolset (if any) to Ollama's tools schema
         ollama_tools = format_tools_for_ollama(toolset) if toolset else None
+
+        # Pre-compute the format schema outside the loop (it never changes):
+        format_schema = (
+            response_format.model_json_schema() if response_format is not None else None
+        )
 
         # List of new messages part of the response:
         new_messages = []
@@ -591,11 +708,11 @@ class OllamaApi(DefaultApi):
 
                 # Convert user messages into Ollama's format
                 ollama_formatted_messages = convert_messages_for_ollama(
-                    preprocessed_messages, response_format=response_format
+                    preprocessed_messages,
                 )
 
-                # Call the Ollama API in streaming mode:
-                chunks = self.client.chat(
+                # Build the chat call keyword arguments:
+                chat_kwargs = dict(
                     model=model_name,
                     messages=ollama_formatted_messages,
                     tools=ollama_tools,
@@ -606,6 +723,17 @@ class OllamaApi(DefaultApi):
                     stream=True,
                     **kwargs,
                 )
+
+                # Pass native think parameter if model supports it:
+                if use_native_thinking:
+                    chat_kwargs["think"] = True
+
+                # Pass native format parameter for structured output:
+                if format_schema is not None:
+                    chat_kwargs["format"] = format_schema
+
+                # Call the Ollama API in streaming mode:
+                chunks = self.client.chat(**chat_kwargs)
 
                 # Aggregate the streamed response:
                 ollama_response = aggregate_chat_responses(
@@ -701,14 +829,22 @@ class OllamaApi(DefaultApi):
 
         from ollama import EmbedResponse
 
-        embed_response: EmbedResponse = self.client.embed(model=model_name, input=texts)
+        # Try using the native dimensions parameter first (ollama >= 0.5.4),
+        # fall back to manual dimension reduction for older servers:
+        try:
+            embed_response: EmbedResponse = self.client.embed(
+                model=model_name, input=texts, dimensions=dimensions
+            )
+        except Exception:
+            embed_response: EmbedResponse = self.client.embed(
+                model=model_name, input=texts
+            )
 
         # Extract embeddings:
         embeddings = embed_response.embeddings
 
-        # Check that the embeddings are of the correct dimension:
-        if len(embeddings[0]) != dimensions:
-            # use function _reduce_embdedding_dimension to reduce or increase the dimension
+        # Check that the embeddings are of the correct dimension and resize if needed:
+        if embeddings and len(embeddings[0]) != dimensions:
             resized_embeddings = self._reduce_embeddings_dimension(
                 embeddings, dimensions
             )
