@@ -56,6 +56,14 @@ def process_response_from_anthropic(
         if block.type == "text":
             # Handle regular text blocks (may include citations)
             text = block.text
+
+            # Skip empty text blocks — Anthropic may return these alongside
+            # tool-use blocks.  Storing them would later cause a 400 error
+            # ("text content blocks must be non-empty") when the conversation
+            # history is sent back to the API.
+            if not text:
+                continue
+
             processed_response.append_text(text)
             text_content += text
 

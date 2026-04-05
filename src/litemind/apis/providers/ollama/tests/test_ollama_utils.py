@@ -496,3 +496,46 @@ class TestProcessResponseEdgeCases:
 
         action_blocks = [b for b in result.blocks if b.has_type(Action)]
         assert len(action_blocks) == 1
+
+
+# =========================================================================
+# _get_ollama_models_list tests
+# =========================================================================
+
+
+class TestGetOllamaModelsList:
+    """Tests for _get_ollama_models_list thinking-variant generation."""
+
+    def _make_client(self, model_names):
+        """Create a mock Ollama client with the given model names."""
+        client = MagicMock()
+        models = []
+        for name in model_names:
+            m = MagicMock()
+            m.model = name
+            m.size = 1000
+            models.append(m)
+        client.list.return_value.models = models
+        return client
+
+    def test_thinking_variants_added(self):
+        """Each regular model should get a -thinking variant."""
+        from litemind.apis.providers.ollama.utils.list_models import (
+            _get_ollama_models_list,
+        )
+
+        client = self._make_client(["llama3:8b"])
+        result = _get_ollama_models_list(client)
+        assert "llama3:8b" in result
+        assert "llama3:8b-thinking" in result
+
+    def test_no_double_thinking_suffix(self):
+        """Models already ending in -thinking should not get a second suffix."""
+        from litemind.apis.providers.ollama.utils.list_models import (
+            _get_ollama_models_list,
+        )
+
+        client = self._make_client(["qwen3:30b-thinking"])
+        result = _get_ollama_models_list(client)
+        assert "qwen3:30b-thinking" in result
+        assert "qwen3:30b-thinking-thinking" not in result

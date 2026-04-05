@@ -59,6 +59,11 @@ def convert_messages_for_anthropic(
                     # remove trailing whitespace as it is not allowed by Anthropic!
                     text = text.rstrip()
 
+                # Skip empty text blocks — the API rejects them with
+                # "text content blocks must be non-empty".
+                if not text:
+                    continue
+
                 # Create text block
                 text_block = {"type": "text", "text": text}
 

@@ -662,9 +662,14 @@ class OllamaApi(DefaultApi):
         use_native_thinking = False
 
         if use_thinking:
-            # Remove the -thinking postfix from the model name:
+            # Remove the -thinking postfix from the model name, but only
+            # when the base model actually exists in Ollama.  Some models
+            # (e.g. qwen3:30b-thinking) use "-thinking" as part of their
+            # real Ollama registry name — stripping it would cause a 404.
             if model_name.endswith("-thinking"):
-                model_name = model_name[:-9]
+                base_model_name = model_name[:-9]
+                if base_model_name in self._model_list:
+                    model_name = base_model_name
 
             # Check if the model supports native think parameter:
             if self._has_native_thinking(model_name):
