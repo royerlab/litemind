@@ -41,11 +41,14 @@ def _get_ollama_models_list(client) -> List[str]:
     # Ensure it is a list:
     model_list = list(model_list)
 
-    # For each model, insert a thinking version with a '-thinking' suffix to the same list:
+    # For each model, insert a thinking version with a '-thinking' suffix to the same list.
+    # Skip models whose name already ends in '-thinking' to avoid
+    # nonsensical double-suffixed entries like 'qwen3:30b-thinking-thinking'.
     model_list_with_thinking = []
     for model in model_list:
         model_list_with_thinking.append(model)
-        model_list_with_thinking.append(f"{model}-thinking")
+        if not model.endswith("-thinking"):
+            model_list_with_thinking.append(f"{model}-thinking")
     model_list = model_list_with_thinking
 
     # Return the list of models:
