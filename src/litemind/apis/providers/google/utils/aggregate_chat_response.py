@@ -177,11 +177,14 @@ def _extract_function_calls_from_chunk(chunk) -> list:
             # Check for function_call attribute
             if hasattr(part, "function_call") and part.function_call:
                 fc = part.function_call
-                function_calls.append(
-                    {
-                        "name": fc.name,
-                        "args": dict(fc.args) if fc.args else {},
-                    }
-                )
+                call_dict = {
+                    "name": fc.name,
+                    "args": dict(fc.args) if fc.args else {},
+                }
+                # Gemini 3 generates unique IDs for function calls that
+                # must be echoed back in the corresponding function response:
+                if hasattr(fc, "id") and fc.id:
+                    call_dict["id"] = fc.id
+                function_calls.append(call_dict)
 
     return function_calls

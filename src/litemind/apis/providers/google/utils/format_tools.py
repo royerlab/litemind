@@ -9,6 +9,9 @@ if TYPE_CHECKING:
 def format_tools_for_gemini(toolset) -> Optional[List["Tool"]]:
     """Convert a ToolSet into Gemini's Tool format with FunctionDeclarations.
 
+    Also handles built-in web search tools by converting them to Gemini's
+    Google Search grounding tool.
+
     Parameters
     ----------
     toolset : Optional[ToolSet]
@@ -26,6 +29,17 @@ def format_tools_for_gemini(toolset) -> Optional[List["Tool"]]:
     if not toolset:
         return None
 
+    # Check for built-in web search tool and add Google Search grounding:
+    has_google_search = False
+    for builtin_tool in toolset.list_builtin_tools():
+        from litemind.agent.tools.builtin_tools.web_search_tool import (
+            BuiltinWebSearchTool,
+        )
+
+        if isinstance(builtin_tool, BuiltinWebSearchTool):
+            has_google_search = True
+            break
+
     # Collect all function declarations into a single Tool object.
     # Gemini expects all declarations in one Tool, not one Tool per function.
     func_decls = []
@@ -33,7 +47,7 @@ def format_tools_for_gemini(toolset) -> Optional[List["Tool"]]:
     # Iterate over the tools in the toolset:
     for tool in toolset.list_tools():
 
-        # Skip built-in tools - Gemini doesn't support them natively
+        # Skip built-in tools - handled separately above
         if tool.is_builtin():
             continue
 
@@ -61,10 +75,20 @@ def format_tools_for_gemini(toolset) -> Optional[List["Tool"]]:
 
         func_decls.append(func_decl)
 
-    if not func_decls:
+    tools_list = []
+
+    # Add function declarations tool if any custom tools exist:
+    if func_decls:
+        tools_list.append(types.Tool(function_declarations=func_decls))
+
+    # Add Google Search grounding tool if web search was requested:
+    if has_google_search:
+        tools_list.append(types.Tool(google_search=types.GoogleSearch()))
+
+    if not tools_list:
         return None
 
-    return [types.Tool(function_declarations=func_decls)]
+    return tools_list
 
 
 def _create_schema(json_schema: dict) -> "Schema":

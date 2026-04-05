@@ -1,12 +1,12 @@
 # Anthropic Model Registry
 # Curated model capabilities and metadata for Anthropic API (Claude)
-# Last updated: 2026-02-10
+# Last updated: 2026-04-05
 # Cross-referenced with live API response
 
 metadata:
   provider: AnthropicApi
   registry_version: "2.0"
-  last_updated: "2026-02-10"
+  last_updated: "2026-04-05"
 
 model_families:
   claude-4.6-family:
@@ -18,7 +18,7 @@ model_families:
       Tools: true
       MCPTool: true
       WebSearchTool: true
-    context_window: 200000
+    context_window: 1000000
     max_output_tokens: 128000
 
   claude-4.5-family:
@@ -103,8 +103,7 @@ models:
 
   claude-opus-4-6-1m:
     extends: claude-4.6-family
-    context_window: 1000000
-    notes: "Claude Opus 4.6 with 1M token context (beta header)"
+    notes: "Claude Opus 4.6 with 1M token context (native, -1m suffix kept for compatibility)"
 
   claude-opus-4-6-thinking-low:
     extends: claude-4.6-family
@@ -129,6 +128,60 @@ models:
     features:
       Thinking: true
     notes: "Claude Opus 4.6 with adaptive thinking (max effort, Opus 4.6 exclusive)"
+
+  # Claude Sonnet 4.6 - Fast, intelligent model (March 2026)
+  claude-sonnet-4-6:
+    extends: claude-4.6-family
+    max_output_tokens: 64000
+    notes: "Fast intelligent model with native 1M context and adaptive thinking"
+    source: "https://platform.claude.com/docs/en/about-claude/models/overview"
+
+  claude-sonnet-4-6-thinking-low:
+    extends: claude-4.6-family
+    max_output_tokens: 64000
+    features:
+      Thinking: true
+    notes: "Claude Sonnet 4.6 with adaptive thinking (low effort)"
+
+  claude-sonnet-4-6-thinking-mid:
+    extends: claude-4.6-family
+    max_output_tokens: 64000
+    features:
+      Thinking: true
+    notes: "Claude Sonnet 4.6 with adaptive thinking (medium effort)"
+
+  claude-sonnet-4-6-thinking-high:
+    extends: claude-4.6-family
+    max_output_tokens: 64000
+    features:
+      Thinking: true
+    notes: "Claude Sonnet 4.6 with adaptive thinking (high effort)"
+
+  claude-sonnet-4-6-1m:
+    extends: claude-4.6-family
+    max_output_tokens: 64000
+    notes: "Claude Sonnet 4.6 with 1M context (native, -1m suffix kept for compatibility)"
+
+  claude-sonnet-4-6-1m-thinking-low:
+    extends: claude-4.6-family
+    max_output_tokens: 64000
+    features:
+      Thinking: true
+    notes: "Claude Sonnet 4.6 1M with adaptive thinking (low effort)"
+
+  claude-sonnet-4-6-1m-thinking-mid:
+    extends: claude-4.6-family
+    max_output_tokens: 64000
+    features:
+      Thinking: true
+    notes: "Claude Sonnet 4.6 1M with adaptive thinking (medium effort)"
+
+  claude-sonnet-4-6-1m-thinking-high:
+    extends: claude-4.6-family
+    max_output_tokens: 64000
+    features:
+      Thinking: true
+    notes: "Claude Sonnet 4.6 1M with adaptive thinking (high effort)"
 
   # ===========================================
   # Claude 4.5 Series (October/November 2025)
@@ -269,7 +322,7 @@ models:
     features:
       Document: false
       WebSearchTool: false
-    notes: "Fast Claude 3 model - still available but limited features"
+    notes: "DEPRECATED - retiring April 20, 2026. Fast Claude 3 model with limited features"
 
   # ===========================================
   # Local/Special Models

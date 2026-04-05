@@ -2,8 +2,13 @@
 
 from typing import List
 
-# Models that support 1M context via the context-1m beta header:
-_LONG_CONTEXT_PATTERNS = ["claude-opus-4-6", "claude-sonnet-4-5", "claude-sonnet-4-2"]
+# Models that support 1M context (native for 4.6, beta header for older):
+_LONG_CONTEXT_PATTERNS = [
+    "claude-opus-4-6",
+    "claude-sonnet-4-6",
+    "claude-sonnet-4-5",
+    "claude-sonnet-4-2",
+]
 
 # Models that support -thinking-max (adaptive thinking with max effort):
 _MAX_THINKING_PATTERNS = ["claude-opus-4-6"]
@@ -73,6 +78,7 @@ def _add_thinking_variants(model_list: List[str]) -> None:
     """
     for pattern in [
         "claude-opus-4-6",
+        "claude-sonnet-4-6",
         "claude-opus-4-5",
         "claude-sonnet-4-5",
         "claude-3-7",

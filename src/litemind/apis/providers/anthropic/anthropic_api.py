@@ -458,7 +458,7 @@ class AnthropicApi(DefaultApi):
     def _uses_adaptive_thinking(self, model_name: str) -> bool:
         """Check if a model uses adaptive thinking instead of budget_tokens.
 
-        Currently only Claude Opus 4.6 supports adaptive thinking.
+        Claude Opus 4.6 and Sonnet 4.6 support adaptive thinking.
         Older models require ``type: "enabled"`` with ``budget_tokens``.
 
         Parameters
@@ -472,7 +472,7 @@ class AnthropicApi(DefaultApi):
             True if the model supports adaptive thinking.
         """
         base = self._strip_thinking_suffix(model_name).lower()
-        return "claude-opus-4-6" in base
+        return "claude-opus-4-6" in base or "claude-sonnet-4-6" in base
 
     # ------------------------------- #
     def max_num_input_tokens(self, model_name: Optional[str] = None) -> int:
@@ -536,7 +536,9 @@ class AnthropicApi(DefaultApi):
         # Fallback for unknown models
         return _DEFAULT_MAX_OUTPUT_TOKENS
 
-    def _format_tools_and_mcp_for_anthropic(self, toolset: ToolSet) -> tuple:
+    def _format_tools_and_mcp_for_anthropic(
+        self, toolset: ToolSet, model_name: Optional[str] = None
+    ) -> tuple:
         """Format tools and MCP servers for the Anthropic API.
 
         Separates custom function tools, built-in web search tools, and MCP
@@ -546,6 +548,8 @@ class AnthropicApi(DefaultApi):
         ----------
         toolset : ToolSet
             The toolset containing function tools, built-in tools, and MCP tools.
+        model_name : Optional[str]
+            The model name, used to select the appropriate web search tool version.
 
         Returns
         -------
@@ -578,9 +582,16 @@ class AnthropicApi(DefaultApi):
                     # Add web search tool
                     web_search_tool: BuiltinWebSearchTool = builtin_tool
 
+                    # Use newer web search version for 4.6 models (dynamic filtering):
+                    model_lower = model_name.lower() if model_name else ""
+                    if "4-6" in model_lower:
+                        ws_type = "web_search_20260209"
+                    else:
+                        ws_type = "web_search_20250305"
+
                     # Build web search config with required parameters
                     web_search_config = {
-                        "type": "web_search_20250305",
+                        "type": ws_type,
                         "name": "web_search",
                         "max_uses": web_search_tool.max_web_searches,
                     }
@@ -791,7 +802,7 @@ class AnthropicApi(DefaultApi):
 
         # Format tools and MCP servers for Anthropic API
         anthropic_tools, mcp_servers, beta_headers = (
-            self._format_tools_and_mcp_for_anthropic(toolset)
+            self._format_tools_and_mcp_for_anthropic(toolset, model_name=model_name)
         )
 
         # Add code execution tool if enabled
@@ -799,11 +810,13 @@ class AnthropicApi(DefaultApi):
             if anthropic_tools == NotGiven():
                 anthropic_tools = []
             anthropic_tools.append(
-                {"type": "code_execution_20241024", "name": "code_execution"}
+                {"type": "code_execution_20250825", "name": "code_execution"}
             )
 
-        # Add interleaved thinking beta feature if needed
-        if use_interleaved_thinking:
+        # Add interleaved thinking beta feature if needed.
+        # For adaptive thinking models (Opus/Sonnet 4.6), interleaved thinking
+        # is automatic — the beta header is only needed for manual thinking mode:
+        if use_interleaved_thinking and not self._uses_adaptive_thinking(model_name):
             existing_features = (
                 beta_headers.get("anthropic-beta", "").split(",")
                 if beta_headers

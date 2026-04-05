@@ -534,11 +534,26 @@ class GeminiApi(DefaultApi):
         # Format tools for Gemini:
         gemini_tools = format_tools_for_gemini(toolset)
 
-        # Disable explicit thinking config when tools are present — Gemini
-        # models that support thinking will still think implicitly, but we
-        # avoid passing a thinking_config that could conflict with tool use.
-        if gemini_tools:
+        # Gemini 2.5 had conflicts between explicit thinking config and
+        # tool use.  Gemini 3+ supports and recommends combining them, so
+        # only disable thinking config for pre-3 models:
+        if gemini_tools and "gemini-3" not in model_name.lower():
             thinking_config = None
+
+        # Gemini 3 models recommend temperature >= 1.0; values below 1.0
+        # can cause looping or degraded performance:
+        if (
+            "gemini-3" in model_name.lower()
+            and temperature is not None
+            and temperature < 1.0
+        ):
+            from arbol import aprint
+
+            aprint(
+                f"Warning: Gemini 3 models recommend temperature >= 1.0 "
+                f"(got {temperature}). Setting to 1.0 to avoid looping."
+            )
+            temperature = 1.0
 
         # Build GenerationConfig (tools are part of the config in new SDK)
         if response_format is None or toolset is not None:

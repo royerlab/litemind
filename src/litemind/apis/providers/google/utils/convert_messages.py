@@ -130,18 +130,24 @@ def convert_messages_for_gemini(
 
                 if isinstance(tool_action, ToolUse):
                     tool_use: ToolUse = tool_action
-                    func_response = types.Part.from_function_response(
+                    # Build FunctionResponse directly to include the id
+                    # field required by Gemini 3 for call-response matching:
+                    func_resp = types.FunctionResponse(
                         name=tool_use.tool_name,
                         response={"result": tool_use.result},
+                        id=tool_use.id if tool_use.id else None,
                     )
-                    parts.append(func_response)
+                    parts.append(types.Part(function_response=func_resp))
                 elif isinstance(tool_action, ToolCall):
                     tool_call: ToolCall = tool_action
-                    func_call = types.Part.from_function_call(
+                    # Build FunctionCall directly to include the id
+                    # field required by Gemini 3:
+                    func_call_obj = types.FunctionCall(
                         name=tool_call.tool_name,
                         args=tool_call.arguments,
+                        id=tool_call.id if tool_call.id else None,
                     )
-                    parts.append(func_call)
+                    parts.append(types.Part(function_call=func_call_obj))
                 else:
                     raise ValueError(
                         f"Unsupported action type: {type(tool_action).__name__}"

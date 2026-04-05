@@ -287,7 +287,9 @@ def model_key(model):
     score = 0
 
     # GPT-5 series (latest)
-    if "gpt-5.3" in model:
+    if "gpt-5.4" in model:
+        score += 170
+    elif "gpt-5.3" in model:
         score += 165
     elif "gpt-5.2" in model:
         score += 160

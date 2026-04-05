@@ -1,12 +1,12 @@
 # OpenAI Model Registry
 # Curated model capabilities and metadata for OpenAI API
-# Last updated: 2026-02-10
+# Last updated: 2026-04-05
 # Cross-referenced with live API response
 
 metadata:
   provider: OpenAIApi
   registry_version: "2.0"
-  last_updated: "2026-02-10"
+  last_updated: "2026-04-05"
 
 model_families:
   gpt-5-family:
@@ -180,6 +180,27 @@ models:
   gpt-5.3-codex:
     extends: gpt-5-family
     notes: "GPT-5.3 most capable agentic coding model (Feb 2026)"
+
+  gpt-5.3-chat-latest:
+    extends: gpt-5-family
+    notes: "GPT-5.3 chat-optimized latest"
+
+  # GPT-5.4 Series (Latest - April 2026)
+  gpt-5.4:
+    extends: gpt-5-family
+    notes: "GPT-5.4 latest flagship model"
+
+  gpt-5.4-mini:
+    extends: gpt-5-family
+    notes: "GPT-5.4 smaller variant"
+
+  gpt-5.4-nano:
+    extends: gpt-5-family
+    notes: "GPT-5.4 smallest variant"
+
+  gpt-5.4-pro:
+    extends: gpt-5-family
+    notes: "GPT-5.4 professional high-compute variant"
 
   # ===========================================
   # GPT-4.1 Series
@@ -485,6 +506,10 @@ models:
     extends: realtime-family
     notes: "GPT Realtime mini model"
 
+  gpt-realtime-1.5:
+    extends: realtime-family
+    notes: "GPT Realtime 1.5 latest model"
+
   # ===========================================
   # Embedding Models
   # ===========================================
@@ -516,11 +541,12 @@ models:
 
   dall-e-2:
     extends: image-gen-family
+    notes: "DEPRECATED - shutdown May 12, 2026. Use gpt-image-1 instead"
     source: "https://platform.openai.com/docs/models/dall-e"
 
   dall-e-3:
     extends: image-gen-family
-    notes: "Latest DALL-E model"
+    notes: "DEPRECATED - shutdown May 12, 2026. Use gpt-image-1 instead"
 
   gpt-image-1:
     extends: image-gen-family

@@ -1343,6 +1343,18 @@ class OpenAIApi(DefaultApi):
         if model_name is None:
             model_name = self.get_best_model(features=ModelFeatures.ImageGeneration)
 
+        # Warn about DALL-E deprecation (shutdown May 12, 2026):
+        if model_name and "dall-e" in model_name.lower():
+            import warnings
+
+            warnings.warn(
+                f"Model '{model_name}' is deprecated and will be shut down "
+                f"on May 12, 2026. Consider using 'gpt-image-1' or "
+                f"'gpt-image-1.5' instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+
         # For Response API compatible models, try to use the newer approach
         if model_name and model_name in self._model_list:
             # Use the Response API for image generation if available

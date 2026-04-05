@@ -1,12 +1,12 @@
 # Google Gemini Model Registry
 # Curated model capabilities and metadata for Google Gemini API
-# Last updated: 2026-02-10
+# Last updated: 2026-04-05
 # Cross-referenced with live API response
 
 metadata:
   provider: GeminiApi
   registry_version: "2.0"
-  last_updated: "2026-02-10"
+  last_updated: "2026-04-05"
 
 model_families:
   gemini-3-family:
@@ -18,6 +18,7 @@ model_families:
       Audio: true
       Video: true
       Tools: true
+      WebSearchTool: true
     context_window: 1000000
     max_output_tokens: 65536
 
@@ -91,13 +92,33 @@ model_families:
 
 models:
   # ===========================================
-  # Gemini 3 Series (Latest - 2026)
+  # Gemini 3.1 Series (Latest - 2026)
+  # ===========================================
+
+  models/gemini-3.1-pro-preview:
+    extends: gemini-3-family
+    notes: "Gemini 3.1 Pro - most advanced model (Feb 2026). Adaptive thinking with thinkingLevel."
+    source: "https://ai.google.dev/gemini-api/docs/models"
+
+  models/gemini-3.1-flash-lite-preview:
+    extends: gemini-3-family
+    notes: "Gemini 3.1 Flash-Lite - first Flash-Lite in 3 series (Mar 2026)"
+
+  models/gemini-3.1-flash-image-preview:
+    extends: gemini-3-family
+    features:
+      NativeImageGeneration: true
+    context_window: 65536
+    max_output_tokens: 32768
+    notes: "Gemini 3.1 Flash with native 4K image generation (Nano Banana 2)"
+
+  # ===========================================
+  # Gemini 3.0 Series (Legacy previews)
   # ===========================================
 
   models/gemini-3-pro-preview:
     extends: gemini-3-family
-    notes: "Latest Gemini 3 Pro preview model"
-    source: "https://ai.google.dev/gemini-api/docs/models"
+    notes: "SHUT DOWN Mar 9, 2026 - redirects to gemini-3.1-pro-preview"
 
   models/gemini-3-pro-image-preview:
     extends: gemini-3-family
@@ -195,12 +216,12 @@ models:
     notes: "Native audio model for Live API with improved function calling"
 
   # ===========================================
-  # Gemini 2.0 Series (Deprecated - shutdown March 31, 2026)
+  # Gemini 2.0 Series (DEPRECATED - shutdown June 1, 2026)
   # ===========================================
 
   models/gemini-2.0-flash:
     extends: gemini-2.0-flash-family
-    notes: "Gemini 2.0 Flash - deprecated, shutdown March 31, 2026"
+    notes: "DEPRECATED - shutdown June 1, 2026. Use gemini-2.5-flash instead"
 
   models/gemini-2.0-flash-001:
     extends: gemini-2.0-flash-family
@@ -231,16 +252,16 @@ models:
   # ===========================================
 
   models/gemini-flash-latest:
-    extends: gemini-2.5-flash-family
-    notes: "Alias pointing to latest Gemini Flash model"
+    extends: gemini-3-family
+    notes: "Alias now pointing to gemini-3-flash-preview (since Jan 21, 2026)"
 
   models/gemini-flash-lite-latest:
     extends: gemini-2.5-flash-family
     notes: "Alias pointing to latest Gemini Flash Lite model"
 
   models/gemini-pro-latest:
-    extends: gemini-2.5-pro-family
-    notes: "Alias pointing to latest Gemini Pro model"
+    extends: gemini-3-family
+    notes: "Alias now pointing to gemini-3.1-pro-preview (since Jan 21, 2026)"
 
   # ===========================================
   # Experimental and Special Models
@@ -297,13 +318,24 @@ models:
     notes: "Gemma 3n e4b instruction-tuned"
 
   # ===========================================
+  # Gemma 4 Series (April 2026)
+  # ===========================================
+
+  models/gemma-4-26b-a4b-it:
+    extends: gemma-family
+    notes: "Gemma 4 26B MoE (4B active) instruction-tuned (Apr 2026)"
+
+  models/gemma-4-31b-it:
+    extends: gemma-family
+    notes: "Gemma 4 31B Dense instruction-tuned (Apr 2026)"
+
+  # ===========================================
   # Embedding Models
   # ===========================================
 
   models/text-embedding-004:
     extends: embedding-family
-    notes: "Latest text embedding model"
-    source: "https://ai.google.dev/models/gemini#text-embedding"
+    notes: "SHUT DOWN Jan 14, 2026. Use gemini-embedding-001 instead"
 
   models/gemini-embedding-001:
     extends: embedding-family
@@ -316,6 +348,16 @@ models:
   models/gemini-embedding-exp-03-07:
     extends: embedding-family
     notes: "Experimental embedding model from March 2025"
+
+  models/gemini-embedding-2-preview:
+    extends: embedding-family
+    features:
+      TextEmbeddings: true
+      ImageEmbeddings: true
+      AudioEmbeddings: true
+      VideoEmbeddings: true
+      DocumentEmbeddings: true
+    notes: "First multimodal embedding model - text, image, video, audio, PDF (Mar 2026)"
 
   # ===========================================
   # Imagen 4.0 (Image Generation)
@@ -364,6 +406,10 @@ models:
   models/veo-3.1-fast-generate-preview:
     extends: video-gen-family
     notes: "Veo 3.1 Fast preview"
+
+  models/veo-3.1-lite-generate-preview:
+    extends: video-gen-family
+    notes: "Veo 3.1 Lite - cost-efficient video generation (Mar 2026)"
 
   # ===========================================
   # Local/Special Models

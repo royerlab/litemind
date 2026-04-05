@@ -1,6 +1,6 @@
 # Ollama Model Registry
 # Curated model capabilities and metadata for Ollama API
-# Last updated: 2026-03-10
+# Last updated: 2026-04-05
 # Note: Ollama models are locally hosted and capabilities may vary by installation
 #
 # Model names can be exact (e.g., "deepseek-r1:32b") or base names without tags
@@ -13,7 +13,7 @@
 metadata:
   provider: OllamaApi
   registry_version: "3.0"
-  last_updated: "2026-03-10"
+  last_updated: "2026-04-05"
 
 model_families:
   # --- Vision + Text families ---
@@ -527,6 +527,21 @@ models:
   gemma3n:e4b:
     extends: compact-text-family
     notes: "Gemma 3n E4B compact model"
+
+  # =====================
+  # Gemma 4 Series (April 2026)
+  # =====================
+  gemma4:
+    extends: gemma-vision-family
+    notes: "Gemma 4 base (matches all tag variants)"
+
+  gemma4:26b:
+    extends: gemma-vision-family
+    notes: "Gemma 4 26B MoE (4B active)"
+
+  gemma4:31b:
+    extends: gemma-vision-family
+    notes: "Gemma 4 31B Dense"
 
   # =====================
   # Phi 4 Series (no tools on base phi4)
