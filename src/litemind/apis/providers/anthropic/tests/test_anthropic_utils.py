@@ -16,7 +16,6 @@ from litemind.apis.providers.anthropic.utils.process_response import (
 )
 from litemind.media.types.media_text import Text
 
-
 # =========================================================================
 # convert_messages_for_anthropic — empty text block tests
 # =========================================================================
@@ -35,7 +34,9 @@ class TestConvertMessagesEmptyTextBlocks:
             if m["role"] == "assistant":
                 for block in m.get("content", []):
                     if isinstance(block, dict) and block.get("type") == "text":
-                        assert block["text"], "Empty text block should have been skipped"
+                        assert block[
+                            "text"
+                        ], "Empty text block should have been skipped"
 
     def test_nonempty_text_preserved(self):
         """Non-empty text blocks should still be included."""
@@ -43,7 +44,9 @@ class TestConvertMessagesEmptyTextBlocks:
         result = convert_messages_for_anthropic([msg])
         assert len(result) == 1
         content = result[0]["content"]
-        text_blocks = [b for b in content if isinstance(b, dict) and b.get("type") == "text"]
+        text_blocks = [
+            b for b in content if isinstance(b, dict) and b.get("type") == "text"
+        ]
         assert len(text_blocks) == 1
         assert text_blocks[0]["text"] == "Hello"
 
@@ -94,24 +97,32 @@ class TestProcessResponseEmptyTextBlocks:
         """Empty text blocks from the API should not produce text in the message."""
         resp = self._make_response([self._text_block("")])
         result = process_response_from_anthropic(resp)
-        text_blocks = [b for b in result.blocks if b.has_type(Text) and not b.is_thinking()]
+        text_blocks = [
+            b for b in result.blocks if b.has_type(Text) and not b.is_thinking()
+        ]
         assert len(text_blocks) == 0
 
     def test_nonempty_text_block_preserved(self):
         """Non-empty text blocks should still be processed."""
         resp = self._make_response([self._text_block("Hello world")])
         result = process_response_from_anthropic(resp)
-        text_blocks = [b for b in result.blocks if b.has_type(Text) and not b.is_thinking()]
+        text_blocks = [
+            b for b in result.blocks if b.has_type(Text) and not b.is_thinking()
+        ]
         assert len(text_blocks) == 1
         assert "Hello world" in text_blocks[0].get_content()
 
     def test_mixed_empty_and_nonempty_response(self):
         """Only non-empty text blocks should appear in the processed message."""
-        resp = self._make_response([
-            self._text_block(""),
-            self._text_block("Valid response"),
-        ])
+        resp = self._make_response(
+            [
+                self._text_block(""),
+                self._text_block("Valid response"),
+            ]
+        )
         result = process_response_from_anthropic(resp)
-        text_blocks = [b for b in result.blocks if b.has_type(Text) and not b.is_thinking()]
+        text_blocks = [
+            b for b in result.blocks if b.has_type(Text) and not b.is_thinking()
+        ]
         assert len(text_blocks) == 1
         assert "Valid response" in text_blocks[0].get_content()
